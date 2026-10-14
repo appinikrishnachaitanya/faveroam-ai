@@ -1,5 +1,7 @@
 # Final readiness — 2026-10-14
 
+Subsequent native Gemini SDK migration: see [Gemini runtime](GEMINI_RUNTIME.md). Current validation is 83 passing tests and a passing production build. Subsequent live acceptance with `gemini-3.1-flash-lite` passed: native intent/function selection, actual `qloo_find_tags` MCP results (five), and a same-request model-only baseline. Earlier HTTP 404 failures are historical. The final-pass native Qloo/browser evidence below remains historical evidence for the preserved flows.
+
 The final coding pass preserves the existing Next.js/Qloo architecture. Native live Qloo acceptance passed. Live Gemini-selected MCP and the model-only baseline remain UNRUN because the running environment has no configured model provider. Do not represent this as complete model acceptance or verified hackathon eligibility.
 
 ## Final behavior

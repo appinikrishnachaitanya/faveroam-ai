@@ -6,10 +6,11 @@ import {
 } from "../src/agent/runtime.ts";
 import { runTurn } from "../src/agent/orchestrator.ts";
 import { normalizeSession } from "../src/agent/session.ts";
+process.env.AGENT_DEBUG ??= "1";
 const provider = configuredProvider();
 if (!provider) {
   console.error(
-    "Live model/MCP acceptance UNRUN: configure AGENT_MODEL_API_KEY, AGENT_MODEL_BASE_URL and AGENT_MODEL_NAME securely.",
+    "Live model/MCP acceptance UNRUN: configure GEMINI_API_KEY securely and GEMINI_MODEL=gemini-2.5-flash.",
   );
   process.exit(2);
 }

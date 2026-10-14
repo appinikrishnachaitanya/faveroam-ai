@@ -35,21 +35,23 @@ Deploy to a host supporting a persistent Node process and child processes for th
 
 ## Optional Gemini conversation layer
 
-Guided discovery, feedback and deterministic conversation refinements work without an LLM. For Gemini's OpenAI-compatible function-calling endpoint, securely configure:
+Guided discovery, feedback and deterministic conversation refinements work without an LLM. The native `@google/genai` SDK handles Gemini intent extraction, function selection and model-only comparison. Securely configure:
 
 ```text
-AGENT_MODEL_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
-AGENT_MODEL_NAME=<available function-calling model>
-AGENT_MODEL_API_KEY=<secure runtime secret>
+GEMINI_API_KEY=<secure runtime secret>
+GEMINI_MODEL=gemini-2.5-flash
+AGENT_DEBUG=1
 ```
 
-Allow the provider hostname in cloud secret bindings. The model interprets requests and can select real discovered Qloo MCP tools; deterministic operations retain the validated native API path. The model is never the source of Qloo entities, addresses or scores.
+No Gemini base URL is needed. Native Gemini takes precedence when `GEMINI_API_KEY` is set; other OpenAI-compatible providers can still use the optional `AGENT_MODEL_*` settings. A native request failure preserves the existing guided fallback and does not silently switch credentials/providers. Allow `generativelanguage.googleapis.com` in cloud secret bindings. The model interprets requests and can select real discovered Qloo MCP tools; deterministic operations retain the validated native API path. The model is never the source of Qloo entities, addresses or scores.
 
 ```sh
 npm run verify:gemini
 ```
 
-This acceptance probe requires a configured provider, verifies a genuine live model-selected Qloo MCP operation, and generates a live baseline without Qloo tools for the same request. Missing configuration exits with status 2 before making calls. Live Gemini acceptance is **not yet verified** in this environment. A saved environment configuration draft must be completed and published to activate credentials.
+The verification command also loads ignored `.env` / `.env.local` files and works across Windows/macOS/Linux on Node 24+. It enables metadata-only logs unless explicitly disabled. Normal app logs require `AGENT_DEBUG=1`; set `0` to disable. No prompts, arguments, model text, headers or credentials are logged. See [native Gemini runtime](docs/GEMINI_RUNTIME.md).
+
+This acceptance probe requires a configured provider, verifies a genuine live model-selected Qloo MCP operation, and generates a live baseline without Qloo tools for the same request. Missing configuration exits with status 2 before making calls. Live native Gemini acceptance **passed with `gemini-3.1-flash-lite`**: intent extraction, dynamic `qloo_find_tags` MCP selection/execution and the same-request model-only baseline. Use that verified model in this environment; the earlier `gemini-2.5-flash` default remains configurable. See the latest acceptance record in the native runtime guide.
 
 The optional judge comparison pairs the exact refinement request with a frozen snapshot of its actual Qloo results. It is hidden without a configured provider or eligible request; it never uses a fabricated baseline.
 

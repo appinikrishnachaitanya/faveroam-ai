@@ -10,10 +10,10 @@
     "typecheck": "tsc --noEmit",
     "spike": "node --use-env-proxy --env-file-if-exists=.env src/spike/tastePassportSpike.ts",
     "test": "node --import tsx --test tests/*.test.ts",
-    "dev": "NODE_USE_ENV_PROXY=1 next dev --hostname 0.0.0.0",
+    "dev": "node --use-env-proxy node_modules/next/dist/bin/next dev --hostname 0.0.0.0",
     "build": "next build",
-    "start": "NODE_USE_ENV_PROXY=1 next start --hostname 0.0.0.0",
-    "verify:gemini": "NODE_USE_ENV_PROXY=1 node --conditions=react-server --import tsx scripts/verify-gemini-mcp.ts"
+    "start": "node --use-env-proxy node_modules/next/dist/bin/next start --hostname 0.0.0.0",
+    "verify:gemini": "node --use-env-proxy --env-file-if-exists=.env --env-file-if-exists=.env.local --conditions=react-server --import tsx scripts/verify-gemini-mcp.ts"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.3",
@@ -25,6 +25,7 @@
     "typescript": "^5.9.0"
   },
   "dependencies": {
+    "@google/genai": "^2.29.1",
     "@modelcontextprotocol/sdk": "^1.32.1",
     "@qloo/qloo-harness": "0.1.26",
     "next": "^16.4.0",

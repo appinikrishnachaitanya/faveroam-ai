@@ -1,4 +1,6 @@
 import "server-only";
+import { GoogleGenAI, FunctionCallingConfigMode } from "@google/genai";
+import { debugEvent } from "./debug.ts";
 import { recordProviderHealth } from "./health.ts";
 import { culturalText, validateIntent } from "./intent.ts";
 import { isObject } from "../qloo/types.ts";
@@ -8,14 +10,15 @@ import type {
   ToolChoice,
   ToolDefinition,
 } from "./types.ts";
-/** OpenAI-compatible tool-calling provider, with no default model or endpoint.
- * Only an explicitly configured server endpoint receives the provider credential. */
+/** Native Gemini takes precedence; compatible providers remain explicitly configurable. */
 export function configuredProvider(): ModelProvider | undefined {
-  const key = process.env.AGENT_MODEL_API_KEY,
+  const native = Boolean(process.env.GEMINI_API_KEY?.trim());
+  const key = native ? process.env.GEMINI_API_KEY : process.env.AGENT_MODEL_API_KEY,
     base = process.env.AGENT_MODEL_BASE_URL,
-    model = process.env.AGENT_MODEL_NAME;
-  if (!key || !base || !model) return;
-  const url = new URL(base);
+    model = native ? (process.env.GEMINI_MODEL?.trim() || "gemini-2.5-flash") : process.env.AGENT_MODEL_NAME;
+  if (!key || !model || (!native && !base)) return;
+  const gemini = native ? new GoogleGenAI({ apiKey: key, httpOptions: { timeout: 20_000, retryOptions: { attempts: 1 } } }) : undefined;
+  const url = new URL(native ? "https://generativelanguage.googleapis.com" : base!);
   if (
     url.protocol !== "https:" ||
     url.username ||
@@ -25,10 +28,39 @@ export function configuredProvider(): ModelProvider | undefined {
   )
     throw Error("Invalid provider configuration");
   async function complete(
-    messages: unknown[],
-    tools: unknown[],
+    messages: { role: string; content: string }[],
+    tools: { type: string; function: { name: string; description?: string; parameters: Record<string, unknown> } }[],
     required = true,
   ): Promise<ToolChoice[]> {
+    if (gemini) {
+      const trace = crypto.randomUUID();
+      debugEvent("gemini.request", { trace, operation: required ? "interpret" : "choose" });
+      try {
+        const response = await gemini.models.generateContent({
+          model: model!,
+          contents: messages.filter(m => m.role !== "system").map(m => ({ role: "user", parts: [{ text: m.content }] })),
+          config: {
+            systemInstruction: messages.find(m => m.role === "system")?.content,
+            tools: [{ functionDeclarations: tools.map(t => ({ name: t.function.name, description: t.function.description, parametersJsonSchema: t.function.parameters })) }],
+            toolConfig: { functionCallingConfig: { mode: required ? FunctionCallingConfigMode.ANY : FunctionCallingConfigMode.AUTO } },
+          },
+        });
+        const calls = response.functionCalls ?? [];
+        if (calls.length > 3 || (required && !calls.length)) throw Error("Invalid provider tool selection");
+        const choices = calls.map(c => {
+          if (!c.name || !tools.some(t => t.function.name === c.name) || !isObject(c.args)) throw Error("Invalid provider tool call");
+          debugEvent("gemini.tool_selected", { trace, tool: c.name });
+          return { name: c.name, arguments: c.args };
+        });
+        debugEvent("gemini.result", { trace, count: choices.length });
+        recordProviderHealth("healthy");
+        return choices;
+      } catch (error) {
+        debugEvent("gemini.failed", { trace, status: safeStatus(error) });
+        recordProviderHealth("unavailable");
+        throw Error("Model provider unavailable");
+      }
+    }
     let r: Response;
     try {
       r = await fetch(`${base!.replace(/\/$/, "")}/chat/completions`, {
@@ -77,6 +109,26 @@ export function configuredProvider(): ModelProvider | undefined {
     async baseline(destination, tastes, request) {
       for (const taste of tastes) culturalText(taste, 100);
       culturalText(request);
+      if (gemini) {
+        const trace = crypto.randomUUID();
+        debugEvent("gemini.request", { trace, operation: "baseline" });
+        try {
+          const response = await gemini.models.generateContent({
+            model: model!,
+            contents: JSON.stringify({ request, destination, tastes }),
+            config: { systemInstruction: "Produce a concise cultural onboarding suggestion using only model knowledge. No tools or Qloo data are available. Explicitly state details and local availability are unverified. Never claim Qloo evidence." },
+          });
+          const text = response.text;
+          if (!text?.trim() || text.length > 8000 || [process.env.QLOO_API_KEY, key].some(secret => secret && text.includes(secret))) throw Error("Invalid baseline");
+          recordProviderHealth("healthy");
+          debugEvent("gemini.result", { trace, count: 1 });
+          return { text: text.trim(), model: model!, generatedAt: new Date().toISOString(), source: "model-only" as const, request };
+        } catch (error) {
+          debugEvent("gemini.failed", { trace, status: safeStatus(error) });
+          recordProviderHealth("unavailable");
+          throw Error("Comparison unavailable");
+        }
+      }
       let response: Response;
       try {
         response = await fetch(`${base!.replace(/\/$/, "")}/chat/completions`, {
@@ -252,4 +304,9 @@ export function configuredProvider(): ModelProvider | undefined {
       );
     },
   };
+}
+
+function safeStatus(error: unknown): number | undefined {
+  if (!isObject(error) || typeof error.status !== "number") return;
+  return error.status >= 400 && error.status <= 599 ? error.status : undefined;
 }

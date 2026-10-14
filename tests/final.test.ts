@@ -324,7 +324,7 @@ test("Gemini-compatible HTTP adapter sends the exact baseline request without Ql
       `
  import assert from 'node:assert/strict';
  import {configuredProvider} from './src/agent/provider.ts';
- process.env.AGENT_MODEL_API_KEY='protocol-model-secret';process.env.AGENT_MODEL_BASE_URL='https://generativelanguage.googleapis.com/v1beta/openai';process.env.AGENT_MODEL_NAME='protocol-model';process.env.QLOO_API_KEY='protocol-qloo-secret';
+ delete process.env.GEMINI_API_KEY;process.env.AGENT_MODEL_API_KEY='protocol-model-secret';process.env.AGENT_MODEL_BASE_URL='https://generativelanguage.googleapis.com/v1beta/openai';process.env.AGENT_MODEL_NAME='protocol-model';process.env.QLOO_API_KEY='protocol-qloo-secret';
  const calls=[];globalThis.fetch=async(url,options)=>{const body=JSON.parse(options.body);calls.push(body);assert.equal(url,'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions');
  if(!body.tools)return Response.json({choices:[{message:{content:'Unverified protocol baseline'}}]});
  const name=body.tools[0].function.name;const args=name==='interpret_cultural_intent'?{kind:'refine',seeds:[],concepts:[],constraints:[],sections:['Eat'],strategy:'discover',affinity:999}:{query:'independent art'};

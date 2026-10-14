@@ -1,4 +1,5 @@
 import "server-only";
+import { debugEvent } from "./debug.ts";
 import { execFile } from "node:child_process";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
@@ -100,7 +101,10 @@ export async function workflow(
     (await discoverTools()).every((t) => t.name !== name)
   )
     throw Error("Qloo workflow unavailable");
-  return paced(
+  const trace = crypto.randomUUID();
+  debugEvent("qloo.invoked", { trace, tool: name, transport: mode });
+  try {
+  const result = await paced(
     `workflow:${process.env.QLOO_API_KEY}:${mode}:${name}:${JSON.stringify(args)}`,
     async () => {
       if(signal?.aborted)throw Error("Workflow cancelled");
@@ -156,4 +160,10 @@ export async function workflow(
       });
     },
   );
+  debugEvent("qloo.result", { trace, tool: name, transport: mode, count: Array.isArray(result.results) ? result.results.length : 0 });
+  return result;
+  } catch (error) {
+    debugEvent("qloo.failed", { trace, tool: name, transport: mode });
+    throw error;
+  }
 }
