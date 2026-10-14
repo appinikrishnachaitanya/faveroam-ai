@@ -2,7 +2,7 @@
 
 A Next.js, TypeScript, Tailwind App Router product built on the validated Qloo spike. Enter 3–5 tastes, confirm each actual Qloo match, then generate a destination passport. No database, authentication, or deployment. The tool-calling model layer is optional.
 
-One structured TastePassport session supports both guided controls and conversation, with category-scoped refinement, full Passport reset, conversation-only reset, provider health and progressive empty-result recovery. See [session reliability and validation](docs/SESSION_RELIABILITY.md).
+**Move anywhere. Keep your vibe.** TastePassport is a cultural onboarding product for people relocating to an unfamiliar city. One structured session supports guided controls and conversation, grounded Taste DNA, an auditable Cultural Bridge Map, Familiar/Balanced/Explore query strategies, category feedback and reliable resets. See [cultural onboarding, strategies and live validation](docs/CULTURAL_ONBOARDING.md) and [session reliability](docs/SESSION_RELIABILITY.md).
 
 The UI provides a conversational agent panel and living passport with explicit match dialogs, confirmed Taste DNA, collective taste translation and Qloo-backed feedback updates. See [workspace behavior and validation](docs/UI_WORKSPACE.md).
 
@@ -66,3 +66,5 @@ Example: build an NYC passport using Rahman, Interstellar and a confirmed Indian
 See [Agent architecture, guardrails and validation](docs/AGENT_ARCHITECTURE.md). Historical UI-only behavior in docs/UI_WORKSPACE.md describes the previous phase; its session-only feedback limitation is superseded by Phase 3.
 
 Gemini can use `AGENT_MODEL_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai` with a securely configured `AGENT_MODEL_API_KEY` and an available function-calling `AGENT_MODEL_NAME`. This deployment has not been live-tested with Gemini.
+
+The Bengaluru → Toronto sample contains editable taste queries; only confirmed Qloo matches enter Taste DNA. Every current discovery carries a collapsible Qloo receipt. The optional model-only comparison is generated live without Qloo tools and hidden when unavailable. No deployment has been performed.

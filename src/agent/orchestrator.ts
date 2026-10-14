@@ -88,7 +88,7 @@ export async function runTurn(
     };
   }
   if (!deps.provider) state.providerHealth = "unconfigured";
-  if (input.guided || input.recovery) delete state.pending;
+  if (input.guided || input.recovery || input.familiarity) delete state.pending;
   if (deps.provider && state.providerHealth === "unconfigured")
     state.providerHealth = "configured";
   if (input.message) {
@@ -96,6 +96,13 @@ export async function runTurn(
     delete state.pending;
   }
   let intent = interpret(input.message ?? "", "New York City");
+  if (input.familiarity) {
+    state.categoryModes[input.familiarity.section] = input.familiarity.mode;
+    intent = guidedIntent(
+      input.familiarity.section,
+      state.categoryConstraints[input.familiarity.section] ?? [],
+    );
+  }
   if (input.guided)
     intent = guidedIntent(input.guided.section, input.guided.constraints);
   if (input.recovery) {
@@ -173,7 +180,7 @@ export async function runTurn(
     intent = {
       kind: "refine",
       seeds: [],
-      concepts: [],
+      concepts: pending.optional ? [] : [pending.query],
       sections: pending.sections,
       constraints: pending.constraints,
       strategy: pending.strategy ?? "discover",
@@ -447,6 +454,22 @@ export async function runTurn(
                   inputSignals: state.selected
                     .filter((s) => !s.id.startsWith("urn:tag:"))
                     .map((s) => s.name),
+                  ...(c.evidence
+                    ? {
+                        evidence: {
+                          ...c.evidence,
+                          ranking: {
+                            operation: "qloo_rank" as const,
+                            signals: args.signals,
+                            options: args.options,
+                            destination: state.city,
+                            ...(typeof r.affinity === "number"
+                              ? { affinity: r.affinity }
+                              : {}),
+                          },
+                        },
+                      }
+                    : {}),
                   ...(typeof r.affinity === "number"
                     ? { affinity: r.affinity }
                     : {}),
@@ -524,6 +547,15 @@ export async function runTurn(
       ];
       changed.push(section);
       event(`${section} passport updated with Qloo-backed results`, "complete");
+      if (cards.length < 3) {
+        state.notices.push(
+          `Limited ${section} coverage: ${cards.length} valid match${cards.length === 1 ? "" : "es"}. Try Balanced or Explore.`,
+        );
+        event(
+          `Limited ${section} coverage · try Balanced or Explore`,
+          "attention",
+        );
+      }
     } catch (error) {
       if (isObject(error) && error.status === 429) {
         state.recovery!.push(section);

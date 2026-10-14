@@ -1,4 +1,6 @@
 import "server-only";
+import { discoveryQueries, mixPools } from "./strategy.ts";
+import { withEvidence } from "../passport/evidence.ts";
 import { sectionTags } from "./session.ts";
 import { workflow, discoverTools } from "./harness.ts";
 import { configuredProvider } from "./provider.ts";
@@ -141,30 +143,46 @@ export async function discoverSection(
     if (!options.length) return [];
     params["filter.results.entities"] = options.join(",");
   }
-  const usedIds = [
-    ...(params["signal.interests.entities"] ?? "").split(","),
-    ...(params["signal.interests.tags"] ?? "").split(","),
-    ...(params["filter.tags"] ?? "").split(","),
+  const mode =
+    state.categoryModes?.[section] ?? state.discoveryMode ?? "familiar";
+  const queries = discoveryQueries(params, state, section, mode);
+  const sources = [
+    ...state.selected,
+    ...state.tags,
+    ...state.cards.filter((c) => likes.includes(c.id)),
   ];
-  if (type === "artist" && !ids.length && !params["signal.interests.tags"])
-    return [];
-  const names = [
-    ...new Set(
-      [
-        ...state.selected,
-        ...state.tags,
-        ...state.cards.filter((c) => likes.includes(c.id)),
-      ]
-        .filter((s) => usedIds.includes(s.id))
-        .map((s) => s.name),
-    ),
-  ];
-  const result = await insights(params, signal);
-  return validateDiscoveries(
-    result.body,
-    state.city,
-    section,
-    constraints,
-    excluded,
-  ).map((c) => ({ ...c, inputSignals: names }));
+  const pools: Card[][] = [];
+  let failure: unknown;
+  for (const query of queries) {
+    try {
+      const result = await insights(query.params, signal);
+      const validated = validateDiscoveries(
+        result.body,
+        state.city,
+        section,
+        constraints,
+        excluded,
+      );
+      const grounded = withEvidence(
+        validated,
+        result.entities,
+        query.params,
+        sources,
+        state.city,
+        mode,
+        query.pool,
+      );
+      if (query.note) {
+        state.notices.push(query.note);
+        for (const card of grounded)
+          if (card.evidence) card.evidence.strategyNote = query.note;
+      }
+      pools.push(grounded);
+    } catch (error) {
+      failure = error;
+      if (queries.length === 1) throw error;
+    }
+  }
+  if (!pools.some((pool) => pool.length) && failure) throw failure;
+  return mixPools(pools);
 }

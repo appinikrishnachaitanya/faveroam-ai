@@ -14,6 +14,8 @@ export function normalizeSession(state: AgentState): TastePassportSession {
   state.hiddenCategories ??= [];
   state.preferences ??= {};
   state.explorationMode ??= "aligned";
+  state.discoveryMode ??= "familiar";
+  state.categoryModes ??= {};
   state.history ??= [];
   state.recovery ??= [];
   state.relaxed ??= [];
@@ -49,6 +51,8 @@ export function clearPassport(original: AgentState): TastePassportSession {
   state.notices = [];
   state.activeCategories = [];
   state.hiddenCategories = [];
+  state.discoveryMode = "familiar";
+  state.categoryModes = {};
   return state;
 }
 export function guidedIntent(

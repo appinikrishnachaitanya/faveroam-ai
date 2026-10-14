@@ -1,4 +1,5 @@
 import "server-only";
+import { withEvidence } from "./evidence.ts";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { culturalText } from "../agent/intent.ts";
 import { validatedSection, validateDiscoveries } from "../agent/validation.ts";
@@ -6,7 +7,13 @@ import type { Constraint } from "../agent/types.ts";
 import { search, insights, QlooError, insightParams } from "../qloo/client.ts";
 import { candidates, classify, card } from "./model.ts";
 import type { Candidate, Card } from "./model.ts";
-export const cities = ["New York City", "London", "Paris", "Tokyo"] as const;
+export const cities = [
+  "Toronto",
+  "New York City",
+  "London",
+  "Paris",
+  "Tokyo",
+] as const;
 function sign(payload: string) {
   const key = process.env.QLOO_API_KEY;
   if (!key) throw new QlooError("Qloo is not configured.");
@@ -71,9 +78,14 @@ export async function passport(
   const notices: string[] = [];
   for (const type of ["place", "artist"]) {
     try {
-      const entityIds = selected
+      const allEntityIds = selected
         .filter((s) => !s.id.startsWith("urn:tag:"))
         .map((s) => s.id);
+      const artistIds = selected
+        .filter((s) => s.types.includes("urn:entity:artist"))
+        .map((s) => s.id);
+      const entityIds =
+        type === "artist" && artistIds.length ? artistIds : allEntityIds;
       const tags = selected
         .filter((s) => s.id.startsWith("urn:tag:"))
         .map((s) => s.id);
@@ -90,6 +102,16 @@ export async function passport(
       if (type === "place") {
         params["filter.location.radius"] = "0";
         if (tags.length) params["signal.interests.tags"] = tags.join(",");
+        const cuisine = selected
+          .filter((s) => s.id.includes(":cuisine:"))
+          .map((s) => s.id);
+        if (cuisine.length) {
+          params["filter.tags"] = [
+            "urn:tag:genre:place:restaurant",
+            ...cuisine,
+          ].join(",");
+          params["operator.filter.tags"] = "intersection";
+        }
       }
       params[
         type === "place" ? "filter.location.query" : "signal.location.query"
@@ -99,6 +121,7 @@ export async function passport(
       if (constraints.includes("mainstream"))
         params["filter.popularity.max"] = "0.9";
       const result = await insights(params);
+      const queryId = crypto.randomUUID();
       for (const entity of result.entities) {
         if (ids.includes(entity.entity_id)) continue;
         const section = type === "artist" ? "Music" : validatedSection(entity);
@@ -110,18 +133,18 @@ export async function passport(
             constraints,
             ids,
           );
-          cards.push(
-            ...validated.map((c) => ({
-              ...c,
-              inputSignals: selected
-                .filter(
-                  (s) =>
-                    entityIds.includes(s.id) ||
-                    (type === "place" && tags.includes(s.id)),
-                )
-                .map((s) => s.name),
-            })),
+          const grounded = withEvidence(
+            validated,
+            [entity],
+            params,
+            selected,
+            city,
+            "familiar",
+            "direct",
           );
+          for (const c of grounded)
+            if (c.evidence) c.evidence.queryId = queryId;
+          cards.push(...grounded);
         }
       }
       if (!result.entities.length)

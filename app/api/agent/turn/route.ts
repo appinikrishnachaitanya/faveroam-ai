@@ -2,6 +2,7 @@ import { inSession } from "../../../../src/agent/store";
 import { runTurn } from "../../../../src/agent/orchestrator";
 import { agentDependencies } from "../../../../src/agent/runtime";
 import { sectionOrder } from "../../../../src/workspace/state";
+import { familiarities } from "../../../../src/passport/evidence";
 import { reasons } from "../../../../src/agent/types";
 import type { AgentInput } from "../../../../src/agent/types";
 export const runtime = "nodejs";
@@ -43,8 +44,15 @@ export async function POST(request: Request) {
       input.guided,
       input.recovery,
       input.reset,
+      input.familiarity,
     ].filter((x) => x !== undefined);
     if (actions.length !== 1) throw Error();
+    if (
+      input.familiarity &&
+      (!familiarities.includes(input.familiarity.mode) ||
+        !sectionOrder.includes(input.familiarity.section))
+    )
+      throw Error();
     if (input.reset !== undefined && input.reset !== "conversation")
       throw Error();
     if (

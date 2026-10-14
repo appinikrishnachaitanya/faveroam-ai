@@ -74,6 +74,60 @@ export function configuredProvider(): ModelProvider | undefined {
     });
   }
   return {
+    async baseline(destination, tastes) {
+      for (const taste of tastes) culturalText(taste, 100);
+      let response: Response;
+      try {
+        response = await fetch(`${base!.replace(/\/$/, "")}/chat/completions`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${key}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model,
+            messages: [
+              {
+                role: "system",
+                content:
+                  "Produce a concise cultural onboarding suggestion for a newcomer using only your own model knowledge. No tools or Qloo data are available. Describe familiar routines and adjacent cultural discoveries. Explicitly state that details and local availability are unverified. Do not claim access to Qloo or evidence.",
+              },
+              {
+                role: "user",
+                content: JSON.stringify({ destination, tastes }),
+              },
+            ],
+          }),
+          redirect: "error",
+          signal: AbortSignal.timeout(20_000),
+        });
+      } catch {
+        recordProviderHealth("unavailable");
+        throw Error("Comparison unavailable");
+      }
+      if (!response.ok) {
+        recordProviderHealth("unavailable");
+        throw Error("Comparison unavailable");
+      }
+      const data = await response.json();
+      const text = data?.choices?.[0]?.message?.content;
+      if (
+        typeof text !== "string" ||
+        !text.trim() ||
+        text.length > 8000 ||
+        [process.env.QLOO_API_KEY, key].some(
+          (secret) => secret && text.includes(secret),
+        )
+      )
+        throw Error("Invalid baseline");
+      recordProviderHealth("healthy");
+      return {
+        text: text.trim(),
+        model: model!,
+        generatedAt: new Date().toISOString(),
+        source: "model-only",
+      };
+    },
     async interpret(text) {
       culturalText(text);
       const calls = await complete(
@@ -81,7 +135,7 @@ export function configuredProvider(): ModelProvider | undefined {
           {
             role: "system",
             content:
-              "Extract cultural onboarding/refinement intent only. Do not generate discovery data. Destination must be New York City, London, Paris or Tokyo. Separate named seeds from cultural concepts and dislikes. Do not include personal identifying information.",
+              "Extract cultural onboarding/refinement intent only. Do not generate discovery data. Destination must be Toronto, New York City, London, Paris or Tokyo. Separate named seeds from cultural concepts and dislikes. Do not include personal identifying information.",
           },
           { role: "user", content: text },
         ],

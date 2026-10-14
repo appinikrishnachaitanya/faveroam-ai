@@ -13,6 +13,7 @@ export interface Card extends Candidate {
   description?: string;
   affinity?: number;
   inputSignals?: string[];
+  evidence?: import("./evidence.ts").QlooEvidence;
 }
 export function candidate(e: Entity): Candidate {
   const p = e.properties ?? {};

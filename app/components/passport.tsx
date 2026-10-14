@@ -1,3 +1,5 @@
+import EvidenceDetails from "./evidence";
+import { bridgeRoutes, sparseSections } from "../../src/passport/evidence";
 import type { Candidate, Card, Section } from "../../src/passport/model";
 import {
   activities,
@@ -176,7 +178,7 @@ export function TasteDNA({
       <div className="panel-heading">
         <div>
           <span className="micro-label">THE CULTURAL THREAD</span>
-          <h2 id="dna-title">Your taste DNA</h2>
+          <h2 id="dna-title">The culture you carry.</h2>
         </div>
         <span className="count-pill">{signals.length} confirmed</span>
       </div>
@@ -189,6 +191,19 @@ export function TasteDNA({
                 <strong>{s.name}</strong>
                 <small>{typeLabel(s)}</small>
               </div>
+              <details className="signal-inspect">
+                <summary aria-label={`Inspect ${s.name}`}>↗</summary>
+                <div className="signal-receipt">
+                  <p>
+                    Resolution source: Qloo{" "}
+                    {s.id.startsWith("urn:tag:")
+                      ? "tag workflow"
+                      : "entity search"}
+                  </p>
+                  <code>{s.id}</code>
+                  <small>{s.types.join(" · ")}</small>
+                </div>
+              </details>
               <button
                 type="button"
                 onClick={() => onRemove(s.id)}
@@ -225,63 +240,112 @@ export function TranslationMap({
   signals: Candidate[];
   result?: Passport;
 }) {
-  const sections = visibleSections(result?.cards ?? []);
+  const cards = result?.cards ?? [];
+  const routes = bridgeRoutes(cards, signals);
+  const sections = visibleSections(cards);
   return (
-    <section className="translation-panel" aria-labelledby="translation-title">
+    <section
+      className="translation-panel cultural-bridge"
+      aria-labelledby="translation-title"
+    >
       <div className="panel-heading">
         <div>
-          <span className="micro-label">TASTE TRANSLATION</span>
-          <h2 id="translation-title">Your world. New possibilities.</h2>
+          <span className="micro-label">YOUR CULTURAL BRIDGE</span>
+          <h2 id="translation-title">Your world. Translated.</h2>
         </div>
-        <Icon name="globe" />
+        <span className="bridge-query-count">
+          {new Set(routes.map((r) => r.id.split(":")[0])).size} auditable
+          queries
+        </span>
       </div>
-      <div className="translation-columns">
-        <div className="world-column">
-          <span className="map-label">YOUR WORLD</span>
-          {signals.length ? (
-            signals.map((s) => (
-              <span className="map-source" key={s.id}>
-                {s.name}
-              </span>
-            ))
-          ) : (
-            <span className="map-placeholder">Your confirmed tastes</span>
+      <div className="bridge-column-labels">
+        <span>YOUR WORLD</span>
+        <span>QLOO CULTURAL INTELLIGENCE</span>
+        <span>YOUR NEW CITY</span>
+      </div>
+      {routes.length ? (
+        <div className="bridge-routes">
+          {routes.map((route) => (
+            <div
+              className={`bridge-route pool-${route.pool}`}
+              key={route.id}
+              data-query-receipt={route.id}
+            >
+              <div className="bridge-inputs">
+                {route.inputs.map((input) => (
+                  <span key={input.id}>
+                    {input.name}
+                    <small>{typeLabel(input)}</small>
+                  </span>
+                ))}
+              </div>
+              <div className="map-bridge" aria-hidden="true">
+                <svg viewBox="0 0 160 100" preserveAspectRatio="none">
+                  <path d="M0 20C45 20 35 50 80 50S115 20 160 20M0 80C45 80 35 50 80 50S115 80 160 80" />
+                </svg>
+                <span>
+                  <Icon name="star" size={23} />
+                  <b>Qloo</b>
+                </span>
+              </div>
+              <div className="bridge-output">
+                <span className="map-target">
+                  <Icon name={route.section} size={17} />
+                  <strong>
+                    {route.destination}
+                    <small>
+                      {route.section} · {route.count} returned{" "}
+                      {route.count === 1 ? "discovery" : "discoveries"}
+                    </small>
+                  </strong>
+                </span>
+                <span className="bridge-pool-label">
+                  {route.mode} ·{" "}
+                  {route.pool === "adjacent"
+                    ? "adjacent cultural pool"
+                    : route.pool === "profile"
+                      ? "grounded profile pool"
+                      : "direct cultural pool"}
+                </span>
+                {route.locality === "audience-context" && (
+                  <small>Audience context, not a local venue</small>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="bridge-awaiting">
+          <Icon name="globe" size={36} />
+          <p>
+            A bridge built from evidence.
+            <span>
+              Connections appear only after a Qloo query returns a grounded
+              discovery.
+            </span>
+          </p>
+          <div>
+            {signals.map((signal) => (
+              <span key={signal.id}>{signal.name}</span>
+            ))}
+          </div>
+          {sections.length > 0 && (
+            <small>
+              Available categories: {sections.join(", ")}. Query evidence is
+              needed before drawing connections.
+            </small>
           )}
         </div>
-        <div className="map-bridge" aria-hidden="true">
-          <svg viewBox="0 0 160 100" preserveAspectRatio="none">
-            <path d="M0 15C45 15 30 50 80 50S120 15 160 15M0 50H160M0 85C45 85 30 50 80 50S120 85 160 85" />
-          </svg>
-          <span>
-            <Icon name="star" size={24} />
-            <b>Qloo</b>
-          </span>
-        </div>
-        <div className="city-column">
-          <span className="map-label">YOUR NEW CITY</span>
-          {sections.length ? (
-            sections.map((s) => (
-              <span className="map-target" key={s}>
-                <Icon name={s} size={14} />
-                {s}
-                <small>
-                  {result!.cards.filter((c) => c.section === s).length}
-                </small>
-              </span>
-            ))
-          ) : (
-            <span className="map-placeholder">Discoveries, when returned</span>
-          )}
-        </div>
-      </div>
+      )}
       <p className="provenance-note">
-        {result
-          ? "These sections use queries drawn from your confirmed taste profile. Individual taste-to-place links are not provided."
-          : "A shared taste query connects your confirmed signals to returned discovery categories."}
+        These are collective query-input → returned-category connections.
+        Individual taste-to-place links are not provided. Inspect each card’s
+        Qloo evidence for exact IDs and parameters.
       </p>
     </section>
   );
 }
+
 export type Feedback = "like" | "dislike";
 export function DiscoveryCard({
   card,
@@ -300,7 +364,7 @@ export function DiscoveryCard({
 }) {
   return (
     <article
-      className={`discovery-card ${feedback === "dislike" ? "muted-card" : ""}`}
+      className={`discovery-card card-${card.section.toLowerCase()} ${feedback === "dislike" ? "muted-card" : ""}`}
     >
       <div className="card-header">
         <span className="category-token">
@@ -309,7 +373,26 @@ export function DiscoveryCard({
         </span>
         <span className="card-type">{typeLabel(card)}</span>
       </div>
-      <h4>{card.name}</h4>
+      <div className="discovery-title">
+        <span className="card-cultural-mark" aria-hidden="true">
+          <Icon name={card.section} size={24} />
+        </span>
+        <h4>{card.name}</h4>
+      </div>
+      {card.evidence && (
+        <p className="card-query-inputs">
+          Query inputs ·{" "}
+          {[
+            ...new Set(
+              card.evidence.inputs
+                .filter((i) => !i.name.startsWith("urn:"))
+                .map((i) => i.name),
+            ),
+          ]
+            .slice(0, 3)
+            .join(" + ")}
+        </p>
+      )}
       {card.address && (
         <p className="card-address">
           <Icon name="pin" size={13} />
@@ -328,16 +411,23 @@ export function DiscoveryCard({
           inputs, not claims of individual contribution.
         </p>
         <div className="why-signals">
-          {(card.inputSignals ?? signals.map((s) => s.name)).map((name) => (
-            <span key={name}>{name}</span>
-          ))}
+          {(
+            card.evidence?.inputs
+              .filter((i) => !i.name.startsWith("urn:"))
+              .map((i) => i.name) ?? []
+          )
+            .filter((name, i, all) => all.indexOf(name) === i)
+            .map((name) => (
+              <span key={name}>{name}</span>
+            ))}
         </div>
-        {card.affinity !== undefined && (
+        {card.evidence?.result.affinity && (
           <p className="affinity">
-            Qloo affinity · {card.affinity.toFixed(3)}
-            <small>Relative relevance, not a probability.</small>
+            Qloo affinity · {card.evidence.result.affinity.value}
+            <small>Actual query.affinity, not a probability.</small>
           </p>
         )}
+        <EvidenceDetails card={card} />
       </details>
       <div className="feedback-actions">
         <button
@@ -385,13 +475,23 @@ export function PassportSections({
   onFeedback: (id: string, value: Feedback) => void;
 }) {
   const sections = visibleSections(result.cards);
+  const hasGaps = result.notices.some((n) =>
+    /failed|unavailable|returned no|no discoveries|limited|Local places:|Music:/i.test(
+      n,
+    ),
+  );
   return (
     <div className="passport-sections">
       {result.notices.length > 0 && (
         <aside className="partial-notice" role="status">
-          <strong>Your passport is ready, with a few gaps.</strong>
+          <strong>
+            {hasGaps
+              ? "Your passport is ready, with a few gaps."
+              : "Your cultural bridge, with a few notes."}
+          </strong>
           <p>
-            Available discoveries are below. Some queries could not complete.
+            Coverage varies by category. These discoveries keep their real Qloo
+            evidence.
           </p>
           <details>
             <summary>View query notices</summary>
@@ -411,6 +511,14 @@ export function PassportSections({
           </p>
         </div>
       )}
+      {sparseSections(result.cards, sections).length > 0 && (
+        <p className="sparse-coverage" role="status">
+          Not enough strong matches in{" "}
+          {sparseSections(result.cards, sections).join(", ")}. Your valid
+          discoveries are shown; try Balanced or Explore to widen the cultural
+          bridge.
+        </p>
+      )}
       {sections.map((s) => (
         <section
           className="result-section"
@@ -426,8 +534,14 @@ export function PassportSections({
             </h3>
             <p>
               {s === "Music"
-                ? "Taste suggestions with city context · not local concerts"
-                : "Places selected from returned category tags"}
+                ? "A soundtrack for your next chapter · artist taste, not local concerts"
+                : s === "Eat"
+                  ? "A familiar table. A new city."
+                  : s === "Coffee"
+                    ? "Find your next daily ritual."
+                    : s === "Culture"
+                      ? "Culture to make this place yours."
+                      : "Small discoveries. New routines."}
             </p>
           </div>
           {updating.includes(s) && (

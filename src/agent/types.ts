@@ -50,6 +50,10 @@ export interface AgentState {
   hiddenCategories?: Section[];
   preferences?: Partial<Record<Section, string[]>>;
   explorationMode?: "aligned" | "shortlist";
+  discoveryMode?: import("../passport/evidence.ts").Familiarity;
+  categoryModes?: Partial<
+    Record<Section, import("../passport/evidence.ts").Familiarity>
+  >;
   categoryTags?: Partial<Record<Section, string[]>>;
   history?: { role: "user" | "agent"; text: string }[];
   providerHealth?: "unconfigured" | "configured" | "healthy" | "unavailable";
@@ -71,6 +75,10 @@ export interface TastePassportSession extends AgentState {
   hiddenCategories: Section[];
   preferences: Partial<Record<Section, string[]>>;
   explorationMode: "aligned" | "shortlist";
+  discoveryMode: import("../passport/evidence.ts").Familiarity;
+  categoryModes: Partial<
+    Record<Section, import("../passport/evidence.ts").Familiarity>
+  >;
   categoryTags: Partial<Record<Section, string[]>>;
   history: { role: "user" | "agent"; text: string }[];
   providerHealth: "unconfigured" | "configured" | "healthy" | "unavailable";
@@ -88,6 +96,15 @@ export interface ToolChoice {
 }
 export interface ModelProvider {
   interpret(text: string): Promise<Intent>;
+  baseline?(
+    destination: string,
+    tastes: string[],
+  ): Promise<{
+    text: string;
+    model: string;
+    generatedAt: string;
+    source: "model-only";
+  }>;
   choose(
     text: string,
     state: AgentState,
@@ -103,6 +120,10 @@ export interface ToolResult {
 }
 export interface AgentInput {
   reset?: "conversation";
+  familiarity?: {
+    mode: import("../passport/evidence.ts").Familiarity;
+    section: Section;
+  };
   guided?: { section: Section; constraints: Constraint[] };
   recovery?: {
     section: Section;

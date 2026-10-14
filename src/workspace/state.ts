@@ -30,7 +30,13 @@ export interface Passport {
   agent?: AgentSession;
   session?: import("../agent/types.ts").TastePassportSession;
 }
-export const destinations = ["New York City", "London", "Paris", "Tokyo"];
+export const destinations = [
+  "Toronto",
+  "New York City",
+  "London",
+  "Paris",
+  "Tokyo",
+];
 export const sectionOrder: Section[] = [
   "Eat",
   "Coffee",

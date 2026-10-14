@@ -42,7 +42,7 @@ export function constraintsFrom(text: string): Constraint[] {
   return values;
 }
 export function isConcept(text: string) {
-  return /^(?:biryani|indian(?: cuisine| food)?|specialty coffee|coffee|quiet (?:caf[eé]s?|bookstores?)|independent bookstores?|cuisine|food|bookstores?)$/i.test(
+  return /^(?:biryani|indian(?: cuisine| food)?|specialty coffee|coffee|quiet (?:caf[eé]s?|bookstores?)|independent bookstores?|independent culture|cuisine|food|bookstores?)$/i.test(
     text.trim(),
   );
 }

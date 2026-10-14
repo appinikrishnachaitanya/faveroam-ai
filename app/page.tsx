@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { sendAgentTurn } from "../src/agent/browser";
 import type { Intent } from "../src/agent/types";
 import type { AgentInput, AgentEvent, Constraint } from "../src/agent/types";
+import { FamiliarityControl, ModelComparison } from "./components/cultural";
 import GuidedRefinement, { RefinementRecovery } from "./components/guided";
 import FeedbackDialog from "./components/feedback";
 import type { Section } from "../src/passport/model";
@@ -31,7 +32,7 @@ interface Message {
 }
 const welcome: Message = {
   role: "agent",
-  text: "A new city should still feel like you. Tell me where you’re headed and three to five things you love. We’ll find their cultural connections.",
+  text: "Move anywhere. Keep your vibe. Tell me your new city and three to five cultural tastes you love. We’ll build a bridge between your world and your next chapter.",
 };
 async function post<T>(path: string, body: unknown): Promise<T> {
   const response = await fetch(path, {
@@ -410,7 +411,7 @@ export default function Home() {
               <h1 id="agent-title">Taste Concierge</h1>
               <p>
                 <span className="live-dot" />
-                Your cultural onboarding workspace
+                Familiar culture. A new beginning.
               </p>
             </div>
           </div>
@@ -491,7 +492,44 @@ export default function Home() {
             </div>
             {phase === "idle" && (
               <div className="suggestion-prompts">
-                <span className="micro-label">A PLACE TO START</span>
+                <span className="micro-label">THE DEMO JOURNEY</span>
+                <div className="persona-story">
+                  <span>
+                    BENGALURU <b>→</b> TORONTO
+                  </span>
+                  <p>
+                    A software engineer starting a new chapter. Rahman on
+                    repeat, Interstellar after work, Indian food and a good
+                    coffee ritual.
+                  </p>
+                  <small>
+                    Sample story — your Passport uses only the tastes you
+                    choose.
+                  </small>
+                </div>
+                <button
+                  className="persona-start"
+                  onClick={() => {
+                    setCity("Toronto");
+                    setDraft([
+                      "A.R. Rahman",
+                      "Interstellar",
+                      "Indian cuisine",
+                      "specialty coffee",
+                      "independent culture",
+                    ]);
+                    setConceptSeeds([
+                      "Indian cuisine",
+                      "specialty coffee",
+                      "independent culture",
+                    ]);
+                    setEditing(true);
+                    resetMatches();
+                  }}
+                >
+                  Start the Bengaluru → Toronto sample{" "}
+                  <Icon name="arrow" size={16} />
+                </button>
                 <button
                   onClick={() => {
                     setDraft(["", "", ""]);
@@ -504,7 +542,7 @@ export default function Home() {
                 <button
                   onClick={() =>
                     setComposer(
-                      "I’m moving to New York. I love A.R. Rahman, Interstellar and Blue Tokai.",
+                      "I’m relocating from Bengaluru to Toronto. I love A.R. Rahman, Interstellar and Indian cuisine.",
                     )
                   }
                 >
@@ -694,7 +732,7 @@ export default function Home() {
                     ? "Exploring your new city…"
                     : result
                       ? "Refresh my passport"
-                      : "Build my TastePassport"}
+                      : "Build your cultural bridge"}
                   <Icon name="arrow" />
                 </button>
                 {!complete && (
@@ -805,12 +843,16 @@ export default function Home() {
             <div className="destination-eyebrow">
               <Icon name="pin" size={14} />
               {city === "New York City"
-                ? "OUR VALIDATED STARTING POINT"
-                : "EXPLORATORY DESTINATION"}
+                ? "YOUR NEXT CHAPTER"
+                : "CULTURAL ONBOARDING"}
             </div>
             <div className="destination-title-row">
               <div>
-                <h2 id="passport-title">{city || "Your next destination"}</h2>
+                <h2 id="passport-title">
+                  {city
+                    ? `Your ${city} TastePassport`
+                    : "Your culture. A new city."}
+                </h2>
                 <p>Your next chapter. Still unmistakably you.</p>
               </div>
               <span className={`workspace-status ${busy ? "working" : ""}`}>
@@ -828,18 +870,36 @@ export default function Home() {
             </div>
           </div>
           <TasteDNA signals={signals} onRemove={removeSignal} disabled={busy} />
+          {result?.session && (
+            <FamiliarityControl
+              session={result.session}
+              disabled={busy}
+              onChange={(input) => void refine(input)}
+            />
+          )}
           <TranslationMap signals={signals} result={result} />
           {result?.session && (
-            <p className="passport-mode">
-              Cultural mode:{" "}
-              {result.session.explorationMode === "shortlist"
-                ? "Your shortlist"
-                : "Aligned with your tastes"}
-              {result.session.hiddenCategories?.length
-                ? ` · Hidden: ${result.session.hiddenCategories.join(", ")}`
-                : ""}
-            </p>
+            <ModelComparison
+              key={result.session.id}
+              session={result.session}
+              cards={result.cards}
+              available={conciergeAvailable}
+            />
           )}
+
+          {result?.session &&
+            (result.session.hiddenCategories.length > 0 ||
+              result.session.explorationMode === "shortlist") && (
+              <p className="passport-mode">
+                {result.session.explorationMode === "shortlist"
+                  ? "Your cultural shortlist. "
+                  : ""}
+                {result.session.hiddenCategories.length > 0
+                  ? `Hidden chapters · ${result.session.hiddenCategories.join(", ")}`
+                  : ""}
+              </p>
+            )}
+
           {busy && phase !== "refining" && (
             <section
               className="exploration-state"
@@ -907,7 +967,7 @@ export default function Home() {
                   <h3>
                     {signals.length
                       ? "Your taste DNA is taking shape."
-                      : "Bring your world with you."}
+                      : "Make a new city feel more like you."}
                   </h3>
                   <p>
                     {signals.length
@@ -925,6 +985,15 @@ export default function Home() {
               </section>
             )
           )}
+          <details className="product-story">
+            <summary>Why TastePassport?</summary>
+            <p>
+              Relocating means rebuilding familiar routines, culture, and
+              discovery from scratch. TastePassport helps newcomers carry their
+              existing tastes into a new city while gradually exploring beyond
+              them.
+            </p>
+          </details>
           <footer className="workspace-footer">
             <span>
               <Icon name="star" size={12} />
