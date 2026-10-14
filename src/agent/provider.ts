@@ -1,4 +1,5 @@
 import "server-only";
+import { recordProviderHealth } from "./health.ts";
 import { culturalText, validateIntent } from "./intent.ts";
 import { isObject } from "../qloo/types.ts";
 import type {
@@ -46,10 +47,15 @@ export function configuredProvider(): ModelProvider | undefined {
         signal: AbortSignal.timeout(20_000),
       });
     } catch {
+      recordProviderHealth("unavailable");
       throw Error("Model provider unavailable");
     }
-    if (!r.ok) throw Error("Model provider unavailable");
+    if (!r.ok) {
+      recordProviderHealth("unavailable");
+      throw Error("Model provider unavailable");
+    }
     const data = await r.json();
+    recordProviderHealth("healthy");
     const calls =
       data?.choices?.[0]?.message?.tool_calls ?? (required ? undefined : []);
     if (!Array.isArray(calls) || calls.length > 3)
@@ -114,7 +120,13 @@ export function configuredProvider(): ModelProvider | undefined {
                       enum: ["Eat", "Coffee", "Music", "Culture", "Lifestyle"],
                     },
                   },
-                  hide: {type:"array",items:{type:"string",enum:["Eat","Coffee","Music","Culture","Lifestyle"]}},
+                  hide: {
+                    type: "array",
+                    items: {
+                      type: "string",
+                      enum: ["Eat", "Coffee", "Music", "Culture", "Lifestyle"],
+                    },
+                  },
                   strategy: {
                     type: "string",
                     enum: ["discover", "rank", "filter"],

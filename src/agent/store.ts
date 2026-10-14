@@ -1,7 +1,8 @@
 import "server-only";
+import { normalizeSession, clearPassport } from "./session.ts";
 import { randomUUID } from "node:crypto";
 import type { Candidate } from "../passport/model.ts";
-import type { AgentState, Constraint } from "./types.ts";
+import type { AgentState, Constraint, TastePassportSession } from "./types.ts";
 import type { Passport } from "../workspace/state.ts";
 const globalStore = globalThis as typeof globalThis & {
   tastePassportSessions?: Map<string, AgentState>;
@@ -15,7 +16,7 @@ const locks = (globalStore.tastePassportLocks ??= new Set<string>());
 export function createSession(
   passport: Passport,
   constraints: Constraint[] = [],
-): AgentState {
+): TastePassportSession {
   for (const [id, s] of sessions)
     if (s.expires < Date.now()) sessions.delete(id);
   if (sessions.size >= 100) sessions.delete(sessions.keys().next().value!);
@@ -35,8 +36,9 @@ export function createSession(
     feedback: [],
     notices: passport.notices,
   };
-  sessions.set(state.id, state);
-  return state;
+  const session = normalizeSession(state);
+  sessions.set(state.id, session);
+  return session;
 }
 export function getSession(id: string): AgentState {
   const state = sessions.get(id);
@@ -60,9 +62,16 @@ export async function inSession<T>(
     const next = await run(state);
     next.state.revision = revision + 1;
     next.state.expires = Date.now() + 30 * 60_000;
+    if (!sessions.has(id)) throw Error("Passport was reset.");
     sessions.set(id, next.state);
     return next.value;
   } finally {
     locks.delete(id);
   }
+}
+
+export function discardSession(id: string) {
+  const old = sessions.get(id);
+  if (old) clearPassport(old);
+  sessions.delete(id);
 }

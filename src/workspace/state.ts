@@ -28,6 +28,7 @@ export interface Passport {
   notices: string[];
   explanation: string;
   agent?: AgentSession;
+  session?: import("../agent/types.ts").TastePassportSession;
 }
 export const destinations = ["New York City", "London", "Paris", "Tokyo"];
 export const sectionOrder: Section[] = [
@@ -82,7 +83,11 @@ export function activities(
   result?: Passport,
 ): Activity[] {
   const rows: Activity[] = [];
-  if(phase==='interpreting')return [{label:'Understanding your request',state:'active'},{label:'Resolve cultural signals',state:'waiting'}];
+  if (phase === "interpreting")
+    return [
+      { label: "Understanding your request", state: "active" },
+      { label: "Resolve cultural signals", state: "waiting" },
+    ];
   if (phase === "idle")
     return [{ label: "Waiting for your world", state: "waiting" }];
   rows.push({ label: "Taste draft prepared", state: "complete" });
@@ -122,7 +127,7 @@ export function typeLabel(candidate: Candidate) {
   return candidate.types
     .map((t) =>
       t.startsWith("urn:tag")
-        ? `cultural concept · ${t.split(":")[2]??"taste"}`
+        ? `cultural concept · ${t.split(":")[2] ?? "taste"}`
         : t.replace("urn:entity:", "").replaceAll("_", " "),
     )
     .join(" · ");
@@ -139,4 +144,28 @@ export function onboardingTastes(intent: Intent): string[] {
       [...intent.seeds, ...intent.concepts].map((text) => [key(text), text]),
     ).values(),
   ];
+}
+
+/** Read-only rendering projection of the canonical session, not another state machine. */
+export function passportView(
+  session: import("../agent/types.ts").TastePassportSession,
+  explanation: string,
+): Passport {
+  return {
+    city: session.city,
+    selected: session.selected,
+    cards: session.cards.filter(
+      (c) => !session.hiddenCategories.includes(c.section),
+    ),
+    notices: session.notices,
+    explanation,
+    session,
+    agent: {
+      sessionId: session.id,
+      revision: session.revision,
+      tags: session.tags,
+      constraints: session.constraints,
+      pending: session.pending,
+    },
+  };
 }

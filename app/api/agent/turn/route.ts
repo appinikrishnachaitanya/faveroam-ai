@@ -1,6 +1,7 @@
 import { inSession } from "../../../../src/agent/store";
 import { runTurn } from "../../../../src/agent/orchestrator";
 import { agentDependencies } from "../../../../src/agent/runtime";
+import { sectionOrder } from "../../../../src/workspace/state";
 import { reasons } from "../../../../src/agent/types";
 import type { AgentInput } from "../../../../src/agent/types";
 export const runtime = "nodejs";
@@ -33,6 +34,42 @@ export async function POST(request: Request) {
       (typeof input.feedback.id !== "string" ||
         typeof input.feedback.accepted !== "boolean" ||
         (!input.feedback.accepted && !reasons.includes(input.feedback.reason!)))
+    )
+      throw Error();
+    const actions = [
+      input.message,
+      input.feedback,
+      input.tagChoice,
+      input.guided,
+      input.recovery,
+      input.reset,
+    ].filter((x) => x !== undefined);
+    if (actions.length !== 1) throw Error();
+    if (input.reset !== undefined && input.reset !== "conversation")
+      throw Error();
+    if (
+      input.guided &&
+      (!sectionOrder.includes(input.guided.section) ||
+        !Array.isArray(input.guided.constraints) ||
+        input.guided.constraints.length > 5 ||
+        input.guided.constraints.some(
+          (c) =>
+            ![
+              "touristy",
+              "crowded",
+              "mainstream",
+              "expensive",
+              "atmosphere",
+            ].includes(c),
+        ))
+    )
+      throw Error();
+    if (
+      input.recovery &&
+      (!sectionOrder.includes(input.recovery.section) ||
+        !["keep-concept", "relax-quiet", "allow-popular", "closest"].includes(
+          input.recovery.action,
+        ))
     )
       throw Error();
     if (input.tagChoice !== undefined && typeof input.tagChoice !== "string")
@@ -70,7 +107,7 @@ export async function POST(request: Request) {
         send({
           type: "error",
           message:
-            "Agentic refinement is temporarily unavailable or the session changed. Your existing passport is still available. Rebuild it if the session expired.",
+            "Refinement is temporarily unavailable or your Passport changed. Your discoveries are still here. Start a New Passport if your session expired.",
         });
       }
       controller.close();

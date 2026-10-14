@@ -46,6 +46,15 @@ export interface AgentState {
   feedback: FeedbackRecord[];
   intent?: Intent;
   notices: string[];
+  activeCategories?: Section[];
+  hiddenCategories?: Section[];
+  preferences?: Partial<Record<Section, string[]>>;
+  explorationMode?: "aligned" | "shortlist";
+  categoryTags?: Partial<Record<Section, string[]>>;
+  history?: { role: "user" | "agent"; text: string }[];
+  providerHealth?: "unconfigured" | "configured" | "healthy" | "unavailable";
+  recovery?: Section[];
+  relaxed?: { section: Section; constraints: Constraint[] }[];
   pending?: {
     query: string;
     candidates: Candidate[];
@@ -53,7 +62,20 @@ export interface AgentState {
     constraints: Constraint[];
     strategy?: Intent["strategy"];
     rankMcp?: boolean;
+    optional?: boolean;
   };
+}
+/** Fully initialized canonical state; AgentState also accepts legacy bootstrap fixtures. */
+export interface TastePassportSession extends AgentState {
+  activeCategories: Section[];
+  hiddenCategories: Section[];
+  preferences: Partial<Record<Section, string[]>>;
+  explorationMode: "aligned" | "shortlist";
+  categoryTags: Partial<Record<Section, string[]>>;
+  history: { role: "user" | "agent"; text: string }[];
+  providerHealth: "unconfigured" | "configured" | "healthy" | "unavailable";
+  recovery: Section[];
+  relaxed: { section: Section; constraints: Constraint[] }[];
 }
 export interface ToolDefinition {
   name: string;
@@ -80,6 +102,12 @@ export interface ToolResult {
   execution?: { transport?: string };
 }
 export interface AgentInput {
+  reset?: "conversation";
+  guided?: { section: Section; constraints: Constraint[] };
+  recovery?: {
+    section: Section;
+    action: "keep-concept" | "relax-quiet" | "allow-popular" | "closest";
+  };
   message?: string;
   feedback?: {
     id: string;
@@ -91,7 +119,7 @@ export interface AgentInput {
   tagChoice?: string;
 }
 export interface AgentReply {
-  state: AgentState;
+  state: TastePassportSession;
   changed: Section[];
   events: AgentEvent[];
   message: string;

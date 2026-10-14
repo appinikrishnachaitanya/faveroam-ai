@@ -1,5 +1,7 @@
 # TastePassport Agent — Phase 3
 
+The subsequent shared-state/guided refinement upgrade is documented in [SESSION_RELIABILITY.md](SESSION_RELIABILITY.md). That document supersedes the earlier provider messaging, hidden-section handling and one-shot empty-result behavior described below.
+
 ## Architecture
 
 One orchestration agent evolves the existing passport. It does not delegate to a swarm or treat generated text as discovery evidence.

@@ -33,9 +33,19 @@ export async function POST(request: Request) {
       : [];
     const result = await passport(b.city, b.token, b.ids, constraints);
     const state = createSession(result, constraints);
+    if (Array.isArray(b.history))
+      state.history = b.history
+        .filter(
+          (m: { role?: string; text?: unknown }) =>
+            ["user", "agent"].includes(m?.role ?? "") &&
+            typeof m.text === "string" &&
+            m.text.length <= 1200,
+        )
+        .slice(-30);
     return NextResponse.json(
       {
         ...result,
+        session: state,
         agent: {
           sessionId: state.id,
           revision: state.revision,

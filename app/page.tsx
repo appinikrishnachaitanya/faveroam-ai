@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { sendAgentTurn } from "../src/agent/browser";
 import type { Intent } from "../src/agent/types";
 import type { AgentInput, AgentEvent, Constraint } from "../src/agent/types";
+import GuidedRefinement, { RefinementRecovery } from "./components/guided";
 import FeedbackDialog from "./components/feedback";
 import type { Section } from "../src/passport/model";
 import type { Candidate } from "../src/passport/model";
@@ -12,6 +13,7 @@ import {
   extractDraft,
   typeLabel,
   onboardingTastes,
+  passportView,
 } from "../src/workspace/state";
 import type { Passport, Phase, Resolution } from "../src/workspace/state";
 import {
@@ -43,7 +45,7 @@ async function post<T>(path: string, body: unknown): Promise<T> {
   return data;
 }
 export default function Home() {
-  const [city, setCity] = useState("New York City");
+  const [city, setCity] = useState("");
   const [composer, setComposer] = useState("");
   const [messages, setMessages] = useState<Message[]>([welcome]);
   const [draft, setDraft] = useState<string[]>([]);
@@ -52,13 +54,13 @@ export default function Home() {
   const [chosen, setChosen] = useState<Record<number, string>>({});
   const [removed, setRemoved] = useState<number[]>([]);
   const [result, setResult] = useState<Passport>();
-  const [feedback, setFeedback] = useState<Record<string, Feedback>>({});
+
   const [error, setError] = useState("");
   const [dialog, setDialog] = useState<number>();
   const [editing, setEditing] = useState(false);
   const [constraints, setConstraints] = useState<Constraint[]>([]);
   const [conceptSeeds, setConceptSeeds] = useState<string[]>([]);
-  const [agentMode, setAgentMode] = useState("deterministic");
+  const [providerHealth, setProviderHealth] = useState("unconfigured");
   const [agentEvents, setAgentEvents] = useState<AgentEvent[]>([]);
   const [updating, setUpdating] = useState<Section[]>([]);
   const [updates, setUpdates] = useState<Partial<Record<Section, number>>>({});
@@ -68,19 +70,43 @@ export default function Home() {
   useEffect(() => {
     fetch("/api/agent/capabilities")
       .then((r) => r.json())
-      .then((d) => setAgentMode(d.mode))
+      .then((d) => setProviderHealth(d.health))
       .catch(() => {});
   }, []);
   const chatRef = useRef<HTMLDivElement>(null);
+  const agentScroll = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (result?.session && !["healthy", "configured"].includes(providerHealth))
+      agentScroll.current?.scrollTo({ top: 0 });
+  }, [result?.agent?.sessionId, providerHealth]);
   const matchOpener = useRef<HTMLButtonElement>(null);
   function closeDialog() {
     setDialog(undefined);
     requestAnimationFrame(() => matchOpener.current?.focus());
   }
   const busy =
-    phase === "resolving" || phase === "exploring" || phase === "refining" || phase === "interpreting";
-  const signals = confirmed(resolution, chosen);
-  const operationLabel=phase==='interpreting'?'Understanding your request…':phase==='resolving'?'Resolving cultural signals…':phase==='exploring'?`Exploring ${city}…`:agentEvents.at(-1)?.label??'Planning your refinement…';
+    phase === "resolving" ||
+    phase === "exploring" ||
+    phase === "refining" ||
+    phase === "interpreting";
+  const signals = result?.session?.selected ?? confirmed(resolution, chosen);
+  const feedback: Record<string, Feedback> = Object.fromEntries(
+    (result?.session?.feedback ?? []).map((f) => [
+      f.id,
+      f.accepted ? "like" : "dislike",
+    ]),
+  );
+  const visibleMessages = result?.session?.history ?? messages;
+  const conciergeAvailable =
+    providerHealth === "healthy" || providerHealth === "configured";
+  const operationLabel =
+    phase === "interpreting"
+      ? "Understanding your request…"
+      : phase === "resolving"
+        ? "Resolving cultural signals…"
+        : phase === "exploring"
+          ? `Exploring ${city}…`
+          : (agentEvents.at(-1)?.label ?? "Planning your refinement…");
   const activeItems =
     resolution?.items
       .map((item, index) => ({ item, index }))
@@ -92,7 +118,7 @@ export default function Home() {
   useEffect(() => {
     if (chatRef.current)
       chatRef.current.scrollTop = chatRef.current.scrollHeight;
-  }, [messages]);
+  }, [messages, result?.session?.history]);
   function say(text: string) {
     setMessages((m) => [...m, { role: "agent", text }]);
   }
@@ -101,7 +127,6 @@ export default function Home() {
     setChosen({});
     setRemoved([]);
     setResult(undefined);
-    setFeedback({});
     setPhase(nextPhase);
     setError("");
     setAgentEvents([]);
@@ -123,17 +148,21 @@ export default function Home() {
     setPhase("interpreting");
     setError("");
     try {
-      const interpreted = await post<{ intent: Intent; mode: string }>(
-        "/api/agent/interpret",
-        { message: text, city },
-      );
+      const interpreted = await post<{
+        intent: Intent;
+        mode: string;
+        health: string;
+      }>("/api/agent/interpret", {
+        message: text,
+        city: city || "New York City",
+      });
       const combined = onboardingTastes(interpreted.intent);
       const parsed = {
         city: interpreted.intent.destination ?? city,
         tastes: combined.length ? combined : extractDraft(text, city).tastes,
       };
       setConceptSeeds(interpreted.intent.concepts);
-      setAgentMode(interpreted.mode);
+      setProviderHealth(interpreted.health);
       setConstraints(interpreted.intent.constraints);
       setMessages((m) => [
         ...m,
@@ -177,34 +206,24 @@ export default function Home() {
             ...new Set([...sections, match[1] as Section]),
           ]);
       });
-      setResult({
-        ...result,
-        cards: reply.state.cards,
-        notices: reply.state.notices,
-        agent: {
-          sessionId: reply.state.id,
-          revision: reply.state.revision,
-          tags: reply.state.tags,
-          constraints: reply.state.constraints,
-          pending: reply.state.pending,
-        },
-      });
+      setResult(passportView(reply.state, result.explanation));
       setUpdates((u) => {
         const next = { ...u };
         for (const section of reply.changed)
           next[section] = (next[section] ?? 0) + 1;
         return next;
       });
-      setFeedback(
-        Object.fromEntries(
-          reply.state.feedback.map((f) => [
-            f.id,
-            f.accepted ? "like" : "dislike",
-          ]),
-        ),
-      );
-      setAgentMode(reply.mode);
-      say(reply.message);
+      setProviderHealth(reply.state.providerHealth ?? "unconfigured");
+      if (input.reset) {
+        setMessages([welcome]);
+        setComposer("");
+        setConstraints([]);
+        setConceptSeeds([]);
+        setConceptDialog(false);
+        setRejectionId(undefined);
+        setAgentEvents([]);
+        setUpdates({});
+      }
       setPhase("ready");
       if (input.feedback && !input.feedback.accepted)
         requestAnimationFrame(() =>
@@ -220,7 +239,7 @@ export default function Home() {
       );
       setPhase("ready");
       say(
-        "Agentic refinement is temporarily unavailable. Your existing TastePassport is still available.",
+        "Refinement is temporarily unavailable. Your existing TastePassport is still available. Try the guided controls.",
       );
     } finally {
       setUpdating([]);
@@ -272,7 +291,6 @@ export default function Home() {
     setChosen((c) => ({ ...c, [index]: id }));
     closeDialog();
     setResult(undefined);
-    setFeedback({});
     setPhase("confirming");
     const item = resolution?.items[index];
     const candidate = item?.candidates.find((c) => c.id === id);
@@ -291,17 +309,15 @@ export default function Home() {
     });
     setRemoved((r) => [...r, index]);
     setResult(undefined);
-    setFeedback({});
     setPhase("confirming");
     say(
       `Removed ${name ?? "that taste"} from the current selection. Keep at least three confirmed tastes to continue.`,
     );
   }
   async function generate() {
-    if (!resolution || !complete || busy) return;
+    if (!resolution || !complete || busy || !city) return;
     setError("");
     setResult(undefined);
-    setFeedback({});
     setAgentEvents([]);
     setUpdating([]);
     setPhase("exploring");
@@ -314,6 +330,7 @@ export default function Home() {
         token: resolution.token,
         ids: signals.map((s) => s.id),
         constraints,
+        history: messages,
       });
       setResult(r);
       setPhase("ready");
@@ -347,13 +364,23 @@ export default function Home() {
     requestAnimationFrame(() => feedbackOpener.current?.focus());
   }
   function fresh() {
-    setCity("New York City");
+    if (result?.agent)
+      void fetch("/api/agent/session", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId: result.agent.sessionId }),
+      });
+    setCity("");
     setComposer("");
     setMessages([welcome]);
     setDraft([]);
     setConstraints([]);
     setConceptSeeds([]);
     setEditing(false);
+    setUpdates({});
+    setDialog(undefined);
+    setRejectionId(undefined);
+    setConceptDialog(false);
     resetMatches("idle");
   }
   return (
@@ -370,7 +397,7 @@ export default function Home() {
         <span className="topbar-caption">Move anywhere. Keep your vibe.</span>
         <button className="quiet-button" onClick={fresh} disabled={busy}>
           <Icon name="plus" size={14} />
-          New passport
+          New Passport
         </button>
       </header>
       <div className="split-workspace">
@@ -380,7 +407,7 @@ export default function Home() {
               <Icon name="star" size={22} />
             </span>
             <div>
-              <h1 id="agent-title">TastePassport Agent</h1>
+              <h1 id="agent-title">Taste Concierge</h1>
               <p>
                 <span className="live-dot" />
                 Your cultural onboarding workspace
@@ -402,19 +429,50 @@ export default function Home() {
                 if (resolution) setPhase("confirming");
               }}
             >
+              <option value="" disabled>
+                Choose destination
+              </option>
               {destinations.map((c) => (
                 <option key={c}>{c}</option>
               ))}
             </select>
             <span>DESTINATION</span>
           </div>
-          {busy&&<div className="agent-current-operation" role="status"><span className="activity-pulse"/>{operationLabel}</div>}
-          <div className="agent-scroll">
-            <p className="agent-mode">
-              {agentMode === "model-mcp"
-                ? "Tool-calling concierge configured"
-                : "Supported refinement mode · open-ended model concierge unavailable"}
+          {busy && (
+            <div className="agent-current-operation" role="status">
+              <span className="activity-pulse" />
+              {operationLabel}
+            </div>
+          )}
+          <div className="agent-scroll" ref={agentScroll}>
+            <p className="agent-mode" role="status">
+              {conciergeAvailable
+                ? "Taste Concierge · conversation and guided controls"
+                : "Taste Concierge is temporarily unavailable. You can still refine your Passport."}
             </p>
+            {result?.agent && (
+              <button
+                className="text-button reset-conversation"
+                disabled={busy}
+                onClick={() => void refine({ reset: "conversation" })}
+              >
+                Reset conversation
+              </button>
+            )}
+            {result?.session && (
+              <GuidedRefinement
+                session={result.session}
+                disabled={busy}
+                onApply={(input) => void refine(input)}
+              />
+            )}
+            {result?.session && (
+              <RefinementRecovery
+                session={result.session}
+                disabled={busy}
+                onApply={(input) => void refine(input)}
+              />
+            )}
             <div
               className="conversation"
               ref={chatRef}
@@ -422,7 +480,7 @@ export default function Home() {
               role="log"
               aria-live="polite"
             >
-              {messages.map((m, i) => (
+              {visibleMessages.map((m, i) => (
                 <div className={`message ${m.role}`} key={i}>
                   <span className="message-label">
                     {m.role === "agent" ? "TASTEPASSPORT" : "YOU"}
@@ -434,6 +492,15 @@ export default function Home() {
             {phase === "idle" && (
               <div className="suggestion-prompts">
                 <span className="micro-label">A PLACE TO START</span>
+                <button
+                  onClick={() => {
+                    setDraft(["", "", ""]);
+                    setEditing(true);
+                    setPhase("review");
+                  }}
+                >
+                  Enter tastes without conversation
+                </button>
                 <button
                   onClick={() =>
                     setComposer(
@@ -620,7 +687,7 @@ export default function Home() {
                 )}
                 <button
                   className="primary-button"
-                  disabled={!complete || busy}
+                  disabled={!complete || busy || !city}
                   onClick={generate}
                 >
                   {phase === "exploring"
@@ -743,7 +810,7 @@ export default function Home() {
             </div>
             <div className="destination-title-row">
               <div>
-                <h2 id="passport-title">{city}</h2>
+                <h2 id="passport-title">{city || "Your next destination"}</h2>
                 <p>Your next chapter. Still unmistakably you.</p>
               </div>
               <span className={`workspace-status ${busy ? "working" : ""}`}>
@@ -762,6 +829,17 @@ export default function Home() {
           </div>
           <TasteDNA signals={signals} onRemove={removeSignal} disabled={busy} />
           <TranslationMap signals={signals} result={result} />
+          {result?.session && (
+            <p className="passport-mode">
+              Cultural mode:{" "}
+              {result.session.explorationMode === "shortlist"
+                ? "Your shortlist"
+                : "Aligned with your tastes"}
+              {result.session.hiddenCategories?.length
+                ? ` · Hidden: ${result.session.hiddenCategories.join(", ")}`
+                : ""}
+            </p>
+          )}
           {busy && phase !== "refining" && (
             <section
               className="exploration-state"
@@ -773,19 +851,25 @@ export default function Home() {
               </div>
               <div>
                 <span className="micro-label">
-                  {phase === "interpreting"?"UNDERSTANDING YOUR REQUEST":phase === "resolving"
-                    ? "LOOKING UP CULTURAL SIGNALS"
-                    : "EXPLORING YOUR NEW CITY"}
+                  {phase === "interpreting"
+                    ? "UNDERSTANDING YOUR REQUEST"
+                    : phase === "resolving"
+                      ? "LOOKING UP CULTURAL SIGNALS"
+                      : "EXPLORING YOUR NEW CITY"}
                 </span>
                 <h3>
-                  {phase === "interpreting"?"Preparing your cultural taste draft.":phase === "resolving"
-                    ? "Finding the entities behind your tastes."
-                    : `Exploring ${city}…`}
+                  {phase === "interpreting"
+                    ? "Preparing your cultural taste draft."
+                    : phase === "resolving"
+                      ? "Finding the entities behind your tastes."
+                      : `Exploring ${city}…`}
                 </h3>
                 <p>
-                  {phase === "interpreting"?"You’ll review the extracted tastes before any Qloo lookup.":phase === "resolving"
-                    ? "Matches appear after Qloo responds. You’ll confirm the intended entities."
-                    : "Requesting local places and music suggestions. Categories appear only after results return."}
+                  {phase === "interpreting"
+                    ? "You’ll review the extracted tastes before any Qloo lookup."
+                    : phase === "resolving"
+                      ? "Matches appear after Qloo responds. You’ll confirm the intended entities."
+                      : "Requesting local places and music suggestions. Categories appear only after results return."}
                 </p>
               </div>
               <div className="skeleton-grid" aria-hidden="true">
@@ -801,7 +885,12 @@ export default function Home() {
           )}
           {result ? (
             <PassportSections
-              result={result}
+              result={{
+                ...result,
+                cards: result.cards.filter(
+                  (c) => !result.session?.hiddenCategories?.includes(c.section),
+                ),
+              }}
               feedback={feedback}
               onFeedback={recordFeedback}
               updates={updates}
@@ -823,7 +912,7 @@ export default function Home() {
                   <p>
                     {signals.length
                       ? "Confirm your remaining signals, then build your cultural passport."
-                      : "Start with a conversation on the left. Your confirmed tastes will become a passport of real discoveries here."}
+                      : "Enter your tastes or start a conversation on the left. Your confirmed tastes will become a passport of real discoveries here."}
                   </p>
                 </div>
                 <span className="empty-ticket" aria-hidden="true">

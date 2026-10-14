@@ -223,7 +223,7 @@ test("provider failure falls back to deterministic refinement", async () => {
   const r = await runTurn(state(), { message: "Find more dining" }, d);
   assert.equal(r.mode, "deterministic");
   assert.deepEqual(r.changed, ["Eat"]);
-  assert.match(r.message, /deterministic/);
+  assert.match(r.message, /temporarily unavailable/);
 });
 test("guard bounds calls, prevents duplicates and expires stalled operations", async () => {
   const guard = new TurnGuard(1);
@@ -386,7 +386,8 @@ test("mixed concierge request hides coffee but refreshes food/books instead of d
     { message: "Forget coffee. Show me books and food." },
     dependencies(),
   );
-  assert.ok(!r.state.cards.some((c) => c.section === "Coffee"));
+  assert.ok(r.state.hiddenCategories?.includes("Coffee"));
+  assert.ok(r.state.cards.some((c) => c.section === "Coffee"));
   assert.ok(r.state.cards.some((c) => c.section === "Eat"));
   assert.ok(r.state.cards.some((c) => c.section === "Lifestyle"));
   assert.equal(
@@ -440,11 +441,34 @@ test("onboarding merges model concepts and named seeds without duplicating cuisi
   assert.equal(isConcept("A.R. Rahman"), false);
 });
 
-test('turn deadline aborts linked work and prevents later queued calls',async()=>{
- const guard=new TurnGuard(2,5);
- await assert.rejects(guard.run('slow',{},()=>new Promise<void>((_resolve,reject)=>guard.signal.addEventListener('abort',()=>reject(Error('cancelled'))))),/cancelled|timeout/);
- assert.equal(guard.signal.aborted,true);
- await assert.rejects(guard.run('later',{},async()=>1),/cancelled/);
+test("turn deadline aborts linked work and prevents later queued calls", async () => {
+  const guard = new TurnGuard(2, 5);
+  await assert.rejects(
+    guard.run(
+      "slow",
+      {},
+      () =>
+        new Promise<void>((_resolve, reject) =>
+          guard.signal.addEventListener("abort", () =>
+            reject(Error("cancelled")),
+          ),
+        ),
+    ),
+    /cancelled|timeout/,
+  );
+  assert.equal(guard.signal.aborted, true);
+  await assert.rejects(
+    guard.run("later", {}, async () => 1),
+    /cancelled/,
+  );
 });
 
-test("interpretation activity does not pretend Qloo resolution started",async()=>{const {activities}=await import("../src/workspace/state.ts");const rows=activities("interpreting","New York City");assert.equal(rows[0].label,"Understanding your request");assert.equal(rows.find(r=>r.label==="Resolve cultural signals")?.state,"waiting")});
+test("interpretation activity does not pretend Qloo resolution started", async () => {
+  const { activities } = await import("../src/workspace/state.ts");
+  const rows = activities("interpreting", "New York City");
+  assert.equal(rows[0].label, "Understanding your request");
+  assert.equal(
+    rows.find((r) => r.label === "Resolve cultural signals")?.state,
+    "waiting",
+  );
+});

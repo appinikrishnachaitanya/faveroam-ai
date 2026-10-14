@@ -1,3 +1,4 @@
+import { conciergeUnavailable } from "../../../../src/agent/health";
 import { NextResponse } from "next/server";
 import { configuredProvider } from "../../../../src/agent/provider";
 import {
@@ -22,6 +23,7 @@ export async function POST(request: Request) {
           {
             intent: validateIntent(await provider.interpret(b.message)),
             mode: "model-mcp",
+            health: "healthy",
           },
           { headers: { "Cache-Control": "no-store" } },
         );
@@ -30,8 +32,8 @@ export async function POST(request: Request) {
       {
         intent: interpret(b.message, b.city),
         mode: "deterministic",
-        notice:
-          "Model-driven conversation is unavailable. Supported deterministic interpretation is active.",
+        health: provider ? "unavailable" : "unconfigured",
+        notice: conciergeUnavailable,
       },
       { headers: { "Cache-Control": "no-store" } },
     );

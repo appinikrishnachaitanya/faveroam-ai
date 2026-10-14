@@ -1,4 +1,5 @@
 import "server-only";
+import { sectionTags } from "./session.ts";
 import { workflow, discoverTools } from "./harness.ts";
 import { configuredProvider } from "./provider.ts";
 import { tagCandidates, validateDiscoveries } from "./validation.ts";
@@ -63,7 +64,7 @@ export async function discoverSection(
   constraints: Constraint[],
   excluded: string[],
   rank: boolean,
-  signal?:AbortSignal,
+  signal?: AbortSignal,
 ): Promise<Card[]> {
   const type = section === "Music" ? "artist" : "place";
   const entityIds = state.selected
@@ -81,7 +82,7 @@ export async function discoverSection(
   params[type === "place" ? "filter.location.query" : "signal.location.query"] =
     state.city;
   if (type === "place") params["filter.location.radius"] = "0";
-  const tags = state.tags.filter(
+  const tags = sectionTags(state, section).filter(
     (t) =>
       t.id.includes(":place:") ||
       t.id.includes(":restaurant:") ||
@@ -89,10 +90,16 @@ export async function discoverSection(
       t.id.includes(":ambience:"),
   );
   if (section === "Eat") {
-    const cuisine = tags.filter((t) =>
-      /indian|biryani|cuisine|restaurant/i.test(`${t.name} ${t.detail}`),
+    const cuisine = tags.filter(
+      (t) =>
+        !t.id.includes(":ambience:") &&
+        /indian|biryani|cuisine|restaurant/i.test(
+          `${t.id} ${t.name} ${t.detail}`,
+        ),
     );
-    const atmosphere = tags.filter((t) => t.id.includes(":ambience:"));
+    const atmosphere = constraints.includes("crowded")
+      ? tags.filter((t) => t.id.includes(":ambience:"))
+      : [];
     params["filter.tags"] = [
       "urn:tag:genre:place:restaurant",
       ...cuisine.map((t) => t.id),
@@ -102,7 +109,7 @@ export async function discoverSection(
   } else if (type === "place" && tags.length) {
     const relevant = tags.filter(
       (t) =>
-        t.id.includes(":ambience:") ||
+        (constraints.includes("crowded") && t.id.includes(":ambience:")) ||
         (section === "Coffee" && /coffee|caf[eé]/i.test(t.name)) ||
         (section === "Lifestyle" && /book|shop/i.test(t.name)) ||
         (section === "Culture" &&
@@ -114,7 +121,7 @@ export async function discoverSection(
     }
   }
   if (type === "artist") {
-    const musicTags = state.tags.filter(
+    const musicTags = sectionTags(state, section).filter(
       (t) => !/:place:|:restaurant:|:cuisine:|:ambience:/.test(t.id),
     );
     if (musicTags.length)
@@ -152,7 +159,7 @@ export async function discoverSection(
         .map((s) => s.name),
     ),
   ];
-  const result = await insights(params,signal);
+  const result = await insights(params, signal);
   return validateDiscoveries(
     result.body,
     state.city,

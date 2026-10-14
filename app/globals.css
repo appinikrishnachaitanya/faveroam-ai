@@ -8,3 +8,21 @@
 .agent-current-operation{display:flex;gap:9px;align-items:center;padding:12px 24px;background:#263c34;color:#ecd1a4;font-size:11px;border-block:1px solid #405646;flex-shrink:0}
 
 .agent-current-operation,.activity-row{overflow-wrap:anywhere}.activity-row>span:nth-child(2){min-width:0}
+
+.guided-panel,.refinement-recovery {border:1px solid var(--border, #dedad2);border-radius:14px;padding:16px;margin:12px 0;background:#fffdf8;}
+.guided-panel select {display:block;width:100%;padding:9px;margin:8px 0 12px;border:1px solid #dedad2;border-radius:8px;background:white;}
+.guided-panel fieldset {border:0;padding:0;margin:12px 0;display:flex;flex-wrap:wrap;gap:10px;}
+.guided-panel legend {font-size:12px;font-weight:600;margin-bottom:8px;}
+.guided-panel label {font-size:12px;display:flex;align-items:center;gap:6px;}
+.guided-panel input {accent-color:#627857;}
+.refinement-recovery h3 {font-size:15px;margin:0 0 8px;}
+.refinement-recovery p {font-size:12px;line-height:1.6;}
+.refinement-recovery>div {display:flex;flex-wrap:wrap;gap:7px;}
+.refinement-recovery button {font-size:11px;padding:7px;}
+.passport-mode {font-size:12px;color:#65705e;margin:16px 0;}
+.reset-conversation {margin:4px 0 12px;}
+
+.guided-panel,.refinement-recovery {color:var(--ink);}
+.guided-panel .helper {color:var(--muted);}
+.guided-panel .small-heading>span {color:var(--muted);}
+.refinement-recovery .quiet-button {border:1px solid var(--line);border-radius:8px;}

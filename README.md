@@ -2,7 +2,7 @@
 
 A Next.js, TypeScript, Tailwind App Router product built on the validated Qloo spike. Enter 3–5 tastes, confirm each actual Qloo match, then generate a destination passport. No database, authentication, or deployment. The tool-calling model layer is optional.
 
-Phase 3 adds one structured TastePassport Agent with real section-level feedback/refinement.
+One structured TastePassport session supports both guided controls and conversation, with category-scoped refinement, full Passport reset, conversation-only reset, provider health and progressive empty-result recovery. See [session reliability and validation](docs/SESSION_RELIABILITY.md).
 
 The UI provides a conversational agent panel and living passport with explicit match dialogs, confirmed Taste DNA, collective taste translation and Qloo-backed feedback updates. See [workspace behavior and validation](docs/UI_WORKSPACE.md).
 
@@ -59,8 +59,10 @@ See [API choices](docs/QLOO_API.md) and [feasibility status](docs/FEASIBILITY.md
 
 One agent maintains a bounded session profile and updates only affected categories. Known entity/discovery queries reuse the proven Qloo client. Concepts use official `@qloo/qloo-harness@0.1.26` workflows; an optional tool-calling model dynamically selects discovered `qloo_find_tags` / `qloo_rank` MCP tools. Qloo remains the sole source of discovery entities and metadata.
 
-Without a model, supported deterministic cuisine/category refinements and Not My Vibe still work; the UI labels open-ended model conversation as unavailable. With a provider, configure server-only `AGENT_MODEL_API_KEY`, `AGENT_MODEL_BASE_URL` (OpenAI-compatible HTTPS API base) and `AGENT_MODEL_NAME`. No specific model is assumed. Secure proxy bindings must allow the chosen provider hostname. Never paste credentials into chat, commit them, or use NEXT_PUBLIC_ prefixes. The harness receives no model credentials.
+Without a model, guided onboarding/refinement and Not My Vibe still work. The UI offers guided controls with friendly concierge availability messaging. With a provider, configure server-only `AGENT_MODEL_API_KEY`, `AGENT_MODEL_BASE_URL` (OpenAI-compatible HTTPS API base) and `AGENT_MODEL_NAME`. No specific model is assumed. Secure proxy bindings must allow the chosen provider hostname. Never paste credentials into chat, commit them, or use NEXT_PUBLIC_ prefixes. The harness receives no model credentials.
 
 Example: build an NYC passport using Rahman, Interstellar and a confirmed Indian cuisine concept, then ask “Tonight I want Indian food but somewhere that doesn't feel too touristy.” Not My Vibe asks for a reason and requests replacements only for that category. Concept ambiguity always requires confirmation. Music is not a local concert schedule; quiet tags do not prove crowd levels. Sessions expire and disappear on server restart.
 
 See [Agent architecture, guardrails and validation](docs/AGENT_ARCHITECTURE.md). Historical UI-only behavior in docs/UI_WORKSPACE.md describes the previous phase; its session-only feedback limitation is superseded by Phase 3.
+
+Gemini can use `AGENT_MODEL_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai` with a securely configured `AGENT_MODEL_API_KEY` and an available function-calling `AGENT_MODEL_NAME`. This deployment has not been live-tested with Gemini.

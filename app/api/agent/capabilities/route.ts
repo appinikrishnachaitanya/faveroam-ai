@@ -1,3 +1,7 @@
+import {
+  providerHealth,
+  conciergeUnavailable,
+} from "../../../../src/agent/health";
 import { NextResponse } from "next/server";
 import { configuredProvider } from "../../../../src/agent/provider";
 export async function GET() {
@@ -8,10 +12,11 @@ export async function GET() {
   return NextResponse.json(
     {
       mode: enabled ? "model-mcp" : "deterministic",
+      health: providerHealth(enabled),
       refinement: true,
       notice: enabled
-        ? "Model-driven tool selection configured."
-        : "Optional model provider not configured. Deterministic cultural refinement remains available.",
+        ? "Taste Concierge is ready to try."
+        : conciergeUnavailable,
     },
     { headers: { "Cache-Control": "no-store" } },
   );
