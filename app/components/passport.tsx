@@ -364,6 +364,7 @@ export function DiscoveryCard({
 }) {
   return (
     <article
+      data-entity-id={card.id}
       className={`discovery-card card-${card.section.toLowerCase()} ${feedback === "dislike" ? "muted-card" : ""}`}
     >
       <div className="card-header">

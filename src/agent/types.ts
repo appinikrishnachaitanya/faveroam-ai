@@ -20,6 +20,7 @@ export interface Intent {
   sections: Section[];
   strategy: "discover" | "rank" | "filter";
   hide?: Section[];
+  familiarity?: import("../passport/evidence.ts").Familiarity;
 }
 export interface AgentEvent {
   label: string;
@@ -41,10 +42,12 @@ export interface AgentState {
   tags: Candidate[];
   constraints: Constraint[];
   categoryConstraints: Partial<Record<Section, Constraint[]>>;
+  categoryConcepts?: Partial<Record<Section, string[]>>;
   cards: Card[];
   previous: Card[];
   feedback: FeedbackRecord[];
   intent?: Intent;
+  comparison?: import("./comparison.ts").ComparisonSnapshot;
   notices: string[];
   activeCategories?: Section[];
   hiddenCategories?: Section[];
@@ -67,6 +70,7 @@ export interface AgentState {
     strategy?: Intent["strategy"];
     rankMcp?: boolean;
     optional?: boolean;
+    request?: string;
   };
 }
 /** Fully initialized canonical state; AgentState also accepts legacy bootstrap fixtures. */
@@ -76,6 +80,7 @@ export interface TastePassportSession extends AgentState {
   preferences: Partial<Record<Section, string[]>>;
   explorationMode: "aligned" | "shortlist";
   discoveryMode: import("../passport/evidence.ts").Familiarity;
+  categoryConcepts: Partial<Record<Section, string[]>>;
   categoryModes: Partial<
     Record<Section, import("../passport/evidence.ts").Familiarity>
   >;
@@ -99,11 +104,13 @@ export interface ModelProvider {
   baseline?(
     destination: string,
     tastes: string[],
+    request: string,
   ): Promise<{
     text: string;
     model: string;
     generatedAt: string;
     source: "model-only";
+    request: string;
   }>;
   choose(
     text: string,

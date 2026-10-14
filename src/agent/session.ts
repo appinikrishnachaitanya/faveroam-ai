@@ -16,6 +16,7 @@ export function normalizeSession(state: AgentState): TastePassportSession {
   state.explorationMode ??= "aligned";
   state.discoveryMode ??= "familiar";
   state.categoryModes ??= {};
+  state.categoryConcepts ??= {};
   state.history ??= [];
   state.recovery ??= [];
   state.relaxed ??= [];
@@ -29,6 +30,7 @@ export function resetConversation(original: AgentState): TastePassportSession {
   state.history = [];
   state.constraints = [];
   state.categoryConstraints = {};
+  state.categoryConcepts = {};
   state.preferences = {};
   state.explorationMode = "aligned";
   state.tags = state.selected.filter((t) => t.id.startsWith("urn:tag:"));
@@ -38,6 +40,7 @@ export function resetConversation(original: AgentState): TastePassportSession {
   state.previous = [];
   delete state.pending;
   delete state.intent;
+  delete state.comparison;
   return state;
 }
 export function clearPassport(original: AgentState): TastePassportSession {

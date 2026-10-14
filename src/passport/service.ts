@@ -163,6 +163,6 @@ export async function passport(
     cards: [...new Map(cards.map((c) => [c.id, c])).values()],
     notices,
     explanation:
-      "Queried using all confirmed taste signals. Qloo did not provide individual signal attribution.",
+      "Used confirmed cultural signals for each query. Qloo did not provide individual signal attribution.",
   };
 }

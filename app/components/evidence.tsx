@@ -11,7 +11,7 @@ export default function EvidenceDetails({ card }: { card: Card }) {
   return (
     <details className="qloo-evidence">
       <summary>
-        Qloo evidence <span>Inspect the receipt ↗</span>
+        View Qloo evidence <span>Inspect the receipt ↗</span>
       </summary>
       {e.strategyNote && <p className="mode-caption">{e.strategyNote}</p>}
       <dl>

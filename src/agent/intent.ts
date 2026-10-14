@@ -49,7 +49,7 @@ export function isConcept(text: string) {
 export function interpret(text: string, fallback = "New York City"): Intent {
   culturalText(text);
   const constraints = constraintsFrom(text);
-  const onboarding = /\b(?:i love|i like|i enjoy|i'm into|my tastes)\b/i.test(
+  const onboarding = /\b(?:i love|i like|i enjoy|i'm into|my tastes (?:are|include))\b/i.test(
     text,
   );
   const clean = text.replace(/\bI (?:don't|do not|dislike|hate)[\s\S]*$/i, "");
@@ -58,7 +58,8 @@ export function interpret(text: string, fallback = "New York City"): Intent {
   if (/food|dining|restaurant|biryani|indian/i.test(text)) sections.push("Eat");
   if (/coffee|caf[eé]/i.test(text)) sections.push("Coffee");
   if (/music|musical|concert/i.test(text)) sections.push("Music");
-  if (/culture|museum|gallery|film/i.test(text)) sections.push("Culture");
+  if (/cultur(?:e|al)|museum|gallery|film/i.test(text))
+    sections.push("Culture");
   if (/book|lifestyle|shop/i.test(text)) sections.push("Lifestyle");
   const concepts = /indian|biryani/i.test(text)
     ? [/biryani/i.test(text) ? "biryani" : "Indian cuisine"]
@@ -79,7 +80,7 @@ export function interpret(text: string, fallback = "New York City"): Intent {
   if (/food|dining/i.test(hidePart)) hidden.push("Eat");
   if (/music/i.test(hidePart)) hidden.push("Music");
   if (/book|lifestyle/i.test(hidePart)) hidden.push("Lifestyle");
-  if (/culture/i.test(hidePart)) hidden.push("Culture");
+  if (/cultur(?:e|al)/i.test(hidePart)) hidden.push("Culture");
   const activeSections = sections.filter((s) => !hidden.includes(s));
   const refine =
     !onboarding &&
@@ -102,6 +103,13 @@ export function interpret(text: string, fallback = "New York City"): Intent {
     constraints,
     sections: hide && !activeSections.length ? hidden : activeSections,
     hide: hidden,
+    ...(/adventurous|explore|broader/i.test(text) && !onboarding
+      ? { familiarity: "explore" as const }
+      : /balanced/i.test(text) && !onboarding
+        ? { familiarity: "balanced" as const }
+        : /feels? like home|more familiar/i.test(text) && !onboarding
+          ? { familiarity: "familiar" as const }
+          : {}),
     strategy: /rank|reorder|shortlist/i.test(text)
       ? "rank"
       : hide
@@ -144,6 +152,11 @@ export function validateIntent(raw: unknown): Intent {
     !destinations.includes(String(x.destination))
   )
     throw Error("Unsupported destination");
+  if (
+    x.familiarity !== undefined &&
+    !["familiar", "balanced", "explore"].includes(String(x.familiarity))
+  )
+    throw Error("Invalid familiarity mode");
   for (const value of [...(x.seeds as string[]), ...(x.concepts as string[])])
     culturalText(value, 100);
   return {
@@ -153,6 +166,9 @@ export function validateIntent(raw: unknown): Intent {
     concepts: x.concepts as string[],
     constraints: x.constraints as Constraint[],
     sections: x.sections as Section[],
+    ...(x.familiarity
+      ? { familiarity: x.familiarity as Intent["familiarity"] }
+      : {}),
     ...(x.destination ? { destination: String(x.destination) } : {}),
     ...(Array.isArray(x.hide)
       ? {

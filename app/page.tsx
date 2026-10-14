@@ -140,7 +140,9 @@ export default function Home() {
     setComposer("");
     if (
       result?.agent &&
-      !/\b(?:i love|my tastes|i'm moving|i’m moving)\b/i.test(text)
+      !/\b(?:i love|my tastes (?:are|include)|i'm moving|i’m moving)\b/i.test(
+        text,
+      )
     ) {
       setMessages((m) => [...m, { role: "user", text }]);
       await refine({ message: text });
@@ -498,8 +500,8 @@ export default function Home() {
                     BENGALURU <b>→</b> TORONTO
                   </span>
                   <p>
-                    A software engineer starting a new chapter. Rahman on
-                    repeat, Interstellar after work, Indian food and a good
+                    An Indian software engineer starting a new chapter. Rahman
+                    on repeat, Interstellar after work, Indian food and a good
                     coffee ritual.
                   </p>
                   <small>
@@ -882,7 +884,6 @@ export default function Home() {
             <ModelComparison
               key={result.session.id}
               session={result.session}
-              cards={result.cards}
               available={conciergeAvailable}
             />
           )}

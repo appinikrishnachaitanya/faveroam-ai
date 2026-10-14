@@ -122,6 +122,26 @@ export async function discoverSection(
       params["operator.filter.tags"] = "intersection";
     }
   }
+  // Returned by live qloo_find_tags("museum") in final acceptance. This is a
+  // category starting point, not a fabricated personal taste or relationship.
+  if (
+    section === "Culture" &&
+    !state.intent?.concepts.length &&
+    !tags.some(
+      (t) =>
+        !t.id.includes(":ambience:") &&
+        /museum|culture|gallery|theatre/i.test(t.name),
+    )
+  ) {
+    params["filter.tags"] = [
+      "urn:tag:genre:place:museum",
+      ...(params["filter.tags"] ?? "").split(",").filter(Boolean),
+    ].join(",");
+    params["operator.filter.tags"] = "intersection";
+    state.notices.push(
+      "Your Culture chapter starts with museums. Name a more specific cultural interest to guide the next search.",
+    );
+  }
   if (type === "artist") {
     const musicTags = sectionTags(state, section).filter(
       (t) => !/:place:|:restaurant:|:cuisine:|:ambience:/.test(t.id),
@@ -184,5 +204,13 @@ export async function discoverSection(
     }
   }
   if (!pools.some((pool) => pool.length) && failure) throw failure;
+  if (failure && pools.some((pool) => pool.length)) {
+    const note =
+      "One discovery pool is temporarily unavailable. The available Qloo matches are shown.";
+    state.notices.push(note);
+    for (const pool of pools)
+      for (const card of pool)
+        if (card.evidence) card.evidence.strategyNote = note;
+  }
   return mixPools(pools);
 }

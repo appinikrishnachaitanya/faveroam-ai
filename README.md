@@ -1,70 +1,79 @@
-# TastePassport AI workspace
+# TastePassport AI
 
-A Next.js, TypeScript, Tailwind App Router product built on the validated Qloo spike. Enter 3–5 tastes, confirm each actual Qloo match, then generate a destination passport. No database, authentication, or deployment. The tool-calling model layer is optional.
+**Move anywhere. Keep your vibe.**
 
-**Move anywhere. Keep your vibe.** TastePassport is a cultural onboarding product for people relocating to an unfamiliar city. One structured session supports guided controls and conversation, grounded Taste DNA, an auditable Cultural Bridge Map, Familiar/Balanced/Explore query strategies, category feedback and reliable resets. See [cultural onboarding, strategies and live validation](docs/CULTURAL_ONBOARDING.md) and [session reliability](docs/SESSION_RELIABILITY.md).
+TastePassport translates confirmed food, music, film and cultural interests into Qloo-backed discoveries in an unfamiliar city. Guided controls and the conversational Taste Concierge share one structured session. The Bengaluru → Toronto persona is editable demo content; only explicitly confirmed Qloo matches become taste signals.
 
-The UI provides a conversational agent panel and living passport with explicit match dialogs, confirmed Taste DNA, collective taste translation and Qloo-backed feedback updates. See [workspace behavior and validation](docs/UI_WORKSPACE.md).
+The six core capabilities are:
 
-## Development
+- **Taste DNA:** inspect and remove confirmed entities and tags, without invented personality scores.
+- **Cultural Bridge Map:** trace actual query/result relationships from your tastes to destination discoveries.
+- **Feels Like Home ↔ Help Me Explore:** Familiar, Balanced and Explore execute different retrieval strategies.
+- **Qloo evidence:** inspect returned metadata and the query receipt behind each discovery.
+- **Not My Vibe:** reject an entity and replan its category while preserving the remaining Passport.
+- **Taste Concierge:** refine preferences, switch categories and update the same state as guided controls.
 
-Node.js 24.19.0 / npm 11.9.0.
+## Reproducible setup
+
+Requires Node.js 24+ and npm. Validated with Node 24.19.0 / npm 11.9.0.
 
 ```sh
-npm install --cache /tmp/tastepassport-npm-cache
-npm run dev
+npm ci
+npm run dev -- --port 3000
 ```
 
-Configure server-only `QLOO_API_KEY` securely in environment settings and `QLOO_API_BASE_URL=https://hackathon.api.qloo.com`. For local development, copy `.env.example` to ignored `.env`. Never prefix these variables with NEXT_PUBLIC_, commit secrets, or publish raw Qloo responses. In cloud settings the secret destination must permit hackathon.api.qloo.com. Startup enables Node HTTPS proxy support.
+Configure server-only `QLOO_API_KEY` securely in the runtime environment and `QLOO_API_BASE_URL=https://hackathon.api.qloo.com`. Local development may use an ignored `.env.local` copied from `.env.example`. Never put credentials in `NEXT_PUBLIC_` variables, browser code, source control or chat. Cloud secret bindings must permit the Qloo hostname. Start scripts enable Node environment-proxy support.
 
 ```sh
 npm run typecheck
 npm test
 npm run build
-npm start
+npm start -- --port 3000
 ```
 
-The home page contains setup, explicit match confirmation, and the resulting passport. Available result sections depend on actual returned metadata; no placeholder recommendations. NYC is validated; London, Paris and Tokyo are exploratory. Music recommendations are audience-context suggestions, not local events. See [MVP behavior](docs/MVP.md) for filtering, retries, caching, and limitations.
+Deploy to a host supporting a persistent Node process and child processes for the official Qloo harness. This task does not deploy the application. Sessions and caches are bounded, in-memory and lost on restart; multiple replicas need shared state or session affinity. Music suggestions reflect audience taste, not local concert availability. Place coverage and metadata depend on Qloo.
 
-## Preserved feasibility spike
+## Optional Gemini conversation layer
 
+Guided discovery, feedback and deterministic conversation refinements work without an LLM. For Gemini's OpenAI-compatible function-calling endpoint, securely configure:
 
-Tests taste entity resolution, cross-domain recommendations, and New York City place filtering. No UI, database, authentication, LLM, or deployment.
+```text
+AGENT_MODEL_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
+AGENT_MODEL_NAME=<available function-calling model>
+AGENT_MODEL_API_KEY=<secure runtime secret>
+```
 
-## Run
-
-Validated tooling: Node.js 24.19.0, npm 11.9.0. Node 24 runs the TypeScript directly; the spike enables `--use-env-proxy` for cloud HTTPS routing; development dependencies only provide type checking.
+Allow the provider hostname in cloud secret bindings. The model interprets requests and can select real discovered Qloo MCP tools; deterministic operations retain the validated native API path. The model is never the source of Qloo entities, addresses or scores.
 
 ```sh
-npm ci
-npm run typecheck
-npm test
+npm run verify:gemini
 ```
 
-Configure `QLOO_API_KEY` securely in cloud environment settings. For local development, copy `.env.example` to the ignored `.env` and enter the key there. The application reads only `process.env.QLOO_API_KEY`; Node's `--env-file-if-exists` loads local configuration. Never share, log, commit, or put the key in browser code. HTTPS access to `hackathon.api.qloo.com` is required.
+This acceptance probe requires a configured provider, verifies a genuine live model-selected Qloo MCP operation, and generates a live baseline without Qloo tools for the same request. Missing configuration exits with status 2 before making calls. Live Gemini acceptance is **not yet verified** in this environment. A saved environment configuration draft must be completed and published to activate credentials.
+
+The optional judge comparison pairs the exact refinement request with a frozen snapshot of its actual Qloo results. It is hidden without a configured provider or eligible request; it never uses a fabricated baseline.
+
+## Toronto demo
+
+Start a New Passport, select the Bengaluru → Toronto sample, and confirm A.R. Rahman, Interstellar (2014) and Indian cuisine. Build the Passport, inspect DNA and bridge receipts, and change Eat from Familiar to Explore. Then try:
+
+1. “Tonight I want Indian food, quiet atmosphere, and nothing too touristy.”
+2. Not My Vibe → Too mainstream on an Eat card.
+3. “Forget food. Show me something cultural.”
+4. “Give me something more adventurous but still connected to my tastes.”
+
+Save a recommendation with My Vibe before asking “I liked this. Find me something with a similar vibe.” Reset conversation preserves the Passport; New Passport clears the session. Quiet/crowded/price metadata is incomplete and is not a guarantee about current conditions.
+
+See [final readiness and acceptance results](docs/FINAL_READINESS.md), [cultural strategies](docs/CULTURAL_ONBOARDING.md), [agent architecture](docs/AGENT_ARCHITECTURE.md) and [session reliability](docs/SESSION_RELIABILITY.md). Earlier phase documents describe their historical validation; the final readiness report records this pass.
+
+## Preserved feasibility spike
 
 ```sh
 npm run spike
 ```
 
-The terminal prints resolved names, IDs, types, metadata, requests, real discoveries, and failures. `.spike-output/latest.json` stores ignored, key-redacted live evidence after completed experiments. No mocks replace live results. A missing key fails with exit status 1 before any requests. Authentication and rate-limit failures stop the run; other experiment failures are reported individually. Empty and insufficient results fail the overall run. The file is overwritten only on a completed run; check its timestamp before using it as evidence.
+The spike uses Node's ignored `.env` file when present or securely configured environment variables. It resolves cultural seeds and tests native Qloo discovery and locality. It prints public catalog/result evidence, never credentials, and saves ignored evidence under `.spike-output/`. Check evidence timestamps; unit tests do not prove live Qloo behavior. See [feasibility verdict](docs/FEASIBILITY.md) and [validated API choices](docs/QLOO_API.md).
 
-Resolution is deliberately conservative: accept one exact normalized name/type match among five candidates; Interstellar must have release year 2014. Ambiguity, missing metadata, and aliases remain unresolved for manual review. Biryani is attempted as an entity, not treated as an invented cuisine tag. No seed substitutions occur. Additional catalog/tag investigation may be needed.
+## Open-source release
 
-Physical results use `filter.location.query=New York City` and `filter.location.radius=0`. Music, book, and brand experiments use `signal.location.query`, which reflects audience taste, **not** local venue availability. Places can cover dining, shops, and cultural venues; categories are not guaranteed. Live-validated affinity at `query.affinity` is shown raw only if present, without rescaling. Search `types` arrays are supported. API documentation describes affinity as recommendation strength, not satisfaction probability; its pages disagree on scale.
-
-See [API choices](docs/QLOO_API.md) and [feasibility status](docs/FEASIBILITY.md). Passing unit tests validates local error handling, not Qloo behavior. After running with a key, review locality metadata, actual addresses, category coverage, and relevance before updating the feasibility verdict.
-
-## Agentic Architecture
-
-One agent maintains a bounded session profile and updates only affected categories. Known entity/discovery queries reuse the proven Qloo client. Concepts use official `@qloo/qloo-harness@0.1.26` workflows; an optional tool-calling model dynamically selects discovered `qloo_find_tags` / `qloo_rank` MCP tools. Qloo remains the sole source of discovery entities and metadata.
-
-Without a model, guided onboarding/refinement and Not My Vibe still work. The UI offers guided controls with friendly concierge availability messaging. With a provider, configure server-only `AGENT_MODEL_API_KEY`, `AGENT_MODEL_BASE_URL` (OpenAI-compatible HTTPS API base) and `AGENT_MODEL_NAME`. No specific model is assumed. Secure proxy bindings must allow the chosen provider hostname. Never paste credentials into chat, commit them, or use NEXT_PUBLIC_ prefixes. The harness receives no model credentials.
-
-Example: build an NYC passport using Rahman, Interstellar and a confirmed Indian cuisine concept, then ask “Tonight I want Indian food but somewhere that doesn't feel too touristy.” Not My Vibe asks for a reason and requests replacements only for that category. Concept ambiguity always requires confirmation. Music is not a local concert schedule; quiet tags do not prove crowd levels. Sessions expire and disappear on server restart.
-
-See [Agent architecture, guardrails and validation](docs/AGENT_ARCHITECTURE.md). Historical UI-only behavior in docs/UI_WORKSPACE.md describes the previous phase; its session-only feedback limitation is superseded by Phase 3.
-
-Gemini can use `AGENT_MODEL_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai` with a securely configured `AGENT_MODEL_API_KEY` and an available function-calling `AGENT_MODEL_NAME`. This deployment has not been live-tested with Gemini.
-
-The Bengaluru → Toronto sample contains editable taste queries; only confirmed Qloo matches enter Taste DNA. Every current discovery carries a collapsible Qloo receipt. The optional model-only comparison is generated live without Qloo tools and hidden when unavailable. No deployment has been performed.
+Licensed under [MIT](LICENSE). Setup and validation are reproducible from the repository. Public repository visibility still needs verification before hackathon submission; an authenticated Git read does not establish public access. No deployment or repository visibility change was performed in this task.

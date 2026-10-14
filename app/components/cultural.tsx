@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { AgentInput, TastePassportSession } from "../../src/agent/types";
 import type { Card, Section } from "../../src/passport/model";
 import { familiarities } from "../../src/passport/evidence";
@@ -80,6 +80,7 @@ export interface ModelBaseline {
   model: string;
   generatedAt: string;
   source: "model-only";
+  request?: string;
 }
 export function ComparisonPanel({
   baseline,
@@ -89,11 +90,19 @@ export function ComparisonPanel({
   cards: Card[];
 }) {
   if (!baseline) return null;
-  const grounded = cards.filter((c) => c.evidence?.result.id === c.id);
+  const grounded = cards.filter(
+    (c) => c.evidence?.source === "Qloo" && c.evidence?.result.id === c.id,
+  );
   return (
     <section className="comparison-panel" aria-labelledby="comparison-title">
       <span className="micro-label">WHAT CHANGES WHEN QLOO IS ADDED?</span>
       <h2 id="comparison-title">A suggestion, or a cultural bridge?</h2>
+      {baseline.request && (
+        <blockquote className="comparison-request">
+          <span>THE SAME USER REQUEST</span>
+          {baseline.request}
+        </blockquote>
+      )}
       <div className="comparison-columns">
         <article>
           <span className="comparison-label">
@@ -186,18 +195,29 @@ export function ComparisonPanel({
 }
 export function ModelComparison({
   session,
-  cards,
   available,
 }: {
   session: TastePassportSession;
-  cards: Card[];
   available: boolean;
 }) {
   const [baseline, setBaseline] = useState<ModelBaseline>();
+  const [comparedCards, setComparedCards] = useState<Card[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  if (!available && !baseline) return null;
+  const generation = useRef(0);
+  useEffect(() => {
+    generation.current++;
+    setBaseline(undefined);
+    setComparedCards([]);
+    setError("");
+    setBusy(false);
+    return () => {
+      generation.current++;
+    };
+  }, [session.id, session.comparison?.revision]);
+  if (!available || !session.comparison) return null;
   async function compare() {
+    const started = generation.current;
     setBusy(true);
     setError("");
     try {
@@ -208,14 +228,23 @@ export function ModelComparison({
       });
       if (!response.ok) throw Error();
       const data = await response.json();
-      if (data.baseline?.source !== "model-only") throw Error();
+      if (
+        data.baseline?.source !== "model-only" ||
+        typeof data.baseline.request !== "string" ||
+        data.baseline.request !== data.comparison?.request ||
+        !Array.isArray(data.comparison.cards)
+      )
+        throw Error();
+      if (started !== generation.current) return;
+      setComparedCards(data.comparison.cards);
       setBaseline(data.baseline);
     } catch {
+      if (started !== generation.current) return;
       setError(
         "The comparison is unavailable right now. Your Passport is still here.",
       );
     } finally {
-      setBusy(false);
+      if (started === generation.current) setBusy(false);
     }
   }
   return (
@@ -232,7 +261,7 @@ export function ModelComparison({
         </button>
         {error && <p role="status">{error}</p>}
       </div>
-      <ComparisonPanel baseline={baseline} cards={cards} />
+      <ComparisonPanel baseline={baseline} cards={comparedCards} />
     </>
   );
 }

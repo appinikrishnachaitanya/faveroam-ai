@@ -12,7 +12,8 @@
     "test": "node --import tsx --test tests/*.test.ts",
     "dev": "NODE_USE_ENV_PROXY=1 next dev --hostname 0.0.0.0",
     "build": "next build",
-    "start": "NODE_USE_ENV_PROXY=1 next start --hostname 0.0.0.0"
+    "start": "NODE_USE_ENV_PROXY=1 next start --hostname 0.0.0.0",
+    "verify:gemini": "NODE_USE_ENV_PROXY=1 node --conditions=react-server --import tsx scripts/verify-gemini-mcp.ts"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.3",

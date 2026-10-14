@@ -97,3 +97,5 @@ body{background:#e9e8e0}.living-passport{background:#f7f5ee;padding:28px}
 .signal-receipt p,.signal-receipt code,.signal-receipt small{display:block;position:static;background:transparent;width:auto;font-size:10px;line-height:1.8;color:#f6f1e2;overflow-wrap:anywhere}
 .signal-receipt code{margin:7px 0}.signal-receipt small{color:#c6d5bd}.bridge-column-labels{color:#58694c;font-size:9px}.bridge-inputs small,.bridge-pool-label{color:#5f7155}.qloo-evidence code{font-size:10px;color:#5b6e4d}
 .discovery-grid{align-items:start}
+.comparison-request{margin:16px 0 20px;padding:15px 18px;border-left:3px solid #a4b78c;background:#f3f3e8;border-radius:0 8px 8px 0;font-family:Georgia,serif;font-size:17px;line-height:1.7;overflow-wrap:anywhere}
+.comparison-request>span{display:block;font-family:Arial,sans-serif;font-size:8px;letter-spacing:1px;color:#63725b;margin-bottom:7px}

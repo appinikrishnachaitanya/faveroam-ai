@@ -4,6 +4,7 @@ import {
   guidedIntent,
   relaxationSteps,
 } from "./session.ts";
+import { captureComparison } from "./comparison.ts";
 import { recordProviderHealth } from "./health.ts";
 import { TurnGuard } from "./guard.ts";
 import {
@@ -60,6 +61,7 @@ export async function runTurn(
   let mode: AgentReply["mode"] = "deterministic";
   let fallback = "";
   let rememberedRank = false;
+  let comparedRequest = input.message;
   const event = (label: string, status: AgentEvent["status"]) => {
     const e = { label, status };
     events.push(e);
@@ -144,9 +146,14 @@ export async function runTurn(
     intent = {
       kind: "refine",
       seeds: [],
-      concepts: input.feedback.detail
-        ? interpret(input.feedback.detail).concepts
-        : [],
+      concepts: [
+        ...new Set([
+          ...(state.categoryConcepts[current.section] ?? []),
+          ...(input.feedback.detail
+            ? interpret(input.feedback.detail).concepts
+            : []),
+        ]),
+      ],
       sections: [current.section],
       constraints: [
         ...reasonConstraint(input.feedback.reason ?? ""),
@@ -158,6 +165,7 @@ export async function runTurn(
     };
   } else if (input.tagChoice) {
     const pending = state.pending;
+    comparedRequest = pending?.request;
     const tag = pending?.candidates.find((t) => t.id === input.tagChoice);
     if (!pending || !tag) throw Error("Choose a returned concept match.");
     state.tags = [...state.tags.filter((t) => t.id !== tag.id), tag].slice(-10);
@@ -212,7 +220,47 @@ export async function runTurn(
     return reply(
       "For this passport, name a section to refine, ask for cuisine or quietness, or select Not my vibe on a card. Start a new taste draft to change the destination or seeds.",
     );
-  const targets: Section[] = intent.sections.length ? intent.sections : ["Eat"];
+  const acceptedScope = state.feedback
+    .filter((f) => f.accepted)
+    .at(-1)?.section;
+  const refersToLike = Boolean(
+    input.message && /(?:i liked|similar vibe|like this)/i.test(input.message),
+  );
+  if (refersToLike && !acceptedScope && !intent.sections.length)
+    return reply(
+      "Save My vibe on a card first, or name a category, so I can use a real cultural anchor.",
+    );
+  const currentScope =
+    original.intent?.kind === "refine"
+      ? original.intent.sections.find(
+          (s) => !state.hiddenCategories.includes(s),
+        )
+      : undefined;
+  const modeScope =
+    currentScope ??
+    state.activeCategories.find((s) => !state.hiddenCategories.includes(s)) ??
+    "Eat";
+  const targets: Section[] = intent.sections.length
+    ? intent.sections
+    : [
+        refersToLike && acceptedScope
+          ? acceptedScope
+          : intent.familiarity
+            ? modeScope
+            : "Eat",
+      ];
+  if (intent.familiarity)
+    for (const section of targets)
+      state.categoryModes[section] = intent.familiarity;
+  if (input.familiarity || intent.familiarity)
+    for (const section of targets) delete state.categoryConcepts[section];
+  else if (intent.kind === "refine") {
+    if (!intent.concepts.length && targets.length === 1)
+      intent.concepts = [...(state.categoryConcepts[targets[0]] ?? [])];
+    for (const section of targets)
+      if (intent.concepts.length)
+        state.categoryConcepts[section] = [...intent.concepts];
+  }
   state.intent = { ...intent, sections: targets };
   state.explorationMode = intent.strategy === "rank" ? "shortlist" : "aligned";
   if (intent.kind !== "hide") {
@@ -343,20 +391,21 @@ export async function runTurn(
         modelChoices.some((c) => c.name === "qloo_find_tags")
           ? "mcp"
           : "exec";
-      const result = await guard.run(
-        "qloo_find_tags",
-        { query: concept, limit: 5 },
-        () =>
-          deps.workflow(
-            transport,
-            "qloo_find_tags",
-            {
-              query: concept,
-              limit: 5,
-            },
-            guard.signal,
-          ),
-      );
+      const args = { query: concept, limit: 5 };
+      let result: ToolResult;
+      try {
+        result = await guard.run("qloo_find_tags", args, () =>
+          deps.workflow(transport, "qloo_find_tags", args, guard.signal),
+        );
+        if (transport === "mcp" && result.status !== "ok")
+          throw Error("Concept transport unavailable");
+      } catch (error) {
+        if (transport !== "mcp") throw error;
+        event("Concept lookup is taking another supported route", "attention");
+        result = await guard.run("qloo_find_tags_exec_fallback", args, () =>
+          deps.workflow("exec", "qloo_find_tags", args, guard.signal),
+        );
+      }
       const choices = tagCandidates(result, concept).filter(
         (t) =>
           !/quiet/i.test(concept) ||
@@ -375,6 +424,7 @@ export async function runTurn(
               : "discover",
           rankMcp: modelChoices.some((c) => c.name === "qloo_rank"),
           optional: /quiet/i.test(concept),
+          request: comparedRequest,
         };
         event("Concept matches returned · your choice needed", "complete");
         if (!/quiet/i.test(concept))
@@ -616,6 +666,13 @@ export async function runTurn(
       "Affordable refinement uses Qloo price levels up to 2 when available; actual menu prices are not verified.",
     ];
   state.notices = [...new Set(state.notices)].slice(-10);
+  if (comparedRequest)
+    state.comparison = captureComparison(
+      state,
+      comparedRequest,
+      targets,
+      changed,
+    );
   return reply(
     changed.length
       ? `Updated ${changed.join(", ")} with Qloo discoveries. ${state.relaxed!.length ? "I couldn't find a strong match satisfying every preference, so these results prioritize your confirmed cultural tastes. Optional preferences relaxed: " + [...new Set(state.relaxed!.flatMap((r) => r.constraints))].map((c) => (c === "crowded" ? "quiet atmosphere" : c)).join(", ") + ". " : ""}${state.pending ? "You can also confirm the atmosphere concept to refine further. " : ""}Other sections and Taste DNA are unchanged.`

@@ -38,17 +38,16 @@ export function validatedSection(e: Entity): Section | undefined {
     .map((t) => String(t.name ?? ""))
     .join(" ")
     .toLowerCase();
-  if (
-    /government|consulate|hospital|airport|financial institution|tourist attraction|landmark/.test(
-      names,
-    )
-  )
+  if (/government|consulate|hospital|airport|financial institution/.test(names))
     return;
+  // Museums may also carry a tourist-attraction tag. Classification and the
+  // user's optional touristy avoidance are separate decisions.
+  if (/museum|gallery|theat(?:er|re)|concert|cinema/.test(names))
+    return "Culture";
+  if (/tourist attraction|landmark/.test(names)) return;
   if (/coffee|cafe|café|tea house/.test(names)) return "Coffee";
   if (/restaurant|dining|bakery|bistro|food court|pizza/.test(names))
     return "Eat";
-  if (/museum|gallery|theat(?:er|re)|concert|cinema/.test(names))
-    return "Culture";
   if (/bookstore|book shop|record store|boutique|shopping|yoga/.test(names))
     return "Lifestyle";
 }

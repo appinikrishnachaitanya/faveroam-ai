@@ -74,8 +74,9 @@ export function configuredProvider(): ModelProvider | undefined {
     });
   }
   return {
-    async baseline(destination, tastes) {
+    async baseline(destination, tastes, request) {
       for (const taste of tastes) culturalText(taste, 100);
+      culturalText(request);
       let response: Response;
       try {
         response = await fetch(`${base!.replace(/\/$/, "")}/chat/completions`, {
@@ -94,7 +95,7 @@ export function configuredProvider(): ModelProvider | undefined {
               },
               {
                 role: "user",
-                content: JSON.stringify({ destination, tastes }),
+                content: JSON.stringify({ request, destination, tastes }),
               },
             ],
           }),
@@ -126,6 +127,7 @@ export function configuredProvider(): ModelProvider | undefined {
         model: model!,
         generatedAt: new Date().toISOString(),
         source: "model-only",
+        request,
       };
     },
     async interpret(text) {
@@ -135,7 +137,7 @@ export function configuredProvider(): ModelProvider | undefined {
           {
             role: "system",
             content:
-              "Extract cultural onboarding/refinement intent only. Do not generate discovery data. Destination must be Toronto, New York City, London, Paris or Tokyo. Separate named seeds from cultural concepts and dislikes. Do not include personal identifying information.",
+              "Extract cultural onboarding/refinement intent only. Do not generate discovery data. Destination must be Toronto, New York City, London, Paris or Tokyo. Separate named seeds from cultural concepts and dislikes. Cultural means Culture. More adventurous selects familiarity explore. More familiar selects familiarity familiar. Mixed hide/refine requests hide only explicitly removed categories and refine the requested active categories. Do not include personal identifying information.",
           },
           { role: "user", content: text },
         ],
@@ -150,6 +152,10 @@ export function configuredProvider(): ModelProvider | undefined {
                   kind: {
                     type: "string",
                     enum: ["onboard", "refine", "hide", "unknown"],
+                  },
+                  familiarity: {
+                    type: "string",
+                    enum: ["familiar", "balanced", "explore"],
                   },
                   destination: { type: "string" },
                   seeds: { type: "array", items: { type: "string" } },
