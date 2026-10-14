@@ -1,3 +1,4 @@
+import { debugRequest } from "../../../../src/agent/debug";
 import { getSession } from "../../../../src/agent/store";
 import { configuredProvider } from "../../../../src/agent/provider";
 export const runtime = "nodejs";
@@ -6,7 +7,7 @@ const cache = new Map<
   { at: number; baseline: unknown; comparison: unknown }
 >();
 const running = new Set<string>();
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   let id = "",
     acquired = false;
   try {
@@ -61,4 +62,8 @@ export async function POST(request: Request) {
   } finally {
     if (acquired) running.delete(id);
   }
+}
+
+export function POST(request: Request) {
+  return debugRequest("agent.comparison", () => handlePOST(request));
 }

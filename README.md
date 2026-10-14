@@ -55,7 +55,14 @@ This acceptance probe requires a configured provider, verifies a genuine live mo
 
 The optional judge comparison pairs the exact refinement request with a frozen snapshot of its actual Qloo results. It is hidden without a configured provider or eligible request; it never uses a fabricated baseline.
 
+## User experience
+
+Start with your move and 3–5 tastes, confirm the real matches, then create your Passport. Chat/manual refinement, bridge and judge comparison are optional. See [progressive UX and live browser checks](docs/PROGRESSIVE_UX.md).
+
 ## Toronto demo
+
+See [the full code flow and backend log guide](docs/FLOW_AND_DEBUGGING.md). The sample fills editable inputs only; discoveries are real Qloo responses. Set `AGENT_DEBUG=1` to follow resolution, HTTP/cache/retry activity, model/MCP choices, category validation, feedback and resets in server logs.
+
 
 Start a New Passport, select the Bengaluru → Toronto sample, and confirm A.R. Rahman, Interstellar (2014) and Indian cuisine. Build the Passport, inspect DNA and bridge receipts, and change Eat from Familiar to Explore. Then try:
 

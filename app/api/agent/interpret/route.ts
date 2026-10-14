@@ -1,3 +1,4 @@
+import { debugRequest, debugEvent } from "../../../../src/agent/debug";
 import { conciergeUnavailable } from "../../../../src/agent/health";
 import { NextResponse } from "next/server";
 import { configuredProvider } from "../../../../src/agent/provider";
@@ -6,7 +7,7 @@ import {
   interpret,
   validateIntent,
 } from "../../../../src/agent/intent";
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   try {
     const raw = await request.text();
     if (raw.length > 2000) throw Error("Input is too long");
@@ -28,6 +29,7 @@ export async function POST(request: Request) {
           { headers: { "Cache-Control": "no-store" } },
         );
       } catch {}
+    debugEvent("agent.fallback", { mode: "deterministic" });
     return NextResponse.json(
       {
         intent: interpret(b.message, b.city),
@@ -46,4 +48,8 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
+}
+
+export function POST(request: Request) {
+  return debugRequest("agent.interpret", () => handlePOST(request));
 }

@@ -1,3 +1,4 @@
+import { debugEvent } from "../agent/debug.ts";
 /** One in-flight request per process. Cache private results for five minutes.
  * Cross-process quotas still need a shared limiter when deployed. */
 export function retryDelay(attempt: number, retryAfter: string | null, now = Date.now()): number {
@@ -13,7 +14,9 @@ export async function fetchWithRetry(url: URL, init: RequestInit, fetcher = fetc
     // A long server cooldown should surface to the user, rather than retry early.
     if (header && (Number(header) > 30 || Date.parse(header) - Date.now() > 30_000)) return response;
     await response.body?.cancel();
-    await pause(retryDelay(attempt, header));
+    const delay = retryDelay(attempt, header);
+    debugEvent('qloo.retry', { status: 429, attempt: attempt + 1, delayMs: delay });
+    await pause(delay);
   }
 }
 const cache = new Map<string, { until: number; value: unknown }>();
@@ -22,7 +25,10 @@ let last = 0;
 export function paced<T>(key: string, run: () => Promise<T>): Promise<T> {
   const job = queue.then(async () => {
     const hit = cache.get(key);
-    if (hit && hit.until > Date.now()) return hit.value as T;
+    if (hit && hit.until > Date.now()) {
+      debugEvent("qloo.cache_hit");
+      return hit.value as T;
+    }
     await new Promise(resolve => setTimeout(resolve, Math.max(0, 800 - (Date.now() - last))));
     try {
       const value = await run();

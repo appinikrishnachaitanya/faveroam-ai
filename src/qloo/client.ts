@@ -1,3 +1,4 @@
+import { debugEvent } from "../agent/debug.ts";
 import { fetchWithRetry, paced } from './transport.ts';
 import { parseEntities } from './types.ts';
 import type { Entity, JsonObject } from './types.ts';
@@ -19,11 +20,13 @@ export async function request(path: '/search' | '/v2/insights/', params: Record<
   url.search = new URLSearchParams(params).toString();
   return paced(`${key}:${url}`, async () => {
   if(signal?.aborted)throw new QlooError('Qloo request cancelled');
+  debugEvent('qloo.request', { endpoint: path === '/search' ? 'search' : 'insights' });
   let response: Response;
   try {
     response = await fetchWithRetry(url, { headers: { 'X-Api-Key': key, Accept: 'application/json' },
       signal: signal ?? AbortSignal.timeout(30_000), redirect: 'error' });
-  } catch { throw new QlooError('Qloo network/TLS/proxy failure or 30-second timeout. No fallback data used.'); }
+  } catch { debugEvent('qloo.failed'); throw new QlooError('Qloo network/TLS/proxy failure or 30-second timeout. No fallback data used.'); }
+  debugEvent('qloo.response', { status: response.status });
   if (!response.ok) {
     // Never log response bodies: they may echo request credentials.
     const reason = response.status === 401 || response.status === 403 ? 'Authentication or access denied'
@@ -36,11 +39,15 @@ export async function request(path: '/search' | '/v2/insights/', params: Record<
   });
 }
 export async function search(query: string): Promise<Entity[]> {
-  return parseEntities(await request('/search', { query, take: '5' }), 'search');
+  const entities = parseEntities(await request('/search', { query, take: '5' }), 'search');
+  debugEvent('qloo.entities', { endpoint: 'search', count: entities.length });
+  return entities;
 }
 export async function insights(params: Record<string, string>, signal?:AbortSignal): Promise<{ entities: Entity[]; body: unknown }> {
   const body = await request('/v2/insights/', params, signal);
-  return { entities: parseEntities(body, 'insights'), body };
+  const entities = parseEntities(body, 'insights');
+  debugEvent('qloo.entities', { endpoint: 'insights', count: entities.length });
+  return { entities, body };
 }
 export function insightParams(ids: string[], type: string, local: boolean): Record<string, string> {
   const supported = ['place', 'artist', 'book', 'brand'];

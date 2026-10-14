@@ -1,4 +1,5 @@
 import "server-only";
+import { debugEvent } from "./debug.ts";
 import { discoveryQueries, mixPools } from "./strategy.ts";
 import { withEvidence } from "../passport/evidence.ts";
 import { sectionTags } from "./session.ts";
@@ -28,6 +29,7 @@ export async function resolveCulturalSeeds(
   queries: string[],
   concepts: string[] = [],
 ) {
+  debugEvent("resolution.started", { count: queries.length });
   const guard = new TurnGuard(5, 90_000);
   const items = [];
   for (const query of queries) {
@@ -56,6 +58,8 @@ export async function resolveCulturalSeeds(
       }
     }
   }
+  items.forEach((item, seedIndex) => debugEvent("resolution.candidates", { seedIndex, count: item.candidates.length }));
+  debugEvent("resolution.completed", { count: items.reduce((n, item) => n + item.candidates.length, 0) });
   return items;
 }
 /** The restaurant tag below was observed in real Qloo responses during Phase 1.
@@ -68,6 +72,7 @@ export async function discoverSection(
   rank: boolean,
   signal?: AbortSignal,
 ): Promise<Card[]> {
+  debugEvent("discovery.started", { section, city: state.city, signalCount: state.selected.length, excludedCount: excluded.length });
   const type = section === "Music" ? "artist" : "place";
   const entityIds = state.selected
     .filter((s) => !s.id.startsWith("urn:tag:"))
@@ -197,8 +202,10 @@ export async function discoverSection(
         for (const card of grounded)
           if (card.evidence) card.evidence.strategyNote = query.note;
       }
+      debugEvent("discovery.pool", { section, mode, pool: query.pool, count: result.entities.length, keptCount: grounded.length });
       pools.push(grounded);
     } catch (error) {
+      debugEvent("discovery.failed", { section, mode, pool: query.pool });
       failure = error;
       if (queries.length === 1) throw error;
     }
@@ -212,5 +219,7 @@ export async function discoverSection(
       for (const card of pool)
         if (card.evidence) card.evidence.strategyNote = note;
   }
-  return mixPools(pools);
+  const cards = mixPools(pools);
+  debugEvent("discovery.completed", { section, mode, count: cards.length });
+  return cards;
 }

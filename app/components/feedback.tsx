@@ -41,7 +41,7 @@ export default function FeedbackDialog({
           <Icon name="close" />
         </button>
       </div>
-      <h2 id="feedback-title">What feels off?</h2>
+      <h2 id="feedback-title">What felt wrong?</h2>
       <p>
         <strong>{card.name}</strong> · I’ll update the {card.section} section
         while keeping your other discoveries.

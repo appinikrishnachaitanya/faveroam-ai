@@ -1,3 +1,4 @@
+import { debugRequest, debugEvent } from "../../../../src/agent/debug";
 import { inSession } from "../../../../src/agent/store";
 import { runTurn } from "../../../../src/agent/orchestrator";
 import { agentDependencies } from "../../../../src/agent/runtime";
@@ -6,7 +7,7 @@ import { familiarities } from "../../../../src/passport/evidence";
 import { reasons } from "../../../../src/agent/types";
 import type { AgentInput } from "../../../../src/agent/types";
 export const runtime = "nodejs";
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   let body: Record<string, unknown>;
   try {
     const raw = await request.text();
@@ -110,8 +111,10 @@ export async function POST(request: Request) {
             return { state: value.state, value };
           },
         );
+        debugEvent("agent.completed", { mode: reply.mode, sections: reply.changed, count: reply.state.cards.length });
         send({ type: "result", reply });
       } catch {
+        debugEvent("api.failed", { route: "agent.turn" });
         send({
           type: "error",
           message:
@@ -128,4 +131,8 @@ export async function POST(request: Request) {
       "X-Content-Type-Options": "nosniff",
     },
   });
+}
+
+export function POST(request: Request) {
+  return debugRequest("agent.turn", () => handlePOST(request));
 }

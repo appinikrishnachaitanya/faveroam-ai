@@ -13,7 +13,8 @@
     "dev": "node --use-env-proxy node_modules/next/dist/bin/next dev --hostname 0.0.0.0",
     "build": "next build",
     "start": "node --use-env-proxy node_modules/next/dist/bin/next start --hostname 0.0.0.0",
-    "verify:gemini": "node --use-env-proxy --env-file-if-exists=.env --env-file-if-exists=.env.local --conditions=react-server --import tsx scripts/verify-gemini-mcp.ts"
+    "verify:gemini": "node --use-env-proxy --env-file-if-exists=.env --env-file-if-exists=.env.local --conditions=react-server --import tsx scripts/verify-gemini-mcp.ts",
+    "test:browser": "node scripts/verify-progressive-ui.mjs"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.3",

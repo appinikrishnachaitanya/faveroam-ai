@@ -26,6 +26,13 @@ import {
 } from "./components/passport";
 import type { Feedback } from "./components/passport";
 import Disambiguation from "./components/disambiguation";
+import {
+  MoveForm,
+  TasteConfirmation,
+  StepIndicator,
+} from "./components/onboarding";
+import ConciergeDrawer from "./components/concierge";
+import type { Familiarity } from "../src/passport/evidence";
 interface Message {
   role: "agent" | "user";
   text: string;
@@ -47,6 +54,10 @@ async function post<T>(path: string, body: unknown): Promise<T> {
 }
 export default function Home() {
   const [city, setCity] = useState("");
+  const [origin, setOrigin] = useState("");
+  const [initialMode, setInitialMode] = useState<Familiarity>("familiar");
+  const [assistantOpen, setAssistantOpen] = useState(false);
+  const [assistantTab, setAssistantTab] = useState<"ask" | "manual">("ask");
   const [composer, setComposer] = useState("");
   const [messages, setMessages] = useState<Message[]>([welcome]);
   const [draft, setDraft] = useState<string[]>([]);
@@ -317,6 +328,9 @@ export default function Home() {
       `Removed ${name ?? "that taste"} from the current selection. Keep at least three confirmed tastes to continue.`,
     );
   }
+  function setLatestActivity(event: AgentEvent) {
+    setAgentEvents((events) => [...events, event]);
+  }
   async function generate() {
     if (!resolution || !complete || busy || !city) return;
     setError("");
@@ -335,7 +349,28 @@ export default function Home() {
         constraints,
         history: messages,
       });
-      setResult(r);
+      let passport = r;
+      if (initialMode !== "familiar" && r.agent) {
+        for (const section of [...new Set(r.cards.map((c) => c.section))]) {
+          try {
+            const reply = await sendAgentTurn(
+              passport.agent!,
+              { familiarity: { mode: initialMode, section } },
+              setLatestActivity,
+            );
+            passport = passportView(reply.state, r.explanation);
+          } catch {
+            passport = {
+              ...passport,
+              notices: [
+                ...passport.notices,
+                "Some discoveries could not be refreshed in your chosen style. You can try again from your Passport.",
+              ],
+            };
+          }
+        }
+      }
+      setResult(passport);
       setPhase("ready");
       say(
         r.cards.length
@@ -374,6 +409,10 @@ export default function Home() {
         body: JSON.stringify({ sessionId: result.agent.sessionId }),
       });
     setCity("");
+    setOrigin("");
+    setInitialMode("familiar");
+    setAssistantOpen(false);
+    setAssistantTab("ask");
     setComposer("");
     setMessages([welcome]);
     setDraft([]);
@@ -386,10 +425,21 @@ export default function Home() {
     setConceptDialog(false);
     resetMatches("idle");
   }
+  const step = result ? 3 : resolution && !editing ? 2 : 1;
+  const progress =
+    phase === "refining"
+      ? updating.length
+        ? `Finding a better fit for ${updating.join(", ")}…`
+        : "Finding a better fit…"
+      : phase === "resolving"
+        ? "Resolving cultural signals…"
+        : phase === "interpreting"
+          ? "Understanding your tastes…"
+          : `Exploring ${city} and curating your Passport…`;
   return (
-    <main className="app-shell">
+    <main className="app-shell progressive-app">
       <header className="workspace-topbar">
-        <a className="brand" href="/">
+        <a className="brand" href="/" aria-label="TastePassport home">
           <span className="brand-symbol">
             <Icon name="star" size={22} />
           </span>
@@ -398,558 +448,160 @@ export default function Home() {
           </span>
         </a>
         <span className="topbar-caption">Move anywhere. Keep your vibe.</span>
-        <button className="quiet-button" onClick={fresh} disabled={busy}>
-          <Icon name="plus" size={14} />
-          New Passport
-        </button>
-      </header>
-      <div className="split-workspace">
-        <aside className="agent-pane" aria-labelledby="agent-title">
-          <div className="agent-heading">
-            <span className="agent-avatar">
-              <Icon name="star" size={22} />
+        {result && (
+          <div className="topbar-actions">
+            <span className="current-city">
+              <Icon name="pin" size={14} />
+              {city}
             </span>
-            <div>
-              <h1 id="agent-title">Taste Concierge</h1>
-              <p>
-                <span className="live-dot" />
-                Familiar culture. A new beginning.
-              </p>
-            </div>
+            <button className="quiet-button" onClick={fresh} disabled={busy}>
+              <Icon name="plus" size={14} />
+              New Passport
+            </button>
           </div>
-          <div className="destination-control">
-            <Icon name="pin" size={16} />
-            <label htmlFor="destination" className="sr-only">
-              Destination city
-            </label>
-            <select
-              id="destination"
-              value={city}
-              disabled={busy}
-              onChange={(e) => {
-                setCity(e.target.value);
-                setResult(undefined);
-                if (resolution) setPhase("confirming");
-              }}
-            >
-              <option value="" disabled>
-                Choose destination
-              </option>
-              {destinations.map((c) => (
-                <option key={c}>{c}</option>
-              ))}
-            </select>
-            <span>DESTINATION</span>
-          </div>
-          {busy && (
-            <div className="agent-current-operation" role="status">
-              <span className="activity-pulse" />
-              {operationLabel}
-            </div>
-          )}
-          <div className="agent-scroll" ref={agentScroll}>
-            <p className="agent-mode" role="status">
-              {conciergeAvailable
-                ? "Taste Concierge · conversation and guided controls"
-                : "Taste Concierge is temporarily unavailable. You can still refine your Passport."}
-            </p>
-            {result?.agent && (
+        )}
+      </header>
+      <div className="progressive-content">
+        {!result && <StepIndicator step={step} />}
+        {step === 1 && (
+          <MoveForm
+            city={city}
+            origin={origin}
+            draft={draft}
+            disabled={busy}
+            onCity={(value) => {
+              setCity(value);
+              resetMatches();
+            }}
+            onOrigin={setOrigin}
+            onDraft={(values) => {
+              setDraft(values);
+              setConceptSeeds(
+                values.filter((v) =>
+                  /cuisine|coffee|bookstores|culture/i.test(v),
+                ),
+              );
+              resetMatches();
+            }}
+            onSubmit={resolve}
+          />
+        )}
+        {step === 2 && resolution && (
+          <TasteConfirmation
+            items={activeItems}
+            chosen={chosen}
+            disabled={busy}
+            complete={complete}
+            mode={initialMode}
+            onMode={setInitialMode}
+            onChoose={choose}
+            onRemove={(index) => {
+              setChosen((c) => {
+                const next = { ...c };
+                delete next[index];
+                return next;
+              });
+              setRemoved((r) => [...r, index]);
+            }}
+            onReplace={() => setEditing(true)}
+            onBack={() => setEditing(true)}
+            onSubmit={generate}
+          />
+        )}
+        {error && (
+          <div className="error-message progressive-error" role="alert">
+            <strong>Let’s try that again.</strong>
+            <p>{error}</p>
+            {!result && (
               <button
-                className="text-button reset-conversation"
+                className="text-button"
+                onClick={() =>
+                  void (resolution && complete ? generate() : resolve())
+                }
                 disabled={busy}
-                onClick={() => void refine({ reset: "conversation" })}
               >
-                Reset conversation
+                Try again
               </button>
             )}
-            {result?.session && (
-              <GuidedRefinement
+          </div>
+        )}
+        {busy && (
+          <div className="compact-progress" role="status" aria-live="polite">
+            <span className="activity-pulse" />
+            <div>
+              <strong>
+                {result
+                  ? "Updating your TastePassport…"
+                  : phase === "resolving"
+                    ? "Finding your Taste DNA…"
+                    : "Building your TastePassport…"}
+              </strong>
+              <p>{progress}</p>
+            </div>
+          </div>
+        )}
+        {result && (
+          <section
+            className="living-passport"
+            aria-labelledby="passport-title"
+            aria-busy={busy}
+          >
+            <div className="passport-hero">
+              <span className="micro-label">A NEW CITY. STILL YOU.</span>
+              <h1 id="passport-title">Your {city} TastePassport</h1>
+              <p>
+                Culturally aligned discoveries based on what you already love.
+              </p>
+              <div className="passport-taste-preview">
+                {signals.map((signal) => (
+                  <span key={signal.id}>{signal.name}</span>
+                ))}
+              </div>
+            </div>
+            {result.session && (
+              <FamiliarityControl
                 session={result.session}
                 disabled={busy}
-                onApply={(input) => void refine(input)}
+                onChange={(input) => void refine(input)}
               />
             )}
-            {result?.session && (
+            {result.agent?.pending && (
+              <div className="pending-concept">
+                <strong>A little clarity for your next discovery</strong>
+                <p>
+                  Choose the meaning you had in mind for “
+                  {result.agent.pending.query}”.
+                </p>
+                <button
+                  className="quiet-button"
+                  disabled={busy}
+                  onClick={(e) => {
+                    matchOpener.current = e.currentTarget;
+                    setConceptDialog(true);
+                  }}
+                >
+                  Choose a match <Icon name="arrow" />
+                </button>
+              </div>
+            )}
+            {result.session && (
               <RefinementRecovery
                 session={result.session}
                 disabled={busy}
                 onApply={(input) => void refine(input)}
               />
             )}
-            <div
-              className="conversation"
-              ref={chatRef}
-              aria-label="Conversation history"
-              role="log"
-              aria-live="polite"
-            >
-              {visibleMessages.map((m, i) => (
-                <div className={`message ${m.role}`} key={i}>
-                  <span className="message-label">
-                    {m.role === "agent" ? "TASTEPASSPORT" : "YOU"}
-                  </span>
-                  <p>{m.text}</p>
-                </div>
-              ))}
-            </div>
-            {phase === "idle" && (
-              <div className="suggestion-prompts">
-                <span className="micro-label">THE DEMO JOURNEY</span>
-                <div className="persona-story">
-                  <span>
-                    BENGALURU <b>→</b> TORONTO
-                  </span>
-                  <p>
-                    An Indian software engineer starting a new chapter. Rahman
-                    on repeat, Interstellar after work, Indian food and a good
-                    coffee ritual.
-                  </p>
-                  <small>
-                    Sample story — your Passport uses only the tastes you
-                    choose.
-                  </small>
-                </div>
-                <button
-                  className="persona-start"
-                  onClick={() => {
-                    setCity("Toronto");
-                    setDraft([
-                      "A.R. Rahman",
-                      "Interstellar",
-                      "Indian cuisine",
-                      "specialty coffee",
-                      "independent culture",
-                    ]);
-                    setConceptSeeds([
-                      "Indian cuisine",
-                      "specialty coffee",
-                      "independent culture",
-                    ]);
-                    setEditing(true);
-                    resetMatches();
-                  }}
-                >
-                  Start the Bengaluru → Toronto sample{" "}
-                  <Icon name="arrow" size={16} />
-                </button>
-                <button
-                  onClick={() => {
-                    setDraft(["", "", ""]);
-                    setEditing(true);
-                    setPhase("review");
-                  }}
-                >
-                  Enter tastes without conversation
-                </button>
-                <button
-                  onClick={() =>
-                    setComposer(
-                      "I’m relocating from Bengaluru to Toronto. I love A.R. Rahman, Interstellar and Indian cuisine.",
-                    )
-                  }
-                >
-                  <Icon name="Music" size={15} />
-                  Bring my music & film tastes
-                </button>
-                <button
-                  onClick={() =>
-                    setComposer(
-                      "I’m moving to New York. I love Blue Tokai, The Strand and Interstellar.",
-                    )
-                  }
-                >
-                  <Icon name="Coffee" size={15} />
-                  Find a familiar daily rhythm
-                </button>
-              </div>
-            )}
-            {draft.length > 0 && (
-              <section className="draft-panel">
-                <div className="small-heading">
-                  <h2>Taste draft</h2>
-                  <button
-                    className="text-button"
-                    disabled={busy}
-                    onClick={() => setEditing(!editing)}
-                  >
-                    {editing ? "Collapse" : "Edit / add"}
-                  </button>
-                </div>
-                {editing ? (
-                  <div className="draft-inputs">
-                    {draft.map((s, i) => (
-                      <div className="draft-row" key={i}>
-                        <label className="sr-only" htmlFor={`taste-${i}`}>
-                          Taste {i + 1}
-                        </label>
-                        <input
-                          id={`taste-${i}`}
-                          value={s}
-                          maxLength={100}
-                          disabled={busy}
-                          onChange={(e) => updateDraft(i, e.target.value)}
-                        />
-                        <button
-                          className="icon-button"
-                          disabled={busy}
-                          aria-label={`Remove taste ${i + 1}`}
-                          onClick={() => {
-                            setDraft((d) => d.filter((_, n) => i !== n));
-                            resetMatches();
-                          }}
-                        >
-                          <Icon name="close" size={14} />
-                        </button>
-                      </div>
-                    ))}
-                    <button
-                      className="text-button add-taste"
-                      disabled={busy || draft.length >= 5}
-                      onClick={() => {
-                        setDraft((d) => [...d, ""]);
-                        resetMatches();
-                      }}
-                    >
-                      <Icon name="plus" size={14} />
-                      Add a taste
-                    </button>
-                    <p className="helper">
-                      Three to five named tastes. Edit phrases that split
-                      incorrectly; broad interests may need a specific entity.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="draft-tags">
-                    {draft.map((s, i) => (
-                      <span key={i}>{s}</span>
-                    ))}
-                  </div>
-                )}
-                {(!resolution || editing) && (
-                  <button
-                    className="primary-button"
-                    disabled={
-                      busy ||
-                      draft.length < 3 ||
-                      draft.length > 5 ||
-                      draft.some((s) => !s.trim())
-                    }
-                    onClick={resolve}
-                  >
-                    {phase === "resolving"
-                      ? "Resolving cultural signals…"
-                      : "Resolve my tastes"}
-                    <Icon name="arrow" />
-                  </button>
-                )}
-              </section>
-            )}
-            {resolution && !editing && (
-              <section
-                className="resolution-panel"
-                aria-labelledby="resolution-title"
-              >
-                <div className="small-heading">
-                  <h2 id="resolution-title">Confirm your signals</h2>
-                  <span>
-                    {signals.length}/{activeItems.length}
-                  </span>
-                </div>
-                {activeItems.map(({ item, index }) => {
-                  const c = item.candidates.find(
-                    (candidate) => candidate.id === chosen[index],
-                  );
-                  return (
-                    <div
-                      className={`resolution-row ${c ? "resolved" : ""}`}
-                      key={index}
-                    >
-                      <span className="resolution-status">
-                        {c ? (
-                          <Icon name="check" size={14} />
-                        ) : item.candidates.length ? (
-                          "?"
-                        ) : (
-                          "!"
-                        )}
-                      </span>
-                      <div>
-                        <strong>{c?.name ?? item.query}</strong>
-                        <small>
-                          {c
-                            ? typeLabel(c)
-                            : item.candidates.length
-                              ? `${item.candidates.length} matches · choose yours`
-                              : "No match returned"}
-                        </small>
-                      </div>
-                      {item.candidates.length ? (
-                        <button
-                          className="text-button"
-                          disabled={busy}
-                          onClick={(e) => {
-                            matchOpener.current = e.currentTarget;
-                            setDialog(index);
-                          }}
-                        >
-                          {c ? "Change" : "Choose"}
-                        </button>
-                      ) : (
-                        <button
-                          className="text-button"
-                          disabled={busy}
-                          onClick={() => setEditing(true)}
-                        >
-                          Edit
-                        </button>
-                      )}
-                      {!c && (
-                        <button
-                          className="icon-button"
-                          disabled={busy}
-                          aria-label={`Remove ${item.query} from selection`}
-                          onClick={() => setRemoved((r) => [...r, index])}
-                        >
-                          <Icon name="close" size={13} />
-                        </button>
-                      )}
-                    </div>
-                  );
-                })}
-                {removed.length > 0 && (
-                  <button
-                    className="text-button"
-                    disabled={busy}
-                    onClick={() => setRemoved([])}
-                  >
-                    Restore removed tastes
-                  </button>
-                )}
-                <button
-                  className="primary-button"
-                  disabled={!complete || busy || !city}
-                  onClick={generate}
-                >
-                  {phase === "exploring"
-                    ? "Exploring your new city…"
-                    : result
-                      ? "Refresh my passport"
-                      : "Build your cultural bridge"}
-                  <Icon name="arrow" />
-                </button>
-                {!complete && (
-                  <p className="helper">
-                    Confirm three to five distinct entities. Every remaining
-                    taste needs your choice.
-                  </p>
-                )}
-              </section>
-            )}
-            <ActivityFeed
-              phase={phase}
-              city={city}
-              resolution={resolution}
-              signals={signals}
-              result={result}
-              events={agentEvents}
-            />
-            {result?.agent?.pending && (
-              <div className="pending-concept">
-                <strong>Confirm a cultural concept</strong>
-                <p>{result.agent.pending.query}</p>
-                <button
-                  className="primary-button"
-                  onClick={(e) => {
-                    matchOpener.current = e.currentTarget;
-                    setConceptDialog(true);
-                  }}
-                  disabled={busy}
-                >
-                  Choose concept match <Icon name="arrow" />
-                </button>
-              </div>
-            )}
-            {result?.agent && (
-              <p className="helper">
-                Try “Tonight I want Indian food”, “rank my dining shortlist”, or
-                “give me quieter cafés”. Refinements preserve other sections.
-              </p>
-            )}
-            {error && (
-              <div className="error-message" role="alert">
-                <strong>Let’s try that again.</strong>
-                <p>{error}</p>
-                {resolution && complete ? (
-                  <button className="text-button" onClick={generate}>
-                    Retry exploration
-                  </button>
-                ) : (
-                  draft.length >= 3 && (
-                    <button className="text-button" onClick={resolve}>
-                      Retry resolution
-                    </button>
-                  )
-                )}
-              </div>
-            )}
-          </div>
-          <form className="composer" onSubmit={submitConversation}>
-            <label htmlFor="conversation-input" className="sr-only">
-              Tell me where you’re going and a few things you love
-            </label>
-            <textarea
-              id="conversation-input"
-              placeholder={
-                result?.agent
-                  ? "What would make this city feel more like you?"
-                  : "Tell me where you’re going and a few things you love…"
-              }
-              value={composer}
-              onChange={(e) => setComposer(e.target.value)}
-              disabled={busy}
-              maxLength={1000}
-              rows={3}
-            />
-            <div className="composer-footer">
-              <span>
-                {result?.agent
-                  ? "Taste Concierge · refine your current passport"
-                  : "New message prepares an editable draft"}
-              </span>
-              <button
-                type="submit"
-                aria-label="Prepare taste draft"
-                disabled={busy || !composer.trim()}
-              >
-                <Icon name="send" size={17} />
-              </button>
-            </div>
-            <p>No account. Session profile · Qloo-backed discoveries.</p>
-          </form>
-        </aside>
-        <section
-          className="living-passport"
-          aria-labelledby="passport-title"
-          aria-busy={busy}
-        >
-          <div className="destination-banner">
-            <div className="city-illustration" aria-hidden="true">
-              <svg viewBox="0 0 360 160">
-                <path d="M0 150h360M10 150V95h30v55M50 150V64h30v86M95 150V36h35v114M110 36V10M142 150V86h30v64M185 150V52h38v98M240 150V72h26v78M281 150V22h34v128M298 22V4M327 150V102h22v48" />
-                <path
-                  className="skyline-detail"
-                  d="M57 78h16M57 90h16M57 102h16M101 54h21M101 67h21M101 80h21M192 67h24M192 80h24M287 40h22M287 52h22M287 64h22"
-                />
-              </svg>
-            </div>
-            <div className="destination-eyebrow">
-              <Icon name="pin" size={14} />
-              {city === "New York City"
-                ? "YOUR NEXT CHAPTER"
-                : "CULTURAL ONBOARDING"}
-            </div>
-            <div className="destination-title-row">
-              <div>
-                <h2 id="passport-title">
-                  {city
-                    ? `Your ${city} TastePassport`
-                    : "Your culture. A new city."}
-                </h2>
-                <p>Your next chapter. Still unmistakably you.</p>
-              </div>
-              <span className={`workspace-status ${busy ? "working" : ""}`}>
-                <span className="live-dot" />
-                {phase === "ready"
-                  ? "Passport ready"
-                  : busy
-                    ? "In progress"
-                    : "Living passport"}
-              </span>
-            </div>
-            <div className="destination-meta">
-              <span>CULTURAL ONBOARDING</span>
-              <span>Powered by Qloo</span>
-            </div>
-          </div>
-          <TasteDNA signals={signals} onRemove={removeSignal} disabled={busy} />
-          {result?.session && (
-            <FamiliarityControl
-              session={result.session}
-              disabled={busy}
-              onChange={(input) => void refine(input)}
-            />
-          )}
-          <TranslationMap signals={signals} result={result} />
-          {result?.session && (
-            <ModelComparison
-              key={result.session.id}
-              session={result.session}
-              available={conciergeAvailable}
-            />
-          )}
-
-          {result?.session &&
-            (result.session.hiddenCategories.length > 0 ||
-              result.session.explorationMode === "shortlist") && (
+            {result.session?.hiddenCategories.length ? (
               <p className="passport-mode">
-                {result.session.explorationMode === "shortlist"
-                  ? "Your cultural shortlist. "
-                  : ""}
-                {result.session.hiddenCategories.length > 0
-                  ? `Hidden chapters · ${result.session.hiddenCategories.join(", ")}`
-                  : ""}
+                Hidden chapters: {result.session.hiddenCategories.join(", ")}.
+                You can bring them back with manual refinement.
               </p>
-            )}
-
-          {busy && phase !== "refining" && (
-            <section
-              className="exploration-state"
-              role="status"
-              aria-live="polite"
-            >
-              <div className="progress-track">
-                <span />
-              </div>
-              <div>
-                <span className="micro-label">
-                  {phase === "interpreting"
-                    ? "UNDERSTANDING YOUR REQUEST"
-                    : phase === "resolving"
-                      ? "LOOKING UP CULTURAL SIGNALS"
-                      : "EXPLORING YOUR NEW CITY"}
-                </span>
-                <h3>
-                  {phase === "interpreting"
-                    ? "Preparing your cultural taste draft."
-                    : phase === "resolving"
-                      ? "Finding the entities behind your tastes."
-                      : `Exploring ${city}…`}
-                </h3>
-                <p>
-                  {phase === "interpreting"
-                    ? "You’ll review the extracted tastes before any Qloo lookup."
-                    : phase === "resolving"
-                      ? "Matches appear after Qloo responds. You’ll confirm the intended entities."
-                      : "Requesting local places and music suggestions. Categories appear only after results return."}
-                </p>
-              </div>
-              <div className="skeleton-grid" aria-hidden="true">
-                {[0, 1, 2].map((n) => (
-                  <div key={n}>
-                    <i />
-                    <i />
-                    <i />
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
-          {result ? (
+            ) : null}
             <PassportSections
               result={{
                 ...result,
                 cards: result.cards.filter(
-                  (c) => !result.session?.hiddenCategories?.includes(c.section),
+                  (c) => !result.session?.hiddenCategories.includes(c.section),
                 ),
               }}
               feedback={feedback}
@@ -957,53 +609,174 @@ export default function Home() {
               updates={updates}
               updating={updating}
             />
-          ) : (
-            !busy && (
-              <section className="passport-empty">
-                <span className="empty-symbol">
-                  <Icon name="globe" size={28} />
-                </span>
-                <div>
-                  <span className="micro-label">A CITY, THROUGH YOUR LENS</span>
-                  <h3>
-                    {signals.length
-                      ? "Your taste DNA is taking shape."
-                      : "Make a new city feel more like you."}
-                  </h3>
-                  <p>
-                    {signals.length
-                      ? "Confirm your remaining signals, then build your cultural passport."
-                      : "Enter your tastes or start a conversation on the left. Your confirmed tastes will become a passport of real discoveries here."}
-                  </p>
-                </div>
-                <span className="empty-ticket" aria-hidden="true">
-                  TASTE
-                  <br />
-                  IS YOUR
-                  <br />
-                  <b>PASSPORT</b>
-                </span>
-              </section>
-            )
-          )}
-          <details className="product-story">
-            <summary>Why TastePassport?</summary>
-            <p>
-              Relocating means rebuilding familiar routines, culture, and
-              discovery from scratch. TastePassport helps newcomers carry their
-              existing tastes into a new city while gradually exploring beyond
-              them.
-            </p>
-          </details>
-          <footer className="workspace-footer">
-            <span>
-              <Icon name="star" size={12} />
-              Move anywhere. Keep your vibe.
-            </span>
-            <span>Real signals. Room for discovery.</span>
-          </footer>
-        </section>
+            <details className="secondary-reveal cultural-reveal">
+              <summary>
+                See your cultural bridge <Icon name="arrow" size={16} />
+              </summary>
+              <TranslationMap signals={signals} result={result} />
+              <TasteDNA
+                signals={signals}
+                onRemove={removeSignal}
+                disabled={busy}
+              />
+            </details>
+            {result.session &&
+              conciergeAvailable &&
+              result.session.comparison && (
+                <details className="secondary-reveal comparison-reveal">
+                  <summary>
+                    See why Qloo matters <Icon name="arrow" size={16} />
+                  </summary>
+                  <ModelComparison
+                    key={result.session.id}
+                    session={result.session}
+                    available={conciergeAvailable}
+                  />
+                </details>
+              )}
+            <footer className="workspace-footer">
+              <span>
+                <Icon name="star" size={12} />
+                Move anywhere. Keep your vibe.
+              </span>
+              <span>Your tastes. A new perspective.</span>
+            </footer>
+          </section>
+        )}
       </div>
+      {result && (
+        <button
+          className="assistant-launch"
+          onClick={() => setAssistantOpen(true)}
+          aria-expanded={assistantOpen}
+          aria-controls="taste-concierge"
+        >
+          <Icon name="star" size={18} />
+          Ask TastePassport
+        </button>
+      )}
+      {result && (
+        <ConciergeDrawer
+          open={assistantOpen}
+          onClose={() => setAssistantOpen(false)}
+        >
+          <div
+            className="concierge-tabs"
+            role="tablist"
+            aria-label="Refinement method"
+          >
+            <button
+              role="tab"
+              id="ask-tab"
+              aria-controls="ask-panel"
+              aria-selected={assistantTab === "ask"}
+              onClick={() => setAssistantTab("ask")}
+            >
+              Ask
+            </button>
+            <button
+              role="tab"
+              id="manual-tab"
+              aria-controls="manual-panel"
+              aria-selected={assistantTab === "manual"}
+              onClick={() => setAssistantTab("manual")}
+            >
+              Refine manually
+            </button>
+          </div>
+          <div className="concierge-body" ref={agentScroll}>
+            {result.agent?.pending && (
+              <div className="pending-concept">
+                <strong>Choose your cultural match</strong>
+                <p>{result.agent.pending.query}</p>
+                <button
+                  className="quiet-button"
+                  disabled={busy}
+                  onClick={(e) => {
+                    matchOpener.current = e.currentTarget;
+                    setConceptDialog(true);
+                  }}
+                >
+                  Choose a match
+                </button>
+              </div>
+            )}
+            {assistantTab === "ask" ? (
+              <div id="ask-panel" role="tabpanel" aria-labelledby="ask-tab">
+                <p className="concierge-intro">
+                  What would make this city feel more like you?
+                </p>
+                {!conciergeAvailable && (
+                  <p className="helper">
+                    Chat is taking a break. Refine manually to keep exploring.
+                  </p>
+                )}
+                <div
+                  className="conversation"
+                  ref={chatRef}
+                  aria-label="Conversation history"
+                  role="log"
+                  aria-live="polite"
+                >
+                  {visibleMessages.map((m, i) => (
+                    <div className={`message ${m.role}`} key={i}>
+                      <span className="message-label">
+                        {m.role === "agent" ? "TASTEPASSPORT" : "YOU"}
+                      </span>
+                      <p>{m.text}</p>
+                    </div>
+                  ))}
+                </div>
+                <form className="composer" onSubmit={submitConversation}>
+                  <label htmlFor="conversation-input" className="sr-only">
+                    Ask TastePassport
+                  </label>
+                  <textarea
+                    id="conversation-input"
+                    placeholder="Show me something quieter…"
+                    value={composer}
+                    onChange={(e) => setComposer(e.target.value)}
+                    disabled={busy}
+                    maxLength={1000}
+                    rows={3}
+                  />
+                  <div className="composer-footer">
+                    <span>Connected to your current Passport</span>
+                    <button
+                      type="submit"
+                      aria-label="Send message"
+                      disabled={busy || !composer.trim()}
+                    >
+                      <Icon name="send" size={17} />
+                    </button>
+                  </div>
+                </form>
+              </div>
+            ) : (
+              <div
+                id="manual-panel"
+                role="tabpanel"
+                aria-labelledby="manual-tab"
+              >
+                {result.session && (
+                  <GuidedRefinement
+                    session={result.session}
+                    disabled={busy}
+                    onApply={(input) => void refine(input)}
+                  />
+                )}
+              </div>
+            )}
+          </div>
+          <button
+            className="text-button reset-conversation"
+            disabled={busy}
+            onClick={() => void refine({ reset: "conversation" })}
+          >
+            Reset conversation
+          </button>
+        </ConciergeDrawer>
+      )}
       {rejectionId && result?.cards.find((c) => c.id === rejectionId) && (
         <FeedbackDialog
           card={result.cards.find((c) => c.id === rejectionId)!}

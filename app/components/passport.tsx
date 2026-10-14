@@ -382,7 +382,7 @@ export function DiscoveryCard({
       </div>
       {card.evidence && (
         <p className="card-query-inputs">
-          Query inputs ·{" "}
+          Found using your tastes ·{" "}
           {[
             ...new Set(
               card.evidence.inputs
@@ -485,19 +485,18 @@ export function PassportSections({
     <div className="passport-sections">
       {result.notices.length > 0 && (
         <aside className="partial-notice" role="status">
-          <strong>
-            {hasGaps
-              ? "Your passport is ready, with a few gaps."
-              : "Your cultural bridge, with a few notes."}
-          </strong>
-          <p>
-            Coverage varies by category. These discoveries keep their real Qloo
-            evidence.
-          </p>
           <details>
-            <summary>View query notices</summary>
-            {result.notices.map((n, i) => (
-              <p key={i}>{n}</p>
+            <summary>
+              {hasGaps
+                ? "Your passport is ready, with a few gaps."
+                : "A few notes about your discoveries"}
+            </summary>
+            <p>
+              Coverage varies by category. These discoveries keep their real
+              Qloo evidence.
+            </p>
+            {result.notices.map((notice, index) => (
+              <p key={index}>{notice}</p>
             ))}
           </details>
         </aside>

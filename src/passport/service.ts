@@ -1,4 +1,5 @@
 import "server-only";
+import { debugEvent } from "../agent/debug.ts";
 import { withEvidence } from "./evidence.ts";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { culturalText } from "../agent/intent.ts";
@@ -45,6 +46,7 @@ export function unseal(
   return value.items;
 }
 export async function resolve(queries: string[]) {
+  debugEvent("resolution.started", { count: queries.length });
   const items = [];
   for (const query of queries) {
     culturalText(query, 100);
@@ -56,6 +58,8 @@ export async function resolve(queries: string[]) {
       else throw e;
     }
   }
+  items.forEach((item, seedIndex) => debugEvent("resolution.candidates", { seedIndex, count: item.candidates.length }));
+  debugEvent("resolution.completed", { count: items.reduce((n, item) => n + item.candidates.length, 0) });
   return { items, token: seal(items) };
 }
 export async function passport(
@@ -74,6 +78,7 @@ export async function passport(
     new Set(ids).size !== ids.length
   )
     throw new QlooError("Confirm three to five distinct taste matches.", 400);
+  debugEvent("passport.started", { city, signalCount: selected.length });
   const cards: Card[] = [];
   const notices: string[] = [];
   for (const type of ["place", "artist"]) {
@@ -122,6 +127,7 @@ export async function passport(
         params["filter.popularity.max"] = "0.9";
       const result = await insights(params);
       const queryId = crypto.randomUUID();
+      const before = cards.length;
       for (const entity of result.entities) {
         if (ids.includes(entity.entity_id)) continue;
         const section = type === "artist" ? "Music" : validatedSection(entity);
@@ -147,16 +153,19 @@ export async function passport(
           cards.push(...grounded);
         }
       }
+      debugEvent("passport.pool", { city, pool: type, count: result.entities.length, keptCount: cards.length - before });
       if (!result.entities.length)
         notices.push(
           `${type === "place" ? "Local places" : "Music"} returned no discoveries.`,
         );
     } catch (e) {
+      debugEvent("discovery.failed", { pool: type, status: e instanceof QlooError ? e.status : undefined });
       notices.push(
         `${type === "place" ? "Local places" : "Music"}: ${e instanceof QlooError ? e.message : "Qloo returned an unexpected response."}`,
       );
     }
   }
+  debugEvent("passport.completed", { city, count: new Set(cards.map(c => c.id)).size });
   return {
     city,
     selected,

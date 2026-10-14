@@ -1,8 +1,9 @@
+import { debugRequest } from "../../../../src/agent/debug";
 import { NextResponse } from "next/server";
 import { resolveCulturalSeeds } from "../../../../src/agent/runtime";
 import { seal } from "../../../../src/passport/service";
 export const runtime = "nodejs";
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   try {
     const raw = await request.text();
     if (raw.length > 3000) throw Error("Input is too long.");
@@ -39,4 +40,8 @@ export async function POST(request: Request) {
       { status: 502 },
     );
   }
+}
+
+export function POST(request: Request) {
+  return debugRequest("agent.resolve", () => handlePOST(request));
 }

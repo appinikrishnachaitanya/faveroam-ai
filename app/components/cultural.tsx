@@ -19,8 +19,8 @@ export function FamiliarityControl({
     <section className="familiarity-panel" aria-labelledby="familiarity-title">
       <div className="panel-heading">
         <div>
-          <span className="micro-label">SET YOUR CULTURAL PACE</span>
-          <h2 id="familiarity-title">Feels like home. Room to explore.</h2>
+          <span className="micro-label">YOUR KIND OF DISCOVERY</span>
+          <h2 id="familiarity-title">How should your city feel?</h2>
         </div>
         <label className="mode-category">
           Apply to
@@ -53,23 +53,29 @@ export function FamiliarityControl({
             onClick={() => onChange({ familiarity: { mode, section } })}
           >
             <span className="mode-orbit" aria-hidden="true" />
-            <strong>{mode[0].toUpperCase() + mode.slice(1)}</strong>
+            <strong>
+              {mode === "familiar"
+                ? "Feels like home"
+                : mode === "balanced"
+                  ? "Balanced"
+                  : "Help me explore"}
+            </strong>
             <small>
               {mode === "familiar"
-                ? "Direct cultural matches"
+                ? "Start with what you love"
                 : mode === "balanced"
-                  ? "Familiar + adjacent"
-                  : "Broader taste connections"}
+                  ? "A little familiar, a little new"
+                  : "Find your next favorite"}
             </small>
           </button>
         ))}
       </div>
       <p className="mode-caption">
         {applied === "familiar"
-          ? "Confirmed category tastes stay as direct filters."
+          ? "Keep your favorite cultural threads close."
           : applied === "balanced"
-            ? "Two Qloo query pools blend direct and adjacent discoveries when supported."
-            : "Profile tastes become cultural signals rather than narrow filters. Explicit refinement requirements stay fixed."}{" "}
+            ? "Enjoy familiar favorites alongside fresh discoveries."
+            : "Explore further while keeping a connection to your tastes."}{" "}
         Changes update {section} only.
       </p>
     </section>

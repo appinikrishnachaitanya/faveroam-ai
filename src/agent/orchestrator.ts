@@ -1,3 +1,4 @@
+import { debugEvent } from "./debug.ts";
 import {
   normalizeSession,
   resetConversation,
@@ -52,6 +53,7 @@ export async function runTurn(
   emit: (event: AgentEvent) => void = () => {},
   guard = new TurnGuard(),
 ): Promise<AgentReply> {
+  debugEvent("agent.started", { action: input.reset ? "conversation" : input.feedback ? "feedback" : input.guided ? "guided" : input.recovery ? "recovery" : input.familiarity ? "familiarity" : input.tagChoice ? "tag-choice" : "message" });
   // Transactional working copy; never commit generated provider text as data.
   const state = normalizeSession(structuredClone(original));
   state.recovery = [];
@@ -79,6 +81,7 @@ export async function runTurn(
     return { state, changed, events, mode, message: text };
   };
   if (input.reset === "conversation") {
+    debugEvent("session.reset", { action: "conversation", count: state.cards.length });
     const clean = resetConversation(state);
     return {
       state: clean,
@@ -127,10 +130,12 @@ export async function runTurn(
       throw Error("That recommendation is no longer in the current passport.");
     if (input.feedback.detail) culturalText(input.feedback.detail, 160);
     state.feedback = state.feedback.filter((f) => f.id !== current.id);
-    if (input.feedback.clear)
+    if (input.feedback.clear) {
+      debugEvent("feedback.recorded", { section: current.section, action: "cleared" });
       return reply(
         "Cleared this preference. Your discoveries remain unchanged.",
       );
+    }
     state.feedback.push({
       id: current.id,
       section: current.section,
@@ -139,6 +144,7 @@ export async function runTurn(
       detail: input.feedback.detail,
     });
     state.feedback = state.feedback.slice(-100);
+    debugEvent("feedback.recorded", { section: current.section, action: input.feedback.accepted ? "accepted" : "rejected" });
     if (input.feedback.accepted)
       return reply(
         "Saved as your vibe. Future refinements can use this cultural signal.",
@@ -210,12 +216,14 @@ export async function runTurn(
         "Taste Concierge is temporarily unavailable. You can still refine your Passport. ";
       state.providerHealth = "unavailable";
       recordProviderHealth("unavailable");
+      debugEvent("agent.fallback", { mode: "deterministic" });
       event(
         "Taste Concierge is temporarily unavailable. Guided refinement is available.",
         "attention",
       );
     }
   }
+  debugEvent("agent.intent", { kind: intent.kind, sections: intent.sections, mode });
   if (intent.kind === "unknown" || intent.kind === "onboard")
     return reply(
       "For this passport, name a section to refine, ask for cuisine or quietness, or select Not my vibe on a card. Start a new taste draft to change the destination or seeds.",
@@ -347,6 +355,7 @@ export async function runTurn(
       mode = "deterministic";
       state.providerHealth = "unavailable";
       recordProviderHealth("unavailable");
+      debugEvent("agent.fallback", { mode: "deterministic" });
       fallback =
         "Taste Concierge is temporarily unavailable. You can still refine your Passport. ";
       event("Guided refinement is available", "attention");

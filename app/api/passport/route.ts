@@ -1,9 +1,10 @@
+import { debugRequest } from "../../../src/agent/debug";
 import { NextResponse } from "next/server";
 import { cities, passport } from "../../../src/passport/service.ts";
 import { createSession } from "../../../src/agent/store.ts";
 import type { Constraint } from "../../../src/agent/types.ts";
 import { QlooError } from "../../../src/qloo/client.ts";
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   try {
     const raw = await request.text();
     if (raw.length > 30000) throw new QlooError("Input is too long.", 400);
@@ -66,4 +67,8 @@ export async function POST(request: Request) {
       { status: e instanceof QlooError && e.status === 400 ? 400 : 502 },
     );
   }
+}
+
+export function POST(request: Request) {
+  return debugRequest("passport", () => handlePOST(request));
 }
