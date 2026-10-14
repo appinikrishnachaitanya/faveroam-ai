@@ -1,0 +1,142 @@
+import type { Intent } from "../agent/types.ts";
+import type { Candidate, Card, Section } from "../passport/model.ts";
+export type Phase =
+  | "idle"
+  | "review"
+  | "resolving"
+  | "confirming"
+  | "exploring"
+  | "ready"
+  | "error"
+  | "refining"
+  | "interpreting";
+export interface Resolution {
+  items: { query: string; candidates: Candidate[] }[];
+  token: string;
+}
+export interface AgentSession {
+  sessionId: string;
+  revision: number;
+  tags: Candidate[];
+  constraints: string[];
+  pending?: { query: string; candidates: Candidate[] };
+}
+export interface Passport {
+  city: string;
+  selected: Candidate[];
+  cards: Card[];
+  notices: string[];
+  explanation: string;
+  agent?: AgentSession;
+}
+export const destinations = ["New York City", "London", "Paris", "Tokyo"];
+export const sectionOrder: Section[] = [
+  "Eat",
+  "Coffee",
+  "Music",
+  "Culture",
+  "Lifestyle",
+];
+/** Deliberately deterministic, editable extraction. No LLM or inferred interests.
+ * Commas/newlines separate tastes; a final "and" is recognized. Users review
+ * the draft before sending it to Qloo, because titles can contain conjunctions. */
+export function extractDraft(text: string, fallback: string) {
+  const city = /\bnew york(?: city)?\b|\bnyc\b/i.test(text)
+    ? "New York City"
+    : (destinations.find(
+        (c) =>
+          c !== "New York City" && new RegExp(`\\b${c}\\b`, "i").test(text),
+      ) ?? fallback);
+  const tastePart =
+    text.match(
+      /\b(?:i love|i like|i enjoy|my tastes? (?:are|include)|i'm into)\s+([\s\S]+)/i,
+    )?.[1] ?? text;
+  const tastes = tastePart
+    .replace(/[.!?]+\s*$/, "")
+    .split(/[,;\n]+|\s+and\s+/i)
+    .map((t) => t.trim().replace(/^['"]|['"]$/g, ""))
+    .filter(Boolean);
+  return { city, tastes: [...new Set(tastes)] };
+}
+export function visibleSections(cards: Card[]) {
+  return sectionOrder.filter((s) => cards.some((c) => c.section === s));
+}
+export function confirmed(
+  resolution: Resolution | undefined,
+  chosen: Record<number, string>,
+): Candidate[] {
+  if (!resolution) return [];
+  return resolution.items.flatMap((item, i) =>
+    item.candidates.filter((c) => c.id === chosen[i]),
+  );
+}
+export interface Activity {
+  label: string;
+  state: "complete" | "active" | "waiting" | "attention";
+}
+export function activities(
+  phase: Phase,
+  city: string,
+  resolution?: Resolution,
+  signals: Candidate[] = [],
+  result?: Passport,
+): Activity[] {
+  const rows: Activity[] = [];
+  if(phase==='interpreting')return [{label:'Understanding your request',state:'active'},{label:'Resolve cultural signals',state:'waiting'}];
+  if (phase === "idle")
+    return [{ label: "Waiting for your world", state: "waiting" }];
+  rows.push({ label: "Taste draft prepared", state: "complete" });
+  rows.push({
+    label: "Resolve cultural signals",
+    state:
+      phase === "resolving"
+        ? "active"
+        : resolution
+          ? "complete"
+          : phase === "error"
+            ? "attention"
+            : "waiting",
+  });
+  for (const signal of signals)
+    rows.push({ label: `Confirmed ${signal.name}`, state: "complete" });
+  rows.push({
+    label: `Explore ${city} places & music`,
+    state:
+      phase === "exploring"
+        ? "active"
+        : result
+          ? result.notices.length
+            ? "attention"
+            : "complete"
+          : "waiting",
+  });
+  rows.push({
+    label: result?.notices.length
+      ? "Passport ready · some queries need attention"
+      : "Build cultural passport",
+    state: result ? "complete" : "waiting",
+  });
+  return rows;
+}
+export function typeLabel(candidate: Candidate) {
+  return candidate.types
+    .map((t) =>
+      t.startsWith("urn:tag")
+        ? `cultural concept · ${t.split(":")[2]??"taste"}`
+        : t.replace("urn:entity:", "").replaceAll("_", " "),
+    )
+    .join(" · ");
+}
+
+export function onboardingTastes(intent: Intent): string[] {
+  const key = (text: string) =>
+    text
+      .toLowerCase()
+      .trim()
+      .replace(/^indian (?:food|cuisine)$/, "indian");
+  return [
+    ...new Map(
+      [...intent.seeds, ...intent.concepts].map((text) => [key(text), text]),
+    ).values(),
+  ];
+}

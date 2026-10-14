@@ -10,7 +10,7 @@ export function safeText(value: unknown): string {
   const key = process.env.QLOO_API_KEY;
   return key ? text.replaceAll(key, '[REDACTED]') : text;
 }
-export async function request(path: '/search' | '/v2/insights/', params: Record<string, string>): Promise<unknown> {
+export async function request(path: '/search' | '/v2/insights/', params: Record<string, string>, signal?:AbortSignal): Promise<unknown> {
   const key = process.env.QLOO_API_KEY;
   if (!key?.trim()) throw new QlooError('Missing QLOO_API_KEY. Supply it securely through environment settings or an ignored .env file.');
   const base = process.env.QLOO_API_BASE_URL ?? 'https://hackathon.api.qloo.com';
@@ -18,10 +18,11 @@ export async function request(path: '/search' | '/v2/insights/', params: Record<
   const url = new URL(path, base);
   url.search = new URLSearchParams(params).toString();
   return paced(`${key}:${url}`, async () => {
+  if(signal?.aborted)throw new QlooError('Qloo request cancelled');
   let response: Response;
   try {
     response = await fetchWithRetry(url, { headers: { 'X-Api-Key': key, Accept: 'application/json' },
-      signal: AbortSignal.timeout(30_000), redirect: 'error' });
+      signal: signal ?? AbortSignal.timeout(30_000), redirect: 'error' });
   } catch { throw new QlooError('Qloo network/TLS/proxy failure or 30-second timeout. No fallback data used.'); }
   if (!response.ok) {
     // Never log response bodies: they may echo request credentials.
@@ -37,8 +38,8 @@ export async function request(path: '/search' | '/v2/insights/', params: Record<
 export async function search(query: string): Promise<Entity[]> {
   return parseEntities(await request('/search', { query, take: '5' }), 'search');
 }
-export async function insights(params: Record<string, string>): Promise<{ entities: Entity[]; body: unknown }> {
-  const body = await request('/v2/insights/', params);
+export async function insights(params: Record<string, string>, signal?:AbortSignal): Promise<{ entities: Entity[]; body: unknown }> {
+  const body = await request('/v2/insights/', params, signal);
   return { entities: parseEntities(body, 'insights'), body };
 }
 export function insightParams(ids: string[], type: string, local: boolean): Record<string, string> {

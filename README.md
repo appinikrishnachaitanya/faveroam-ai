@@ -1,6 +1,10 @@
-# TastePassport AI MVP
+# TastePassport AI workspace
 
-A Next.js, TypeScript, Tailwind App Router product built on the validated Qloo spike. Enter 3–5 tastes, confirm each actual Qloo match, then generate a destination passport. No database, authentication, LLM, or deployment.
+A Next.js, TypeScript, Tailwind App Router product built on the validated Qloo spike. Enter 3–5 tastes, confirm each actual Qloo match, then generate a destination passport. No database, authentication, or deployment. The tool-calling model layer is optional.
+
+Phase 3 adds one structured TastePassport Agent with real section-level feedback/refinement.
+
+The UI provides a conversational agent panel and living passport with explicit match dialogs, confirmed Taste DNA, collective taste translation and Qloo-backed feedback updates. See [workspace behavior and validation](docs/UI_WORKSPACE.md).
 
 ## Development
 
@@ -50,3 +54,13 @@ Resolution is deliberately conservative: accept one exact normalized name/type m
 Physical results use `filter.location.query=New York City` and `filter.location.radius=0`. Music, book, and brand experiments use `signal.location.query`, which reflects audience taste, **not** local venue availability. Places can cover dining, shops, and cultural venues; categories are not guaranteed. Live-validated affinity at `query.affinity` is shown raw only if present, without rescaling. Search `types` arrays are supported. API documentation describes affinity as recommendation strength, not satisfaction probability; its pages disagree on scale.
 
 See [API choices](docs/QLOO_API.md) and [feasibility status](docs/FEASIBILITY.md). Passing unit tests validates local error handling, not Qloo behavior. After running with a key, review locality metadata, actual addresses, category coverage, and relevance before updating the feasibility verdict.
+
+## Agentic Architecture
+
+One agent maintains a bounded session profile and updates only affected categories. Known entity/discovery queries reuse the proven Qloo client. Concepts use official `@qloo/qloo-harness@0.1.26` workflows; an optional tool-calling model dynamically selects discovered `qloo_find_tags` / `qloo_rank` MCP tools. Qloo remains the sole source of discovery entities and metadata.
+
+Without a model, supported deterministic cuisine/category refinements and Not My Vibe still work; the UI labels open-ended model conversation as unavailable. With a provider, configure server-only `AGENT_MODEL_API_KEY`, `AGENT_MODEL_BASE_URL` (OpenAI-compatible HTTPS API base) and `AGENT_MODEL_NAME`. No specific model is assumed. Secure proxy bindings must allow the chosen provider hostname. Never paste credentials into chat, commit them, or use NEXT_PUBLIC_ prefixes. The harness receives no model credentials.
+
+Example: build an NYC passport using Rahman, Interstellar and a confirmed Indian cuisine concept, then ask “Tonight I want Indian food but somewhere that doesn't feel too touristy.” Not My Vibe asks for a reason and requests replacements only for that category. Concept ambiguity always requires confirmation. Music is not a local concert schedule; quiet tags do not prove crowd levels. Sessions expire and disappear on server restart.
+
+See [Agent architecture, guardrails and validation](docs/AGENT_ARCHITECTURE.md). Historical UI-only behavior in docs/UI_WORKSPACE.md describes the previous phase; its session-only feedback limitation is superseded by Phase 3.

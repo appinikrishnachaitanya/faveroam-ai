@@ -7,7 +7,7 @@ export function retryDelay(attempt: number, retryAfter: string | null, now = Dat
 }
 export async function fetchWithRetry(url: URL, init: RequestInit, fetcher = fetch, pause = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms))): Promise<Response> {
   for (let attempt = 0; ; attempt++) {
-    const response = await fetcher(url, { ...init, signal: AbortSignal.timeout(30_000) });
+    const response = await fetcher(url, { ...init, signal: init.signal ? AbortSignal.any([init.signal, AbortSignal.timeout(30_000)]) : AbortSignal.timeout(30_000) });
     if (response.status !== 429 || attempt >= 2) return response;
     const header = response.headers.get('retry-after');
     // A long server cooldown should surface to the user, rather than retry early.
