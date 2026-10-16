@@ -498,6 +498,7 @@ export default function Home() {
           : `Exploring ${city} and curating your Passport…`;
   return (
     <main className="app-shell progressive-app">
+      <a href="#passport-content" className="skip-link">Skip to main content</a>
       <header className="workspace-topbar">
         <a className="brand" href="/" aria-label="TastePassport home">
           <span className="brand-symbol">
@@ -541,7 +542,7 @@ export default function Home() {
           </div>
         )}
       </header>
-      <div className="progressive-content">
+      <div className="progressive-content" id="passport-content" tabIndex={-1}>
         {!result && <StepIndicator step={step} />}
         {step === 1 && (
           <MoveForm

@@ -80,6 +80,14 @@ export function MoveForm({
           <em>TastePassport</em>
         </h1>
         <p>Tell us where you’re moving and a few things you already love.</p>
+        <div className="onboarding-story">
+          <div className="journey-emblem" aria-hidden="true"><Icon name="globe" size={76} /><span>TASTE TRAVELS WITH YOU</span></div>
+          <ul>
+            <li><Icon name="check" size={16} /> Your tastes, explicitly confirmed</li>
+            <li><Icon name="check" size={16} /> Real discoveries. Visible connections.</li>
+            <li><Icon name="check" size={16} /> A first weekend that feels like you</li>
+          </ul>
+        </div>
       </div>
       <form
         className="move-form"

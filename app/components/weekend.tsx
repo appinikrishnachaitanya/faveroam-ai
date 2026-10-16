@@ -45,9 +45,10 @@ export default function WeekendPlan({ passport, disabled }: { passport: Passport
               setOmitted((old) => ({ ...old, [stop.section]: !id }));
               setStatus(`${stop.section} updated. Your other choices stay the same.`);
             }}>
-            <option value="">{stop.pool.length ? "Leave this stop open" : "No local discoveries available yet"}</option>
+            <option value="">{stop.pool.length ? "Leave this stop open" : "No matches yet"}</option>
             {stop.pool.map((card) => <option key={card.id} value={card.id}>{card.name}</option>)}
           </select>
+          {!stop.pool.length && <p className="helper">No local discoveries available yet. Refine this chapter to find a stop, or leave it open.</p>}
           {stop.selected && <>
             <p>{stop.selected.address || "Address not provided in this discovery."}</p>
             <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([stop.selected.name, stop.selected.address, passport.city].filter(Boolean).join(", "))}`} target="_blank" rel="noopener noreferrer">Look up location &amp; hours ↗</a>

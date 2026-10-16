@@ -79,6 +79,19 @@ await call("Emulation.setDeviceMetricsOverride", {
 await call("Page.navigate", { url: appUrl });
 await waitFor("Boolean(document.querySelector('#taste-input'))");
 await new Promise((r) => setTimeout(r, 500));
+await call("Input.dispatchKeyEvent", { type: "keyDown", key: "Tab", code: "Tab", windowsVirtualKeyCode: 9 });
+await call("Input.dispatchKeyEvent", { type: "keyUp", key: "Tab", code: "Tab", windowsVirtualKeyCode: 9 });
+assert.equal(await evaluate("document.activeElement.classList.contains('skip-link')"), true);
+await call("Input.dispatchKeyEvent", { type: "keyDown", key: "Enter", code: "Enter", windowsVirtualKeyCode: 13 });
+await call("Input.dispatchKeyEvent", { type: "keyUp", key: "Enter", code: "Enter", windowsVirtualKeyCode: 13 });
+assert.equal(await evaluate("document.activeElement.id"), "passport-content");
+assert.ok(await evaluate("parseFloat(getComputedStyle(document.querySelector('#taste-input')).fontSize)>=16"));
+assert.ok(await evaluate("document.querySelector('.build-map').getBoundingClientRect().height>=52"));
+for (const width of [320, 390, 768]) {
+  await call("Emulation.setDeviceMetricsOverride", { width, height: 900, deviceScaleFactor: 1, mobile: true });
+  assert.equal(await evaluate("document.documentElement.scrollWidth>innerWidth"), false);
+}
+await call("Emulation.setDeviceMetricsOverride", { width: 1440, height: 1100, deviceScaleFactor: 1, mobile: false });
 assert.ok(
   !(await evaluate(
     "Boolean(document.querySelector('.agent-pane,.activity-feed,.persona-story,.assistant-launch,.cultural-reveal'))",
@@ -147,6 +160,11 @@ assert.equal(
 assert.ok(
   await evaluate("document.querySelectorAll('.discovery-card').length>0"),
 );
+for (const width of [320, 390, 768]) {
+  await call("Emulation.setDeviceMetricsOverride", { width, height: 900, deviceScaleFactor: 1, mobile: true });
+  assert.equal(await evaluate("document.documentElement.scrollWidth>innerWidth"), false);
+}
+await call("Emulation.setDeviceMetricsOverride", { width: 1440, height: 1100, deviceScaleFactor: 1, mobile: false });
 assert.equal(
   await evaluate(
     "document.querySelector('.familiarity-options button:nth-child(3)').getAttribute('aria-pressed')",
@@ -159,6 +177,7 @@ assert.ok(
 );
 assert.ok(!(await evaluate("document.querySelector('#taste-concierge').open")));
 await evaluate("document.querySelector('.weekend-reveal').open=true");
+await evaluate("document.querySelector('.weekend-reveal').scrollIntoView({behavior:'instant',block:'start'})");
 const weekendBefore = await evaluate("[...document.querySelectorAll('.weekend-stops select')].map(s=>s.value)");
 assert.ok(weekendBefore.some(Boolean));
 assert.ok(await evaluate("[...document.querySelectorAll('#weekend-Eat option')].length>2"));
@@ -377,6 +396,8 @@ assert.equal(
   await evaluate("document.documentElement.scrollWidth>innerWidth"),
   false,
 );
+await evaluate("document.querySelector('.weekend-reveal').scrollIntoView({behavior:'instant',block:'start'})");
+await shot("/tmp/tastepassport-weekend-mobile.png");
 await clickText("Ask TastePassport");
 assert.ok(
   await evaluate(
