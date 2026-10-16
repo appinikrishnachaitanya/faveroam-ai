@@ -2,7 +2,7 @@
 
 ## What the Toronto sample actually does
 
-The Bengaluru → Toronto button in `app/page.tsx` fills editable form inputs: destination Toronto and taste queries A.R. Rahman, Interstellar, Indian cuisine, specialty coffee, independent culture. The persona story is demo copy. It contains no canned restaurant, artist or venue recommendation, no sample Qloo response, and no identity-based recommendation rule. You can change the city or queries, or use your own inputs.
+The current three-step form starts without a preselected persona. Toronto is a supported destination, and taste suggestions such as A.R. Rahman, Interstellar and Indian cuisine are editable inputs, not recommendations. Origin is presentation context, not a recommendation signal. No canned restaurant, artist or venue recommendation, sample Qloo response or identity-based recommendation rule is used. Choose your own supported city and tastes, then explicitly confirm the resolved catalog matches.
 
 Results are actual Qloo responses, optionally served from the private five-minute cache. Names/IDs must be resolved and confirmed before becoming Taste DNA. A response can be empty or ambiguous. The app does not replace failures with fake recommendations. The confirmed profile, destination and selected constraints drive discovery; Gemini interprets intent and selects tools rather than inventing Qloo discoveries.
 

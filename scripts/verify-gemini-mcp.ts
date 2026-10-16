@@ -14,6 +14,7 @@ if (!provider) {
   );
   process.exit(2);
 }
+let stage = "resolve-confirmed-tastes";
 try {
   const items = await resolveCulturalSeeds([
     "A.R. Rahman",
@@ -64,6 +65,7 @@ try {
       });
     return result;
   };
+  stage = "native-model-tool-selection-and-mcp";
   const reply = await runTurn(state, { message: request }, deps);
   if (!operations.length || !operations.some((o) => o.status === "ok"))
     throw Error();
@@ -76,6 +78,7 @@ try {
       changed: reply.changed,
     }),
   );
+  stage = "same-request-model-baseline";
   const baseline = await provider.baseline?.(
     "Toronto",
     state.selected.map((c) => c.name),
@@ -86,6 +89,7 @@ try {
     "Same-request model-only baseline generated without Qloo tools; contents not logged.",
   );
 } catch {
+  console.error(JSON.stringify({ acceptance: "failed", stage }));
   console.error(
     "Live model/MCP acceptance FAILED or selected no usable MCP operation. Existing guided Qloo behavior remains available.",
   );

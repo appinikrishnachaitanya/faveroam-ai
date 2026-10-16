@@ -32,6 +32,14 @@ import {
   StepIndicator,
 } from "./components/onboarding";
 import ConciergeDrawer from "./components/concierge";
+import AccountControl from "./components/account";
+import WeekendPlan from "./components/weekend";
+import {
+  PassportCover,
+  SavedDiscoveries,
+  ConnectionExplorer,
+} from "./components/consumer";
+import { sectionOrder } from "../src/workspace/state";
 import type { Familiarity } from "../src/passport/evidence";
 interface Message {
   role: "agent" | "user";
@@ -53,6 +61,8 @@ async function post<T>(path: string, body: unknown): Promise<T> {
   return data;
 }
 export default function Home() {
+  const [showSaved, setShowSaved] = useState(false);
+  const [adaptation, setAdaptation] = useState("");
   const [city, setCity] = useState("");
   const [origin, setOrigin] = useState("");
   const [initialMode, setInitialMode] = useState<Familiarity>("familiar");
@@ -205,7 +215,9 @@ export default function Home() {
     setUpdating(
       input.feedback
         ? [
-            result.cards.find((c) => c.id === input.feedback!.id)?.section,
+            [...result.cards, ...(result.session?.savedCards ?? [])].find(
+              (c) => c.id === input.feedback!.id,
+            )?.section,
           ].filter((s): s is Section => Boolean(s))
         : [],
     );
@@ -220,6 +232,32 @@ export default function Home() {
             ...new Set([...sections, match[1] as Section]),
           ]);
       });
+      const changed = reply.changed;
+      const unchanged = sectionOrder.filter(
+        (section) =>
+          !changed.includes(section) &&
+          result.cards.some((c) => c.section === section) &&
+          JSON.stringify(result.cards.filter((c) => c.section === section)) ===
+            JSON.stringify(
+              reply.state.cards.filter((c) => c.section === section),
+            ),
+      );
+      const added = reply.state.cards.filter(
+        (c) =>
+          changed.includes(c.section) &&
+          !result.cards.some((old) => old.id === c.id),
+      ).length;
+      setAdaptation(
+        input.feedback?.accepted
+          ? input.feedback.clear
+            ? "Removed from My Vibe."
+            : "Saved to My Vibe. This real discovery can guide future refinements."
+          : changed.length
+            ? `Updated ${changed.join(", ")}${added ? ` with ${added} new discoveries` : ""}. ${unchanged.length ? `${unchanged.join(", ")} stayed unchanged.` : ""}`
+            : input.reset
+              ? "Conversation cleared. Your discoveries and My Vibe are still here."
+              : "Your Passport is preserved.",
+      );
       setResult(passportView(reply.state, result.explanation));
       setUpdates((u) => {
         const next = { ...u };
@@ -313,7 +351,27 @@ export default function Home() {
   }
   function removeSignal(id: string) {
     const entry = Object.entries(chosen).find(([, value]) => value === id);
-    if (!entry) return;
+    if (!entry) {
+      const remaining = signals.filter((signal) => signal.id !== id);
+      const query = (signal: Candidate) =>
+        signal.id.includes(":cuisine:")
+          ? `${signal.name} cuisine`
+          : signal.name;
+      fresh();
+      setCity(city);
+      setDraft(remaining.map(query));
+      setConceptSeeds(
+        remaining
+          .filter((signal) => signal.id.startsWith("urn:tag:"))
+          .map(query),
+      );
+      setEditing(true);
+      setPhase("review");
+      say(
+        "Taste draft updated. Confirm at least three tastes to rebuild your Passport.",
+      );
+      return;
+    }
     const index = Number(entry[0]);
     const name = signals.find((s) => s.id === id)?.name;
     setChosen((c) => {
@@ -408,6 +466,8 @@ export default function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sessionId: result.agent.sessionId }),
       });
+    setShowSaved(false);
+    setAdaptation("");
     setCity("");
     setOrigin("");
     setInitialMode("familiar");
@@ -448,6 +508,26 @@ export default function Home() {
           </span>
         </a>
         <span className="topbar-caption">Move anywhere. Keep your vibe.</span>
+        <AccountControl
+          passport={result}
+          disabled={busy}
+          onSignOut={fresh}
+          onRestore={(passport) => {
+            fresh();
+            setResult(passport);
+            setCity(passport.city);
+            setDraft(passport.selected.map((s) => s.name));
+            setPhase("ready");
+            setProviderHealth("unconfigured");
+            void fetch("/api/agent/capabilities")
+              .then((response) => response.json())
+              .then((value) => setProviderHealth(value.health))
+              .catch(() => {});
+            setAdaptation(
+              "Your saved Passport is back. Refine a chapter for fresh Qloo discoveries.",
+            );
+          }}
+        />
         {result && (
           <div className="topbar-actions">
             <span className="current-city">
@@ -546,18 +626,51 @@ export default function Home() {
             aria-labelledby="passport-title"
             aria-busy={busy}
           >
-            <div className="passport-hero">
-              <span className="micro-label">A NEW CITY. STILL YOU.</span>
-              <h1 id="passport-title">Your {city} TastePassport</h1>
-              <p>
-                Culturally aligned discoveries based on what you already love.
-              </p>
-              <div className="passport-taste-preview">
-                {signals.map((signal) => (
-                  <span key={signal.id}>{signal.name}</span>
-                ))}
-              </div>
+            <PassportCover
+              passport={result}
+              origin={origin}
+              onConnections={() => {
+                const reveal =
+                  document.querySelector<HTMLDetailsElement>(
+                    ".cultural-reveal",
+                  );
+                if (reveal) {
+                  reveal.open = true;
+                  reveal.scrollIntoView({ behavior: "smooth", block: "start" });
+                }
+              }}
+            />
+            <div
+              className="discovery-view-tabs"
+              role="group"
+              aria-label="Passport view"
+            >
+              <button
+                aria-pressed={!showSaved}
+                onClick={() => setShowSaved(false)}
+              >
+                Discover
+              </button>
+              <button
+                aria-pressed={showSaved}
+                onClick={() => setShowSaved(true)}
+              >
+                My Vibe <span>{result.session?.savedCards.length ?? 0}</span>
+              </button>
             </div>
+            {adaptation && (
+              <div className="adaptation-notice" role="status">
+                <Icon name="check" size={16} />
+                <span>{adaptation}</span>
+                <button
+                  className="icon-button"
+                  aria-label="Dismiss update"
+                  onClick={() => setAdaptation("")}
+                >
+                  <Icon name="close" size={13} />
+                </button>
+              </div>
+            )}
             {result.session && (
               <FamiliarityControl
                 session={result.session}
@@ -597,23 +710,40 @@ export default function Home() {
                 You can bring them back with manual refinement.
               </p>
             ) : null}
-            <PassportSections
-              result={{
-                ...result,
-                cards: result.cards.filter(
-                  (c) => !result.session?.hiddenCategories.includes(c.section),
-                ),
-              }}
-              feedback={feedback}
-              onFeedback={recordFeedback}
-              updates={updates}
-              updating={updating}
-            />
+            {showSaved ? (
+              <SavedDiscoveries
+                cards={result.session?.savedCards ?? []}
+                feedback={feedback}
+                onFeedback={recordFeedback}
+                disabled={busy}
+              />
+            ) : (
+              <>
+                <PassportSections
+                  result={{
+                    ...result,
+                    cards: result.cards.filter(
+                      (c) =>
+                        !result.session?.hiddenCategories.includes(c.section),
+                    ),
+                  }}
+                  feedback={feedback}
+                  onFeedback={recordFeedback}
+                  updates={updates}
+                  updating={updating}
+                />
+              </>
+            )}
+            <WeekendPlan key={result.session?.id ?? result.city} passport={result} disabled={busy} />
             <details className="secondary-reveal cultural-reveal">
               <summary>
                 See your cultural bridge <Icon name="arrow" size={16} />
               </summary>
-              <TranslationMap signals={signals} result={result} />
+              <ConnectionExplorer passport={result} />
+              <details className="all-query-routes">
+                <summary>Inspect all recorded query routes</summary>
+                <TranslationMap signals={signals} result={result} />
+              </details>
               <TasteDNA
                 signals={signals}
                 onRemove={removeSignal}
@@ -777,18 +907,26 @@ export default function Home() {
           </button>
         </ConciergeDrawer>
       )}
-      {rejectionId && result?.cards.find((c) => c.id === rejectionId) && (
-        <FeedbackDialog
-          card={result.cards.find((c) => c.id === rejectionId)!}
-          onClose={closeFeedback}
-          onSubmit={(reason, detail) => {
-            setRejectionId(undefined);
-            void refine({
-              feedback: { id: rejectionId, accepted: false, reason, detail },
-            });
-          }}
-        />
-      )}
+      {rejectionId &&
+        [...(result?.cards ?? []), ...(result?.session?.savedCards ?? [])].find(
+          (c) => c.id === rejectionId,
+        ) && (
+          <FeedbackDialog
+            card={
+              [
+                ...(result?.cards ?? []),
+                ...(result?.session?.savedCards ?? []),
+              ].find((c) => c.id === rejectionId)!
+            }
+            onClose={closeFeedback}
+            onSubmit={(reason, detail) => {
+              setRejectionId(undefined);
+              void refine({
+                feedback: { id: rejectionId, accepted: false, reason, detail },
+              });
+            }}
+          />
+        )}
       {conceptDialog && result?.agent?.pending && (
         <Disambiguation
           item={result.agent.pending}

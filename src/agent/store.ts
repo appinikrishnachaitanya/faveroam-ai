@@ -75,3 +75,11 @@ export function discardSession(id: string) {
   if (old) clearPassport(old);
   sessions.delete(id);
 }
+
+/** Rehydrate trusted account data with a fresh, bounded guest-session token. */
+export function registerRestoredSession(state: TastePassportSession) {
+  for (const [id, s] of sessions)
+    if (s.expires < Date.now()) sessions.delete(id);
+  if (sessions.size >= 100) sessions.delete(sessions.keys().next().value!);
+  sessions.set(state.id, state);
+}

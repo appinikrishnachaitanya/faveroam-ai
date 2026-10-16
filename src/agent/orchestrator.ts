@@ -53,7 +53,21 @@ export async function runTurn(
   emit: (event: AgentEvent) => void = () => {},
   guard = new TurnGuard(),
 ): Promise<AgentReply> {
-  debugEvent("agent.started", { action: input.reset ? "conversation" : input.feedback ? "feedback" : input.guided ? "guided" : input.recovery ? "recovery" : input.familiarity ? "familiarity" : input.tagChoice ? "tag-choice" : "message" });
+  debugEvent("agent.started", {
+    action: input.reset
+      ? "conversation"
+      : input.feedback
+        ? "feedback"
+        : input.guided
+          ? "guided"
+          : input.recovery
+            ? "recovery"
+            : input.familiarity
+              ? "familiarity"
+              : input.tagChoice
+                ? "tag-choice"
+                : "message",
+  });
   // Transactional working copy; never commit generated provider text as data.
   const state = normalizeSession(structuredClone(original));
   state.recovery = [];
@@ -81,7 +95,10 @@ export async function runTurn(
     return { state, changed, events, mode, message: text };
   };
   if (input.reset === "conversation") {
-    debugEvent("session.reset", { action: "conversation", count: state.cards.length });
+    debugEvent("session.reset", {
+      action: "conversation",
+      count: state.cards.length,
+    });
     const clean = resetConversation(state);
     return {
       state: clean,
@@ -125,13 +142,19 @@ export async function runTurn(
     intent = guidedIntent(section, constraints);
   }
   if (input.feedback) {
-    const current = state.cards.find((c) => c.id === input.feedback!.id);
+    const current =
+      state.cards.find((c) => c.id === input.feedback!.id) ??
+      state.savedCards.find((c) => c.id === input.feedback!.id);
     if (!current)
       throw Error("That recommendation is no longer in the current passport.");
     if (input.feedback.detail) culturalText(input.feedback.detail, 160);
     state.feedback = state.feedback.filter((f) => f.id !== current.id);
+    state.savedCards = state.savedCards.filter((c) => c.id !== current.id);
     if (input.feedback.clear) {
-      debugEvent("feedback.recorded", { section: current.section, action: "cleared" });
+      debugEvent("feedback.recorded", {
+        section: current.section,
+        action: "cleared",
+      });
       return reply(
         "Cleared this preference. Your discoveries remain unchanged.",
       );
@@ -144,11 +167,18 @@ export async function runTurn(
       detail: input.feedback.detail,
     });
     state.feedback = state.feedback.slice(-100);
-    debugEvent("feedback.recorded", { section: current.section, action: input.feedback.accepted ? "accepted" : "rejected" });
-    if (input.feedback.accepted)
+    debugEvent("feedback.recorded", {
+      section: current.section,
+      action: input.feedback.accepted ? "accepted" : "rejected",
+    });
+    if (input.feedback.accepted) {
+      state.savedCards = [...state.savedCards, structuredClone(current)].slice(
+        -100,
+      );
       return reply(
         "Saved as your vibe. Future refinements can use this cultural signal.",
       );
+    }
     intent = {
       kind: "refine",
       seeds: [],
@@ -223,7 +253,11 @@ export async function runTurn(
       );
     }
   }
-  debugEvent("agent.intent", { kind: intent.kind, sections: intent.sections, mode });
+  debugEvent("agent.intent", {
+    kind: intent.kind,
+    sections: intent.sections,
+    mode,
+  });
   if (intent.kind === "unknown" || intent.kind === "onboard")
     return reply(
       "For this passport, name a section to refine, ask for cuisine or quietness, or select Not my vibe on a card. Start a new taste draft to change the destination or seeds.",

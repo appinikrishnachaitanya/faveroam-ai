@@ -132,14 +132,16 @@ await clickText("Help me explore");
 await shot("/tmp/tastepassport-step2.png");
 await clickText("Create my TastePassport");
 await waitFor(
-  "Boolean(document.querySelector('.passport-hero')) || Boolean(document.querySelector('.error-message'))",
+  "Boolean(document.querySelector('.passport-cover')) || Boolean(document.querySelector('.error-message'))",
 );
 await settled();
 assert.ok(
   !(await evaluate("Boolean(document.querySelector('.error-message'))")),
 );
 assert.equal(
-  await evaluate("document.querySelector('#passport-title').textContent"),
+  await evaluate(
+    "document.querySelector('#passport-title').innerText.replace(/\\s+/g,' ')",
+  ),
   "Your Toronto TastePassport",
 );
 assert.ok(
@@ -156,6 +158,63 @@ assert.ok(
   !(await evaluate("Boolean(document.querySelector('.why-section[open]'))")),
 );
 assert.ok(!(await evaluate("document.querySelector('#taste-concierge').open")));
+await evaluate("document.querySelector('.weekend-reveal').open=true");
+const weekendBefore = await evaluate("[...document.querySelectorAll('.weekend-stops select')].map(s=>s.value)");
+assert.ok(weekendBefore.some(Boolean));
+assert.ok(await evaluate("[...document.querySelectorAll('#weekend-Eat option')].length>2"));
+await input("#weekend-Eat", await evaluate("document.querySelector('#weekend-Eat option:last-child').value"), "HTMLSelectElement");
+const weekendAfter = await evaluate("[...document.querySelectorAll('.weekend-stops select')].map(s=>s.value)");
+assert.deepEqual(weekendAfter.slice(0, 2), weekendBefore.slice(0, 2));
+assert.notEqual(weekendAfter[2], weekendBefore[2]);
+assert.ok(await evaluate("document.querySelector('.weekend-plan').textContent.includes('not a timed route or a reservation')"));
+// Inspect the actual download payload without writing Qloo data into the repository.
+await evaluate("window.__weekendBlob=null;window.__originalCreateObjectURL=URL.createObjectURL;URL.createObjectURL=(blob)=>{window.__weekendBlob=blob;return window.__originalCreateObjectURL(blob)}");
+await evaluate("document.querySelector('.weekend-plan > button').click()");
+assert.match(await evaluate("window.__weekendBlob.text()"), /My first weekend in Toronto/);
+await evaluate("URL.createObjectURL=window.__originalCreateObjectURL;document.querySelector('.weekend-reveal').open=false");
+assert.equal(
+  await evaluate(
+    "document.querySelector('#section-Eat').closest('section').querySelectorAll('.discovery-card').length",
+  ),
+  3,
+);
+await evaluate(
+  "document.querySelector('#section-Eat').closest('section').querySelector('.category-more').click()",
+);
+assert.ok(
+  await evaluate(
+    "document.querySelector('#section-Eat').closest('section').querySelectorAll('.discovery-card').length>3",
+  ),
+);
+await evaluate(
+  "document.querySelector('#section-Eat').closest('section').querySelector('.category-more').click()",
+);
+await evaluate(
+  "document.querySelector('#section-Eat').closest('section').querySelector('.feedback-actions button').click()",
+);
+await settled();
+await evaluate(
+  "document.querySelector('.discovery-view-tabs button:nth-child(2)').click()",
+);
+assert.equal(
+  await evaluate(
+    "document.querySelectorAll('.my-vibe .discovery-card').length",
+  ),
+  1,
+);
+await evaluate(
+  "document.querySelector('.discovery-view-tabs button:first-child').click()",
+);
+await clickText("Sign in");
+await waitFor("Boolean(document.querySelector('.account-dialog[open]'))");
+assert.ok(
+  await evaluate(
+    "document.querySelector('.account-dialog').textContent.includes('Accounts are coming online')",
+  ),
+);
+await evaluate(
+  "document.querySelector('[aria-label=\"Close account\"]').click()",
+);
 await shot("/tmp/tastepassport-step3.png");
 const initialIds = await evaluate(
   "[...document.querySelectorAll('.discovery-card')].map(c=>c.dataset.entityId)",
@@ -194,13 +253,13 @@ assert.ok(
 );
 await evaluate("document.querySelector('.cultural-reveal').open=false");
 const first = await evaluate(
-  "document.querySelector('#section-Eat').closest('section').querySelector('.discovery-card').dataset.entityId",
+  "document.querySelector('#section-Eat').closest('section').querySelectorAll('.discovery-card')[1].dataset.entityId",
 );
 const music = await evaluate(
   "document.querySelector('#section-Music').closest('section').innerText",
 );
 await evaluate(
-  "document.querySelector('#section-Eat').closest('section').querySelectorAll('.feedback-actions button')[1].click()",
+  "document.querySelector('#section-Eat').closest('section').querySelectorAll('.discovery-card')[1].querySelectorAll('.feedback-actions button')[1].click()",
 );
 await waitFor("Boolean(document.querySelector('.match-dialog[open]'))");
 await evaluate(
@@ -280,6 +339,18 @@ if (comparisonAvailable) {
     !(await evaluate("Boolean(document.querySelector('.compare-control'))")),
   );
 }
+await evaluate(
+  "document.querySelector('.discovery-view-tabs button:nth-child(2)').click()",
+);
+assert.equal(
+  await evaluate(
+    "document.querySelectorAll('.my-vibe .discovery-card').length",
+  ),
+  1,
+);
+await evaluate(
+  "document.querySelector('.discovery-view-tabs button:first-child').click()",
+);
 await clickText("Ask TastePassport");
 const beforeReset = await evaluate(
   "[...document.querySelectorAll('.discovery-card')].map(c=>c.dataset.entityId)",
@@ -301,6 +372,7 @@ await call("Emulation.setDeviceMetricsOverride", {
   deviceScaleFactor: 1,
   mobile: true,
 });
+await evaluate("document.querySelector('.weekend-reveal').open=true");
 assert.equal(
   await evaluate("document.documentElement.scrollWidth>innerWidth"),
   false,
@@ -337,6 +409,6 @@ assert.equal(
 );
 await shot("/tmp/tastepassport-onboarding-mobile.png");
 console.log(
-  "Production browser progressive UX: PASS. Three steps, initial Explore queries, collapsed evidence/bridge, drawer persistence, manual refinement, feedback, both resets, 390px layout.",
+  "Production browser progressive UX: PASS. Three steps, curated previews, editable local weekend plan and download, My Vibe persistence, account setup fallback, initial Explore queries, collapsed evidence/bridge, drawer persistence, manual refinement, feedback, both resets, 390px layout.",
 );
 ws.close();

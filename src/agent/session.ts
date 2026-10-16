@@ -8,6 +8,9 @@ import type { Section } from "../passport/model.ts";
 import { sectionOrder } from "../workspace/state.ts";
 /** Canonical state shared by guided controls and conversational interpretation. */
 export function normalizeSession(state: AgentState): TastePassportSession {
+  state.savedCards ??= state.cards.filter((card) =>
+    state.feedback.some((f) => f.id === card.id && f.accepted),
+  );
   state.activeCategories ??= sectionOrder.filter((s) =>
     state.cards.some((c) => c.section === s),
   );
@@ -50,6 +53,7 @@ export function clearPassport(original: AgentState): TastePassportSession {
   state.tags = [];
   state.categoryTags = {};
   state.cards = [];
+  state.savedCards = [];
   state.feedback = [];
   state.notices = [];
   state.activeCategories = [];

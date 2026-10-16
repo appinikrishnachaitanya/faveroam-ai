@@ -58,8 +58,15 @@ export async function resolveCulturalSeeds(
       }
     }
   }
-  items.forEach((item, seedIndex) => debugEvent("resolution.candidates", { seedIndex, count: item.candidates.length }));
-  debugEvent("resolution.completed", { count: items.reduce((n, item) => n + item.candidates.length, 0) });
+  items.forEach((item, seedIndex) =>
+    debugEvent("resolution.candidates", {
+      seedIndex,
+      count: item.candidates.length,
+    }),
+  );
+  debugEvent("resolution.completed", {
+    count: items.reduce((n, item) => n + item.candidates.length, 0),
+  });
   return items;
 }
 /** The restaurant tag below was observed in real Qloo responses during Phase 1.
@@ -72,7 +79,12 @@ export async function discoverSection(
   rank: boolean,
   signal?: AbortSignal,
 ): Promise<Card[]> {
-  debugEvent("discovery.started", { section, city: state.city, signalCount: state.selected.length, excludedCount: excluded.length });
+  debugEvent("discovery.started", {
+    section,
+    city: state.city,
+    signalCount: state.selected.length,
+    excludedCount: excluded.length,
+  });
   const type = section === "Music" ? "artist" : "place";
   const entityIds = state.selected
     .filter((s) => !s.id.startsWith("urn:tag:"))
@@ -174,7 +186,9 @@ export async function discoverSection(
   const sources = [
     ...state.selected,
     ...state.tags,
-    ...state.cards.filter((c) => likes.includes(c.id)),
+    ...[...state.cards, ...(state.savedCards ?? [])].filter((c) =>
+      likes.includes(c.id),
+    ),
   ];
   const pools: Card[][] = [];
   let failure: unknown;
@@ -202,7 +216,13 @@ export async function discoverSection(
         for (const card of grounded)
           if (card.evidence) card.evidence.strategyNote = query.note;
       }
-      debugEvent("discovery.pool", { section, mode, pool: query.pool, count: result.entities.length, keptCount: grounded.length });
+      debugEvent("discovery.pool", {
+        section,
+        mode,
+        pool: query.pool,
+        count: result.entities.length,
+        keptCount: grounded.length,
+      });
       pools.push(grounded);
     } catch (error) {
       debugEvent("discovery.failed", { section, mode, pool: query.pool });

@@ -1,3 +1,9 @@
+# Latest consumer pass
+
+Current: [development completion](DEVELOPMENT_COMPLETION.md), including the real-data weekend planner and 101 passing tests. All dated reports below are historical; current full Gemini/MCP acceptance is blocked by HTTP 503.
+
+See [consumer readiness](CONSUMER_READINESS.md): 98 passing tests, production build and live consumer browser flow passed. Optional account integration is implemented; live account lifecycle and RLS acceptance require the user’s Supabase project. Earlier phase results below are historical.
+
 # Final readiness — 2026-10-14
 
 Subsequent native Gemini SDK migration: see [Gemini runtime](GEMINI_RUNTIME.md). Current validation is 90 passing tests and a passing production build. Subsequent live acceptance with `gemini-3.1-flash-lite` passed: native intent/function selection, actual `qloo_find_tags` MCP results (five), and a same-request model-only baseline. Earlier HTTP 404 failures are historical. The final-pass native Qloo/browser evidence below remains historical evidence for the preserved flows. The subsequent [progressive frontend redesign](PROGRESSIVE_UX.md) passed production Chromium flow/mobile tests; current live comparison was unrun due to Gemini HTTP 503.

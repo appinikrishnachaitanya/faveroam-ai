@@ -1,3 +1,5 @@
+"use client";
+import { useState } from "react";
 import EvidenceDetails from "./evidence";
 import { bridgeRoutes, sparseSections } from "../../src/passport/evidence";
 import type { Candidate, Card, Section } from "../../src/passport/model";
@@ -468,13 +470,18 @@ export function PassportSections({
   onFeedback,
   updates = {},
   updating = [],
+  previewLimit = 3,
 }: {
+  previewLimit?: number;
   updates?: Partial<Record<Section, number>>;
   updating?: Section[];
   result: Passport;
   feedback: Record<string, Feedback>;
   onFeedback: (id: string, value: Feedback) => void;
 }) {
+  const [expanded, setExpanded] = useState<Partial<Record<Section, boolean>>>(
+    {},
+  );
   const sections = visibleSections(result.cards);
   const hasGaps = result.notices.some((n) =>
     /failed|unavailable|returned no|no discoveries|limited|Local places:|Music:/i.test(
@@ -553,6 +560,7 @@ export function PassportSections({
           <div className="discovery-grid">
             {result.cards
               .filter((c) => c.section === s)
+              .slice(0, expanded[s] ? undefined : previewLimit)
               .map((c) => (
                 <DiscoveryCard
                   key={c.id}
@@ -565,6 +573,19 @@ export function PassportSections({
                 />
               ))}
           </div>
+          {result.cards.filter((c) => c.section === s).length >
+            previewLimit && (
+            <button
+              className="quiet-button category-more"
+              aria-expanded={Boolean(expanded[s])}
+              onClick={() => setExpanded((e) => ({ ...e, [s]: !e[s] }))}
+            >
+              {expanded[s]
+                ? "Show fewer"
+                : `See all ${result.cards.filter((c) => c.section === s).length} ${s.toLowerCase()} discoveries`}{" "}
+              <Icon name="arrow" size={14} />
+            </button>
+          )}
         </section>
       ))}
     </div>

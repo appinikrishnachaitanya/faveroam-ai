@@ -1,0 +1,191 @@
+import {
+  accountClient,
+  accountConfigured,
+  storageConfigured,
+  storageWriter,
+  sameOrigin,
+  requestOrigin,
+  privateJson,
+} from "../../../src/account/server";
+export const runtime = "nodejs";
+export async function GET() {
+  if (!accountConfigured())
+    return privateJson({ configured: false, storage: false, user: null });
+  try {
+    const client = await accountClient();
+    const { data, error } = await client.auth.getUser();
+    return privateJson({
+      configured: true,
+      storage: storageConfigured(),
+      user: error ? null : data.user ? { email: data.user.email } : null,
+    });
+  } catch {
+    return privateJson(
+      {
+        configured: true,
+        storage: false,
+        user: null,
+        error: "Accounts are temporarily unavailable.",
+      },
+      503,
+    );
+  }
+}
+export async function POST(request: Request) {
+  if (!sameOrigin(request))
+    return privateJson(
+      { error: "Please use this app to manage your account." },
+      403,
+    );
+  if (!accountConfigured())
+    return privateJson(
+      {
+        error:
+          "Accounts are not configured yet. Your guest Passport still works.",
+      },
+      503,
+    );
+  try {
+    const raw = await request.text();
+    if (raw.length > 4096)
+      return privateJson({ error: "Invalid account request." }, 400);
+    const b = JSON.parse(raw);
+    const client = await accountClient();
+    if (b.action === "logout") {
+      const { error } = await client.auth.signOut();
+      if (error)
+        return privateJson({ error: "Could not sign out. Please retry." }, 502);
+      return privateJson({ signedOut: true });
+    }
+    if (b.action === "recover") {
+      if (
+        typeof b.email !== "string" ||
+        b.email.length > 254 ||
+        !/^\S+@\S+\.\S+$/.test(b.email)
+      )
+        return privateJson({ error: "Use a valid email." }, 400);
+      await client.auth.resetPasswordForEmail(b.email.trim(), {
+        redirectTo: `${requestOrigin(request)}/auth/callback?recovery=1`,
+      });
+      return privateJson({ requested: true });
+    }
+    if (b.action === "password") {
+      if (
+        typeof b.password !== "string" ||
+        b.password.length < 12 ||
+        b.password.length > 128
+      )
+        return privateJson({ error: "Use 12–128 characters." }, 400);
+      const {
+        data: { user },
+        error: authError,
+      } = await client.auth.getUser();
+      if (authError || !user)
+        return privateJson(
+          { error: "Open your email recovery link first." },
+          401,
+        );
+      const { error } = await client.auth.updateUser({ password: b.password });
+      if (error) throw Error();
+      return privateJson({ signedIn: true });
+    }
+    if (
+      !["login", "register"].includes(b.action) ||
+      typeof b.email !== "string" ||
+      b.email.length > 254 ||
+      !/^\S+@\S+\.\S+$/.test(b.email) ||
+      typeof b.password !== "string" ||
+      b.password.length > 128 ||
+      b.password.length < (b.action === "register" ? 12 : 1)
+    )
+      return privateJson(
+        {
+          error:
+            "Use a valid email and a password of at least 12 characters for registration.",
+        },
+        400,
+      );
+    const result =
+      b.action === "register"
+        ? await client.auth.signUp({
+            email: b.email.trim(),
+            password: b.password,
+            options: {
+              emailRedirectTo: `${requestOrigin(request)}/auth/callback`,
+            },
+          })
+        : await client.auth.signInWithPassword({
+            email: b.email.trim(),
+            password: b.password,
+          });
+    if (result.error)
+      return privateJson(
+        {
+          error:
+            b.action === "login"
+              ? "We couldn’t sign you in. Check your details or confirm your email."
+              : "Registration could not complete. If you already have an account, try signing in.",
+        },
+        400,
+      );
+    return privateJson({
+      signedIn: Boolean(result.data.session),
+      confirmationRequired: !result.data.session,
+    });
+  } catch {
+    return privateJson(
+      {
+        error:
+          "Account service is temporarily unavailable. Your Passport is preserved.",
+      },
+      502,
+    );
+  }
+}
+export async function DELETE(request: Request) {
+  if (!sameOrigin(request))
+    return privateJson({ error: "Please use this app." }, 403);
+  if (!storageConfigured())
+    return privateJson(
+      { error: "Account deletion is not configured yet." },
+      503,
+    );
+  try {
+    const raw = await request.text();
+    if (raw.length > 1000)
+      return privateJson({ error: "Invalid deletion request." }, 400);
+    const b = JSON.parse(raw);
+    if (
+      b.confirmation !== "DELETE" ||
+      typeof b.password !== "string" ||
+      !b.password ||
+      b.password.length > 128
+    )
+      return privateJson(
+        { error: "Re-enter your password and type DELETE to confirm." },
+        400,
+      );
+    const client = await accountClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await client.auth.getUser();
+    if (authError || !user?.email)
+      return privateJson({ error: "Please sign in again." }, 401);
+    const verified = await client.auth.signInWithPassword({
+      email: user.email,
+      password: b.password,
+    });
+    if (verified.error || verified.data.user?.id !== user.id)
+      return privateJson({ error: "Password confirmation failed." }, 400);
+    const { error } = await storageWriter().auth.admin.deleteUser(user.id);
+    if (error) throw Error();
+    await client.auth.signOut();
+    return privateJson({ deleted: true });
+  } catch {
+    return privateJson(
+      { error: "Could not delete the account. Please retry." },
+      502,
+    );
+  }
+}

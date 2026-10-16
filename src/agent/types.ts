@@ -1,6 +1,10 @@
 import type { Candidate, Card, Section } from "../passport/model.ts";
 export type Constraint =
-  "touristy" | "crowded" | "mainstream" | "expensive" | "atmosphere";
+  | "touristy"
+  | "crowded"
+  | "mainstream"
+  | "expensive"
+  | "atmosphere";
 export const reasons = [
   "Too touristy",
   "Too crowded",
@@ -45,6 +49,7 @@ export interface AgentState {
   categoryConcepts?: Partial<Record<Section, string[]>>;
   cards: Card[];
   previous: Card[];
+  savedCards?: Card[];
   feedback: FeedbackRecord[];
   intent?: Intent;
   comparison?: import("./comparison.ts").ComparisonSnapshot;
@@ -75,6 +80,7 @@ export interface AgentState {
 }
 /** Fully initialized canonical state; AgentState also accepts legacy bootstrap fixtures. */
 export interface TastePassportSession extends AgentState {
+  savedCards: Card[];
   activeCategories: Section[];
   hiddenCategories: Section[];
   preferences: Partial<Record<Section, string[]>>;

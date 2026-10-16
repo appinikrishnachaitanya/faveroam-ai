@@ -31,7 +31,7 @@ npm run build
 npm start -- --port 3000
 ```
 
-Deploy to a host supporting a persistent Node process and child processes for the official Qloo harness. This task does not deploy the application. Sessions and caches are bounded, in-memory and lost on restart; multiple replicas need shared state or session affinity. Music suggestions reflect audience taste, not local concert availability. Place coverage and metadata depend on Qloo.
+Deploy to a host supporting a persistent Node process and child processes for the official Qloo harness. This task does not deploy the application. Active guest sessions and caches are bounded, in-memory and lost on restart; multiple replicas need shared state or session affinity. Optional managed accounts can save and restore per-city Passport snapshots after Supabase setup. Music suggestions reflect audience taste, not local concert availability. Place coverage and metadata depend on Qloo.
 
 ## Optional Gemini conversation layer
 
@@ -39,7 +39,7 @@ Guided discovery, feedback and deterministic conversation refinements work witho
 
 ```text
 GEMINI_API_KEY=<secure runtime secret>
-GEMINI_MODEL=gemini-2.5-flash
+GEMINI_MODEL=gemini-3.1-flash-lite
 AGENT_DEBUG=1
 ```
 
@@ -55,6 +55,10 @@ This acceptance probe requires a configured provider, verifies a genuine live mo
 
 The optional judge comparison pairs the exact refinement request with a frozen snapshot of its actual Qloo results. It is hidden without a configured provider or eligible request; it never uses a fabricated baseline.
 
+## Accounts and consumer experience
+
+Guest discovery works without login. Optional managed registration, email confirmation, login/recovery and saved city Passports are implemented; live accounts require your Supabase project and schema. See [account setup and security boundaries](docs/ACCOUNTS_AND_STORAGE.md) and [consumer product readiness](docs/CONSUMER_READINESS.md). My Vibe keeps liked discoveries through replanning; the connection reveal shows actual grouped Qloo query relationships.
+
 ## User experience
 
 Start with your move and 3–5 tastes, confirm the real matches, then create your Passport. Chat/manual refinement, bridge and judge comparison are optional. See [progressive UX and live browser checks](docs/PROGRESSIVE_UX.md).
@@ -64,7 +68,7 @@ Start with your move and 3–5 tastes, confirm the real matches, then create you
 See [the full code flow and backend log guide](docs/FLOW_AND_DEBUGGING.md). The sample fills editable inputs only; discoveries are real Qloo responses. Set `AGENT_DEBUG=1` to follow resolution, HTTP/cache/retry activity, model/MCP choices, category validation, feedback and resets in server logs.
 
 
-Start a New Passport, select the Bengaluru → Toronto sample, and confirm A.R. Rahman, Interstellar (2014) and Indian cuisine. Build the Passport, inspect DNA and bridge receipts, and change Eat from Familiar to Explore. Then try:
+Start a New Passport, choose Toronto, add and confirm A.R. Rahman, Interstellar (2014) and Indian cuisine. Build the Passport, inspect DNA and bridge receipts, and change Eat from Familiar to Explore. Then try:
 
 1. “Tonight I want Indian food, quiet atmosphere, and nothing too touristy.”
 2. Not My Vibe → Too mainstream on an Eat card.
@@ -86,3 +90,8 @@ The spike uses Node's ignored `.env` file when present or securely configured en
 ## Open-source release
 
 Licensed under [MIT](LICENSE). Setup and validation are reproducible from the repository. Public repository visibility still needs verification before hackathon submission; an authenticated Git read does not establish public access. No deployment or repository visibility change was performed in this task.
+# Latest development pass
+
+The guest experience includes an editable **My first weekend** plan with locally grounded Qloo discoveries, independent stop selection, location lookups and a downloadable text copy. It does not claim live opening hours, route optimization or bookings. Plan edits stay in the open view; download them to retain a copy. Account Passport snapshots do not save weekend edits.
+
+See [development completion](docs/DEVELOPMENT_COMPLETION.md) for current validation and [demo script](docs/HACKATHON_DEMO.md) for the end-to-end story. Supabase activation and deployment remain separate tasks.
