@@ -95,12 +95,7 @@ export default function Home() {
       .then((d) => setProviderHealth(d.health))
       .catch(() => {});
   }, []);
-  const chatRef = useRef<HTMLDivElement>(null);
   const agentScroll = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (result?.session && !["healthy", "configured"].includes(providerHealth))
-      agentScroll.current?.scrollTo({ top: 0 });
-  }, [result?.agent?.sessionId, providerHealth]);
   const matchOpener = useRef<HTMLButtonElement>(null);
   function closeDialog() {
     setDialog(undefined);
@@ -118,7 +113,11 @@ export default function Home() {
       f.accepted ? "like" : "dislike",
     ]),
   );
-  const visibleMessages = result?.session?.history ?? messages;
+  const sessionHistory = result?.session?.history ?? [];
+  const conversationStart = sessionHistory.findIndex((message) => message.role === "user");
+  const visibleMessages = result
+    ? (conversationStart < 0 ? [] : sessionHistory.slice(conversationStart))
+    : messages;
   const conciergeAvailable =
     providerHealth === "healthy" || providerHealth === "configured";
   const operationLabel =
@@ -138,9 +137,12 @@ export default function Home() {
     activeItems.every(({ index }) => chosen[index]) &&
     new Set(signals.map((s) => s.id)).size === signals.length;
   useEffect(() => {
-    if (chatRef.current)
-      chatRef.current.scrollTop = chatRef.current.scrollHeight;
-  }, [messages, result?.session?.history]);
+    const body = agentScroll.current;
+    if (!assistantOpen || !body) return;
+    body.scrollTop = assistantTab === "ask" && !result?.agent?.pending
+      ? body.scrollHeight
+      : 0;
+  }, [assistantOpen, assistantTab, messages, result?.session?.history, result?.agent?.pending]);
   function say(text: string) {
     setMessages((m) => [...m, { role: "agent", text }]);
   }
@@ -405,7 +407,8 @@ export default function Home() {
         token: resolution.token,
         ids: signals.map((s) => s.id),
         constraints,
-        history: messages,
+        // Onboarding progress is not assistant chat history.
+        history: [],
       });
       let passport = r;
       if (initialMode !== "familiar" && r.agent) {
@@ -815,13 +818,13 @@ export default function Home() {
               aria-selected={assistantTab === "manual"}
               onClick={() => setAssistantTab("manual")}
             >
-              Refine manually
+              Adjust filters
             </button>
           </div>
           <div className="concierge-body" ref={agentScroll}>
             {result.agent?.pending && (
               <div className="pending-concept">
-                <strong>Choose your cultural match</strong>
+                <strong>Choose what you meant</strong>
                 <p>{result.agent.pending.query}</p>
                 <button
                   className="quiet-button"
@@ -838,16 +841,37 @@ export default function Home() {
             {assistantTab === "ask" ? (
               <div id="ask-panel" role="tabpanel" aria-labelledby="ask-tab">
                 <p className="concierge-intro">
-                  What would make this city feel more like you?
+                  Tell us what you’d like to change.
                 </p>
                 {!conciergeAvailable && (
                   <p className="helper">
-                    Chat is taking a break. Refine manually to keep exploring.
+                    Live chat is unavailable. Use Adjust filters to keep exploring.
                   </p>
+                )}
+                {!visibleMessages.length && (
+                  <div className="concierge-starters" aria-label="Suggested requests">
+                    <span className="micro-label">TRY A REQUEST</span>
+                    {[
+                      "Find somewhere quieter to eat",
+                      "Show me something cultural",
+                      "Help me explore a little further",
+                    ].map((text) => (
+                      <button
+                        key={text}
+                        type="button"
+                        disabled={busy}
+                        onClick={() => {
+                          setComposer(text);
+                          document.querySelector<HTMLTextAreaElement>("#conversation-input")?.focus();
+                        }}
+                      >
+                        {text} <Icon name="arrow" size={15} />
+                      </button>
+                    ))}
+                  </div>
                 )}
                 <div
                   className="conversation"
-                  ref={chatRef}
                   aria-label="Conversation history"
                   role="log"
                   aria-live="polite"
@@ -861,30 +885,6 @@ export default function Home() {
                     </div>
                   ))}
                 </div>
-                <form className="composer" onSubmit={submitConversation}>
-                  <label htmlFor="conversation-input" className="sr-only">
-                    Ask TastePassport
-                  </label>
-                  <textarea
-                    id="conversation-input"
-                    placeholder="Show me something quieter…"
-                    value={composer}
-                    onChange={(e) => setComposer(e.target.value)}
-                    disabled={busy}
-                    maxLength={1000}
-                    rows={3}
-                  />
-                  <div className="composer-footer">
-                    <span>Connected to your current Passport</span>
-                    <button
-                      type="submit"
-                      aria-label="Send message"
-                      disabled={busy || !composer.trim()}
-                    >
-                      <Icon name="send" size={17} />
-                    </button>
-                  </div>
-                </form>
               </div>
             ) : (
               <div
@@ -902,13 +902,40 @@ export default function Home() {
               </div>
             )}
           </div>
-          <button
+          {assistantTab === "ask" && (
+            <form className="composer" onSubmit={submitConversation}>
+              <label htmlFor="conversation-input" className="sr-only">
+                Ask TastePassport
+              </label>
+              <textarea
+                id="conversation-input"
+                placeholder="Show me something quieter…"
+                value={composer}
+                onChange={(e) => setComposer(e.target.value)}
+                disabled={busy}
+                maxLength={1000}
+                rows={2}
+              />
+              <div className="composer-footer">
+                <span>Updates your current suggestions</span>
+                <button
+                  type="submit"
+                  aria-label="Send message"
+                  disabled={busy || !composer.trim()}
+                >
+                  <Icon name="send" size={17} />
+                  Send
+                </button>
+              </div>
+            </form>
+          )}
+          {visibleMessages.length > 0 && <button
             className="text-button reset-conversation"
             disabled={busy}
             onClick={() => void refine({ reset: "conversation" })}
           >
             Reset conversation
-          </button>
+          </button>}
         </ConciergeDrawer>
       )}
       {rejectionId &&

@@ -7,8 +7,9 @@
 - `navigation.css`: header grid, navbar insets, responsive actions and skip link.
 - `onboarding.css`: introduction, confirmation and taste-entry layout.
 - `discoveries.css`: Passport, cards, explanations and day-out layout.
-- `dialogs.css`: account modal, concierge and feedback dialog layout.
-- `controls.css`: input/select styling and focus behavior; loaded last deliberately.
+- `dialogs.css`: account and feedback dialog layout.
+- `assistant.css`: Ask TastePassport only; one content scroller, pinned composer and background scroll lock. Legacy drawer rules were removed from the baseline files.
+- `controls.css`: shared input/select styling and focus behavior. The assistant loads after it only for its scoped layout and native-checkbox sizing.
 
 Compound controls have one border owner: their wrapper. Their inner input/select has no border, outline or glow. Standalone fields use their own border. Keyboard focus remains visible through the wrapper border change; button/link focus rings are retained. Keep these rules in `controls.css` rather than adding competing focus rules elsewhere.
 

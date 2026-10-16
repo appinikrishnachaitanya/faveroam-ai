@@ -93,6 +93,34 @@ async function verifyAccountCentering() {
   await evaluate("document.querySelector('[aria-label=\"Close account\"]').click()");
   await waitFor("document.activeElement.classList.contains('account-launch')");
 }
+async function verifyAssistantScrolling() {
+  assert.ok(await evaluate(`(()=>{
+    const dialog=document.querySelector('#taste-concierge');
+    const body=dialog.querySelector('.concierge-body');
+    const panel=body.querySelector('[role="tabpanel"]');
+    const fixture=document.createElement('p');
+    fixture.dataset.scrollFixture='true';
+    fixture.textContent='Layout stress text. '.repeat(600);
+    (panel.querySelector('.conversation') || panel).append(fixture);
+    const scrollAreas=[dialog,...dialog.querySelectorAll('*')].filter(el=>{
+      if(el.tagName==='TEXTAREA')return false;
+      const style=getComputedStyle(el);
+      return /auto|scroll/.test(style.overflowY) && el.scrollHeight>el.clientHeight+1;
+    });
+    const header=dialog.querySelector('.concierge-heading');
+    const top=header.getBoundingClientRect().top;
+    body.scrollTop=body.scrollHeight;
+    const composer=dialog.querySelector('.composer');
+    const rect=composer?.getBoundingClientRect();
+    const valid=document.documentElement.style.overflow==='hidden' &&
+      document.body.style.overflow==='hidden' && scrollAreas.length===1 &&
+      scrollAreas[0]===body && Math.abs(header.getBoundingClientRect().top-top)<1 &&
+      (!composer || (composer.parentElement===dialog && rect.top>=body.getBoundingClientRect().bottom-1 && rect.bottom<=innerHeight));
+    fixture.remove();
+    body.scrollTop=0;
+    return valid;
+  })()`), 'Assistant must have one content scroller, a pinned composer/header and a locked page');
+}
 await call("Emulation.setDeviceMetricsOverride", {
   width: 1440,
   height: 1100,
@@ -283,18 +311,37 @@ await shot("/tmp/tastepassport-step3.png");
 const initialIds = await evaluate(
   "[...document.querySelectorAll('.discovery-card')].map(c=>c.dataset.entityId)",
 );
+await evaluate("document.querySelector('.assistant-launch').focus()");
 await clickText("Ask TastePassport");
 await waitFor("document.querySelector('#taste-concierge').open");
-await clickText("Refine manually");
+assert.ok(await evaluate("!document.querySelector('.conversation').textContent.includes('looking up your cultural signals')"));
+assert.ok(await evaluate("Boolean(document.querySelector('.concierge-starters')) && !document.querySelector('.conversation').textContent.includes('Updated Eat')"));
+if (await evaluate("Boolean(document.querySelector('.concierge-starters button'))")) {
+  await evaluate("document.querySelector('.concierge-starters button').click()");
+  assert.equal(await evaluate("document.querySelector('#conversation-input').value"), 'Find somewhere quieter to eat');
+}
+for (const [width, height] of [[1440, 900], [768, 900], [390, 844], [320, 640], [390, 480]]) {
+  await call("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: 1, mobile: width<768 });
+  await verifyAssistantScrolling();
+  assert.equal(await evaluate("document.querySelector('#taste-concierge').scrollWidth>document.querySelector('#taste-concierge').clientWidth"), false);
+}
+await call("Emulation.setDeviceMetricsOverride", { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
+await shot('/tmp/tastepassport-assistant-desktop.png');
+await clickText("Adjust filters");
 assert.ok(
   await evaluate(
     "Boolean(document.querySelector('#manual-panel .guided-panel'))",
   ),
 );
+await verifyAssistantScrolling();
+assert.ok(await evaluate("[...document.querySelectorAll('#manual-panel input[type=checkbox]')].every(el=>el.getBoundingClientRect().height<=22)"));
+await shot('/tmp/tastepassport-assistant-filters.png');
 await evaluate(
   "document.querySelector('[aria-label=\"Close Taste Concierge\"]').click()",
 );
 await waitFor("!document.querySelector('#taste-concierge').open");
+assert.ok(await evaluate("document.documentElement.style.overflow!=='hidden' && document.body.style.overflow!=='hidden'"));
+assert.ok(await evaluate("document.activeElement.classList.contains('assistant-launch')"));
 assert.deepEqual(
   await evaluate(
     "[...document.querySelectorAll('.discovery-card')].map(c=>c.dataset.entityId)",
@@ -346,7 +393,7 @@ assert.equal(
   music,
 );
 await clickText("Ask TastePassport");
-await clickText("Refine manually");
+await clickText("Adjust filters");
 await input(".guided-panel select", "Culture", "HTMLSelectElement");
 await evaluate(
   "document.querySelector('.guided-panel .primary-button').click()",

@@ -32,46 +32,6 @@
   font-size: 14px;
 }
 
-.concierge-drawer {
-  width: 480px;
-  padding: 28px;
-  border-radius: 24px;
-}
-
-.concierge-heading h2 {
-  font-size: 25px;
-}
-
-.concierge-heading p, .concierge-intro, .concierge-drawer .composer-footer > span {
-  font-size: 13px;
-  color: var(--ui-muted);
-}
-
-.concierge-tabs button {
-  min-height: 48px;
-  font-size: 14px;
-}
-
-.concierge-drawer .message p {
-  font-size: 15px;
-  line-height: 1.7;
-}
-
-.concierge-drawer .message-label {
-  font-size: 10px;
-  opacity: .85;
-}
-
-.concierge-drawer .composer textarea {
-  font-size: 16px;
-  padding: 16px;
-}
-
-.concierge-drawer .reset-conversation {
-  min-height: 44px;
-  font-size: 13px;
-}
-
 .account-dialog, .match-dialog {
   position: fixed;
   inset: 0;
@@ -120,12 +80,6 @@
 }
 
 @media (max-width: 640px) {
-  .concierge-drawer {
-    width: 100%;
-    max-width: 100%;
-    padding: 24px 20px max(20px, env(safe-area-inset-bottom));
-    border-radius: 26px 26px 0 0;
-  }
   .account-dialog, .match-dialog {
     padding: 20px;
     border-radius: 20px;

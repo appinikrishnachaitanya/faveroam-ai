@@ -106,7 +106,7 @@ export async function runTurn(
       events: [],
       mode,
       message:
-        "Conversation cleared. Your destination, Taste DNA and Passport are preserved.",
+        "Conversation cleared. Your city, confirmed interests and Passport are preserved.",
     };
   }
   if (!deps.provider) state.providerHealth = "unconfigured";
@@ -483,7 +483,7 @@ export async function runTurn(
       event("No matching concept returned", "attention");
       if (/quiet/i.test(concept)) continue;
       return reply(
-        "Qloo returned no matching concept. Your existing passport is unchanged; try a more specific cultural term.",
+        "No matching interest was found. Your existing Passport is unchanged; try a more specific term.",
       );
     } catch {
       event("Concept workflow unavailable", "attention");
@@ -639,7 +639,7 @@ export async function runTurn(
         ...cards,
       ];
       changed.push(section);
-      event(`${section} passport updated with Qloo-backed results`, "complete");
+      event(`${section} suggestions updated`, "complete");
       if (cards.length < 3) {
         state.notices.push(
           `Limited ${section} coverage: ${cards.length} valid match${cards.length === 1 ? "" : "es"}. Try Balanced or Explore.`,
@@ -653,7 +653,7 @@ export async function runTurn(
       if (isObject(error) && error.status === 429) {
         state.recovery!.push(section);
         event(
-          `Qloo is busy · previous ${section} results retained`,
+          `Recommendation service is busy · previous ${section} results retained`,
           "attention",
         );
         continue;
@@ -687,7 +687,7 @@ export async function runTurn(
               ...safeCards,
             ];
             changed.push(section);
-            event(`${section} updated with Qloo discoveries`, "complete");
+            event(`${section} suggestions updated`, "complete");
             continue;
           }
         } catch {}
@@ -706,7 +706,7 @@ export async function runTurn(
   if (intent.constraints.includes("expensive"))
     state.notices = [
       ...state.notices,
-      "Affordable refinement uses Qloo price levels up to 2 when available; actual menu prices are not verified.",
+      "Affordable suggestions use available price categories; check actual menu prices before going.",
     ];
   state.notices = [...new Set(state.notices)].slice(-10);
   if (comparedRequest)
@@ -718,7 +718,7 @@ export async function runTurn(
     );
   return reply(
     changed.length
-      ? `Updated ${changed.join(", ")} with Qloo discoveries. ${state.relaxed!.length ? "I couldn't find a strong match satisfying every preference, so these results prioritize your confirmed cultural tastes. Optional preferences relaxed: " + [...new Set(state.relaxed!.flatMap((r) => r.constraints))].map((c) => (c === "crowded" ? "quiet atmosphere" : c)).join(", ") + ". " : ""}${state.pending ? "You can also confirm the atmosphere concept to refine further. " : ""}Other sections and Taste DNA are unchanged.`
+      ? `Updated ${changed.join(", ")} suggestions. ${state.relaxed!.length ? "I couldn't find a strong match satisfying every preference, so these results prioritize your confirmed cultural tastes. Optional preferences relaxed: " + [...new Set(state.relaxed!.flatMap((r) => r.constraints))].map((c) => (c === "crowded" ? "quiet atmosphere" : c)).join(", ") + ". " : ""}${state.pending ? "You can also confirm the atmosphere concept to refine further. " : ""}Your other categories and confirmed interests are unchanged.`
       : "No strong match yet. Your Passport is preserved. Keep your cuisine, relax quiet, allow popular places, or show closest matches below.",
   );
 }

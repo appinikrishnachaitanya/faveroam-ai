@@ -14,15 +14,19 @@ export default function ConciergeDrawer({
   const opener = useRef<HTMLElement | null>(null);
   useEffect(() => {
     const element = dialog.current;
-    if (open) {
-      opener.current = document.activeElement as HTMLElement;
-      if (!element?.open) element?.showModal();
-    } else if (element?.open) {
-      element.close();
-      opener.current?.focus();
-    }
+    if (!open || !element) return;
+    opener.current = document.activeElement as HTMLElement;
+    const root = document.documentElement;
+    const previousRootOverflow = root.style.overflow;
+    const previousBodyOverflow = document.body.style.overflow;
+    root.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+    if (!element.open) element.showModal();
     return () => {
-      if (element?.open) element.close();
+      if (element.open) element.close();
+      root.style.overflow = previousRootOverflow;
+      document.body.style.overflow = previousBodyOverflow;
+      opener.current?.focus();
     };
   }, [open]);
   return (
@@ -53,8 +57,8 @@ export default function ConciergeDrawer({
           <Icon name="star" />
         </span>
         <div>
-          <h2 id="concierge-title">Taste Concierge</h2>
-          <p>A little guidance. Your kind of discovery.</p>
+          <h2 id="concierge-title">Ask TastePassport</h2>
+          <p>Make these suggestions feel more like you.</p>
         </div>
         <button
           className="icon-button"

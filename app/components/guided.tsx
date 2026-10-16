@@ -67,31 +67,23 @@ export default function GuidedRefinement({
           Less mainstream
         </label>
       </fieldset>
-      <fieldset disabled={disabled}>
-        <legend>Avoid</legend>
-        {section !== "Music" && (
+      {section !== "Music" && (
+        <fieldset disabled={disabled}>
+          <legend>Avoid</legend>
           <label>
             <input
               type="checkbox"
               checked={constraints.includes("touristy")}
               onChange={() => toggle("touristy")}
-            />{" "}
+            />
             Touristy places
           </label>
-        )}
-        <label>
-          <input
-            type="checkbox"
-            checked={constraints.includes("mainstream")}
-            onChange={() => toggle("mainstream")}
-          />{" "}
-          Mainstream
-        </label>
-      </fieldset>
+        </fieldset>
+      )}
       <p className="helper">
-        Quiet uses confirmed Qloo atmosphere tags, not current crowd levels.
-        Less mainstream uses a popularity cap. Your destination and cultural
-        tastes stay fixed.
+        Quiet looks for atmosphere descriptions, not live crowd levels.
+        Less mainstream favors less popular options. Your city and confirmed
+        interests stay the same.
       </p>
       <button
         className="primary-button"
