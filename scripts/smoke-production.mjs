@@ -1,0 +1,54 @@
+/** Tests the built server without spending Qloo/Gemini quota or requiring keys. */
+import assert from "node:assert/strict";
+import { spawn } from "node:child_process";
+import { once } from "node:events";
+
+const external = process.env.PASSPORT_SMOKE_URL;
+const base = new URL(external || "http://127.0.0.1:4100");
+assert.ok(["http:", "https:"].includes(base.protocol));
+assert.ok(!base.username && !base.password && !base.search && !base.hash);
+assert.equal(base.pathname, "/", "Use the application's origin, without a path");
+let child;
+let exited;
+try {
+  if (!external) {
+    child = spawn(process.execPath, ["--use-env-proxy", "node_modules/next/dist/bin/next", "start", "--hostname", "127.0.0.1"], {
+      env: { ...process.env, NODE_ENV: "production", PORT: base.port },
+      // No environment, request bodies or raw server errors enter CI output.
+      stdio: "ignore",
+    });
+    exited = once(child, "exit");
+    child.on("error", () => {});
+  }
+  let ready = false;
+  for (let attempt = 0; attempt < 60; attempt++) {
+    if (child?.exitCode !== null && child?.exitCode !== undefined) break;
+    try {
+      const response = await fetch(new URL("/api/health", base), { signal: AbortSignal.timeout(2000), redirect: "error" });
+      if (response.status === 200) {
+        assert.deepEqual(await response.json(), { status: "ok" });
+        assert.match(response.headers.get("cache-control") || "", /no-store/);
+        ready = true;
+        break;
+      }
+    } catch { /* Wait for startup; a final failure stays nonzero. */ }
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+  assert.ok(ready, "Production health check failed");
+  const root = await fetch(base, { signal: AbortSignal.timeout(10000), redirect: "error" });
+  assert.equal(root.status, 200);
+  assert.match(await root.text(), /TastePassport/);
+  const missing = await fetch(new URL("/deployment-smoke-missing-page", base), { signal: AbortSignal.timeout(10000), redirect: "error" });
+  assert.equal(missing.status, 404);
+  console.log("Production smoke PASS: health JSON/no-store, rendered home and 404; no provider calls.");
+} catch {
+  console.error("Production smoke FAILED: app startup, readiness or page response did not match expectations.");
+  process.exitCode = 1;
+} finally {
+  if (child && child.exitCode === null && !child.killed) {
+    child.kill("SIGTERM");
+    const timer = setTimeout(() => child.kill("SIGKILL"), 5000);
+    await exited;
+    clearTimeout(timer);
+  }
+}

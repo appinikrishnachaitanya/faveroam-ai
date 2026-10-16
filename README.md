@@ -15,6 +15,8 @@ The six core capabilities are:
 
 ## Reproducible setup
 
+For temporary hackathon hosting, see [Render Free deployment and GitHub CI](docs/HACKATHON_DEPLOYMENT.md). The repository includes one-service configuration and a quota-free production smoke check; hosting has not been provisioned automatically.
+
 Requires Node.js 24+ and npm. Validated with Node 24.19.0 / npm 11.9.0.
 
 ```sh
