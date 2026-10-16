@@ -1,5 +1,7 @@
 # Hackathon deployment: Render Free
 
+The user subsequently selected **Railway**. Use [Railway deployment](RAILWAY_DEPLOYMENT.md) for the current release. This Render guide and `render.yaml` are alternatives only.
+
 Chosen for temporary guest-mode hosting with minimal architecture changes. Confirm free-plan eligibility and limits in your Render account. No service has been provisioned here. Supabase is optional for guest discovery. Vercel would need shared active-session storage and verification of the Qloo harness runtime; those changes are outside this deployment pass.
 
 ## Free hosting tradeoffs

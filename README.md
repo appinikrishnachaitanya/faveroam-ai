@@ -15,7 +15,7 @@ The six core capabilities are:
 
 ## Reproducible setup
 
-For temporary hackathon hosting, see [Render Free deployment and GitHub CI](docs/HACKATHON_DEPLOYMENT.md). The repository includes one-service configuration and a quota-free production smoke check; hosting has not been provisioned automatically.
+For the selected hackathon host, see [Railway deployment and GitHub CI](docs/RAILWAY_DEPLOYMENT.md). The repository includes `railway.toml`, one-service startup/health configuration and a quota-free production smoke check; hosting has not been provisioned automatically. [Render Free](docs/HACKATHON_DEPLOYMENT.md) remains an alternative.
 
 Requires Node.js 24+ and npm. Validated with Node 24.19.0 / npm 11.9.0.
 
