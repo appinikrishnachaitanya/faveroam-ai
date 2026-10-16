@@ -23,12 +23,18 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 ::selection { background: #d4e2c7; color: #183e33; }
-.progressive-app { max-width: 1280px; padding: 0 40px 112px; }
+.progressive-app { --header-height: 88px; max-width: 1280px; padding: 0 40px 64px; }
 .progressive-app .workspace-topbar {
   position: sticky; top: 0; z-index: 30;
-  height: 88px; background: #f8f7f1ed;
+  height: var(--header-height); background: #f8f7f1ed;
   backdrop-filter: blur(16px); border-bottom: 1px solid var(--ui-border);
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 24px;
 }
+.header-controls, .header-controls .account-control, .header-controls .topbar-actions { display: flex; align-items: center; gap: 8px; margin: 0; min-width: 0; }
+.header-controls { justify-content: flex-end; }
+.header-controls button, .header-controls .current-city { white-space: nowrap; }
+.progressive-app .brand { white-space: nowrap; }
+.progressive-app .topbar-caption { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .progressive-app .brand { font-size: 23px; letter-spacing: -1px; gap: 12px; }
 .progressive-app .brand-symbol { width: 42px; height: 42px; border-radius: 14px; box-shadow: 0 4px 12px #214f3e20; }
 .progressive-app .brand small { font-size: 10px; letter-spacing: 1px; }
@@ -70,6 +76,20 @@ body {
 .field-with-icon { min-height: 56px; border-radius: 13px; background: #f4f6ef; }
 .field-with-icon:focus-within { border-color: #548268; box-shadow: 0 0 0 3px #dce9d4; }
 .field-with-icon input, .field-with-icon select { font-size: 16px; min-height: 54px; }
+.progressive-app select, .account-dialog select, .match-dialog select {
+  min-width: 0; max-width: 100%; box-sizing: border-box;
+  min-height: 48px; line-height: 1.4; padding: 12px 38px 12px 14px;
+  border: 1px solid var(--ui-border); border-radius: 12px;
+  background-color: var(--ui-surface); color: var(--ui-ink);
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23365346' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 12px center;
+  text-overflow: ellipsis;
+}
+.progressive-app .field-with-icon select { border: 0; border-radius: 0; background-color: transparent; padding-left: 0; }
+.mode-category { display: flex; flex-direction: column; align-items: stretch; gap: 6px; min-width: 112px; }
+.mode-category select { margin: 0; width: 100%; }
+.progressive-app .weekend-stops select { border: 1px solid var(--ui-border); }
 .taste-entry { margin-top: 32px; padding-top: 28px; border-top: 1px solid #e5e9df; }
 .taste-entry h2 { font-size: 27px; letter-spacing: -.5px; }
 .taste-entry > p { font-size: 14px; color: var(--ui-muted); }
@@ -128,7 +148,8 @@ body {
 .cover-stamp > span { font-size: 9px; }
 .cover-connection { min-height: 44px; font-size: 14px; font-weight: 600; }
 .passport-taste-preview > span { font-size: 13px; padding: 7px 12px; background: #fffaf080; border: 1px solid #d7dfc9; }
-.discovery-view-tabs { margin: 28px 0 20px; padding: 5px; border-radius: 14px; background: #e9eee2; width: fit-content; }
+.passport-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 24px 0; }
+.discovery-view-tabs { margin: 0; padding: 5px; border: 1px solid var(--ui-border); border-radius: 14px; background: #e9eee2; width: fit-content; }
 .discovery-view-tabs button { min-height: 44px; padding: 10px 24px; font-size: 15px; border-radius: 10px; font-weight: 600; }
 .progressive-app .familiarity-panel { padding: 16px 0 28px; }
 .progressive-app .familiarity-panel h2 { font-size: 25px; }
@@ -137,7 +158,7 @@ body {
 .progressive-app .familiarity-options button[aria-pressed="true"] { color: var(--ui-ink); border-color: #64815c; background: #eaf0df; box-shadow: inset 0 0 0 1px #64815c; }
 .progressive-app .familiarity-options strong { font-size: 16px; }
 .progressive-app .familiarity-options small { font-size: 13px; line-height: 1.5; color: var(--ui-muted); margin-top: 6px; }
-.mode-category select { font-size: 14px; min-height: 44px; padding: 8px 12px; }
+.mode-category select { font-size: 14px; min-height: 48px; padding: 10px 38px 10px 12px; }
 .progressive-app .passport-sections { margin-top: 36px; }
 .progressive-app .result-heading { margin-bottom: 18px; gap: 16px; }
 .progressive-app .result-heading h3, .my-vibe h2 { font-size: 32px; letter-spacing: -.7px; }
@@ -171,7 +192,7 @@ body {
 .connected-results li { border-radius: 16px; padding: 20px; }
 .connected-results li > strong { font-size: 20px; }
 .progressive-app .helper, .my-vibe > .helper { font-size: 14px; color: var(--ui-muted); line-height: 1.7; }
-.progressive-app .assistant-launch { min-height: 56px; font-size: 15px; padding: 14px 22px; border-radius: 18px; box-shadow: 0 8px 28px #193e3230; bottom: max(24px, env(safe-area-inset-bottom)); }
+.progressive-app .assistant-launch { position: static; inset: auto; z-index: auto; min-height: 54px; font-size: 15px; padding: 14px 20px; border-radius: 14px; box-shadow: none; flex-shrink: 0; justify-content: center; }
 .concierge-drawer { width: 480px; padding: 28px; border-radius: 24px; }
 .concierge-heading h2 { font-size: 25px; }
 .concierge-heading p, .concierge-intro, .concierge-drawer .composer-footer > span { font-size: 13px; color: var(--ui-muted); }
@@ -180,7 +201,11 @@ body {
 .concierge-drawer .message-label { font-size: 10px; opacity: .85; }
 .concierge-drawer .composer textarea { font-size: 16px; padding: 16px; }
 .concierge-drawer .reset-conversation { min-height: 44px; font-size: 13px; }
-.account-dialog, .match-dialog { border-radius: 24px; padding: 28px; box-shadow: 0 24px 80px #183e3330; }
+.account-dialog, .match-dialog { position: fixed; inset: 0; margin: auto; width: min(520px, calc(100vw - 32px)); height: fit-content; max-height: calc(100dvh - 48px); border: 1px solid var(--ui-border); border-radius: 24px; padding: 28px; box-shadow: 0 24px 80px #183e3330; overflow: auto; overscroll-behavior: contain; white-space: normal; }
+.account-dialog .dialog-header, .match-dialog .dialog-header { gap: 16px; align-items: center; }
+.account-dialog .icon-button, .match-dialog .icon-button { min-width: 44px; min-height: 44px; flex-shrink: 0; border-radius: 12px; }
+.account-dialog h2, .match-dialog h2 { line-height: 1.2; overflow-wrap: anywhere; }
+.account-dialog .account-intro { line-height: 1.7; }
 .account-dialog input, .account-dialog select, .match-dialog select { font-size: 16px; min-height: 52px; border-radius: 12px; }
 .account-dialog form > label { font-size: 14px; }
 .account-privacy { font-size: 13px; line-height: 1.7; color: var(--ui-muted); }
@@ -195,15 +220,18 @@ body {
   .progressive-app .discovery-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .passport-cover { padding: 30px; }
   .progressive-app .topbar-caption { display: none; }
+  .progressive-app .workspace-topbar { grid-template-columns: auto minmax(0, 1fr); gap: 16px; }
+  .header-controls .current-city { display: none; }
 }
 @media (max-width: 640px) {
   html { scroll-padding-top: 84px; }
-  .progressive-app { padding: 0 16px 104px; }
-  .progressive-app .workspace-topbar { height: 76px; gap: 8px; }
+  .progressive-app { --header-height: 76px; padding: 0 16px 40px; }
+  .progressive-app .workspace-topbar { height: var(--header-height); gap: 8px; }
   .progressive-app .brand { font-size: 18px; gap: 8px; }
   .progressive-app .brand-symbol { width: 34px; height: 38px; border-radius: 11px; }
   .progressive-app .quiet-button { font-size: 13px; padding: 9px 8px; }
-  .topbar-actions { gap: 4px; }
+  .header-controls, .header-controls .topbar-actions, .header-controls .account-control { gap: 4px; }
+  .header-controls .save-passport { display: none; }
   .step-indicator { gap: 14px; margin: 24px 0; font-size: 11px; }
   .step-indicator li { gap: 6px; }
   .step-indicator li > span { width: 26px; height: 26px; }
@@ -225,7 +253,9 @@ body {
   .passport-book { width: 115px; height: 158px; }
   .cover-stamp { width: 80px; height: 80px; }
   .cover-stamp > span { font-size: 8px; }
+  .passport-toolbar { flex-wrap: wrap; gap: 12px; }
   .discovery-view-tabs { width: 100%; display: flex; }
+  .progressive-app .assistant-launch { width: 100%; min-height: 48px; }
   .discovery-view-tabs button { flex: 1; padding: 10px 14px; }
   .progressive-app .familiarity-panel h2 { font-size: 22px; }
   .progressive-app .familiarity-options { gap: 8px; }
@@ -241,16 +271,17 @@ body {
   .weekend-stops { grid-template-columns: 1fr; }
   .weekend-plan h2, .connection-explorer h2 { font-size: 28px; }
   .concierge-drawer { width: 100%; max-width: 100%; padding: 24px 20px max(20px, env(safe-area-inset-bottom)); border-radius: 26px 26px 0 0; }
-  .progressive-app .assistant-launch { right: 16px; bottom: max(16px, env(safe-area-inset-bottom)); }
+  .account-dialog, .match-dialog { padding: 20px; border-radius: 20px; max-height: calc(100dvh - 32px); }
 }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
 @media (max-width: 380px) {
-  .progressive-app .workspace-topbar { height: auto; min-height: 76px; padding: 10px 0; flex-wrap: wrap; gap: 4px; }
+  .progressive-app { --header-height: 112px; }
+  .progressive-app .workspace-topbar { grid-template-columns: 1fr; height: var(--header-height); padding: 8px 0; gap: 2px; }
   .progressive-app .brand { margin-right: auto; font-size: 16px; }
   .progressive-app .brand-symbol { width: 30px; height: 34px; }
   .progressive-app .quiet-button { padding-inline: 6px; font-size: 12px; }
-  .topbar-actions { margin-left: auto; }
+  .header-controls { width: 100%; justify-content: flex-end; }
 }

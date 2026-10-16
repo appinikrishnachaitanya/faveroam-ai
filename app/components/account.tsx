@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { Passport } from "../../src/workspace/state";
 import { Icon } from "./passport";
 type Account = {
@@ -48,6 +49,7 @@ export default function AccountControl({
   const [entries, setEntries] = useState<Entry[]>([]);
   const [pendingSave, setPendingSave] = useState(false);
   const dialog = useRef<HTMLDialogElement>(null);
+  const opener = useRef<HTMLElement | null>(null);
   async function refresh() {
     try {
       const data = await request("/api/account");
@@ -84,13 +86,18 @@ export default function AccountControl({
   }, []);
   useEffect(() => {
     const el = dialog.current;
-    if (open && !el?.open) el?.showModal();
+    if (open && !el?.open) {
+      opener.current = document.activeElement as HTMLElement | null;
+      el?.showModal();
+    }
     if (!open) {
       el?.close();
       setPassword("");
       setDeletePassword("");
       setDeleteConfirmation("");
+      opener.current?.focus();
     }
+    return () => { if (el?.open) el.close(); };
   }, [open]);
   async function save() {
     if (!passport?.agent) return;
@@ -229,7 +236,7 @@ export default function AccountControl({
       >
         {account?.user ? "My Passports" : "Sign in"}
       </button>
-      {open && (
+      {open && createPortal(
         <dialog
           ref={dialog}
           className="account-dialog"
@@ -469,7 +476,8 @@ export default function AccountControl({
               Privacy & data controls
             </a>
           </p>
-        </dialog>
+        </dialog>,
+        document.body,
       )}
     </div>
   );

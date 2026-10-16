@@ -70,6 +70,29 @@ async function shot(path) {
     Buffer.from(s.result.data, "base64"),
   );
 }
+async function verifyHeaderLayout() {
+  assert.ok(await evaluate(`(()=>{
+    const header=document.querySelector('.workspace-topbar').getBoundingClientRect();
+    const brand=document.querySelector('.brand').getBoundingClientRect();
+    const nav=document.querySelector('.header-controls').getBoundingClientRect();
+    return brand.left>=header.left-1 && nav.right<=header.right+1 &&
+      (brand.right<=nav.left+1 || brand.bottom<=nav.top+1);
+  })()`), "Brand and navigation must fit without overlap");
+}
+async function verifyAccountCentering() {
+  await evaluate("document.querySelector('.account-launch').focus();document.querySelector('.account-launch').click()");
+  await waitFor("Boolean(document.querySelector('.account-dialog[open]'))");
+  assert.ok(await evaluate(`(()=>{
+    const r=document.querySelector('.account-dialog').getBoundingClientRect();
+    return Math.abs(r.left+r.width/2-innerWidth/2)<2 &&
+      Math.abs(r.top+r.height/2-innerHeight/2)<2 && r.left>=15 && r.right<=innerWidth-15 && r.top>=15 && r.bottom<=innerHeight-15;
+  })()`), "Account dialog must be centered and contained in the viewport");
+  if (await evaluate("innerWidth===390 || innerWidth===1440")) {
+    await shot(`/tmp/tastepassport-account-${await evaluate("innerWidth")}.png`);
+  }
+  await evaluate("document.querySelector('[aria-label=\"Close account\"]').click()");
+  await waitFor("document.activeElement.classList.contains('account-launch')");
+}
 await call("Emulation.setDeviceMetricsOverride", {
   width: 1440,
   height: 1100,
@@ -87,9 +110,11 @@ await call("Input.dispatchKeyEvent", { type: "keyUp", key: "Enter", code: "Enter
 assert.equal(await evaluate("document.activeElement.id"), "passport-content");
 assert.ok(await evaluate("parseFloat(getComputedStyle(document.querySelector('#taste-input')).fontSize)>=16"));
 assert.ok(await evaluate("document.querySelector('.build-map').getBoundingClientRect().height>=52"));
-for (const width of [320, 390, 768]) {
+for (const width of [320, 390, 640, 768, 1024, 1440]) {
   await call("Emulation.setDeviceMetricsOverride", { width, height: 900, deviceScaleFactor: 1, mobile: true });
   assert.equal(await evaluate("document.documentElement.scrollWidth>innerWidth"), false);
+  await verifyHeaderLayout();
+  await verifyAccountCentering();
 }
 await call("Emulation.setDeviceMetricsOverride", { width: 1440, height: 1100, deviceScaleFactor: 1, mobile: false });
 assert.ok(
@@ -160,9 +185,17 @@ assert.equal(
 assert.ok(
   await evaluate("document.querySelectorAll('.discovery-card').length>0"),
 );
-for (const width of [320, 390, 768]) {
+for (const width of [320, 390, 640, 768, 1024, 1440]) {
   await call("Emulation.setDeviceMetricsOverride", { width, height: 900, deviceScaleFactor: 1, mobile: true });
   assert.equal(await evaluate("document.documentElement.scrollWidth>innerWidth"), false);
+  await verifyHeaderLayout();
+  await verifyAccountCentering();
+  assert.ok(await evaluate(`(()=>{
+    const toolbar=document.querySelector('.passport-toolbar').getBoundingClientRect();
+    const button=document.querySelector('.assistant-launch').getBoundingClientRect();
+    return getComputedStyle(document.querySelector('.assistant-launch')).position==='static' &&
+      button.left>=toolbar.left-1 && button.right<=toolbar.right+1 && button.top>=toolbar.top-1 && button.bottom<=toolbar.bottom+1;
+  })()`), "Ask action must stay inside its toolbar");
 }
 await call("Emulation.setDeviceMetricsOverride", { width: 1440, height: 1100, deviceScaleFactor: 1, mobile: false });
 assert.equal(

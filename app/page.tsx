@@ -509,38 +509,40 @@ export default function Home() {
           </span>
         </a>
         <span className="topbar-caption">Move anywhere. Keep your vibe.</span>
-        <AccountControl
-          passport={result}
-          disabled={busy}
-          onSignOut={fresh}
-          onRestore={(passport) => {
-            fresh();
-            setResult(passport);
-            setCity(passport.city);
-            setDraft(passport.selected.map((s) => s.name));
-            setPhase("ready");
-            setProviderHealth("unconfigured");
-            void fetch("/api/agent/capabilities")
-              .then((response) => response.json())
-              .then((value) => setProviderHealth(value.health))
-              .catch(() => {});
-            setAdaptation(
-              "Your saved Passport is back. Refine a chapter for fresh Qloo discoveries.",
-            );
-          }}
-        />
-        {result && (
-          <div className="topbar-actions">
-            <span className="current-city">
-              <Icon name="pin" size={14} />
-              {city}
-            </span>
-            <button className="quiet-button" onClick={fresh} disabled={busy}>
-              <Icon name="plus" size={14} />
-              New Passport
-            </button>
-          </div>
-        )}
+        <nav className="header-controls" aria-label="Passport actions">
+          <AccountControl
+            passport={result}
+            disabled={busy}
+            onSignOut={fresh}
+            onRestore={(passport) => {
+              fresh();
+              setResult(passport);
+              setCity(passport.city);
+              setDraft(passport.selected.map((s) => s.name));
+              setPhase("ready");
+              setProviderHealth("unconfigured");
+              void fetch("/api/agent/capabilities")
+                .then((response) => response.json())
+                .then((value) => setProviderHealth(value.health))
+                .catch(() => {});
+              setAdaptation(
+                "Your saved Passport is back. Refine a chapter for fresh Qloo discoveries.",
+              );
+            }}
+          />
+          {result && (
+            <div className="topbar-actions">
+              <span className="current-city">
+                <Icon name="pin" size={14} />
+                {city}
+              </span>
+              <button className="quiet-button" onClick={fresh} disabled={busy}>
+                <Icon name="plus" size={14} />
+                New Passport
+              </button>
+            </div>
+          )}
+        </nav>
       </header>
       <div className="progressive-content" id="passport-content" tabIndex={-1}>
         {!result && <StepIndicator step={step} />}
@@ -641,22 +643,33 @@ export default function Home() {
                 }
               }}
             />
-            <div
-              className="discovery-view-tabs"
-              role="group"
-              aria-label="Passport view"
-            >
-              <button
-                aria-pressed={!showSaved}
-                onClick={() => setShowSaved(false)}
+            <div className="passport-toolbar">
+              <div
+                className="discovery-view-tabs"
+                role="group"
+                aria-label="Passport view"
               >
-                Discover
-              </button>
+                <button
+                  aria-pressed={!showSaved}
+                  onClick={() => setShowSaved(false)}
+                >
+                  Discover
+                </button>
+                <button
+                  aria-pressed={showSaved}
+                  onClick={() => setShowSaved(true)}
+                >
+                  My Vibe <span>{result.session?.savedCards.length ?? 0}</span>
+                </button>
+              </div>
               <button
-                aria-pressed={showSaved}
-                onClick={() => setShowSaved(true)}
+                className="assistant-launch"
+                onClick={() => setAssistantOpen(true)}
+                aria-expanded={assistantOpen}
+                aria-controls="taste-concierge"
               >
-                My Vibe <span>{result.session?.savedCards.length ?? 0}</span>
+                <Icon name="star" size={18} />
+                Ask TastePassport
               </button>
             </div>
             {adaptation && (
@@ -775,17 +788,6 @@ export default function Home() {
           </section>
         )}
       </div>
-      {result && (
-        <button
-          className="assistant-launch"
-          onClick={() => setAssistantOpen(true)}
-          aria-expanded={assistantOpen}
-          aria-controls="taste-concierge"
-        >
-          <Icon name="star" size={18} />
-          Ask TastePassport
-        </button>
-      )}
       {result && (
         <ConciergeDrawer
           open={assistantOpen}
