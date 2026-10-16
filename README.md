@@ -6,10 +6,10 @@ TastePassport translates confirmed food, music, film and cultural interests into
 
 The six core capabilities are:
 
-- **Taste DNA:** inspect and remove confirmed entities and tags, without invented personality scores.
-- **Cultural Bridge Map:** trace actual query/result relationships from your tastes to destination discoveries.
+- **Confirmed interests:** inspect and remove confirmed entities and tags, without invented personality scores.
+- **Why these suggestions?** trace actual query/result relationships from your tastes to destination discoveries.
 - **Feels Like Home ↔ Help Me Explore:** Familiar, Balanced and Explore execute different retrieval strategies.
-- **Qloo evidence:** inspect returned metadata and the query receipt behind each discovery.
+- **Recommendation source details:** inspect returned metadata and the query receipt behind each discovery.
 - **Not My Vibe:** reject an entity and replan its category while preserving the remaining Passport.
 - **Taste Concierge:** refine preferences, switch categories and update the same state as guided controls.
 
@@ -94,6 +94,6 @@ The spike uses Node's ignored `.env` file when present or securely configured en
 Licensed under [MIT](LICENSE). Setup and validation are reproducible from the repository. Public repository visibility still needs verification before hackathon submission; an authenticated Git read does not establish public access. No deployment or repository visibility change was performed in this task.
 # Latest development pass
 
-The guest experience includes an editable **My first weekend** plan with locally grounded Qloo discoveries, independent stop selection, location lookups and a downloadable text copy. It does not claim live opening hours, route optimization or bookings. Plan edits stay in the open view; download them to retain a copy. Account Passport snapshots do not save weekend edits.
+The guest experience includes an editable **Plan a day out** plan with locally grounded Qloo discoveries, independent stop selection, location lookups and a downloadable text copy. It does not claim live opening hours, route optimization or bookings. Plan edits stay in the open view; download them to retain a copy. Account Passport snapshots do not save weekend edits.
 
 See [development completion](docs/DEVELOPMENT_COMPLETION.md) for current validation and [demo script](docs/HACKATHON_DEMO.md) for the end-to-end story. Supabase activation and deployment remain separate tasks.

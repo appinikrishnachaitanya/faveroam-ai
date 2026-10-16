@@ -247,7 +247,7 @@ test("comparison UI displays the exact shared request and labels baseline as unv
   );
   assert.match(html, /THE SAME USER REQUEST/);
   assert.match(html, /Find something cultural in Toronto/);
-  assert.match(html, /Unverified model output/);
+  assert.match(html, /unverified/i);
 });
 test("failed dynamic MCP concept lookup falls back once to the real known exec workflow", async () => {
   const d = dependencies();

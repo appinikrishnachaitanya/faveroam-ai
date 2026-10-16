@@ -85,7 +85,7 @@ export function MoveForm({
           <ul>
             <li><Icon name="check" size={16} /> Your tastes, explicitly confirmed</li>
             <li><Icon name="check" size={16} /> Real discoveries. Visible connections.</li>
-            <li><Icon name="check" size={16} /> A first weekend that feels like you</li>
+            <li><Icon name="check" size={16} /> Places to try and a day out to plan</li>
           </ul>
         </div>
       </div>
@@ -125,7 +125,7 @@ export function MoveForm({
                 required
                 onChange={(e) => onCity(e.target.value)}
               >
-                <option value="">Choose your new city</option>
+                <option value="">Choose a city</option>
                 {destinations.map((destination) => (
                   <option key={destination}>{destination}</option>
                 ))}
@@ -215,7 +215,7 @@ export function MoveForm({
           type="submit"
           disabled={disabled || !city || draft.length < 3 || draft.length > 5}
         >
-          Build my cultural map <Icon name="arrow" />
+          Find my taste matches <Icon name="arrow" />
         </button>
         <p className="onboarding-footnote">
           Carry what you love into somewhere new.
@@ -255,11 +255,11 @@ export function TasteConfirmation({
       aria-labelledby="confirmation-title"
     >
       <div className="onboarding-heading">
-        <span className="micro-label">THE CULTURE YOU CARRY</span>
+        <span className="micro-label">MAKE SURE WE GOT IT RIGHT</span>
         <h1 id="confirmation-title">
-          We found your
+          Confirm your
           <br />
-          <em>Taste DNA</em>
+          <em>interests</em>
         </h1>
         <p>Choose the match you meant. Your Passport starts with you.</p>
       </div>

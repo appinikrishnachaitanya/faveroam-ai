@@ -1,6 +1,8 @@
 # Consumer interface refinement
 
-The shared presentation layer in `app/consumer.css` defines action colors, surfaces, borders, radii, shadows and interaction timing above the existing component styles. It uses system UI fonts for controls and reading, Georgia for editorial headings, and no external font or image requests. Product behavior, Qloo evidence and agent orchestration are preserved.
+Current style ownership and user-facing terminology are documented in [user language and controls](USER_LANGUAGE_AND_CONTROLS.md) and [styles README](../app/styles/README.md).
+
+The shared presentation files in `app/styles/` define action colors, surfaces, borders, radii, shadows and interaction timing above the existing component styles. It uses system UI fonts for controls and reading, Georgia for editorial headings, and no external font or image requests. Product behavior, Qloo evidence and agent orchestration are preserved.
 
 Desktop onboarding uses a two-column introduction/form layout; smaller screens retain a single-column flow. The Passport cover, discovery cards, query connections, weekend plan, confirmation cards, concierge and account dialogs share clearer spacing and typography. Body copy is generally 14–17px, form entry 16px, primary actions at least 52px high and common interactive controls at least 44px high. Utility receipts remain smaller. This is not a claim of a formal accessibility certification.
 

@@ -1,0 +1,434 @@
+/* Discoveries: shared TastePassport presentation. */
+
+.mode-category {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  min-width: 112px;
+}
+
+.living-passport {
+  padding: 0;
+  margin-top: 32px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.passport-cover {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  padding: 38px 42px;
+  border: 1px solid #d7dfc9;
+  border-radius: 28px;
+  background: radial-gradient(ellipse at 90% 20%, #f5e6c8 0, transparent 48%), linear-gradient(120deg, #edf2e5, #f7f2e4);
+  gap: 32px;
+  box-shadow: var(--ui-shadow);
+}
+
+.cover-copy h1 {
+  font-size: clamp(36px, 4vw, 54px);
+  line-height: 1.08;
+  letter-spacing: -1.5px;
+  margin: 14px 0;
+}
+
+.cover-copy > p {
+  font-size: 16px;
+  color: var(--ui-muted);
+}
+
+.cover-journey {
+  font-size: 13px;
+}
+
+.cover-art {
+  min-height: 245px;
+}
+
+.passport-book {
+  width: 155px;
+  height: 215px;
+}
+
+.cover-stamp {
+  width: 96px;
+  height: 96px;
+  bottom: 6px;
+}
+
+.cover-stamp > strong {
+  font-size: 27px;
+}
+
+.cover-stamp > span {
+  font-size: 9px;
+}
+
+.cover-connection {
+  min-height: 44px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.passport-taste-preview > span {
+  font-size: 13px;
+  padding: 7px 12px;
+  background: #fffaf080;
+  border: 1px solid #d7dfc9;
+}
+
+.passport-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 24px 0;
+}
+
+.discovery-view-tabs {
+  margin: 0;
+  padding: 5px;
+  border: 1px solid var(--ui-border);
+  border-radius: 14px;
+  background: #e9eee2;
+  width: fit-content;
+}
+
+.discovery-view-tabs button {
+  min-height: 44px;
+  padding: 10px 24px;
+  font-size: 15px;
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+.progressive-app .familiarity-panel {
+  padding: 16px 0 28px;
+}
+
+.progressive-app .familiarity-panel h2 {
+  font-size: 25px;
+}
+
+.progressive-app .familiarity-options {
+  gap: 12px;
+}
+
+.progressive-app .familiarity-options button {
+  min-height: 94px;
+  padding: 18px;
+  border-radius: 16px;
+  background: var(--ui-surface);
+}
+
+.progressive-app .familiarity-options button[aria-pressed="true"] {
+  color: var(--ui-ink);
+  border-color: #64815c;
+  background: #eaf0df;
+  box-shadow: inset 0 0 0 1px #64815c;
+}
+
+.progressive-app .familiarity-options strong {
+  font-size: 16px;
+}
+
+.progressive-app .familiarity-options small {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ui-muted);
+  margin-top: 6px;
+}
+
+.progressive-app .passport-sections {
+  margin-top: 36px;
+}
+
+.progressive-app .result-heading {
+  margin-bottom: 18px;
+  gap: 16px;
+}
+
+.progressive-app .result-heading h3, .my-vibe h2 {
+  font-size: 32px;
+  letter-spacing: -.7px;
+}
+
+.progressive-app .discovery-grid {
+  gap: 20px;
+}
+
+.progressive-app .discovery-card {
+  padding: 24px;
+  border-radius: var(--ui-radius);
+  box-shadow: 0 4px 18px #193e3208;
+  border-color: var(--ui-border);
+  background: var(--ui-surface);
+}
+
+.progressive-app .discovery-card h4 {
+  font-size: clamp(23px, 2.1vw, 28px);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.progressive-app .card-cultural-mark {
+  width: 42px;
+  height: 48px;
+}
+
+.progressive-app .card-type {
+  font-size: 11px;
+  color: var(--ui-muted);
+}
+
+.progressive-app .card-description {
+  font-size: 14px;
+  line-height: 1.75;
+  color: #40574b;
+}
+
+.progressive-app .card-address, .progressive-app .card-query-inputs {
+  font-size: 13px;
+  color: var(--ui-muted);
+}
+
+.progressive-app .why-section summary {
+  font-size: 13px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}
+
+.progressive-app .feedback-actions {
+  gap: 8px;
+  padding-top: 14px;
+  border-top: 1px solid #e8ece2;
+}
+
+.progressive-app .feedback-actions button {
+  font-size: 13px;
+  min-height: 44px;
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+
+.category-more {
+  min-height: 44px;
+  font-size: 14px;
+  padding: 9px 16px;
+  border-radius: 12px;
+}
+
+.progressive-app .secondary-reveal {
+  margin-top: 24px;
+  padding: 18px 24px;
+  background: #fffef980;
+  border: 1px solid var(--ui-border);
+  border-radius: var(--ui-radius);
+}
+
+.secondary-reveal > summary {
+  min-height: 44px;
+  font-size: 17px;
+  font-weight: 600;
+  gap: 16px;
+}
+
+.secondary-reveal > summary::after {
+  content: "+";
+  margin-left: auto;
+  font-size: 24px;
+  font-weight: 400;
+}
+
+.secondary-reveal[open] > summary::after {
+  content: "−";
+}
+
+.secondary-reveal > summary > svg {
+  display: none;
+}
+
+.day-out-plan h2, .connection-explorer h2 {
+  font: 32px/1.2 Georgia, serif;
+  letter-spacing: -.6px;
+  margin: 12px 0;
+}
+
+.day-out-plan > p, .connection-explorer > p {
+  font-size: 15px;
+  line-height: 1.75;
+  color: var(--ui-muted);
+}
+
+.day-out-stops {
+  margin: 24px 0;
+  gap: 18px;
+}
+
+.day-out-stops > li {
+  background: var(--ui-surface);
+  padding: 22px;
+}
+
+.day-out-stops h3 {
+  font-size: 18px;
+  line-height: 1.4;
+  margin-bottom: 16px;
+}
+
+.day-out-stops label {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.day-out-stops p, .day-out-stops a, .day-out-stops summary {
+  font-size: 14px;
+  margin-top: 12px;
+}
+
+.day-out-stops small {
+  display: block;
+  font-size: 12px;
+}
+
+.connection-routes button {
+  min-height: 64px;
+  font-size: 15px;
+  border-radius: 12px;
+}
+
+.connection-routes small, .connected-results li > span {
+  font-size: 13px;
+  color: var(--ui-muted);
+}
+
+.connected-results li {
+  border-radius: 16px;
+  padding: 20px;
+}
+
+.connected-results li > strong {
+  font-size: 20px;
+}
+
+.progressive-app .assistant-launch {
+  position: static;
+  inset: auto;
+  z-index: auto;
+  min-height: 54px;
+  font-size: 15px;
+  padding: 14px 20px;
+  border-radius: 14px;
+  box-shadow: none;
+  flex-shrink: 0;
+  justify-content: center;
+}
+
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .progressive-app .discovery-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--ui-shadow);
+    border-color: #abbda1;
+  }
+}
+
+@media (max-width: 1000px) {
+  .progressive-app .discovery-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .passport-cover {
+    padding: 30px;
+  }
+}
+
+@media (max-width: 640px) {
+  .living-passport {
+    margin-top: 24px;
+  }
+  .passport-cover {
+    padding: 26px 22px;
+    border-radius: 22px;
+    gap: 16px;
+  }
+  .cover-copy h1 {
+    font-size: 36px;
+  }
+  .cover-copy > p {
+    font-size: 15px;
+  }
+  .cover-art {
+    min-height: 180px;
+  }
+  .passport-book {
+    width: 115px;
+    height: 158px;
+  }
+  .cover-stamp {
+    width: 80px;
+    height: 80px;
+  }
+  .cover-stamp > span {
+    font-size: 8px;
+  }
+  .passport-toolbar {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .discovery-view-tabs {
+    width: 100%;
+    display: flex;
+  }
+  .progressive-app .assistant-launch {
+    width: 100%;
+    min-height: 48px;
+  }
+  .discovery-view-tabs button {
+    flex: 1;
+    padding: 10px 14px;
+  }
+  .progressive-app .familiarity-panel h2 {
+    font-size: 22px;
+  }
+  .progressive-app .familiarity-options {
+    gap: 8px;
+  }
+  .progressive-app .familiarity-options button {
+    min-height: 100px;
+    padding: 12px 8px;
+  }
+  .progressive-app .familiarity-options strong {
+    font-size: 13px;
+  }
+  .progressive-app .familiarity-options small {
+    font-size: 12px;
+  }
+  .progressive-app .discovery-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .progressive-app .discovery-card {
+    padding: 24px;
+  }
+  .progressive-app .discovery-card h4 {
+    font-size: 28px;
+  }
+  .progressive-app .result-heading h3 {
+    font-size: 29px;
+  }
+  .progressive-app .secondary-reveal {
+    padding: 14px 18px;
+  }
+  .secondary-reveal > summary {
+    font-size: 16px;
+  }
+  .day-out-stops {
+    grid-template-columns: 1fr;
+  }
+  .day-out-plan h2, .connection-explorer h2 {
+    font-size: 28px;
+  }
+}

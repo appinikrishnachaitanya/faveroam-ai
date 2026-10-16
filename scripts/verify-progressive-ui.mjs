@@ -75,7 +75,7 @@ async function verifyHeaderLayout() {
     const header=document.querySelector('.workspace-topbar').getBoundingClientRect();
     const brand=document.querySelector('.brand').getBoundingClientRect();
     const nav=document.querySelector('.header-controls').getBoundingClientRect();
-    return brand.left>=header.left-1 && nav.right<=header.right+1 &&
+    return brand.left>=header.left+11 && nav.right<=header.right-11 &&
       (brand.right<=nav.left+1 || brand.bottom<=nav.top+1);
   })()`), "Brand and navigation must fit without overlap");
 }
@@ -110,6 +110,16 @@ await call("Input.dispatchKeyEvent", { type: "keyUp", key: "Enter", code: "Enter
 assert.equal(await evaluate("document.activeElement.id"), "passport-content");
 assert.ok(await evaluate("parseFloat(getComputedStyle(document.querySelector('#taste-input')).fontSize)>=16"));
 assert.ok(await evaluate("document.querySelector('.build-map').getBoundingClientRect().height>=52"));
+for (const selector of ['#origin', '#destination', '#taste-input']) {
+  await evaluate(`document.querySelector(${JSON.stringify(selector)}).focus()`);
+  assert.ok(await evaluate(`(()=>{
+    const input=document.querySelector(${JSON.stringify(selector)});
+    const wrapper=input.closest('.field-with-icon,.taste-input-shell');
+    const control=getComputedStyle(input), frame=getComputedStyle(wrapper);
+    return control.outlineStyle==='none' && control.boxShadow==='none' &&
+      control.borderTopWidth==='0px' && frame.boxShadow==='none' && parseFloat(frame.borderTopWidth)>0;
+  })()`), 'Compound fields must show one frame, without an inner outline or glow');
+}
 for (const width of [320, 390, 640, 768, 1024, 1440]) {
   await call("Emulation.setDeviceMetricsOverride", { width, height: 900, deviceScaleFactor: 1, mobile: true });
   assert.equal(await evaluate("document.documentElement.scrollWidth>innerWidth"), false);
@@ -139,7 +149,7 @@ assert.equal(
   await evaluate("document.querySelectorAll('.taste-chip').length"),
   3,
 );
-await clickText("Build my cultural map");
+await clickText("Find my taste matches");
 await waitFor(
   "Boolean(document.querySelector('.confirmation-list')) || Boolean(document.querySelector('.error-message'))",
 );
@@ -185,6 +195,8 @@ assert.equal(
 assert.ok(
   await evaluate("document.querySelectorAll('.discovery-card').length>0"),
 );
+assert.ok(await evaluate("!document.querySelector('.passport-cover').innerText.includes('Qloo')"));
+assert.ok(await evaluate("document.querySelector('.day-out-reveal > summary').innerText.includes('Plan a day out')"));
 for (const width of [320, 390, 640, 768, 1024, 1440]) {
   await call("Emulation.setDeviceMetricsOverride", { width, height: 900, deviceScaleFactor: 1, mobile: true });
   assert.equal(await evaluate("document.documentElement.scrollWidth>innerWidth"), false);
@@ -209,21 +221,21 @@ assert.ok(
   !(await evaluate("Boolean(document.querySelector('.why-section[open]'))")),
 );
 assert.ok(!(await evaluate("document.querySelector('#taste-concierge').open")));
-await evaluate("document.querySelector('.weekend-reveal').open=true");
-await evaluate("document.querySelector('.weekend-reveal').scrollIntoView({behavior:'instant',block:'start'})");
-const weekendBefore = await evaluate("[...document.querySelectorAll('.weekend-stops select')].map(s=>s.value)");
-assert.ok(weekendBefore.some(Boolean));
-assert.ok(await evaluate("[...document.querySelectorAll('#weekend-Eat option')].length>2"));
-await input("#weekend-Eat", await evaluate("document.querySelector('#weekend-Eat option:last-child').value"), "HTMLSelectElement");
-const weekendAfter = await evaluate("[...document.querySelectorAll('.weekend-stops select')].map(s=>s.value)");
-assert.deepEqual(weekendAfter.slice(0, 2), weekendBefore.slice(0, 2));
-assert.notEqual(weekendAfter[2], weekendBefore[2]);
-assert.ok(await evaluate("document.querySelector('.weekend-plan').textContent.includes('not a timed route or a reservation')"));
+await evaluate("document.querySelector('.day-out-reveal').open=true");
+await evaluate("document.querySelector('.day-out-reveal').scrollIntoView({behavior:'instant',block:'start'})");
+const outingBefore = await evaluate("[...document.querySelectorAll('.day-out-stops select')].map(s=>s.value)");
+assert.ok(outingBefore.some(Boolean));
+assert.ok(await evaluate("[...document.querySelectorAll('#day-out-Eat option')].length>2"));
+await input("#day-out-Eat", await evaluate("document.querySelector('#day-out-Eat option:last-child').value"), "HTMLSelectElement");
+const outingAfter = await evaluate("[...document.querySelectorAll('.day-out-stops select')].map(s=>s.value)");
+assert.deepEqual(outingAfter.slice(0, 2), outingBefore.slice(0, 2));
+assert.notEqual(outingAfter[2], outingBefore[2]);
+assert.ok(await evaluate("document.querySelector('.day-out-plan').textContent.includes('not a timed route or a reservation')"));
 // Inspect the actual download payload without writing Qloo data into the repository.
-await evaluate("window.__weekendBlob=null;window.__originalCreateObjectURL=URL.createObjectURL;URL.createObjectURL=(blob)=>{window.__weekendBlob=blob;return window.__originalCreateObjectURL(blob)}");
-await evaluate("document.querySelector('.weekend-plan > button').click()");
-assert.match(await evaluate("window.__weekendBlob.text()"), /My first weekend in Toronto/);
-await evaluate("URL.createObjectURL=window.__originalCreateObjectURL;document.querySelector('.weekend-reveal').open=false");
+await evaluate("window.__outingBlob=null;window.__originalCreateObjectURL=URL.createObjectURL;URL.createObjectURL=(blob)=>{window.__outingBlob=blob;return window.__originalCreateObjectURL(blob)}");
+await evaluate("document.querySelector('.day-out-plan > button').click()");
+assert.match(await evaluate("window.__outingBlob.text()"), /My day out in Toronto/);
+await evaluate("URL.createObjectURL=window.__originalCreateObjectURL;document.querySelector('.day-out-reveal').open=false");
 assert.equal(
   await evaluate(
     "document.querySelector('#section-Eat').closest('section').querySelectorAll('.discovery-card').length",
@@ -373,7 +385,7 @@ if (comparisonAvailable) {
     !(await evaluate("document.querySelector('.comparison-reveal').open")),
   );
   await evaluate("document.querySelector('.comparison-reveal').open=true");
-  await clickText("See what Qloo adds");
+  await clickText("Compare recommendation approaches");
   await waitFor(
     "Boolean(document.querySelector('.comparison-panel')) || Boolean(document.querySelector('.compare-control [role=status]'))",
   );
@@ -424,13 +436,13 @@ await call("Emulation.setDeviceMetricsOverride", {
   deviceScaleFactor: 1,
   mobile: true,
 });
-await evaluate("document.querySelector('.weekend-reveal').open=true");
+await evaluate("document.querySelector('.day-out-reveal').open=true");
 assert.equal(
   await evaluate("document.documentElement.scrollWidth>innerWidth"),
   false,
 );
-await evaluate("document.querySelector('.weekend-reveal').scrollIntoView({behavior:'instant',block:'start'})");
-await shot("/tmp/tastepassport-weekend-mobile.png");
+await evaluate("document.querySelector('.day-out-reveal').scrollIntoView({behavior:'instant',block:'start'})");
+await shot("/tmp/tastepassport-day-out-mobile.png");
 await clickText("Ask TastePassport");
 assert.ok(
   await evaluate(
@@ -463,6 +475,6 @@ assert.equal(
 );
 await shot("/tmp/tastepassport-onboarding-mobile.png");
 console.log(
-  "Production browser progressive UX: PASS. Three steps, curated previews, editable local weekend plan and download, My Vibe persistence, account setup fallback, initial Explore queries, collapsed evidence/bridge, drawer persistence, manual refinement, feedback, both resets, 390px layout.",
+  "Production browser progressive UX: PASS. Three steps, curated previews, editable day-out plan and download, My Vibe persistence, account setup fallback, initial Explore queries, collapsed evidence/bridge, drawer persistence, manual refinement, feedback, both resets, 390px layout.",
 );
 ws.close();

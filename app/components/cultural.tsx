@@ -101,8 +101,8 @@ export function ComparisonPanel({
   );
   return (
     <section className="comparison-panel" aria-labelledby="comparison-title">
-      <span className="micro-label">WHAT CHANGES WHEN QLOO IS ADDED?</span>
-      <h2 id="comparison-title">A suggestion, or a cultural bridge?</h2>
+      <span className="micro-label">TWO WAYS TO FIND SOMETHING NEW</span>
+      <h2 id="comparison-title">General ideas or suggestions based on your tastes?</h2>
       {baseline.request && (
         <blockquote className="comparison-request">
           <span>THE SAME USER REQUEST</span>
@@ -112,11 +112,11 @@ export function ComparisonPanel({
       <div className="comparison-columns">
         <article>
           <span className="comparison-label">
-            Generic AI · Model-only baseline
+            General AI suggestions
           </span>
           <p className="baseline-disclaimer">
-            Generated live without Qloo tools. Unverified model output; it never
-            becomes a Passport card.
+            Generated without our recommendation service. These ideas are unverified and never
+            become a Passport card.
           </p>
           <p className="baseline-text">{baseline.text}</p>
           <small>
@@ -125,14 +125,14 @@ export function ComparisonPanel({
           </small>
         </article>
         <article>
-          <span className="comparison-label">TastePassport + Qloo</span>
+          <span className="comparison-label">Your personalized discoveries</span>
           <h3>
-            {grounded.length} auditable{" "}
+            {grounded.length}{" "}
             {grounded.length === 1 ? "discovery" : "discoveries"}
           </h3>
           <p>
-            Resolved cultural IDs, actual query inputs, returned entities and
-            category metadata. Inspect the evidence on each card.
+            Based on the interests you confirmed. Open a suggestion’s details
+            to see how it was found.
           </p>
           <ul>
             {grounded.slice(0, 3).map((c) => (
@@ -155,7 +155,7 @@ export function ComparisonPanel({
           <tr>
             <th>Dimension</th>
             <th>Model-only</th>
-            <th>With Qloo</th>
+            <th>Personalized suggestions</th>
           </tr>
         </thead>
         <tbody>
@@ -178,7 +178,7 @@ export function ComparisonPanel({
             ],
             [
               "Evidence",
-              "No Qloo receipts",
+              "No verified recommendation sources",
               "Query receipts and returned metadata",
             ],
           ].map((row) => (
@@ -263,7 +263,7 @@ export function ModelComparison({
         >
           {busy
             ? "Generating a live model-only baseline…"
-            : "See what Qloo adds"}
+            : "Compare recommendation approaches"}
         </button>
         {error && <p role="status">{error}</p>}
       </div>

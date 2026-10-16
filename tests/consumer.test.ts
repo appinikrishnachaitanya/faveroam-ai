@@ -13,10 +13,10 @@ import { PassportSections } from "../app/components/passport.tsx";
 import {
   PassportCover,
   ConnectionExplorer,
-} from "../app/components/consumer.tsx";
+} from "../app/components/passport-overview.tsx";
 import type { Card } from "../src/passport/model.ts";
-import { weekendOptions, weekendText } from "../src/passport/weekend.ts";
-import WeekendPlan from "../app/components/weekend.tsx";
+import { dayOutOptions, dayOutText } from "../src/passport/day-out.ts";
+import DayOutPlan from "../app/components/day-out.tsx";
 const signal = {
   id: "00000000-0000-0000-0000-000000000001",
   name: "Real-shaped protocol taste",
@@ -68,7 +68,7 @@ function state() {
     history: [{ role: "user", text: "private conversation" }],
   });
 }
-test("weekend excludes nonlocal, mismatched, ungrounded and duplicate discoveries", () => {
+test("day-out excludes nonlocal, mismatched, ungrounded and duplicate discoveries", () => {
   const local = card("local");
   const audience = card("audience");
   audience.evidence!.locality = "audience-context";
@@ -77,23 +77,23 @@ test("weekend excludes nonlocal, mismatched, ungrounded and duplicate discoverie
   const mismatched = card("mismatch");
   mismatched.evidence!.result.id = "different";
   const music = { ...card("music"), section: "Music" as const };
-  assert.deepEqual(weekendOptions([local, local, audience, otherCity, mismatched, music, { ...card("missing"), evidence: undefined }], "Toronto"), [local]);
+  assert.deepEqual(dayOutOptions([local, local, audience, otherCity, mismatched, music, { ...card("missing"), evidence: undefined }], "Toronto"), [local]);
 });
-test("weekend export contains real selections and explicit availability limits", () => {
-  const text = weekendText("Toronto", [{ ...card("chosen"), address: "Fixture address" }]);
+test("day-out export contains real selections and explicit availability limits", () => {
+  const text = dayOutText("Toronto", [{ ...card("chosen"), address: "Fixture address" }]);
   assert.match(text, /Protocol discovery chosen/);
   assert.match(text, /Fixture address/);
   assert.match(text, /Check opening hours, travel times and availability/);
   assert.match(text, /No booking has been made/);
   assert.doesNotMatch(text, /private-guest-token|private conversation/);
 });
-test("weekend renders honest empty categories and local selectors", () => {
+test("day-out renders honest empty categories and local selectors", () => {
   const session = state();
-  const markup = renderToStaticMarkup(createElement(WeekendPlan, { passport: { city: session.city, selected: session.selected, cards: session.cards, notices: [], explanation: "" }, disabled: false }));
-  assert.match(markup, /weekend-Eat/);
-  assert.match(markup, /No local discoveries available yet/);
+  const markup = renderToStaticMarkup(createElement(DayOutPlan, { passport: { city: session.city, selected: session.selected, cards: session.cards, notices: [], explanation: "" }, disabled: false }));
+  assert.match(markup, /day-out-Eat/);
+  assert.match(markup, /No local suggestions here yet/);
   assert.match(markup, /not a timed route or a reservation/);
-  assert.match(markup, /Download my weekend/);
+  assert.match(markup, /Download my plan/);
 });
 const deps = {
   tools: async () => [],
@@ -190,14 +190,14 @@ test("consumer cover and connection reveal use real query relationships rather t
     }),
   );
   assert.match(cover, /Your Toronto/);
-  assert.match(cover, /See how your world connects/);
+  assert.match(cover, /Why these suggestions\?/);
   assert.doesNotMatch(cover, /Bengaluru|confidence/);
   const html = renderToStaticMarkup(
     createElement(ConnectionExplorer, { passport }),
   );
   assert.match(html, /Real-shaped protocol taste/);
   assert.match(html, /Protocol discovery one/);
-  assert.match(html, /Individual taste contribution is not supplied/);
+  assert.match(html, /We cannot measure/);
   assert.doesNotMatch(html, /private-guest-token/);
 });
 

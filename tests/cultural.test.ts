@@ -189,7 +189,7 @@ test("Qloo evidence uses raw returned fields and excludes headers and fabricated
       onFeedback: () => {},
     }),
   );
-  assert.match(html, /Qloo evidence/);
+  assert.match(html, /Technical details/);
   assert.match(html, /query.affinity/);
   assert.match(html, /0.125/);
   assert.match(html, /physical place filter/);
@@ -340,10 +340,10 @@ test("a generated baseline is labelled unverified and kept separate from Qloo ca
       cards: [grounded()],
     }),
   );
-  assert.match(html, /Model-only baseline/);
-  assert.match(html, /Unverified model output/);
-  assert.match(html, /TastePassport \+ Qloo/);
-  assert.match(html, /1 auditable discovery/);
+  assert.match(html, /General AI suggestions/);
+  assert.match(html, /unverified/i);
+  assert.match(html, /Your personalized discoveries/);
+  assert.match(html, /1 discovery/);
   assert.doesNotMatch(html, /class="discovery-card/);
 });
 test("Toronto relocation is a supported destination without storing demo identity in intent", () => {

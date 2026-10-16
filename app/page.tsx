@@ -33,12 +33,12 @@ import {
 } from "./components/onboarding";
 import ConciergeDrawer from "./components/concierge";
 import AccountControl from "./components/account";
-import WeekendPlan from "./components/weekend";
+import DayOutPlan from "./components/day-out";
 import {
   PassportCover,
   SavedDiscoveries,
   ConnectionExplorer,
-} from "./components/consumer";
+} from "./components/passport-overview";
 import { sectionOrder } from "../src/workspace/state";
 import type { Familiarity } from "../src/passport/evidence";
 interface Message {
@@ -193,7 +193,7 @@ export default function Home() {
         { role: "user", text },
         {
           role: "agent",
-          text: `I’ve prepared an editable taste draft for ${parsed.city}. Check the phrases below before I look for Qloo entity or concept matches.`,
+          text: `I’ve prepared an editable taste draft for ${parsed.city}. Check the phrases below before I look for matching interests.`,
         },
       ]);
       setCity(parsed.city);
@@ -432,8 +432,8 @@ export default function Home() {
       setPhase("ready");
       say(
         r.cards.length
-          ? `Your passport is ready: ${r.cards.length} discoveries${r.notices.length ? ", with a few query gaps" : ""}. Explore what feels like you.`
-          : "No suitable discoveries were returned this time. Try editing your tastes or retry the query.",
+          ? `Your passport is ready: ${r.cards.length} discoveries${r.notices.length ? ", with a few categories unavailable" : ""}. Explore what feels like you.`
+          : "No suitable discoveries were returned this time. Try editing your tastes or try again.",
       );
     } catch (e) {
       setError(
@@ -526,7 +526,7 @@ export default function Home() {
                 .then((value) => setProviderHealth(value.health))
                 .catch(() => {});
               setAdaptation(
-                "Your saved Passport is back. Refine a chapter for fresh Qloo discoveries.",
+                "Your saved Passport is back. Refine a chapter for fresh suggestions.",
               );
             }}
           />
@@ -536,9 +536,10 @@ export default function Home() {
                 <Icon name="pin" size={14} />
                 {city}
               </span>
-              <button className="quiet-button" onClick={fresh} disabled={busy}>
+              <button className="quiet-button" aria-label="Start a new Passport" onClick={fresh} disabled={busy}>
                 <Icon name="plus" size={14} />
-                New Passport
+                <span className="new-passport-label">New Passport</span>
+                <span className="new-passport-short" aria-hidden="true">New</span>
               </button>
             </div>
           )}
@@ -748,14 +749,14 @@ export default function Home() {
                 />
               </>
             )}
-            <WeekendPlan key={result.session?.id ?? result.city} passport={result} disabled={busy} />
+            <DayOutPlan key={result.session?.id ?? result.city} passport={result} disabled={busy} />
             <details className="secondary-reveal cultural-reveal">
               <summary>
-                See your cultural bridge <Icon name="arrow" size={16} />
+                Why these suggestions? <Icon name="arrow" size={16} />
               </summary>
               <ConnectionExplorer passport={result} />
               <details className="all-query-routes">
-                <summary>Inspect all recorded query routes</summary>
+                <summary>Technical recommendation details</summary>
                 <TranslationMap signals={signals} result={result} />
               </details>
               <TasteDNA
@@ -769,7 +770,7 @@ export default function Home() {
               result.session.comparison && (
                 <details className="secondary-reveal comparison-reveal">
                   <summary>
-                    See why Qloo matters <Icon name="arrow" size={16} />
+                    Compare recommendation approaches <Icon name="arrow" size={16} />
                   </summary>
                   <ModelComparison
                     key={result.session.id}

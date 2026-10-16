@@ -179,8 +179,8 @@ export function TasteDNA({
     <section className="dna-panel" aria-labelledby="dna-title">
       <div className="panel-heading">
         <div>
-          <span className="micro-label">THE CULTURAL THREAD</span>
-          <h2 id="dna-title">The culture you carry.</h2>
+          <span className="micro-label">YOUR CONFIRMED INTERESTS</span>
+          <h2 id="dna-title">What you love.</h2>
         </div>
         <span className="count-pill">{signals.length} confirmed</span>
       </div>
@@ -228,7 +228,7 @@ export function TasteDNA({
           <p>
             Your world, in a few cultural signals.
             <br />
-            <span>Confirmed Qloo matches will appear here.</span>
+            <span>Your confirmed interests will appear here.</span>
           </p>
         </div>
       )}
@@ -407,11 +407,11 @@ export function DiscoveryCard({
       )}
       <details className="why-section">
         <summary>
-          Why this surfaced <Icon name="plus" size={12} />
+          Why this suggestion? <Icon name="plus" size={12} />
         </summary>
         <p>
-          Returned by Qloo using the cultural inputs below. These are query
-          inputs, not claims of individual contribution.
+          These confirmed interests were considered together when finding this
+          suggestion. It may reflect a different part of your taste than other results.
         </p>
         <div className="why-signals">
           {(
@@ -424,12 +424,6 @@ export function DiscoveryCard({
               <span key={name}>{name}</span>
             ))}
         </div>
-        {card.evidence?.result.affinity && (
-          <p className="affinity">
-            Qloo affinity · {card.evidence.result.affinity.value}
-            <small>Actual query.affinity, not a probability.</small>
-          </p>
-        )}
         <EvidenceDetails card={card} />
       </details>
       <div className="feedback-actions">
@@ -457,7 +451,7 @@ export function DiscoveryCard({
       {feedback && (
         <small className="feedback-note">
           {live
-            ? "Preference recorded for this session. Rejected results are replaced when Qloo returns a suitable match."
+            ? "Your preference is saved for this visit. We’ll look for a replacement when one is available."
             : "Preference saved for this session. Recommendations haven’t been replanned."}
         </small>
       )}
@@ -499,8 +493,8 @@ export function PassportSections({
                 : "A few notes about your discoveries"}
             </summary>
             <p>
-              Coverage varies by category. These discoveries keep their real
-              Qloo evidence.
+              Some categories have fewer suggestions available. You can adjust your
+              interests or try again.
             </p>
             {result.notices.map((notice, index) => (
               <p key={index}>{notice}</p>

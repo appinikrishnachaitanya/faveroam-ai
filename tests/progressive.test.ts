@@ -20,7 +20,7 @@ test("first load has one clear onboarding action without agent panels or advance
   assert.match(html, /Build your/);
   assert.match(html, /Moving to/);
   assert.match(html, /What already feels like you/);
-  assert.match(html, /Build my cultural map/);
+  assert.match(html, /Find my taste matches/);
   assert.doesNotMatch(
     html,
     /Taste Concierge|Agent execution activity|THE DEMO JOURNEY|View Qloo evidence|cultural-reveal|guided-panel|split-workspace/,
@@ -73,7 +73,7 @@ test("confirmation offers actual candidates inline, explicit selection, replacem
     onSubmit: noop,
   };
   const html = renderToStaticMarkup(createElement(TasteConfirmation, props));
-  assert.match(html, /We found your/);
+  assert.match(html, /Confirm your/);
   assert.match(html, /select/);
   assert.match(html, /ui-protocol-id/);
   assert.match(html, /Replace taste/);

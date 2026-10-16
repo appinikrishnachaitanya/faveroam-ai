@@ -22,7 +22,7 @@ export function PassportCover({
       <div className="cover-copy">
         <span className="micro-label">MOVE ANYWHERE. KEEP YOUR VIBE.</span>
         <div className="cover-journey">
-          <span>{origin || "Your cultural world"}</span>
+          <span>{origin || "Your interests"}</span>
           <Icon name="arrow" size={16} />
           <span>{passport.city}</span>
         </div>
@@ -38,7 +38,7 @@ export function PassportCover({
           ))}
         </div>
         <button className="cover-connection" onClick={onConnections}>
-          See how your world connects <Icon name="arrow" size={15} />
+          Why these suggestions? <Icon name="arrow" size={15} />
         </button>
       </div>
       <div className="cover-art" aria-hidden="true">
@@ -51,9 +51,9 @@ export function PassportCover({
         <div className="cover-stamp">
           <strong>{count}</strong>
           <span>
-            Qloo-backed
-            <br />
             discoveries
+            <br />
+            to explore
           </span>
         </div>
       </div>
@@ -120,16 +120,16 @@ export function ConnectionExplorer({ passport }: { passport: Passport }) {
       className="connection-explorer"
       aria-labelledby="connections-title"
     >
-      <span className="micro-label">THE CONNECTION IS THE STORY</span>
-      <h2 id="connections-title">Your world, translated.</h2>
+      <span className="micro-label">BASED ON WHAT YOU LOVE</span>
+      <h2 id="connections-title">Why these suggestions?</h2>
       <p>
-        These tastes were used together in a real Qloo query. Follow a route to
-        see what came back.
+        Your confirmed interests helped shape these suggestions. Choose a category
+        to see which interests were used and what you could try.
       </p>
       <div
         className="connection-routes"
         role="group"
-        aria-label="Cultural query connections"
+        aria-label="Suggestions by category"
       >
         {routes.map((r) => (
           <button
@@ -156,7 +156,7 @@ export function ConnectionExplorer({ passport }: { passport: Passport }) {
           ))}
         </div>
         <Icon name="arrow" />
-        <strong>Qloo</strong>
+        <strong>Your taste profile</strong>
         <Icon name="arrow" />
         <div>
           <strong>{route.destination}</strong>
@@ -173,12 +173,12 @@ export function ConnectionExplorer({ passport }: { passport: Passport }) {
             <strong>{card.name}</strong>
             <span>{card.address || card.section}</span>
             <details>
-              <summary>View this connection’s evidence</summary>
+              <summary>How this was suggested</summary>
               <p>
-                Returned in the same query that used the tastes above.
-                Individual taste contribution is not supplied by Qloo.
+                Suggested using the interests above together. We cannot measure
+                how much each individual interest contributed.
               </p>
-              <code>{card.evidence?.queryId}</code>
+              <small>Based on the interests shown above.</small>
               <small>
                 Recorded{" "}
                 {card.evidence?.recordedAt
@@ -190,8 +190,8 @@ export function ConnectionExplorer({ passport }: { passport: Passport }) {
         ))}
       </ul>
       <p className="connection-honesty">
-        A recorded query-to-result connection—not an invented claim that one
-        film or artist caused a particular recommendation.
+        These interests were considered together. Each suggestion may reflect
+        a different part of your taste; it does not have to match every interest.
       </p>
     </section>
   );
