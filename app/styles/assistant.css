@@ -26,25 +26,25 @@ html { scrollbar-gutter: stable; }
   align-items: center;
   gap: 12px;
   flex: 0 0 auto;
-  padding: 24px 24px 18px;
+  min-height: 88px;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--ui-border);
 }
 .concierge-heading > div { min-width: 0; flex: 1; }
 .concierge-heading h2 { font: 25px/1.2 Georgia, serif; margin: 0; }
 .concierge-heading p { font-size: 13px; line-height: 1.5; color: var(--ui-muted); margin-top: 5px; }
 .concierge-heading .agent-avatar { width: 40px; height: 40px; background: var(--ui-tint); color: var(--ui-action); border: 0; }
-.concierge-heading-actions { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
-.concierge-heading .assistant-minimize { min-height: 40px; padding: 8px 10px; border: 1px solid var(--ui-border); border-radius: 10px; background: transparent; color: var(--ui-muted); font-size: 12px; font-weight: 650; }
-.concierge-heading .assistant-minimize:hover { background: var(--ui-tint); color: var(--ui-ink); }
+.concierge-heading-actions { display: flex; align-items: center; flex: 0 0 auto; }
 .concierge-heading .icon-button { min-width: 44px; min-height: 44px; margin: 0; border-radius: 12px; color: var(--ui-ink); }
 .concierge-heading .icon-button:hover { background: var(--ui-tint); }
-.concierge-tabs { display: flex; flex: 0 0 auto; gap: 4px; padding: 4px; margin: 0 24px 16px; border-radius: 12px; background: var(--ui-tint); }
+.concierge-tabs { display: flex; flex: 0 0 auto; gap: 4px; padding: 4px; margin: 16px 24px; border-radius: 12px; background: var(--ui-tint); }
 .concierge-tabs button { flex: 1; min-width: 0; min-height: 44px; border: 0; border-radius: 9px; background: transparent; color: var(--ui-muted); font-size: 14px; font-weight: 600; }
 .concierge-tabs button[aria-selected="true"] { background: var(--ui-surface); color: var(--ui-ink); box-shadow: 0 2px 6px #193e3210; }
 
 .concierge-body {
   flex: 1 1 0;
   min-height: 0;
-  padding: 8px 24px 20px;
+  padding: 4px 24px 20px;
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -115,9 +115,8 @@ html { scrollbar-gutter: stable; }
 
 @media (max-width: 640px) {
   .concierge-drawer { inset: auto 0 0; width: 100%; height: calc(100dvh - 12px); border-radius: 24px 24px 0 0; border-bottom: 0; }
-  .concierge-heading { padding: 20px 20px 16px; }
+  .concierge-heading { min-height: 76px; padding: 16px 20px; }
   .concierge-heading h2 { font-size: 23px; }
-  .concierge-heading .assistant-minimize { padding-inline: 8px; font-size: 11px; }
   .concierge-tabs { margin-inline: 20px; }
   .concierge-body { padding-inline: 20px; }
   .concierge-drawer .composer { padding-inline: 20px; }

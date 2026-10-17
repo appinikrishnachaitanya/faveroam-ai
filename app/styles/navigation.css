@@ -1,8 +1,7 @@
 /* Navigation: shared TastePassport presentation. */
 
 .progressive-app .workspace-topbar {
-  position: sticky;
-  top: 16px;
+  position: relative;
   margin-top: 16px;
   z-index: 30;
   height: var(--header-height);
@@ -113,7 +112,6 @@
 @media (max-width: 640px) {
   .progressive-app .workspace-topbar {
     height: var(--header-height);
-    top: 10px;
     margin-top: 10px;
     gap: 8px;
     padding-inline: 16px;
@@ -139,7 +137,6 @@
   .progressive-app .workspace-topbar {
     grid-template-columns: 1fr;
     height: var(--header-height);
-    top: 8px;
     margin-top: 8px;
     padding: 8px 12px;
     gap: 2px;
