@@ -51,6 +51,24 @@
   background-repeat: no-repeat;
   background-position: right 12px center;
   text-overflow: ellipsis;
+  color-scheme: light;
+  box-shadow: 0 2px 0 #17334808;
+  transition: border-color .16s ease, box-shadow .16s ease, background-color .16s ease;
+}
+
+.progressive-app select:hover:not(:disabled),
+.account-dialog select:hover:not(:disabled),
+.match-dialog select:hover:not(:disabled) {
+  border-color: #94afc1;
+  background-color: #fbfdff;
+}
+
+.progressive-app select:focus-visible,
+.account-dialog select:focus-visible,
+.match-dialog select:focus-visible {
+  border-color: var(--ui-action);
+  box-shadow: 0 0 0 3px #075f5920;
+  outline: none;
 }
 
 .progressive-app select option,
@@ -66,6 +84,7 @@
   border-radius: 0;
   background-color: transparent;
   padding-left: 0;
+  box-shadow: none;
 }
 
 .mode-category select {
