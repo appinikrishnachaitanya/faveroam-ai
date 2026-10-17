@@ -60,13 +60,23 @@ export default function ConciergeDrawer({
           <h2 id="concierge-title">Ask TastePassport</h2>
           <p>Make these suggestions feel more like you.</p>
         </div>
-        <button
-          className="icon-button"
-          aria-label="Close Taste Concierge"
-          onClick={onClose}
-        >
-          <Icon name="close" />
-        </button>
+        <div className="concierge-heading-actions">
+          <button
+            className="assistant-minimize"
+            aria-label="Minimize Ask TastePassport"
+            onClick={onClose}
+          >
+            Minimize
+          </button>
+          <button
+            className="icon-button assistant-close"
+            aria-label="Close Ask TastePassport"
+            title="Close"
+            onClick={onClose}
+          >
+            <Icon name="close" />
+          </button>
+        </div>
       </div>
       {children}
     </dialog>

@@ -11,7 +11,7 @@
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 24px;
-  padding-inline: 24px;
+  padding-inline: clamp(16px, 3vw, 40px);
 }
 
 .header-controls, .header-controls .account-control, .header-controls .topbar-actions {
@@ -24,6 +24,17 @@
 
 .header-controls {
   justify-content: flex-end;
+  flex-wrap: nowrap;
+  align-self: stretch;
+}
+
+.header-controls .account-control,
+.header-controls .topbar-actions {
+  flex-wrap: nowrap;
+}
+
+.header-controls .topbar-actions {
+  gap: 10px;
 }
 
 .header-controls button, .header-controls .current-city {

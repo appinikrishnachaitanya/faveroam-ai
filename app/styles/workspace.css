@@ -133,6 +133,14 @@
   background: #064e49;
   box-shadow: 0 12px 34px #123b5640;
 }
+
+/* The destination picker already has a pin icon; keep one dropdown affordance. */
+.progressive-app .destination-control select {
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: none;
+  padding-right: 0;
+}
 .workspace-panel {
   margin-top: 24px;
 }
