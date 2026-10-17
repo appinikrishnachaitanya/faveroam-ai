@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import type { Passport } from "../../src/workspace/state";
-import type { Candidate, Card } from "../../src/passport/model";
+import type { Candidate, Card, Section } from "../../src/passport/model";
 import { bridgeRoutes } from "../../src/passport/evidence";
 import { DiscoveryCard, Icon } from "./passport";
 import type { Feedback } from "./passport";
@@ -107,11 +107,14 @@ export function SavedDiscoveries({
     </section>
   );
 }
-export function ConnectionExplorer({ passport }: { passport: Passport }) {
-  const routes = bridgeRoutes(passport.cards, passport.selected);
+export function ConnectionExplorer({ passport, onExplore }: { passport: Passport; onExplore?: (section: Section) => void }) {
+  const allRoutes = bridgeRoutes(passport.cards, passport.selected);
+  const [interest, setInterest] = useState<string>();
+  const routes = allRoutes.filter((route) => !interest || route.inputs.some((input) => input.id === interest));
   const [active, setActive] = useState<string>();
   const route = routes.find((r) => r.id === active) ?? routes[0];
-  if (!route) return null;
+  if (!allRoutes.length) return null;
+  if (!route) return <section className="connection-explorer"><h2>No current suggestions use this interest yet.</h2><button className="quiet-button" onClick={() => setInterest(undefined)}>Show all interests</button></section>;
   const cards = passport.cards
     .filter((c) => `${c.evidence?.queryId}:${c.section}` === route.id)
     .slice(0, 3);
@@ -126,6 +129,11 @@ export function ConnectionExplorer({ passport }: { passport: Passport }) {
         Your confirmed interests helped shape these suggestions. Choose a category
         to see which interests were used and what you could try.
       </p>
+      <div className="connection-interest-picker" role="group" aria-label="Explore connections from an interest">
+        <button aria-pressed={!interest} onClick={() => setInterest(undefined)}>All interests</button>
+        {passport.selected.filter((selected) => allRoutes.some((r) => r.inputs.some((input) => input.id === selected.id))).map((selected) => <button key={selected.id} aria-pressed={interest === selected.id} onClick={() => setInterest(selected.id)}>{selected.name}</button>)}
+      </div>
+      <p className="helper">Follow a combination of interests into a category. Filtering by one interest shows groups that included it, rather than claiming it caused each suggestion.</p>
       <div
         className="connection-routes"
         role="group"
@@ -156,7 +164,7 @@ export function ConnectionExplorer({ passport }: { passport: Passport }) {
           ))}
         </div>
         <Icon name="arrow" />
-        <strong>Your taste profile</strong>
+        <strong>Matched together</strong>
         <Icon name="arrow" />
         <div>
           <strong>{route.destination}</strong>
@@ -172,6 +180,7 @@ export function ConnectionExplorer({ passport }: { passport: Passport }) {
           <li key={card.id}>
             <strong>{card.name}</strong>
             <span>{card.address || card.section}</span>
+            {!!card.evidence?.result.tags.length && <div className="connection-result-tags" aria-label="Place details">{card.evidence.result.tags.slice(0, 3).map((tag) => <span key={tag.id}>{tag.name}</span>)}</div>}
             <details>
               <summary>How this was suggested</summary>
               <p>
@@ -189,6 +198,7 @@ export function ConnectionExplorer({ passport }: { passport: Passport }) {
           </li>
         ))}
       </ul>
+      {onExplore && <button className="quiet-button connection-explore" onClick={() => onExplore(route.section)}>Explore {route.section.toLowerCase()} suggestions in {route.destination} <Icon name="arrow" size={16} /></button>}
       <p className="connection-honesty">
         These interests were considered together. Each suggestion may reflect
         a different part of your taste; it does not have to match every interest.

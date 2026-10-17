@@ -261,7 +261,7 @@ assert.notEqual(outingAfter[2], outingBefore[2]);
 assert.ok(await evaluate("document.querySelector('.day-out-plan').textContent.includes('not a timed route or a reservation')"));
 // Inspect the actual download payload without writing Qloo data into the repository.
 await evaluate("window.__outingBlob=null;window.__originalCreateObjectURL=URL.createObjectURL;URL.createObjectURL=(blob)=>{window.__outingBlob=blob;return window.__originalCreateObjectURL(blob)}");
-await evaluate("document.querySelector('.day-out-plan > button').click()");
+await evaluate("document.querySelector('.download-plan').click()");
 assert.match(await evaluate("window.__outingBlob.text()"), /My day out in Toronto/);
 await evaluate("URL.createObjectURL=window.__originalCreateObjectURL;document.querySelector('.day-out-reveal').open=false");
 assert.equal(

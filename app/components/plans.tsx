@@ -1,0 +1,30 @@
+"use client";
+import { calendarFile, cityDate, type SavedPlan } from "../../src/account/plans";
+
+export function downloadCalendar(plan: SavedPlan) {
+  const url = URL.createObjectURL(new Blob([calendarFile(plan)], { type: "text/calendar;charset=utf-8" }));
+  const link = document.createElement("a");
+  link.href = url; link.download = "tastepassport-plan.ics"; link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+export default function UpcomingPlans({ plans, busy, error, onDelete, onRetry }: {
+  plans: SavedPlan[]; busy: boolean; error: string;
+  onDelete: (id: string) => void; onRetry: () => void;
+}) {
+  const upcoming = plans.filter((p) => p.scheduled_date >= cityDate(p.city))
+    .sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date));
+  return <section className="upcoming-plans" aria-label="Your upcoming plans">
+    <p className="helper">Your own outings, saved by date. These are plans, not booked events. Dates follow the destination’s local calendar.</p>
+    {error ? <div role="alert"><p>{error}</p><button className="quiet-button" disabled={busy} onClick={onRetry}>Try again</button></div>
+      : !upcoming.length ? <div className="library-empty"><h3>Your next good day starts here.</h3><p>Build a Passport, open Plan a day out, choose a date, and save your stops.</p></div>
+      : upcoming.map((plan) => <article className="saved-plan" key={plan.id}>
+        <div className="plan-date"><span>{new Date(`${plan.scheduled_date}T12:00:00Z`).toLocaleDateString(undefined, { month: "short", timeZone: "UTC" })}</span><strong>{plan.scheduled_date.slice(-2)}</strong></div>
+        <div className="plan-details"><h3>A day out in {plan.city}</h3>
+          <p>{new Date(`${plan.scheduled_date}T12:00:00Z`).toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: "UTC" })}</p>
+          <ol>{plan.stops.map((stop) => <li key={stop.id}><strong>{stop.name}</strong><span>{stop.section}{stop.address ? ` · ${stop.address}` : ""}</span></li>)}</ol>
+          <div className="plan-actions"><button className="quiet-button" onClick={() => downloadCalendar(plan)}>Add to calendar</button>
+            <button className="text-button" disabled={busy} onClick={() => { if (window.confirm("Delete this saved plan?")) onDelete(plan.id); }}>Delete plan</button></div>
+        </div>
+      </article>)}
+  </section>;
+}

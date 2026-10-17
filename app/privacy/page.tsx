@@ -12,6 +12,9 @@ export default function Privacy() {
       <p>
         An account stores the latest Passport per city: confirmed tastes, Qloo
         discoveries and evidence, explicit feedback and your My Vibe shortlist.
+        If you save an outing, we also store its date, destination and chosen
+        stops. Plans can be deleted individually and are removed when you delete
+        your account. They do not represent bookings.
         We do not save conversation history, model-only comparisons, provider
         credentials or guest-session tokens in account storage. Saved evidence
         is dated; it is not a guarantee of current venue availability.

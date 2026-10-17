@@ -61,6 +61,8 @@ The optional judge comparison pairs the exact refinement request with a frozen s
 
 Guest discovery works without login. Optional managed registration, email confirmation, login/recovery and saved city Passports are implemented; live accounts require your Supabase project and schema. See [account setup and security boundaries](docs/ACCOUNTS_AND_STORAGE.md) and [consumer product readiness](docs/CONSUMER_READINESS.md). My Vibe keeps liked discoveries through replanning; the connection reveal shows actual grouped Qloo query relationships.
 
+Signed-in navigation includes My Saved Passports, Upcoming plans and Sign out. Choose a date in Plan a day out, save your stops and export them to your calendar. Apply the [dated plans migration](supabase/migrations/202610170001_saved_plans.sql) in addition to the existing Passport migration before using plan storage. These are personal outings, not reservations or verified events. The connection explorer filters actual query groups by interest and exposes returned tags; loading phases and save confirmations provide accessible status feedback.
+
 ## User experience
 
 Start with your move and 3–5 tastes, confirm the real matches, then create your Passport. Chat/manual refinement, bridge and judge comparison are optional. See [progressive UX and live browser checks](docs/PROGRESSIVE_UX.md).

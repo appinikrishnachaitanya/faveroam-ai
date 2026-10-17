@@ -34,6 +34,7 @@ import {
 import ConciergeDrawer from "./components/concierge";
 import AccountControl from "./components/account";
 import DayOutPlan from "./components/day-out";
+import { JourneyLoading, ToastNotice } from "./components/status";
 import {
   PassportCover,
   SavedDiscoveries,
@@ -124,7 +125,7 @@ export default function Home() {
     phase === "interpreting"
       ? "Understanding your request…"
       : phase === "resolving"
-        ? "Resolving cultural signals…"
+        ? "Matching the artists, films, food and interests you chose…"
         : phase === "exploring"
           ? `Exploring ${city}…`
           : (agentEvents.at(-1)?.label ?? "Planning your refinement…");
@@ -501,6 +502,7 @@ export default function Home() {
           : `Exploring ${city} and curating your Passport…`;
   return (
     <main className="app-shell progressive-app">
+      <ToastNotice />
       <a href="#passport-content" className="skip-link">Skip to main content</a>
       <header className="workspace-topbar">
         <a className="brand" href="/" aria-label="TastePassport home">
@@ -612,21 +614,7 @@ export default function Home() {
             )}
           </div>
         )}
-        {busy && (
-          <div className="compact-progress" role="status" aria-live="polite">
-            <span className="activity-pulse" />
-            <div>
-              <strong>
-                {result
-                  ? "Updating your TastePassport…"
-                  : phase === "resolving"
-                    ? "Finding your Taste DNA…"
-                    : "Building your TastePassport…"}
-              </strong>
-              <p>{progress}</p>
-            </div>
-          </div>
-        )}
+        {busy && <JourneyLoading phase={phase} detail={progress} />}
         {result && (
           <section
             className="living-passport"
@@ -757,7 +745,10 @@ export default function Home() {
               <summary>
                 Why these suggestions? <Icon name="arrow" size={16} />
               </summary>
-              <ConnectionExplorer passport={result} />
+              <ConnectionExplorer passport={result} onExplore={(section) => {
+                setShowSaved(false);
+                requestAnimationFrame(() => document.getElementById(`section-${section}`)?.scrollIntoView({ behavior: "smooth", block: "start" }));
+              }} />
               <details className="all-query-routes">
                 <summary>Technical recommendation details</summary>
                 <TranslationMap signals={signals} result={result} />

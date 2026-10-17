@@ -18,9 +18,10 @@ export function dayOutOptions(cards: Card[], city: string): Card[] {
   ).map((card) => [card.id, card])).values()];
 }
 
-export function dayOutText(city: string, cards: Card[]): string {
+export function dayOutText(city: string, cards: Card[], date?: string): string {
   return [
     `My day out in ${city} · TastePassport AI`,
+    ...(date ? [`Planned for ${date} (local date in ${city})`] : []),
     "Suggested sequence. Check opening hours, travel times and availability before going.",
     ...cards.map((card, i) => `${i + 1}. ${card.name} (${card.section})${card.address ? `\n   ${card.address}` : ""}\n   Suggestion recorded: ${card.evidence?.recordedAt ?? "unknown"}`),
     "Built from my confirmed tastes and personalized suggestions. No booking has been made.",
