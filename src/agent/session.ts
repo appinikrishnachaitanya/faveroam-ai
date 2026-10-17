@@ -25,6 +25,7 @@ export function normalizeSession(state: AgentState): TastePassportSession {
   state.relaxed ??= [];
   state.providerHealth ??= "unconfigured";
   state.categoryTags ??= tagScopes(state);
+  state.queryPreferences ??= {};
 
   return state as TastePassportSession;
 }
@@ -41,6 +42,7 @@ export function resetConversation(original: AgentState): TastePassportSession {
   state.recovery = [];
   state.relaxed = [];
   state.previous = [];
+  state.queryPreferences = {};
   delete state.pending;
   delete state.intent;
   delete state.comparison;

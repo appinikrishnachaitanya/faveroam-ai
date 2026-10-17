@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import EvidenceDetails from "./evidence";
+import { ResultMetrics, WhyEvidence } from "./intelligence-evidence";
 import { bridgeRoutes, sparseSections } from "../../src/passport/evidence";
 import type { Candidate, Card, Section } from "../../src/passport/model";
 import {
@@ -350,6 +351,7 @@ export function TranslationMap({
 
 export type Feedback = "like" | "dislike";
 export function DiscoveryCard({
+  session,
   card,
   signals,
   feedback,
@@ -357,6 +359,7 @@ export function DiscoveryCard({
   live = false,
   disabled = false,
 }: {
+  session?: { sessionId: string; revision: number };
   live?: boolean;
   disabled?: boolean;
   card: Card;
@@ -405,13 +408,15 @@ export function DiscoveryCard({
       {card.description && (
         <p className="card-description">{card.description}</p>
       )}
+      <ResultMetrics card={card} />
       <details className="why-section">
         <summary>
           Why this suggestion? <Icon name="plus" size={12} />
         </summary>
         <p>
           These confirmed interests were considered together when finding this
-          suggestion. It may reflect a different part of your taste than other results.
+          suggestion. It may reflect a different part of your taste than other
+          results.
         </p>
         <div className="why-signals">
           {(
@@ -425,6 +430,7 @@ export function DiscoveryCard({
             ))}
         </div>
         <EvidenceDetails card={card} />
+        <WhyEvidence card={card} session={session} />
       </details>
       <div className="feedback-actions">
         <button
@@ -493,8 +499,8 @@ export function PassportSections({
                 : "A few notes about your discoveries"}
             </summary>
             <p>
-              Some categories have fewer suggestions available. You can adjust your
-              interests or try again.
+              Some categories have fewer suggestions available. You can adjust
+              your interests or try again.
             </p>
             {result.notices.map((notice, index) => (
               <p key={index}>{notice}</p>
@@ -557,6 +563,7 @@ export function PassportSections({
               .slice(0, expanded[s] ? undefined : previewLimit)
               .map((c) => (
                 <DiscoveryCard
+                  session={result.agent}
                   key={c.id}
                   card={c}
                   signals={result.selected}

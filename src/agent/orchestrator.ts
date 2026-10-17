@@ -8,6 +8,7 @@ import {
 import { captureComparison } from "./comparison.ts";
 import { recordProviderHealth } from "./health.ts";
 import { TurnGuard } from "./guard.ts";
+import { validatePreferences, patchPreferences } from "../qloo/query-plan.ts";
 import {
   culturalText,
   interpret,
@@ -110,7 +111,8 @@ export async function runTurn(
     };
   }
   if (!deps.provider) state.providerHealth = "unconfigured";
-  if (input.guided || input.recovery || input.familiarity) delete state.pending;
+  if (input.guided || input.recovery || input.familiarity || input.discovery)
+    delete state.pending;
   if (deps.provider && state.providerHealth === "unconfigured")
     state.providerHealth = "configured";
   if (input.message) {
@@ -127,6 +129,14 @@ export async function runTurn(
   }
   if (input.guided)
     intent = guidedIntent(input.guided.section, input.guided.constraints);
+  if (input.discovery)
+    intent = {
+      ...guidedIntent(
+        input.discovery.section,
+        state.categoryConstraints[input.discovery.section] ?? [],
+      ),
+      query: validatePreferences(input.discovery.preferences),
+    };
   if (input.recovery) {
     const { section, action } = input.recovery;
     let constraints = [...(state.categoryConstraints[section] ?? [])];
@@ -205,9 +215,24 @@ export async function runTurn(
     const tag = pending?.candidates.find((t) => t.id === input.tagChoice);
     if (!pending || !tag) throw Error("Choose a returned concept match.");
     state.tags = [...state.tags.filter((t) => t.id !== tag.id), tag].slice(-10);
+    if (pending.exclude) {
+      state.queryPreferences ??= {};
+      for (const section of pending.sections)
+        state.queryPreferences[section] = {
+          ...state.queryPreferences[section],
+          excludeTags: [
+            ...new Set([
+              ...(state.queryPreferences[section]?.excludeTags ?? []),
+              tag.id,
+            ]),
+          ],
+        };
+    }
     for (const section of pending.sections) {
+      if (pending.exclude) continue;
       const replacesCuisine =
         section === "Eat" &&
+        !state.queryPreferences?.[section]?.tagOperator &&
         !pending.optional &&
         /cuisine|restaurant/i.test(`${tag.id} ${tag.name} ${tag.detail}`);
       const existing = (state.categoryTags![section] ?? []).filter(
@@ -224,7 +249,10 @@ export async function runTurn(
     intent = {
       kind: "refine",
       seeds: [],
-      concepts: pending.optional ? [] : [pending.query],
+      concepts:
+        pending.optional || pending.exclude
+          ? []
+          : [pending.query, ...(pending.remainingConcepts ?? [])],
       sections: pending.sections,
       constraints: pending.constraints,
       strategy: pending.strategy ?? "discover",
@@ -289,7 +317,7 @@ export async function runTurn(
           ? acceptedScope
           : intent.familiarity
             ? modeScope
-            : "Eat",
+            : (currentScope ?? "Eat"),
       ];
   if (intent.familiarity)
     for (const section of targets)
@@ -304,6 +332,15 @@ export async function runTurn(
         state.categoryConcepts[section] = [...intent.concepts];
   }
   state.intent = { ...intent, sections: targets };
+  state.queryPreferences ??= {};
+  if (intent.query)
+    for (const section of targets) {
+      // This is a patch: follow-ups keep the existing price, location and other unaffected preferences.
+      state.queryPreferences[section] = patchPreferences(
+        state.queryPreferences[section] ?? {},
+        intent.query,
+      );
+    }
   state.explorationMode = intent.strategy === "rank" ? "shortlist" : "aligned";
   if (intent.kind !== "hide") {
     state.hiddenCategories = state.hiddenCategories!.filter(
@@ -395,7 +432,7 @@ export async function runTurn(
       event("Guided refinement is available", "attention");
     }
   }
-  const concepts = [...intent.concepts];
+  const concepts = [...(intent.excludeConcepts ?? []), ...intent.concepts];
   if (
     intent.constraints.includes("crowded") &&
     !concepts.some((c) => /quiet/i.test(c))
@@ -411,11 +448,13 @@ export async function runTurn(
       if (!concepts.includes(q)) concepts.push(q);
     }
   for (const concept of concepts.slice(0, 2)) {
+    const excluding = intent.excludeConcepts?.includes(concept) ?? false;
     const words = concept
       .toLowerCase()
       .split(/\s+/)
       .filter((w) => !["cuisine", "food"].includes(w));
     if (
+      !excluding &&
       state.tags
         .filter((t) =>
           targets.some((section) =>
@@ -468,11 +507,17 @@ export async function runTurn(
           rankMcp: modelChoices.some((c) => c.name === "qloo_rank"),
           optional: /quiet/i.test(concept),
           request: comparedRequest,
+          exclude: excluding,
+          remainingConcepts: excluding
+            ? []
+            : concepts.slice(concepts.indexOf(concept) + 1, 2),
         };
         event("Concept matches returned · your choice needed", "complete");
         if (!/quiet/i.test(concept))
           return reply(
-            "Choose the concept you mean before I update that section. Your current passport is unchanged.",
+            excluding
+              ? "Choose the concept to exclude before I update that section. Your current Passport is unchanged."
+              : "Choose the concept you mean before I update that section. Your current passport is unchanged.",
           );
         event(
           "You can confirm a quiet atmosphere match; dining discovery will continue with your confirmed tastes",
@@ -502,7 +547,13 @@ export async function runTurn(
         ...(input.feedback ? (state.categoryConstraints[section] ?? []) : []),
         ...intent.constraints,
       ]),
-    ];
+    ].filter(
+      (c) =>
+        !(
+          c === "expensive" &&
+          (state.queryPreferences?.[section]?.priceMax ?? 2) > 2
+        ),
+    );
     state.categoryConstraints[section] = constraints;
     const excluded = state.feedback.filter((f) => !f.accepted).map((f) => f.id);
     const rank =
@@ -519,6 +570,7 @@ export async function runTurn(
       // filters. Constrained ranking must use the shared filtered pipeline.
       const useMcpRank =
         constraints.length === 0 &&
+        !Object.keys(state.queryPreferences?.[section] ?? {}).length &&
         mode === "model-mcp" &&
         modelChoices.some((c) => c.name === "qloo_rank");
       if (rank && useMcpRank) {

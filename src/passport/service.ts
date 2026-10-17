@@ -58,8 +58,15 @@ export async function resolve(queries: string[]) {
       else throw e;
     }
   }
-  items.forEach((item, seedIndex) => debugEvent("resolution.candidates", { seedIndex, count: item.candidates.length }));
-  debugEvent("resolution.completed", { count: items.reduce((n, item) => n + item.candidates.length, 0) });
+  items.forEach((item, seedIndex) =>
+    debugEvent("resolution.candidates", {
+      seedIndex,
+      count: item.candidates.length,
+    }),
+  );
+  debugEvent("resolution.completed", {
+    count: items.reduce((n, item) => n + item.candidates.length, 0),
+  });
   return { items, token: seal(items) };
 }
 export async function passport(
@@ -126,7 +133,7 @@ export async function passport(
       if (constraints.includes("mainstream"))
         params["filter.popularity.max"] = "0.9";
       const result = await insights(params);
-      const queryId = crypto.randomUUID();
+      const queryId = result.traceId;
       const before = cards.length;
       for (const entity of result.entities) {
         if (ids.includes(entity.entity_id)) continue;
@@ -142,30 +149,44 @@ export async function passport(
           const grounded = withEvidence(
             validated,
             [entity],
-            params,
+            result.params,
             selected,
             city,
             "familiar",
             "direct",
           );
           for (const c of grounded)
-            if (c.evidence) c.evidence.queryId = queryId;
+            if (c.evidence) {
+              c.evidence.queryId = queryId;
+              c.evidence.diagnostics = result.diagnostics;
+            }
           cards.push(...grounded);
         }
       }
-      debugEvent("passport.pool", { city, pool: type, count: result.entities.length, keptCount: cards.length - before });
+      debugEvent("passport.pool", {
+        city,
+        pool: type,
+        count: result.entities.length,
+        keptCount: cards.length - before,
+      });
       if (!result.entities.length)
         notices.push(
           `${type === "place" ? "Local places" : "Music"} returned no discoveries.`,
         );
     } catch (e) {
-      debugEvent("discovery.failed", { pool: type, status: e instanceof QlooError ? e.status : undefined });
+      debugEvent("discovery.failed", {
+        pool: type,
+        status: e instanceof QlooError ? e.status : undefined,
+      });
       notices.push(
         `${type === "place" ? "Local places" : "Music"}: ${e instanceof QlooError ? e.message : "Qloo returned an unexpected response."}`,
       );
     }
   }
-  debugEvent("passport.completed", { city, count: new Set(cards.map(c => c.id)).size });
+  debugEvent("passport.completed", {
+    city,
+    count: new Set(cards.map((c) => c.id)).size,
+  });
   return {
     city,
     selected,

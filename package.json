@@ -15,6 +15,7 @@
     "start": "node --use-env-proxy node_modules/next/dist/bin/next start --hostname 0.0.0.0",
     "verify:gemini": "node --use-env-proxy --env-file-if-exists=.env --env-file-if-exists=.env.local --conditions=react-server --import tsx scripts/verify-gemini-mcp.ts",
     "test:browser": "node scripts/verify-progressive-ui.mjs",
+    "verify:qloo": "node --use-env-proxy --env-file-if-exists=.env --env-file-if-exists=.env.local --conditions=react-server --import tsx scripts/verify-qloo-intelligence.ts",
     "smoke:production": "node scripts/smoke-production.mjs"
   },
   "devDependencies": {

@@ -1,0 +1,193 @@
+/* Progressive controls: one chapter, a discovery mood, and optional common ground. */
+.intelligence-content {
+  padding: 28px 0;
+}
+.intelligence-content > h2 {
+  font:
+    30px/1.2 Georgia,
+    serif;
+  margin-bottom: 14px;
+}
+.intelligence-content p {
+  line-height: 1.7;
+  margin-block: 12px;
+}
+.intelligence-content label {
+  display: grid;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  min-width: 0;
+}
+.intelligence-content select,
+.intelligence-content input {
+  min-height: 48px;
+  width: 100%;
+  max-width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--ui-border);
+  border-radius: 12px;
+  background: var(--ui-surface);
+  color: var(--ui-ink);
+  font-family: inherit;
+  font-size: 16px;
+  line-height: 1.5;
+}
+.intelligence-section {
+  max-width: 300px;
+  margin-block: 22px;
+}
+.intelligence-content select {
+  appearance: auto;
+}
+.intelligence-modes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.intelligence-modes button {
+  min-height: 44px;
+  padding: 10px 16px;
+  border: 1px solid var(--ui-border);
+  border-radius: 24px;
+  font-size: 14px;
+  background: var(--ui-surface);
+}
+.intelligence-modes button[aria-pressed="true"] {
+  background: var(--ui-action);
+  color: white;
+  border-color: var(--ui-action);
+}
+.intelligence-filters,
+.partner-interests {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-block: 22px;
+}
+.partner-interests {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.together-reveal {
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px solid var(--ui-border);
+}
+.together-reveal > summary {
+  min-height: 44px;
+  cursor: pointer;
+  font-size: 18px;
+}
+.together-reveal h3 {
+  font:
+    26px/1.3 Georgia,
+    serif;
+  margin: 20px 0 12px;
+}
+.partner-matches {
+  display: grid;
+  gap: 20px;
+  margin-top: 22px;
+}
+.partner-matches .candidate-options {
+  display: grid;
+  gap: 8px;
+}
+.partner-matches .candidate-option {
+  min-width: 0;
+}
+.common-tags,
+.result-metrics {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-block: 14px;
+}
+.common-tags span,
+.result-metrics > span {
+  padding: 6px 10px;
+  border: 1px solid var(--ui-border);
+  background: var(--ui-tint);
+  border-radius: 10px;
+  font-size: 13px;
+}
+.together-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-block: 22px;
+}
+.together-cards article {
+  border: 1px solid var(--ui-border);
+  padding: 20px;
+  border-radius: 16px;
+  background: var(--ui-surface);
+  min-width: 0;
+}
+.together-cards h4 {
+  font:
+    24px/1.3 Georgia,
+    serif;
+}
+.why-evidence h5 {
+  font-size: 15px;
+  margin: 18px 0 10px;
+}
+.why-evidence p,
+.why-evidence li {
+  font-size: 13px;
+  line-height: 1.7;
+}
+.contribution-list {
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 12px;
+}
+.contribution-list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 12px;
+}
+.contribution-list meter {
+  width: 100%;
+  grid-column: 1/-1;
+  accent-color: var(--ui-action);
+}
+.evidence-metrics {
+  display: grid;
+  gap: 4px 16px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  margin-block: 18px;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.evidence-metrics dt {
+  color: var(--ui-muted);
+}
+.evidence-metrics dd {
+  margin: 0;
+}
+.evidence-metrics > div {
+  display: contents;
+}
+.query-debug {
+  margin-top: 30px;
+}
+.query-debug pre {
+  max-height: 450px;
+  overflow: auto;
+  font-size: 12px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 640px) {
+  .intelligence-filters,
+  .partner-interests,
+  .together-cards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .intelligence-content {
+    padding-block: 20px;
+  }
+}

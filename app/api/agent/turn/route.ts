@@ -6,6 +6,7 @@ import { sectionOrder } from "../../../../src/workspace/state";
 import { familiarities } from "../../../../src/passport/evidence";
 import { reasons } from "../../../../src/agent/types";
 import type { AgentInput } from "../../../../src/agent/types";
+import { validatePreferences } from "../../../../src/qloo/query-plan";
 export const runtime = "nodejs";
 async function handlePOST(request: Request) {
   let body: Record<string, unknown>;
@@ -46,8 +47,15 @@ async function handlePOST(request: Request) {
       input.recovery,
       input.reset,
       input.familiarity,
+      input.discovery,
     ].filter((x) => x !== undefined);
     if (actions.length !== 1) throw Error();
+    if (input.discovery) {
+      if (!sectionOrder.includes(input.discovery.section)) throw Error();
+      input.discovery.preferences = validatePreferences(
+        input.discovery.preferences,
+      );
+    }
     if (
       input.familiarity &&
       (!familiarities.includes(input.familiarity.mode) ||
@@ -111,7 +119,11 @@ async function handlePOST(request: Request) {
             return { state: value.state, value };
           },
         );
-        debugEvent("agent.completed", { mode: reply.mode, sections: reply.changed, count: reply.state.cards.length });
+        debugEvent("agent.completed", {
+          mode: reply.mode,
+          sections: reply.changed,
+          count: reply.state.cards.length,
+        });
         send({ type: "result", reply });
       } catch {
         debugEvent("api.failed", { route: "agent.turn" });

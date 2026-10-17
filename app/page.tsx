@@ -34,6 +34,7 @@ import {
 import ConciergeDrawer from "./components/concierge";
 import AccountControl from "./components/account";
 import DayOutPlan from "./components/day-out";
+import TasteIntelligence from "./components/intelligence";
 import { JourneyLoading, ToastNotice } from "./components/status";
 import {
   PassportCover,
@@ -77,6 +78,7 @@ export default function Home() {
   const [chosen, setChosen] = useState<Record<number, string>>({});
   const [removed, setRemoved] = useState<number[]>([]);
   const [result, setResult] = useState<Passport>();
+  const [accountSignedIn,setAccountSignedIn] = useState(false);
 
   const [error, setError] = useState("");
   const [dialog, setDialog] = useState<number>();
@@ -516,6 +518,7 @@ export default function Home() {
         <span className="topbar-caption">Move anywhere. Keep your vibe.</span>
         <nav className="header-controls" aria-label="Passport actions">
           <AccountControl
+            onAccountChange={setAccountSignedIn}
             passport={result}
             disabled={busy}
             onSignOut={fresh}
@@ -740,7 +743,8 @@ export default function Home() {
                 />
               </>
             )}
-            <DayOutPlan key={result.session?.id ?? result.city} passport={result} disabled={busy} />
+            <DayOutPlan key={`day-out:${result.session?.id ?? result.city}`} passport={result} disabled={busy} signedIn={accountSignedIn} />
+            <TasteIntelligence key={`intelligence:${result.session?.id ?? result.city}`} passport={result} busy={busy} onRefine={input=>void refine(input)} />
             <details className="secondary-reveal cultural-reveal">
               <summary>
                 Why these suggestions? <Icon name="arrow" size={16} />

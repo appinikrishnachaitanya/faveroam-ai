@@ -24,7 +24,9 @@ function environment(): Record<string, string> & {
   ])
     if (process.env[name]) env[name] = process.env[name]!;
   const base =
-    process.env.QLOO_API_BASE_URL ?? "https://hackathon.api.qloo.com";
+    process.env.QLOO_API_BASE_URL ??
+    process.env.QLOO_BASE_URL ??
+    "https://hackathon.api.qloo.com";
   if (
     !["https://hackathon.api.qloo.com", "https://api.qloo.com"].includes(
       base.replace(/\/$/, ""),
@@ -40,7 +42,10 @@ function environment(): Record<string, string> & {
     QLOO_TRUSTED_BASE_URL: base,
   };
 }
-async function withMcp<T>(fn: (client: Client) => Promise<T>,signal?:AbortSignal): Promise<T> {
+async function withMcp<T>(
+  fn: (client: Client) => Promise<T>,
+  signal?: AbortSignal,
+): Promise<T> {
   const transport = new StdioClientTransport({
     command: process.execPath,
     args: [bin(), "mcp"],
@@ -52,8 +57,8 @@ async function withMcp<T>(fn: (client: Client) => Promise<T>,signal?:AbortSignal
   try {
     return await Promise.race([
       (async () => {
-        if(signal?.aborted)throw Error("Qloo MCP cancelled");
-          await client.connect(transport);
+        if (signal?.aborted) throw Error("Qloo MCP cancelled");
+        await client.connect(transport);
         return fn(client);
       })(),
       new Promise<never>((_, reject) => {
@@ -94,7 +99,7 @@ export async function workflow(
   mode: "exec" | "mcp",
   name: string,
   args: Record<string, unknown>,
-  signal?:AbortSignal,
+  signal?: AbortSignal,
 ): Promise<ToolResult> {
   if (
     !["qloo_find_tags", "qloo_rank"].includes(name) ||
@@ -104,64 +109,69 @@ export async function workflow(
   const trace = crypto.randomUUID();
   debugEvent("qloo.invoked", { trace, tool: name, transport: mode });
   try {
-  const result = await paced(
-    `workflow:${process.env.QLOO_API_KEY}:${mode}:${name}:${JSON.stringify(args)}`,
-    async () => {
-      if(signal?.aborted)throw Error("Workflow cancelled");
-      if (mode === "mcp")
-        return withMcp(async (client) => {
-          const response = await client.callTool(
-            { name, arguments: args },
-            undefined,
-            { timeout: 24_000, signal },
-          );
-          const value =
-            response.structuredContent ??
-            JSON.parse(
-              (response.content as { type: string; text?: string }[]).find(
-                (c) => c.type === "text",
-              )?.text ?? "null",
+    const result = await paced(
+      `workflow:${process.env.QLOO_API_KEY}:${mode}:${name}:${JSON.stringify(args)}`,
+      async () => {
+        if (signal?.aborted) throw Error("Workflow cancelled");
+        if (mode === "mcp")
+          return withMcp(async (client) => {
+            const response = await client.callTool(
+              { name, arguments: args },
+              undefined,
+              { timeout: 24_000, signal },
             );
-          const result = normalizeWorkflow(value);
-          if (response.isError || result.status === "error")
-            throw Error(
-              "Qloo MCP workflow failed; existing passport preserved",
-            );
-          return result;
-        },signal);
-      return new Promise<ToolResult>((resolve, reject) => {
-        const child = execFile(
-          process.execPath,
-          [bin(), "exec", name.slice(5)],
-          {
-            env: environment(),
-            timeout: 25_000,
-            signal,
-            maxBuffer: 1024 * 1024,
-            encoding: "utf8",
-          },
-          (error, stdout) => {
-            if (error) {
-              reject(
-                Error(
-                  "Qloo workflow failed or rate limited; please retry later",
-                ),
+            const value =
+              response.structuredContent ??
+              JSON.parse(
+                (response.content as { type: string; text?: string }[]).find(
+                  (c) => c.type === "text",
+                )?.text ?? "null",
               );
-              return;
-            }
-            try {
-              resolve(normalizeWorkflow(JSON.parse(stdout)));
-            } catch {
-              reject(Error("Unexpected Qloo workflow response"));
-            }
-          },
-        );
-        child.stdin?.end(JSON.stringify(args));
-      });
-    },
-  );
-  debugEvent("qloo.result", { trace, tool: name, transport: mode, count: Array.isArray(result.results) ? result.results.length : 0 });
-  return result;
+            const result = normalizeWorkflow(value);
+            if (response.isError || result.status === "error")
+              throw Error(
+                "Qloo MCP workflow failed; existing passport preserved",
+              );
+            return result;
+          }, signal);
+        return new Promise<ToolResult>((resolve, reject) => {
+          const child = execFile(
+            process.execPath,
+            [bin(), "exec", name.slice(5)],
+            {
+              env: environment(),
+              timeout: 25_000,
+              signal,
+              maxBuffer: 1024 * 1024,
+              encoding: "utf8",
+            },
+            (error, stdout) => {
+              if (error) {
+                reject(
+                  Error(
+                    "Qloo workflow failed or rate limited; please retry later",
+                  ),
+                );
+                return;
+              }
+              try {
+                resolve(normalizeWorkflow(JSON.parse(stdout)));
+              } catch {
+                reject(Error("Unexpected Qloo workflow response"));
+              }
+            },
+          );
+          child.stdin?.end(JSON.stringify(args));
+        });
+      },
+    );
+    debugEvent("qloo.result", {
+      trace,
+      tool: name,
+      transport: mode,
+      count: Array.isArray(result.results) ? result.results.length : 0,
+    });
+    return result;
   } catch (error) {
     debugEvent("qloo.failed", { trace, tool: name, transport: mode });
     throw error;

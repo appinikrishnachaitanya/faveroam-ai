@@ -5,6 +5,10 @@ import {
 } from "../workspace/state.ts";
 import type { Section } from "../passport/model.ts";
 import type { Constraint, Intent } from "./types.ts";
+import {
+  preferencesFromText,
+  validatePreferences,
+} from "../qloo/query-plan.ts";
 export function culturalText(value: string, max = 1000): string {
   if (
     typeof value !== "string" ||
@@ -49,9 +53,10 @@ export function isConcept(text: string) {
 export function interpret(text: string, fallback = "New York City"): Intent {
   culturalText(text);
   const constraints = constraintsFrom(text);
-  const onboarding = /\b(?:i love|i like|i enjoy|i'm into|my tastes (?:are|include))\b/i.test(
-    text,
-  );
+  const onboarding =
+    /\b(?:i love|i like|i enjoy|i'm into|my tastes (?:are|include))\b/i.test(
+      text,
+    );
   const clean = text.replace(/\bI (?:don't|do not|dislike|hate)[\s\S]*$/i, "");
   const draft = extractDraft(clean, fallback);
   const sections: Section[] = [];
@@ -64,6 +69,8 @@ export function interpret(text: string, fallback = "New York City"): Intent {
   const concepts = /indian|biryani/i.test(text)
     ? [/biryani/i.test(text) ? "biryani" : "Indian cuisine"]
     : [];
+  if (/\bThai\b/i.test(text)) concepts.push("Thai cuisine");
+  if (/\bvegetarian\b/i.test(text)) concepts.push("vegetarian");
   if (
     !onboarding &&
     /show|find|want/i.test(text) &&
@@ -84,7 +91,7 @@ export function interpret(text: string, fallback = "New York City"): Intent {
   const activeSections = sections.filter((s) => !hidden.includes(s));
   const refine =
     !onboarding &&
-    /tonight|quieter|more|less|find|show|want|give|too |niche|refine|rank|reorder/i.test(
+    /tonight|quieter|more|less|find|show|want|give|too |niche|refine|rank|reorder|trending|hidden gem|safe bet|surprise me|highly rated|make it/i.test(
       text,
     );
   return {
@@ -100,6 +107,8 @@ export function interpret(text: string, fallback = "New York City"): Intent {
     destination: onboarding ? draft.city : undefined,
     seeds: onboarding ? draft.tastes.map((s) => s.replace(/[.\s]+$/, "")) : [],
     concepts,
+    excludeConcepts: /\bno seafood\b/i.test(text) ? ["seafood"] : [],
+    query: preferencesFromText(text),
     constraints,
     sections: hide && !activeSections.length ? hidden : activeSections,
     hide: hidden,
@@ -166,6 +175,15 @@ export function validateIntent(raw: unknown): Intent {
     concepts: x.concepts as string[],
     constraints: x.constraints as Constraint[],
     sections: x.sections as Section[],
+    ...(Array.isArray(x.excludeConcepts)
+      ? {
+          excludeConcepts: x.excludeConcepts
+            .filter((s): s is string => typeof s === "string")
+            .slice(0, 2)
+            .map((s) => culturalText(s, 100)),
+        }
+      : {}),
+    ...(x.query !== undefined ? { query: validatePreferences(x.query) } : {}),
     ...(x.familiarity
       ? { familiarity: x.familiarity as Intent["familiarity"] }
       : {}),

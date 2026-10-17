@@ -13,6 +13,9 @@ import { candidates } from "../passport/model.ts";
 import type { AgentDependencies } from "./orchestrator.ts";
 import type { AgentState, Constraint } from "./types.ts";
 import type { Card, Section } from "../passport/model.ts";
+import { buildQuery } from "../qloo/query-plan.ts";
+import { findTags } from "../qloo/lookups.ts";
+import { enrichTrends } from "../qloo/enrichment.ts";
 export function agentDependencies(): AgentDependencies {
   let provider;
   try {
@@ -43,7 +46,11 @@ export async function resolveCulturalSeeds(
         );
         items.push({ query, candidates: tagCandidates(result, query) });
       } catch {
-        items.push({ query, candidates: [] });
+        try {
+          items.push({ query, candidates: await findTags(query) });
+        } catch {
+          items.push({ query, candidates: [] });
+        }
       }
     } else {
       try {
@@ -54,7 +61,7 @@ export async function resolveCulturalSeeds(
       } catch (e) {
         if (e instanceof QlooError && e.status === 404)
           items.push({ query, candidates: [] });
-        else throw e;
+        else items.push({ query, candidates: [] });
       }
     }
   }
@@ -182,7 +189,55 @@ export async function discoverSection(
   }
   const mode =
     state.categoryModes?.[section] ?? state.discoveryMode ?? "familiar";
-  const queries = discoveryQueries(params, state, section, mode);
+  const preferences = state.queryPreferences?.[section] ?? {};
+  const planned = buildQuery({
+    outputType: type,
+    interests: { entities: ids, tags: [] },
+    preferences,
+    take: 20,
+  });
+  // Merge the shared planner's applied settings with existing category filters.
+  // Omitted settings remain in the server session; unrelated categories are untouched.
+  const categoryFilter = params["filter.tags"];
+  Object.assign(params, planned.params);
+  if (preferences.includeTags?.length && type === "place") {
+    params["filter.tags"] = [
+      ...new Set([
+        ...(categoryFilter ?? "").split(",").filter(Boolean),
+        ...preferences.includeTags,
+      ]),
+    ].join(",");
+  }
+  if (preferences.tagOperator && params["filter.tags"]) {
+    params["operator.filter.tags"] = preferences.tagOperator;
+    if (preferences.tagOperator === "union" && section === "Eat") {
+      const specific = params["filter.tags"]
+        .split(",")
+        .filter((id) => id !== "urn:tag:genre:place:restaurant");
+      if (specific.length) params["filter.tags"] = specific.join(",");
+    }
+  }
+  if (excluded.length || preferences.excludeEntities?.length)
+    params["filter.exclude.entities"] = [
+      ...new Set([...excluded, ...(preferences.excludeEntities ?? [])]),
+    ]
+      .slice(-50)
+      .join(",");
+  if (planned.diagnostics.dropped.length)
+    state.notices.push(
+      `Some requested settings could not be applied: ${planned.diagnostics.dropped.map((d) => d.parameter).join(", ")}. Open Why this suggestion for details.`,
+    );
+  if (preferences.goal === "surprise") {
+    // No undocumented bias.content_based. Existing exploration broadens only soft taste filters.
+    state.categoryModes ??= {};
+    state.categoryModes[section] = "explore";
+  }
+  const queries = discoveryQueries(
+    params,
+    state,
+    section,
+    preferences.goal === "surprise" ? "explore" : mode,
+  );
   const sources = [
     ...state.selected,
     ...state.tags,
@@ -205,12 +260,23 @@ export async function discoverSection(
       const grounded = withEvidence(
         validated,
         result.entities,
-        query.params,
+        result.params,
         sources,
         state.city,
         mode,
         query.pool,
       );
+      for (const card of grounded)
+        if (card.evidence) {
+          card.evidence.queryId = result.traceId;
+          card.evidence.diagnostics = {
+            ...result.diagnostics,
+            dropped: [
+              ...planned.diagnostics.dropped,
+              ...result.diagnostics.dropped,
+            ],
+          };
+        }
       if (query.note) {
         state.notices.push(query.note);
         for (const card of grounded)
@@ -240,6 +306,13 @@ export async function discoverSection(
         if (card.evidence) card.evidence.strategyNote = note;
   }
   const cards = mixPools(pools);
+  if (preferences.goal === "trending") {
+    await enrichTrends(cards, signal);
+    debugEvent("qloo.enrichment", {
+      endpoint: "trending",
+      count: cards.filter((c) => c.trend?.points.length).length,
+    });
+  }
   debugEvent("discovery.completed", { section, mode, count: cards.length });
   return cards;
 }

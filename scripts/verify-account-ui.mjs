@@ -1,4 +1,4 @@
-/** Browser contract tests with explicitly mocked account APIs. Not live Supabase acceptance. */
+/** Browser contracts with explicitly mocked account/intelligence APIs. Not live provider acceptance. */
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import { normalizeSession } from '../src/agent/session.ts';
@@ -66,11 +66,16 @@ ws.addEventListener('message', async event => {
         value = { saved: true, id: uuid };
       } else if (request.method === 'DELETE') { plans = []; value = { deleted: true }; }
       else value = { plans };
+    } else if(path==='/api/agent/resolve') {
+      value={token:'protocol-only-token',items:body.seeds.map((query,i)=>({query,candidates:[{id:`partner-${i}`,name:`Protocol partner ${i}`,types:['urn:entity:artist'],detail:'UI protocol fixture'}]}))};
+    } else if(path==='/api/agent/intelligence') {
+      assert.equal(body.action,'together');assert.deepEqual(body.ids,['partner-0','partner-1','partner-2']);assert.equal(body.token,'protocol-only-token');
+      value={comparison:{shared:[{id:'urn:tag:genre:protocol',name:'Protocol common ground'}],aOnly:[],bOnly:[],recordedAt:new Date().toISOString()},cards,notice:'Protocol shared taste suggestions'};
     } else value = { deleted: true };
     await call('Fetch.fulfillRequest', { requestId, responseCode: 200, responseHeaders: [{ name: 'Content-Type', value: 'application/json' }, { name: 'Cache-Control', value: 'no-store' }], body: Buffer.from(JSON.stringify(value)).toString('base64') });
   } catch (error) { failure = error; await call('Fetch.failRequest', { requestId, errorReason: 'Failed' }); }
 });
-await call('Fetch.enable', { patterns: [{ urlPattern: '*://*/api/account*' }, { urlPattern: '*://*/api/agent/session' }] });
+await call('Fetch.enable', { patterns: [{ urlPattern: '*://*/api/account*' }, { urlPattern: '*://*/api/agent/session' },{urlPattern:'*://*/api/agent/resolve'},{urlPattern:'*://*/api/agent/intelligence'}] });
 await call('Emulation.setDeviceMetricsOverride', { width: 1440, height: 1000, deviceScaleFactor: 1, mobile: false });
 await call('Page.navigate', { url: base + '/?ui-contract=1' });
 await wait("location.search.includes('ui-contract=1') && document.readyState==='complete' && Boolean(document.querySelector('.account-launch'))");
@@ -98,12 +103,29 @@ await click('.account-launch');
 await wait("Boolean(document.querySelector('.saved-passport-list article'))");
 await textClick('Open');
 await wait("Boolean(document.querySelector('.passport-cover')) && !document.querySelector('.account-dialog[open]')");
+await wait("document.querySelector('.plan-save-actions .primary-button').textContent.includes('Save to')");
 for (const width of [320, 390, 640, 768, 1024, 1440]) {
   await call('Emulation.setDeviceMetricsOverride', { width, height: 900, deviceScaleFactor: 1, mobile: width<768 });
   assert.equal(await evaluate('document.documentElement.scrollWidth>innerWidth'), false, `Signed-in layout overflow at ${width}`);
   assert.ok(await evaluate("(()=>{const h=document.querySelector('.workspace-topbar').getBoundingClientRect(), n=document.querySelector('.header-controls').getBoundingClientRect(), b=document.querySelector('.brand').getBoundingClientRect();return n.right<=h.right+1 && (b.right<=n.left+1 || b.bottom<=n.top+1)})()"), `Signed-in nav overlap at ${width}`);
 }
 await evaluate("document.querySelector('.day-out-reveal').open=true");
+await evaluate("document.querySelector('.taste-intelligence').open=true;document.querySelector('.together-reveal').open=true");
+for(let i=0;i<3;i++)await input(`.partner-interests label:nth-child(${i+1}) input`,`Protocol interest ${i}`);
+await textClick('Find their interests');
+await wait("document.querySelectorAll('.partner-matches fieldset').length===3");
+await evaluate("document.querySelectorAll('.partner-matches input[type=radio]').forEach(input=>input.click())");
+assert.equal(await evaluate("document.querySelectorAll('.partner-matches input:checked').length"),3,'Partner matches have independent radio groups');
+await textClick('Find something for both of us');
+await wait("Boolean(document.querySelector('.common-tags'))");
+assert.ok(await evaluate("document.querySelector('.common-tags').textContent.includes('Protocol common ground')"));
+await evaluate("document.querySelector('.advanced-taste-filters').open=true");
+for(const width of [320,390,768,1440]){
+  await call('Emulation.setDeviceMetricsOverride',{width,height:900,deviceScaleFactor:1,mobile:width<768});
+  assert.equal(await evaluate('document.documentElement.scrollWidth>innerWidth'),false,`Intelligence UI overflow at ${width}`);
+}
+await evaluate("window.scrollTo({top:document.querySelector('.taste-intelligence').getBoundingClientRect().top+scrollY-120,behavior:'instant'})");
+let intelligenceShot=await call('Page.captureScreenshot',{format:'png'});await fs.writeFile('/tmp/tastepassport-intelligence.png',Buffer.from(intelligenceShot.result.data,'base64'));
 await wait("document.querySelector('.plan-save-actions .primary-button').textContent.includes('Save to')");
 await input('#plan-date', '2099-10-18');
 await click('.plan-save-actions .primary-button');
@@ -127,4 +149,4 @@ await wait("!document.querySelector('.signout-button') && !document.querySelecto
 await call('Fetch.disable');
 ws.close();
 if (failure) throw failure;
-console.log('Account UI contract PASS (mocked APIs): registration verification screen, sign-in nav/logout, saved Passport listing/open, dated plan save/list/calendar, mobile containment and sign-out clearing. Live Supabase and email delivery remain separate acceptance.');
+console.log('UI contract PASS (mocked APIs): verification, signed-in nav, saved Passports, Together confirmation with independent radios and shared results, advanced controls, dated plans/calendar, mobile containment and sign-out. Live providers remain separate acceptance.');

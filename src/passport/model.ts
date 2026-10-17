@@ -14,6 +14,9 @@ export interface Card extends Candidate {
   affinity?: number;
   inputSignals?: string[];
   evidence?: import("./evidence.ts").QlooEvidence;
+  intelligence?: import("../qloo/normalizer.ts").TasteResult;
+  trend?: import("../qloo/trending.ts").TrendResult;
+  trendUnavailable?: boolean;
 }
 export function candidate(e: Entity): Candidate {
   const p = e.properties ?? {};

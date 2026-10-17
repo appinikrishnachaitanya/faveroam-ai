@@ -25,6 +25,8 @@ export interface Intent {
   strategy: "discover" | "rank" | "filter";
   hide?: Section[];
   familiarity?: import("../passport/evidence.ts").Familiarity;
+  query?: import("../qloo/query-plan.ts").QueryPreferences;
+  excludeConcepts?: string[];
 }
 export interface AgentEvent {
   label: string;
@@ -63,6 +65,9 @@ export interface AgentState {
     Record<Section, import("../passport/evidence.ts").Familiarity>
   >;
   categoryTags?: Partial<Record<Section, string[]>>;
+  queryPreferences?: Partial<
+    Record<Section, import("../qloo/query-plan.ts").QueryPreferences>
+  >;
   history?: { role: "user" | "agent"; text: string }[];
   providerHealth?: "unconfigured" | "configured" | "healthy" | "unavailable";
   recovery?: Section[];
@@ -76,6 +81,8 @@ export interface AgentState {
     rankMcp?: boolean;
     optional?: boolean;
     request?: string;
+    exclude?: boolean;
+    remainingConcepts?: string[];
   };
 }
 /** Fully initialized canonical state; AgentState also accepts legacy bootstrap fixtures. */
@@ -106,6 +113,7 @@ export interface ToolChoice {
   arguments: Record<string, unknown>;
 }
 export interface ModelProvider {
+  explain?(facts: string[]): Promise<number[]>;
   interpret(text: string): Promise<Intent>;
   baseline?(
     destination: string,
@@ -132,6 +140,10 @@ export interface ToolResult {
   execution?: { transport?: string };
 }
 export interface AgentInput {
+  discovery?: {
+    section: Section;
+    preferences: import("../qloo/query-plan.ts").QueryPreferences;
+  };
   reset?: "conversation";
   familiarity?: {
     mode: import("../passport/evidence.ts").Familiarity;

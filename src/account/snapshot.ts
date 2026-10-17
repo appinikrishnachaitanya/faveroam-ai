@@ -30,6 +30,7 @@ export function passportSnapshot(original: AgentState) {
     discoveryMode: s.discoveryMode,
     categoryModes: s.categoryModes,
     categoryTags: s.categoryTags,
+    queryPreferences: s.queryPreferences,
   };
   if (Buffer.byteLength(JSON.stringify(snapshot), "utf8") > 600_000)
     throw Error("Passport is too large to save");

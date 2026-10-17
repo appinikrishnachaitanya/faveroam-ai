@@ -2,6 +2,11 @@ import type { Candidate, Card, Section } from "./model.ts";
 import type { Entity } from "../qloo/types.ts";
 import { sectionOrder } from "../workspace/state.ts";
 import { isObject } from "../qloo/types.ts";
+import { normalizeEntity } from "../qloo/normalizer.ts";
+import {
+  supportedParameterNames,
+  type QueryDiagnostics,
+} from "../qloo/query-plan.ts";
 export type Familiarity = "familiar" | "balanced" | "explore";
 export const familiarities: Familiarity[] = ["familiar", "balanced", "explore"];
 export interface QlooEvidence {
@@ -28,6 +33,7 @@ export interface QlooEvidence {
     affinity?: { field: "query.affinity"; value: number };
   };
   strategyNote?: string;
+  diagnostics?: QueryDiagnostics;
   ranking?: {
     operation: "qloo_rank";
     signals: string[];
@@ -36,21 +42,6 @@ export interface QlooEvidence {
     affinity?: number;
   };
 }
-const allowed = new Set([
-  "filter.type",
-  "signal.interests.entities",
-  "signal.interests.tags",
-  "filter.tags",
-  "operator.filter.tags",
-  "filter.location.query",
-  "filter.location.radius",
-  "signal.location.query",
-  "filter.price_level.max",
-  "filter.popularity.max",
-  "filter.exclude.entities",
-  "filter.results.entities",
-  "take",
-]);
 export function withEvidence(
   cards: Card[],
   entities: Entity[],
@@ -120,7 +111,11 @@ export function withEvidence(
       pool,
       inputs,
       params: Object.fromEntries(
-        Object.entries(params).filter(([key]) => allowed.has(key)),
+        Object.entries(params).filter(([key]) =>
+          supportedParameterNames(
+            params["filter.type"]?.replace("urn:entity:", ""),
+          ).has(key),
+        ),
       ),
       result: {
         id: entity.entity_id,
@@ -145,6 +140,7 @@ export function withEvidence(
           ),
         ],
         evidence,
+        intelligence: normalizeEntity(entity),
       },
     ];
   });
