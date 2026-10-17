@@ -36,7 +36,7 @@ export function dayOutOptions(cards: Card[], city: string): Card[] {
 export function dayOutText(city: string, cards: Card[], date?: string): string {
   return [
     `My day out in ${city} · TastePassport AI`,
-    ...(date ? [`Planned for ${date} (local date in ${city})`] : []),
+    ...(date ? [`Planned for ${date}`] : []),
     "Suggested sequence. Check opening hours, travel times and availability before going.",
     ...cards.map(
       (card, i) =>

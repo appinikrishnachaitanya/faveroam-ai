@@ -170,7 +170,7 @@ assert.equal(
 );
 await shot("/tmp/tastepassport-step1.png");
 await input("#origin", "Bengaluru");
-await input("#destination", "Toronto", "HTMLSelectElement");
+await input("#destination", "Toronto");
 for (const taste of ["A.R. Rahman", "Interstellar", "Indian cuisine"])
   await clickText(taste);
 assert.equal(

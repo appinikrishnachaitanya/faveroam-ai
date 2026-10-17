@@ -1,5 +1,6 @@
 import type { Intent } from "../agent/types.ts";
 import type { Candidate, Card, Section } from "../passport/model.ts";
+import { validDestination } from "./location.ts";
 export type Phase =
   | "idle"
   | "review"
@@ -48,7 +49,10 @@ export const sectionOrder: Section[] = [
  * Commas/newlines separate tastes; a final "and" is recognized. Users review
  * the draft before sending it to Qloo, because titles can contain conjunctions. */
 export function extractDraft(text: string, fallback: string) {
-  const city = /\bnew york(?: city)?\b|\bnyc\b/i.test(text)
+  const explicitCity = text.match(/\b(?:moving|relocating)\s+(?:from\s+.+?\s+)?to\s+([^.!?]+?)(?=\.\s|\s+I\s+(?:love|like|enjoy)|$)/i)?.[1]?.trim();
+  const city = explicitCity && validDestination(explicitCity)
+    ? (/^(?:new york(?: city)?|nyc)$/i.test(explicitCity) ? "New York City" : explicitCity)
+    : /\bnew york(?: city)?\b|\bnyc\b/i.test(text)
     ? "New York City"
     : (destinations.find(
         (c) =>

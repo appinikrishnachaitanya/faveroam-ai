@@ -1,13 +1,13 @@
 import type { AgentState } from "../agent/types.ts";
 import { normalizeSession } from "../agent/session.ts";
 import { randomUUID } from "node:crypto";
-import { destinations } from "../workspace/state.ts";
+import { validDestination } from "../workspace/location.ts";
 export const SNAPSHOT_VERSION = 1;
 /** Snapshot only server-held state. Excludes bearer tokens, chat history and model-only output. */
 export function passportSnapshot(original: AgentState) {
   const s = normalizeSession(structuredClone(original));
   if (
-    !destinations.includes(s.city) ||
+    !validDestination(s.city) ||
     s.selected.length < 3 ||
     s.selected.length > 5
   )
@@ -43,7 +43,7 @@ export function restoreSnapshot(value: unknown) {
   if (
     !v ||
     v.version !== SNAPSHOT_VERSION ||
-    !destinations.includes(v.city) ||
+    !validDestination(v.city) ||
     !Array.isArray(v.selected) ||
     v.selected.length < 3 ||
     v.selected.length > 5 ||

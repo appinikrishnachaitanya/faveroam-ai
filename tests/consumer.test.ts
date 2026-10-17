@@ -152,7 +152,8 @@ test("restore rejects fabricated or incompatible account snapshots", () => {
       cards: [{ ...card("bad"), evidence: undefined }],
     }),
   );
-  assert.throws(() => restoreSnapshot({ ...snap, city: "Unsupported" }));
+  assert.throws(() => restoreSnapshot({ ...snap, city: "https://invalid.example" }));
+  assert.equal(restoreSnapshot({ ...snap, city: "Bengaluru" }).city, "Bengaluru");
 });
 test("curated preview retains true total and access to all cards without manufacturing highlights", () => {
   const s = state();

@@ -115,21 +115,24 @@ export function MoveForm({
             <Icon name="arrow" size={22} />
           </span>
           <label htmlFor="destination">
-            Moving to <span>5 supported cities</span>
+            Moving to <span>City, country</span>
             <div className="field-with-icon">
               <Icon name="pin" />
-              <select
+              <input
                 id="destination"
+                list="destination-suggestions"
+                placeholder="e.g. Bengaluru, India"
+                maxLength={100}
                 value={city}
                 disabled={disabled}
                 required
                 onChange={(e) => onCity(e.target.value)}
-              >
-                <option value="">Choose a city</option>
+              />
+              <datalist id="destination-suggestions">
                 {destinations.map((destination) => (
                   <option key={destination}>{destination}</option>
                 ))}
-              </select>
+              </datalist>
             </div>
           </label>
         </div>

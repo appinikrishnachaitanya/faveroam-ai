@@ -1,6 +1,5 @@
 import {
   extractDraft,
-  destinations,
   sectionOrder,
 } from "../workspace/state.ts";
 import type { Section } from "../passport/model.ts";
@@ -9,6 +8,7 @@ import {
   preferencesFromText,
   validatePreferences,
 } from "../qloo/query-plan.ts";
+import { validDestination } from "../workspace/location.ts";
 export function culturalText(value: string, max = 1000): string {
   if (
     typeof value !== "string" ||
@@ -186,7 +186,7 @@ export function validateIntent(raw: unknown): Intent {
     throw Error("Invalid scope");
   if (
     x.destination !== undefined &&
-    !destinations.includes(String(x.destination))
+    !validDestination(x.destination)
   )
     throw Error("Unsupported destination");
   if (

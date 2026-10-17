@@ -8,13 +8,6 @@ import type { Constraint } from "../agent/types.ts";
 import { search, insights, QlooError, insightParams } from "../qloo/client.ts";
 import { candidates, classify, card, diversifyCards } from "./model.ts";
 import type { Candidate, Card } from "./model.ts";
-export const cities = [
-  "Toronto",
-  "New York City",
-  "London",
-  "Paris",
-  "Tokyo",
-] as const;
 function sign(payload: string) {
   const key = process.env.QLOO_API_KEY;
   if (!key) throw new QlooError("Qloo is not configured.");

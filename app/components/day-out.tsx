@@ -7,7 +7,7 @@ import {
   dayOutText,
   stopDistance,
 } from "../../src/passport/day-out";
-import { cityDate, nextWeekend } from "../../src/account/plans";
+import { cityDate, cityTimeZone, nextWeekend } from "../../src/account/plans";
 import { accountRequest, showNotice } from "../../src/account/browser";
 
 export default function DayOutPlan({
@@ -142,7 +142,7 @@ export default function DayOutPlan({
             Next weekend
           </button>
           <p className="helper">
-            Dates are local to {passport.city}. Saving again for the same city
+            Dates use {cityTimeZone(passport.city) === "UTC" ? "UTC until a destination time zone is available" : `local time in ${passport.city}`}. Saving again for the same city
             and date updates that plan.
           </p>
         </div>

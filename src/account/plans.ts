@@ -17,9 +17,11 @@ const zones: Record<string, string> = {
   Paris: "Europe/Paris",
   Tokyo: "Asia/Tokyo",
 };
+export function cityTimeZone(city: string) {
+  return zones[city.split(",")[0].trim()] ?? "UTC";
+}
 export function cityDate(city: string, now = new Date()) {
-  const zone = zones[city];
-  if (!zone) throw Error("Unsupported city.");
+  const zone = cityTimeZone(city);
   const parts = new Intl.DateTimeFormat("en", {
     timeZone: zone, year: "numeric", month: "2-digit", day: "2-digit",
   }).formatToParts(now);
@@ -46,7 +48,7 @@ export function planFromSession(state: AgentState, input: unknown, now = new Dat
   const stops = b.ids.map((id) => available.find((card) => card.id === id));
   if (stops.some((card) => !card) || new Set(stops.map((c) => c!.section)).size !== stops.length)
     throw Error("A stop changed. Choose one current suggestion per category.");
-  const plan = { city: state.city, scheduled_date: b.date, time_zone: zones[state.city], stops: structuredClone(stops as Card[]) };
+  const plan = { city: state.city, scheduled_date: b.date, time_zone: cityTimeZone(state.city), stops: structuredClone(stops as Card[]) };
   if (new TextEncoder().encode(JSON.stringify(plan.stops)).length > 120000) throw Error("This plan is too large to save.");
   return plan;
 }

@@ -3,6 +3,7 @@ import type { Entity } from "../qloo/types.ts";
 import { card, classify } from "../passport/model.ts";
 import type { Candidate, Card, Section } from "../passport/model.ts";
 import type { Constraint, ToolResult } from "./types.ts";
+import { matchesDestination } from "../workspace/location.ts";
 export function tagCandidates(result: ToolResult, query: string): Candidate[] {
   if (result.status !== "ok" || !Array.isArray(result.results)) return [];
   return result.results
@@ -112,12 +113,7 @@ export function validateDiscoveries(
         return false;
       const geo = e.properties?.geocode;
       if (!isObject(geo)) return false;
-      const label = city === "New York City" ? "new york" : city.toLowerCase();
-      return [geo.city, geo.metro, geo.name].some(
-        (v) =>
-          typeof v === "string" &&
-          (v.toLowerCase() === label || v.toLowerCase() === city.toLowerCase()),
-      );
+      return matchesDestination(city, geo);
     })
     .map((e) => card(e, section));
 }
