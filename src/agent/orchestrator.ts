@@ -189,6 +189,7 @@ export async function runTurn(
         "Saved as your vibe. Future refinements can use this cultural signal.",
       );
     }
+    state.cards = state.cards.filter((card) => card.id !== current.id);
     intent = {
       kind: "refine",
       seeds: [],
@@ -264,7 +265,9 @@ export async function runTurn(
     event("Interpreting your cultural request", "active");
     try {
       intent = validateIntent(
-        await deps.provider.interpret(input.message ?? ""),
+        await deps.provider.interpret(input.message ?? "", {
+          city: state.city,
+        }),
       );
       mode = "model-mcp";
       state.providerHealth = "healthy";
@@ -281,6 +284,9 @@ export async function runTurn(
       );
     }
   }
+  // Excluding a venue type is not permission to hide its whole chapter.
+  if (input.message && !/\b(?:hide|remove|skip|forget)\b/i.test(input.message))
+    intent.hide = [];
   debugEvent("agent.intent", {
     kind: intent.kind,
     sections: intent.sections,
@@ -493,6 +499,60 @@ export async function runTurn(
           !/quiet/i.test(concept) ||
           (t.id.includes(":ambience:") && /quiet|calm|tranquil/i.test(t.name)),
       );
+      // Generic venue genres describe the requested output, not a new personal taste.
+      // Resolve their actual Qloo taxonomy without another taste-confirmation dialog.
+      const genericGenre =
+        targets.length === 1 &&
+        targets[0] === "Culture" &&
+        /^(?:(?:museums?|art galler(?:y|ies)|galleries|restaurants?)(?:\s+(?:or|and)\s+)?)+$/i.test(
+          concept.trim(),
+        );
+      const genres = genericGenre
+        ? choices.filter(
+            (t) =>
+              t.id.includes(":place:") &&
+              (excluding
+                ? /^(restaurant|restaurants)$/i
+                : /^(museum|museums|art gallery|art galleries|gallery|galleries)$/i
+              ).test(t.name),
+          )
+        : [];
+      if (genres.length) {
+        state.tags = [
+          ...new Map([...state.tags, ...genres].map((t) => [t.id, t])).values(),
+        ];
+        state.categoryTags!.Culture = [
+          ...new Set([
+            ...(state.categoryTags!.Culture ?? []),
+            ...genres.map((t) => t.id),
+          ]),
+        ];
+        const old = state.queryPreferences!.Culture ?? {};
+        state.queryPreferences!.Culture = patchPreferences(
+          old,
+          excluding
+            ? {
+                excludeTags: [
+                  ...new Set([
+                    ...(old.excludeTags ?? []),
+                    ...genres.map((t) => t.id),
+                  ]),
+                ],
+              }
+            : {
+                includeTags: [
+                  ...new Set([
+                    ...(old.includeTags ?? []),
+                    ...genres.map((t) => t.id),
+                  ]),
+                ],
+                tagOperator: "union",
+              },
+        );
+        if (intent.strategy !== "rank")
+          modelChoices = modelChoices.filter((c) => c.name !== "qloo_rank");
+        continue;
+      }
       if (choices.length) {
         state.pending = {
           query: concept,
@@ -544,7 +604,9 @@ export async function runTurn(
     // retain this category's settings, but no other category contributes state.
     const constraints = [
       ...new Set([
-        ...(input.feedback ? (state.categoryConstraints[section] ?? []) : []),
+        ...(input.guided || input.recovery
+          ? []
+          : (state.categoryConstraints[section] ?? state.constraints)),
         ...intent.constraints,
       ]),
     ].filter(
@@ -648,22 +710,8 @@ export async function runTurn(
               !state.selected.some((s) => s.id === c.id),
           );
           if (cards.length) break;
-          event(
-            "Looking for a closer match with fewer optional preferences",
-            "active",
-          );
         }
-        const quietConfirmed = (state.categoryTags![section] ?? []).some((id) =>
-          state.tags.some(
-            (t) =>
-              t.id === id &&
-              t.id.includes(":ambience:") &&
-              /quiet|calm|tranquil/i.test(t.name),
-          ),
-        );
-        const relaxed = constraints.filter(
-          (c) => !applied.includes(c) || (c === "crowded" && !quietConfirmed),
-        );
+        const relaxed = constraints.filter((c) => !applied.includes(c));
         if (relaxed.length)
           state.relaxed!.push({ section, constraints: relaxed });
       }

@@ -73,7 +73,22 @@ const cards = ["Coffee", "Culture", "Eat"].map((section, index) => ({
     pool: "direct",
     inputs: [],
     params: {},
-    result: { id: `fixture-${index}`, type: "urn:entity:place", tags: [] },
+    result: {
+      id: `fixture-${index}`,
+      type: "urn:entity:place",
+      tags: [
+        {
+          id: "urn:tag:genre:place:fixture",
+          type: "urn:tag:genre:place",
+          name:
+            section === "Coffee"
+              ? "Coffee shop"
+              : section === "Culture"
+                ? "Museum"
+                : "Restaurant",
+        },
+      ],
+    },
   },
 }));
 const session = normalizeSession({
@@ -109,6 +124,7 @@ let libraryReads = 0,
   budgetUpdates = 0;
 let plans = [];
 let failure;
+let turnScenario = "budget";
 ws.addEventListener("message", async (event) => {
   const message = JSON.parse(event.data);
   if (message.id) {
@@ -123,6 +139,47 @@ ws.addEventListener("message", async (event) => {
     const body = request.postData ? JSON.parse(request.postData) : {};
     let value;
     if (path === "/api/agent/turn") {
+      if (body.input.message) {
+        if (turnScenario === "stall") return; // Cancelled by browser AbortSignal, never reaches the backend.
+        const payload =
+          turnScenario === "malformed"
+            ? "invalid-json\n"
+            : turnScenario === "provider-error"
+              ? JSON.stringify({
+                  type: "error",
+                  message:
+                    "Provider unavailable. Your discoveries are preserved.",
+                })
+              : JSON.stringify({
+                  type: "result",
+                  reply: {
+                    state: {
+                      ...session,
+                      revision: ++session.revision,
+                      history: [
+                        { role: "user", text: body.input.message },
+                        {
+                          role: "agent",
+                          text: "Your existing matches remain available.",
+                        },
+                      ],
+                    },
+                    changed: [],
+                    events: [],
+                    message: "Your matches remain available.",
+                    mode: "deterministic",
+                  },
+                });
+        await call("Fetch.fulfillRequest", {
+          requestId,
+          responseCode: 200,
+          responseHeaders: [
+            { name: "Content-Type", value: "application/x-ndjson" },
+          ],
+          body: Buffer.from(payload).toString("base64"),
+        });
+        return;
+      }
       assert.equal(body.input.discovery.section, "Eat");
       assert.equal(body.input.discovery.preferences.priceMax, 2);
       budgetUpdates++;
@@ -362,7 +419,7 @@ assert.equal(
 );
 assert.ok(
   await evaluate(
-    "document.querySelector('.day-out-plan [role=status]').textContent.includes('Your plan is set')",
+    "[...document.querySelectorAll('.day-out-plan [role=status]')].some(e => e.textContent.includes('Your plan is set'))",
   ),
 );
 await textClick("Preferences & Together");
@@ -469,6 +526,47 @@ assert.ok(
   ),
   "Floating assistant stays inside viewport",
 );
+await click(".assistant-launch");
+for (const scenario of ["provider-error", "malformed", "stall", "deadline"]) {
+  turnScenario = scenario === "deadline" ? "stall" : scenario;
+  if (scenario === "deadline")
+    await evaluate(
+      "window.__realTimeout=AbortSignal.timeout;AbortSignal.timeout=ms=>window.__realTimeout(ms===100000?30:ms)",
+    );
+  await input(
+    "#conversation-input",
+    "Please refine Culture " + scenario,
+    "HTMLTextAreaElement",
+  );
+  await click('[aria-label="Send message"]');
+  await wait(
+    `document.querySelector('.concierge-body').textContent.includes(${JSON.stringify("Please refine Culture ")}+${JSON.stringify(scenario)})`,
+  );
+  if (scenario === "stall") {
+    await wait(
+      "[...document.querySelectorAll('#taste-concierge button')].some(b=>b.textContent.includes('Cancel refinement'))",
+    );
+    await textClick("Cancel refinement");
+  }
+  await wait("!document.querySelector('#conversation-input').disabled");
+  assert.ok(
+    await evaluate(
+      "[...document.querySelectorAll('#taste-concierge button')].some(b=>b.textContent.includes('Retry last refinement'))",
+    ),
+  );
+  assert.equal(
+    await evaluate("document.querySelectorAll('.discovery-card').length"),
+    3,
+  );
+  if (scenario === "deadline")
+    await evaluate("AbortSignal.timeout=window.__realTimeout");
+}
+turnScenario = "success";
+await textClick("Retry last refinement");
+await wait(
+  "!document.querySelector('#conversation-input').disabled && ![...document.querySelectorAll('#taste-concierge button')].some(b=>b.textContent.includes('Retry last refinement'))",
+);
+await click('[aria-label="Close Taste Concierge"]');
 await click(".signout-button");
 await wait(
   "!document.querySelector('.signout-button') && !document.querySelector('.upcoming-launch') && !document.querySelector('.passport-cover')",
@@ -495,5 +593,5 @@ await call("Fetch.disable");
 ws.close();
 if (failure) throw failure;
 console.log(
-  "UI contract PASS (mocked APIs): no sign-in library flash, automatic budget updates, next-weekend date selection, focused views, floating assistant, Together, saved plans/calendar, responsive About and self-hosted font. Live providers remain separate acceptance.",
+  "UI contract PASS (mocked APIs, including provider error, malformed response, deadline, cancellation and retry): no sign-in library flash, automatic budget updates, next-weekend date selection, focused views, floating assistant, Together, saved plans/calendar, responsive About and self-hosted font. Live providers remain separate acceptance.",
 );

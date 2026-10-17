@@ -101,6 +101,8 @@ export default function Home() {
       .then((d) => setProviderHealth(d.health))
       .catch(() => {});
   }, []);
+  const activeTurn = useRef<AbortController | null>(null);
+  const [retryInput, setRetryInput] = useState<AgentInput>();
   const agentScroll = useRef<HTMLDivElement>(null);
   const matchOpener = useRef<HTMLButtonElement>(null);
   function closeDialog() {
@@ -123,11 +125,17 @@ export default function Home() {
   const conversationStart = sessionHistory.findIndex(
     (message) => message.role === "user",
   );
-  const visibleMessages = result
+  const committedMessages = result
     ? conversationStart < 0
       ? []
       : sessionHistory.slice(conversationStart)
     : messages;
+  const visibleMessages = retryInput?.message
+    ? [
+        ...committedMessages,
+        { role: "user" as const, text: retryInput.message },
+      ]
+    : committedMessages;
   const conciergeAvailable =
     providerHealth === "healthy" || providerHealth === "configured";
   const operationLabel =
@@ -225,7 +233,10 @@ export default function Home() {
     }
   }
   async function refine(input: AgentInput) {
-    if (!result?.agent || busy) return;
+    if (!result?.agent || busy || activeTurn.current) return;
+    const controller = new AbortController();
+    activeTurn.current = controller;
+    setRetryInput(input);
     setError("");
     setPhase("refining");
     setAgentEvents([]);
@@ -239,16 +250,23 @@ export default function Home() {
         : [],
     );
     try {
-      const reply = await sendAgentTurn(result.agent, input, (event) => {
-        setAgentEvents((events) => [...events, event]);
-        const match = event.label.match(
-          /(?:Updating|Ranking) your (Eat|Coffee|Music|Culture|Lifestyle) passport/,
-        );
-        if (match && event.status === "active")
-          setUpdating((sections) => [
-            ...new Set([...sections, match[1] as Section]),
-          ]);
-      });
+      const reply = await sendAgentTurn(
+        result.agent,
+        input,
+        (event) => {
+          setAgentEvents((events) => [...events, event]);
+          const match = event.label.match(
+            /(?:Updating|Ranking) your (Eat|Coffee|Music|Culture|Lifestyle) passport/,
+          );
+          if (match && event.status === "active")
+            setUpdating((sections) => [
+              ...new Set([...sections, match[1] as Section]),
+            ]);
+        },
+        controller.signal,
+      );
+      if (controller.signal.aborted || activeTurn.current !== controller) return;
+      setRetryInput(undefined);
       const changed = reply.changed;
       const unchanged = sectionOrder.filter(
         (section) =>
@@ -301,32 +319,38 @@ export default function Home() {
             ?.focus(),
         );
     } catch (e) {
+      if (activeTurn.current !== controller) return;
       setError(
-        e instanceof Error
-          ? e.message
-          : "Refinement is unavailable. Your passport is preserved.",
+        controller.signal.aborted
+          ? "Refinement cancelled. Your discoveries are preserved. Retry when you’re ready."
+          : e instanceof Error && e.name === "TimeoutError"
+            ? "This search took too long. Your discoveries are preserved. Try again or adjust this category."
+            : e instanceof Error
+              ? e.message
+              : "Refinement is unavailable. Your passport is preserved.",
       );
       setPhase("ready");
       say(
         "Refinement is temporarily unavailable. Your existing TastePassport is still available. Try the guided controls.",
       );
     } finally {
-      setUpdating([]);
+      if (activeTurn.current === controller) {
+        activeTurn.current = null;
+        setPhase("ready");
+        setUpdating([]);
+      }
     }
   }
 
   function selectWorkspaceView(next: typeof workspaceView) {
     setWorkspaceView(next);
     requestAnimationFrame(() =>
-      document
-        .getElementById(`view-${next}`)
-        ?.scrollIntoView({
-          behavior: window.matchMedia("(prefers-reduced-motion: reduce)")
-            .matches
-            ? "instant"
-            : "smooth",
-          block: "start",
-        }),
+      document.getElementById(`view-${next}`)?.scrollIntoView({
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? "instant"
+          : "smooth",
+        block: "start",
+      }),
     );
   }
   function updateDraft(index: number, value: string) {
@@ -492,6 +516,9 @@ export default function Home() {
     requestAnimationFrame(() => feedbackOpener.current?.focus());
   }
   function fresh() {
+    activeTurn.current?.abort();
+    activeTurn.current = null;
+    setRetryInput(undefined);
     if (result?.agent)
       void fetch("/api/agent/session", {
         method: "DELETE",
@@ -1015,31 +1042,52 @@ export default function Home() {
             )}
           </div>
           {assistantTab === "ask" && (
-            <form className="composer" onSubmit={submitConversation}>
-              <label htmlFor="conversation-input" className="sr-only">
-                Ask TastePassport
-              </label>
-              <textarea
-                id="conversation-input"
-                placeholder="Show me something quieter…"
-                value={composer}
-                onChange={(e) => setComposer(e.target.value)}
-                disabled={busy}
-                maxLength={1000}
-                rows={2}
-              />
-              <div className="composer-footer">
-                <span>Updates your current suggestions</span>
+            <>
+              {phase === "refining" && (
                 <button
-                  type="submit"
-                  aria-label="Send message"
-                  disabled={busy || !composer.trim()}
+                  type="button"
+                  className="quiet-button"
+                  onClick={() => activeTurn.current?.abort()}
                 >
-                  <Icon name="send" size={17} />
-                  Send
+                  Cancel refinement
                 </button>
-              </div>
-            </form>
+              )}
+              {error && <p role="alert">{error}</p>}
+              {retryInput && !busy && (
+                <button
+                  type="button"
+                  className="quiet-button"
+                  onClick={() => void refine(retryInput)}
+                >
+                  Retry last refinement
+                </button>
+              )}
+              <form className="composer" onSubmit={submitConversation}>
+                <label htmlFor="conversation-input" className="sr-only">
+                  Ask TastePassport
+                </label>
+                <textarea
+                  id="conversation-input"
+                  placeholder="Show me something quieter…"
+                  value={composer}
+                  onChange={(e) => setComposer(e.target.value)}
+                  disabled={busy}
+                  maxLength={1000}
+                  rows={2}
+                />
+                <div className="composer-footer">
+                  <span>Updates your current suggestions</span>
+                  <button
+                    type="submit"
+                    aria-label="Send message"
+                    disabled={busy || !composer.trim()}
+                  >
+                    <Icon name="send" size={17} />
+                    Send
+                  </button>
+                </div>
+              </form>
+            </>
           )}
           {visibleMessages.length > 0 && (
             <button

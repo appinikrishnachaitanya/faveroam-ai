@@ -78,17 +78,8 @@ export function guidedIntent(
   };
 }
 export function relaxationSteps(constraints: Constraint[]): Constraint[][] {
-  const steps = [constraints];
-  // These product preferences are optional. Entity exclusions and locality are
-  // enforced separately and are never part of this relaxation list.
-  for (const group of [
-    ["touristy", "mainstream"],
-    ["crowded", "atmosphere", "expensive"],
-  ] as Constraint[][]) {
-    const next = steps.at(-1)!.filter((c) => !group.includes(c));
-    if (next.length !== steps.at(-1)!.length) steps.push(next);
-  }
-  return steps;
+  // Explicit requirements need user consent to relax. Sparse handling changes taste signals only.
+  return [constraints];
 }
 
 function tagScopes(state: AgentState): Partial<Record<Section, string[]>> {

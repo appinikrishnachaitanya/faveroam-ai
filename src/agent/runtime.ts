@@ -115,6 +115,8 @@ export async function discoverSection(
       t.id.includes(":cuisine:") ||
       t.id.includes(":ambience:"),
   );
+  if (type === "place" && tags.length)
+    params["signal.interests.tags"] = tags.map((t) => t.id).join(",");
   if (section === "Eat") {
     const cuisine = tags.filter(
       (t) =>
@@ -165,6 +167,22 @@ export async function discoverSection(
     state.notices.push(
       "Your Culture chapter starts with museums. Name a more specific cultural interest to guide the next search.",
     );
+  }
+  // Resolve category taxonomy through Qloo; never substitute a cuisine pool.
+  if (
+    (section === "Coffee" || section === "Culture") &&
+    !params["filter.tags"]
+  ) {
+    const options = await findTags(
+      section === "Coffee" ? "coffee shop" : "museum",
+    );
+    const category = options.find(
+      (t) =>
+        t.id.includes(":place:") &&
+        (section === "Coffee" ? /coffee|café|cafe/i : /museum/i).test(t.name),
+    );
+    if (!category) return [];
+    params["filter.tags"] = category.id;
   }
   if (type === "artist") {
     const musicTags = sectionTags(state, section).filter(
@@ -304,6 +322,36 @@ export async function discoverSection(
     for (const pool of pools)
       for (const card of pool)
         if (card.evidence) card.evidence.strategyNote = note;
+  }
+  if (!rank && !pools.some((pool) => pool.length) && !signal?.aborted) {
+    const broader = { ...params };
+    delete broader["signal.interests.entities"];
+    delete broader["signal.interests.tags"];
+    // Keep city, category, explicit concepts, exclusions and all user filters.
+    if (type === "place" && broader["filter.tags"]) {
+      const result = await insights(broader, signal);
+      const valid = validateDiscoveries(
+        result.body,
+        state.city,
+        section,
+        constraints,
+        excluded,
+      );
+      const local = withEvidence(
+        valid,
+        result.entities,
+        result.params,
+        sources,
+        state.city,
+        mode,
+        "adjacent",
+      );
+      for (const card of local)
+        if (card.evidence)
+          card.evidence.strategyNote =
+            "Broader local suggestion. Your venue requirements were kept; taste similarity was broadened.";
+      pools.push(local);
+    }
   }
   const cards = mixPools(pools);
   if (preferences.goal === "trending") {

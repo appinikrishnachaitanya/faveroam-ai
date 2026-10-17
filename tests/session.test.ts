@@ -202,7 +202,7 @@ test("guided refinement bypasses failed provider and only updates the affected c
     original.cards.filter((c) => c.section === "Music"),
   );
 });
-test("progressive relaxation retains cuisine, location, category and all rejected IDs", async () => {
+test("sparse refinement preserves explicit constraints, cuisine, location and rejected IDs", async () => {
   const s = fresh();
   s.feedback = [
     {
@@ -237,12 +237,10 @@ test("progressive relaxation retains cuisine, location, category and all rejecte
     { guided: { section: "Eat", constraints: ["crowded", "touristy"] } },
     d,
   );
-  assert.deepEqual(attempts, [["crowded", "touristy"], ["crowded"], []]);
-  assert.deepEqual(r.changed, ["Eat"]);
-  assert.deepEqual(r.state.relaxed, [
-    { section: "Eat", constraints: ["crowded", "touristy"] },
-  ]);
-  assert.match(r.message, /Optional preferences relaxed/);
+  assert.deepEqual(attempts, [["crowded", "touristy"]]);
+  assert.deepEqual(r.changed, []);
+  assert.deepEqual(r.state.relaxed, []);
+  assert.deepEqual(r.state.cards, s.cards);
 });
 test("no stale hidden category or constraints carry into a new explicit guided refinement", async () => {
   const r = await runTurn(
@@ -361,7 +359,7 @@ test("exact failure case attempts Qloo-backed dining despite provider and quiet 
     r.state.cards.filter((c) => c.section === "Music"),
     s.cards.filter((c) => c.section === "Music"),
   );
-  assert.ok(r.state.relaxed?.[0].constraints.includes("crowded"));
+  assert.deepEqual(r.state.relaxed, []);
   assert.deepEqual(clearPassport(r.state).cards, []);
 });
 test("conversation reset makes no tool calls and clears stored history", async () => {

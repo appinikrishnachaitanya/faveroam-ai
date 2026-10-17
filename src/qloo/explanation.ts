@@ -5,6 +5,18 @@ export function evidenceFacts(card: Card): string[] {
   const m = card.intelligence,
     params = card.evidence?.params ?? {},
     facts: string[] = [];
+  if (card.evidence?.strategyNote?.startsWith("Broader local"))
+    facts.push(
+      "This is a broader local suggestion; your venue requirements were kept.",
+    );
+  else if (
+    card.evidence?.inputs.some(
+      (i) => i.role === "entity-signal" || i.role === "tag-signal",
+    )
+  )
+    facts.push(
+      "Your interests were considered together; this does not establish an individual taste relationship.",
+    );
   for (const signal of m?.taste.contributingSignals ?? []) {
     const name = card.evidence?.inputs.find(
       (i) => i.id.toLowerCase() === signal.id.toLowerCase(),

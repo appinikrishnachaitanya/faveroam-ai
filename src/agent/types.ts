@@ -114,7 +114,7 @@ export interface ToolChoice {
 }
 export interface ModelProvider {
   explain?(facts: string[]): Promise<number[]>;
-  interpret(text: string): Promise<Intent>;
+  interpret(text: string, context?: { city: string }): Promise<Intent>;
   baseline?(
     destination: string,
     tastes: string[],

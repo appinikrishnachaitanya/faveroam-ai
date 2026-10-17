@@ -1,5 +1,6 @@
 import { debugRequest, debugEvent } from "../../../../src/agent/debug";
 import { inSession } from "../../../../src/agent/store";
+import { TurnGuard } from "../../../../src/agent/guard";
 import { runTurn } from "../../../../src/agent/orchestrator";
 import { agentDependencies } from "../../../../src/agent/runtime";
 import { sectionOrder } from "../../../../src/workspace/state";
@@ -97,8 +98,17 @@ async function handlePOST(request: Request) {
       { status: 400 },
     );
   }
+  const cancellation = new AbortController();
+  const deadline = AbortSignal.any([
+    cancellation.signal,
+    request.signal,
+    AbortSignal.timeout(95_000),
+  ]);
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
+    cancel() {
+      cancellation.abort();
+    },
     async start(controller) {
       const send = (value: unknown) => {
         try {
@@ -115,9 +125,11 @@ async function handlePOST(request: Request) {
               body.input as AgentInput,
               agentDependencies(),
               (event) => send({ type: "activity", event }),
+              new TurnGuard(8, 90_000, deadline),
             );
             return { state: value.state, value };
           },
+          deadline,
         );
         debugEvent("agent.completed", {
           mode: reply.mode,
@@ -133,7 +145,9 @@ async function handlePOST(request: Request) {
             "Refinement is temporarily unavailable or your Passport changed. Your discoveries are still here. Start a New Passport if your session expired.",
         });
       }
-      controller.close();
+      try {
+        controller.close();
+      } catch {}
     },
   });
   return new Response(stream, {

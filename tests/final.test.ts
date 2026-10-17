@@ -302,13 +302,13 @@ test("Too mainstream feedback keeps rejection hard even if optional constraints 
     { feedback: { id: "dining", accepted: false, reason: "Too mainstream" } },
     d,
   );
-  assert.equal(attempts, 2);
+  assert.equal(attempts, 1);
   assert.ok(!r.state.cards.some((c) => c.id === "dining"));
   assert.deepEqual(
     r.state.cards.filter((c) => c.section === "Music"),
     s.cards.filter((c) => c.section === "Music"),
   );
-  assert.ok(r.state.relaxed.some((p) => p.constraints.includes("mainstream")));
+  assert.deepEqual(r.state.relaxed, []);
 });
 
 test("Gemini-compatible HTTP adapter sends the exact baseline request without Qloo tools, IDs or credentials in prompts", async () => {

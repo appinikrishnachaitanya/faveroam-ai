@@ -5,6 +5,7 @@ import {
   dayOutOptions,
   dayOutStops,
   dayOutText,
+  stopDistance,
 } from "../../src/passport/day-out";
 import { cityDate, nextWeekend } from "../../src/account/plans";
 import { accountRequest, showNotice } from "../../src/account/browser";
@@ -26,12 +27,14 @@ export default function DayOutPlan({
   const [date, setDate] = useState(() => cityDate(passport.city));
   const [saving, setSaving] = useState(false);
   const options = dayOutOptions(passport.cards, passport.city);
+  let anchor: import("../../src/passport/model").Card | undefined;
   const stops = dayOutStops.map((stop) => {
     const pool = options.filter((card) => card.section === stop.section);
     // A choice removed by refinement requires explicit reselection.
     const selected = choices[stop.section]
       ? pool.find((card) => card.id === choices[stop.section])
-      : pool[0];
+      : pool.find((card) => !anchor || (stopDistance(anchor, card) ?? 0) <= 15);
+    if (selected && !omitted[stop.section]) anchor = selected;
     return {
       ...stop,
       pool,
@@ -92,7 +95,17 @@ export default function DayOutPlan({
       <summary>Plan a day out in {passport.city}</summary>
       <div className="day-out-plan">
         <span className="micro-label">MAKE THE CITY YOURS</span>
-        <h2>Coffee, culture, and a good meal.</h2>
+        <h2>
+          {selected.length === 3
+            ? "Coffee, culture, and a good meal."
+            : "Build your first outing."}
+        </h2>
+        <p role="status">
+          {selected.length} of 3 stops selected.
+          {selected.length < 3
+            ? " This is a partial plan; leave a stop open or refine that category."
+            : " Check locations and hours before going."}
+        </p>
         <p>
           Choose a coffee stop, something to see, and somewhere to eat from your
           suggestions. Swap or skip any stop, then download your plan to keep
@@ -202,13 +215,24 @@ export default function DayOutPlan({
             </li>
           ))}
         </ol>
+        {selected.some(
+          (card, index) =>
+            index > 0 && (stopDistance(selected[index - 1], card) ?? 0) > 15,
+        ) && (
+          <p role="status">
+            Some stops are more than 15 km apart in a straight line. Consider a
+            closer choice and check transport before going.
+          </p>
+        )}
         <div className="plan-save-actions">
           <button
             className="quiet-button download-plan"
             onClick={download}
             disabled={disabled || !selected.length}
           >
-            Download my plan
+            {selected.length === 3
+              ? "Download my plan"
+              : "Download partial plan"}
           </button>
           <button
             className="primary-button"

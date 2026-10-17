@@ -101,3 +101,5 @@ Licensed under [MIT](LICENSE). Setup and validation are reproducible from the re
 The guest experience includes an editable **Plan a day out** plan with locally grounded Qloo discoveries, independent stop selection, location lookups and a downloadable text copy. It does not claim live opening hours, route optimization or bookings. Plan edits stay in the open view; download them to retain a copy. Account Passport snapshots do not save weekend edits.
 
 See [development completion](docs/DEVELOPMENT_COMPLETION.md) for current validation and [demo script](docs/HACKATHON_DEMO.md) for the end-to-end story. Supabase activation and deployment remain separate tasks.
+
+Discovery correctness, live Toronto findings and opt-in evaluation/browser commands are documented in [docs/DISCOVERY_INTEGRITY.md](docs/DISCOVERY_INTEGRITY.md).

@@ -1,11 +1,17 @@
 export class TurnGuard {
+  private external?: AbortSignal;
   private calls = 0;
   private seen = new Set<string>();
   private deadline: number;
   private limit: number;
   private cancellation = new AbortController();
-  get signal(){return this.cancellation.signal}
-  constructor(limit = 4, timeout = 90_000) {
+  get signal() {
+    return this.external
+      ? AbortSignal.any([this.cancellation.signal, this.external])
+      : this.cancellation.signal;
+  }
+  constructor(limit = 4, timeout = 90_000, external?: AbortSignal) {
+    this.external = external;
     this.limit = limit;
     this.deadline = Date.now() + timeout;
   }
@@ -14,7 +20,7 @@ export class TurnGuard {
     args: unknown,
     call: () => Promise<T>,
   ): Promise<T> {
-    if(this.signal.aborted)throw Error('Turn cancelled');
+    if (this.signal.aborted) throw Error("Turn cancelled");
     const signature = JSON.stringify([name, args]);
     if (this.seen.has(signature)) throw Error("Duplicate tool call prevented");
     if (this.calls >= this.limit) throw Error("Tool-call budget reached");
@@ -27,7 +33,10 @@ export class TurnGuard {
       return await Promise.race([
         call(),
         new Promise<never>((_, reject) => {
-          timer = setTimeout(() => {this.cancellation.abort();reject(Error("Turn timeout"))}, remaining);
+          timer = setTimeout(() => {
+            this.cancellation.abort();
+            reject(Error("Turn timeout"));
+          }, remaining);
         }),
       ]);
     } finally {

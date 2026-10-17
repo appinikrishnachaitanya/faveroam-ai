@@ -47,7 +47,7 @@ function card(id: string): Card {
         },
       ],
       params: { "filter.type": "urn:entity:place" },
-      result: { id, type: "urn:entity:place", tags: [] },
+      result: { id, type: "urn:entity:place", tags: [{ id: "urn:tag:genre:place:restaurant", type: "urn:tag:genre:place", name: "Restaurant" }] },
     },
   };
 }
@@ -93,7 +93,7 @@ test("day-out renders honest empty categories and local selectors", () => {
   assert.match(markup, /day-out-Eat/);
   assert.match(markup, /No local suggestions here yet/);
   assert.match(markup, /not a timed route or a reservation/);
-  assert.match(markup, /Download my plan/);
+  assert.match(markup, /Download partial plan/);
 });
 const deps = {
   tools: async () => [],

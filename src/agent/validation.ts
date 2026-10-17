@@ -42,7 +42,23 @@ export function validatedSection(e: Entity): Section | undefined {
     return;
   // Museums may also carry a tourist-attraction tag. Classification and the
   // user's optional touristy avoidance are separate decisions.
-  if (/museum|gallery|theat(?:er|re)|concert|cinema/.test(names))
+  const dining =
+    /restaurant|dining|bakery|bistro|food court|pizza|tiffin|delivery kitchen|catering/.test(
+      names,
+    );
+  const description = String(
+    e.properties?.short_description ?? "",
+  ).toLowerCase();
+  // Conflicting venue genres are ambiguous; descriptions may veto, never establish culture.
+  if (
+    !dining &&
+    !/tiffin|delivery kitchen|meal delivery|catering service/.test(
+      description,
+    ) &&
+    /\b(?:museum|art gallery|gallery|theater|theatre|concert hall|cinema)\b/.test(
+      names,
+    )
+  )
     return "Culture";
   if (/tourist attraction|landmark/.test(names)) return;
   if (/coffee|cafe|café|tea house/.test(names)) return "Coffee";

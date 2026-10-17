@@ -288,13 +288,16 @@ export function configuredProvider(): ModelProvider | undefined {
         request,
       };
     },
-    async interpret(text) {
+    async interpret(text, context) {
       culturalText(text);
       const calls = await complete(
         [
           {
             role: "system",
             content:
+              (context
+                ? `The user already has a confirmed Passport in ${context.city}. Interpret this as a refinement of that Passport, not onboarding. Do not replace confirmed tastes. A request for museums OR art galleries is one Culture request with alternative venue genres (tagOperator union), not an intersection. Negated restaurants must not select Eat. `
+                : "") +
               "Extract cultural onboarding/refinement intent only. Do not generate discovery data. Destination must be Toronto, New York City, London, Paris or Tokyo. Separate named seeds from cultural concepts and dislikes. Cultural means Culture. More adventurous selects familiarity explore. More familiar selects familiarity familiar. Mixed hide/refine requests hide only explicitly removed categories and refine the requested active categories. Extract query preferences as a partial update: keep omitted preferences unchanged. Places use businessRatingMin, not ratingMin (Qloo film/TV rating). Price levels 1-4, popularity 0-1, business ratings 0-5. Trending uses goal trending; hidden gems uses goal hidden-gems; safe choices goal safe-bets; surprise goal surprise. Geography is a named locality, not a guaranteed point geocode. Never invent IDs or resolved tags. Concepts needing inclusion or exclusion must be resolved first. Do not include personal identifying information.",
           },
           { role: "user", content: text },

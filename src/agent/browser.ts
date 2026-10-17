@@ -4,8 +4,14 @@ export async function sendAgentTurn(
   session: AgentSession,
   input: AgentInput,
   onEvent: (event: AgentEvent) => void,
+  cancellation?: AbortSignal,
 ): Promise<AgentReply> {
+  const signal = AbortSignal.any([
+    AbortSignal.timeout(100_000),
+    ...(cancellation ? [cancellation] : []),
+  ]);
   const response = await fetch("/api/agent/turn", {
+    signal,
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -26,7 +32,19 @@ export async function sendAgentTurn(
     if (!text.trim()) return;
     const data = JSON.parse(text);
     if (data.type === "activity") onEvent(data.event);
-    if (data.type === "result") reply = data.reply;
+    if (data.type === "result") {
+      if (
+        !data.reply ||
+        !Array.isArray(data.reply.changed) ||
+        !Array.isArray(data.reply.state?.cards) ||
+        data.reply.state.revision !== session.revision + 1 ||
+        data.reply.state.id !== session.sessionId
+      )
+        throw Error(
+          "Invalid refinement response. Your discoveries are preserved.",
+        );
+      reply = data.reply;
+    }
     if (data.type === "error") throw Error(data.message);
   }
   try {

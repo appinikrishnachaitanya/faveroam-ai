@@ -112,6 +112,22 @@ export function WhyEvidence({
       .slice(0, 3) ?? [];
   return (
     <div className="why-evidence">
+      {card.evidence?.strategyNote?.startsWith("Broader local") && (
+        <p>Broader local suggestion. Your venue requirements were kept.</p>
+      )}
+      <details>
+        <summary>Interests considered</summary>
+        <p>
+          {inputs
+            .filter((i) => i.role !== "tag-filter")
+            .map((i) => i.name)
+            .join(", ") || "Category and location requirements"}
+        </p>
+        <p>
+          These interests were considered together. Inclusion in a search does
+          not establish an individual relationship.
+        </p>
+      </details>
       {!!connected.length && (
         <p>Connected to {connected.join(", ")} in your interests.</p>
       )}

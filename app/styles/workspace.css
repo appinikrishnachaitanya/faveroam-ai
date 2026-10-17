@@ -339,3 +339,27 @@
     padding: 24px;
   }
 }
+
+/* Result navigation remains legible on both pale surfaces and selected tabs. */
+.workspace-tabs button,
+.concierge-tabs button {
+  color: #243c50;
+}
+.workspace-tabs button[aria-selected="true"],
+.concierge-tabs button[aria-selected="true"] {
+  background: #123b4d;
+  color: #ffffff;
+}
+.workspace-tabs button:focus-visible,
+.concierge-tabs button:focus-visible {
+  outline: 3px solid #087c78;
+  outline-offset: 3px;
+}
+
+.progressive-app .discovery-view-tabs button {
+  color: #243c50;
+}
+.progressive-app .discovery-view-tabs button[aria-pressed="true"] {
+  color: #fff;
+  background: #123b4d;
+}

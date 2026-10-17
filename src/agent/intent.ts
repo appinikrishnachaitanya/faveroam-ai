@@ -60,7 +60,12 @@ export function interpret(text: string, fallback = "New York City"): Intent {
   const clean = text.replace(/\bI (?:don't|do not|dislike|hate)[\s\S]*$/i, "");
   const draft = extractDraft(clean, fallback);
   const sections: Section[] = [];
-  if (/food|dining|restaurant|biryani|indian/i.test(text)) sections.push("Eat");
+  const positive = text.replace(
+    /\b(?:not|no|without)\s+(?:ordinary\s+)?restaurants?\b/gi,
+    "",
+  );
+  if (/food|dining|restaurant|biryani|indian/i.test(positive))
+    sections.push("Eat");
   if (/coffee|caf[eé]/i.test(text)) sections.push("Coffee");
   if (/music|musical|concert/i.test(text)) sections.push("Music");
   if (/cultur(?:e|al)|museum|gallery|film/i.test(text))

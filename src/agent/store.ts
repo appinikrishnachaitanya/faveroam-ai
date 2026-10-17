@@ -56,6 +56,7 @@ export async function inSession<T>(
   id: string,
   revision: number,
   run: (state: AgentState) => Promise<{ state: AgentState; value: T }>,
+  signal?: AbortSignal,
 ): Promise<T> {
   const state = getSession(id);
   if (locks.has(id)) throw Error("A refinement is already in progress.");
@@ -63,7 +64,25 @@ export async function inSession<T>(
     throw Error("Passport changed. Use the latest state.");
   locks.add(id);
   try {
-    const next = await run(state);
+    let abort: (() => void) | undefined;
+    const next = await (signal
+      ? Promise.race([
+          run(state),
+          new Promise<never>((_, reject) => {
+            abort = () =>
+              reject(
+                Error(
+                  "Refinement cancelled or timed out. Your discoveries are preserved.",
+                ),
+              );
+            if (signal.aborted) abort();
+            else signal.addEventListener("abort", abort, { once: true });
+          }),
+        ]).finally(() => {
+          if (abort) signal.removeEventListener("abort", abort);
+        })
+      : run(state));
+    signal?.throwIfAborted();
     next.state.revision = revision + 1;
     next.state.expires = Date.now() + 30 * 60_000;
     if (!sessions.has(id)) throw Error("Passport was reset.");

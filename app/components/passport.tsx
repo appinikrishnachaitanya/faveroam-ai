@@ -385,7 +385,10 @@ export function DiscoveryCard({
       </div>
       {card.evidence && (
         <p className="card-query-inputs">
-          Found using your tastes ·{" "}
+          {card.evidence.strategyNote?.startsWith("Broader local")
+            ? "Broader local suggestion"
+            : "Your interests were considered together"}{" "}
+          ·{" "}
           {[
             ...new Set(
               card.evidence.inputs
@@ -406,15 +409,18 @@ export function DiscoveryCard({
       {card.description && (
         <p className="card-description">{card.description}</p>
       )}
+      {card.evidence?.strategyNote?.startsWith("Broader local") && (
+        <p className="helper">Broader local suggestion</p>
+      )}
       <ResultMetrics card={card} />
       <details className="why-section">
         <summary>
           Why this suggestion? <Icon name="plus" size={12} />
         </summary>
         <p>
-          These confirmed interests were considered together when finding this
-          suggestion. It may reflect a different part of your taste than other
-          results.
+          {card.evidence?.strategyNote?.startsWith("Broader local")
+            ? "This is a broader local suggestion. Your venue requirements were kept, while taste similarity was broadened."
+            : "Your confirmed interests were considered together. This does not establish a separate relationship with every interest."}
         </p>
         <div className="why-signals">
           {(

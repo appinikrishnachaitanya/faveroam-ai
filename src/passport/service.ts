@@ -183,6 +183,51 @@ export async function passport(
       );
     }
   }
+  // Fill distinct outing chapters through the same validated refinement pipeline.
+  const { discoverSection } = await import("../agent/runtime.ts");
+  const { normalizeSession } = await import("../agent/session.ts");
+  const state = normalizeSession({
+    id: "initial",
+    revision: 0,
+    expires: Date.now() + 90_000,
+    city,
+    selected,
+    tags: selected.filter((s) => s.id.startsWith("urn:tag:")),
+    constraints,
+    categoryConstraints: {},
+    cards,
+    previous: [],
+    feedback: [],
+    notices,
+  });
+  await Promise.all(
+    ["Coffee", "Culture"].map(async (chapter) => {
+      const section = chapter as "Coffee" | "Culture";
+      if (cards.filter((c) => c.section === section).length >= 3) return;
+      try {
+        const found = await discoverSection(
+          state,
+          section,
+          constraints,
+          ids.filter((id) => !id.startsWith("urn:tag:")),
+          false,
+          AbortSignal.timeout(35_000),
+        );
+        const unique = found.filter(
+          (c) => !cards.some((old) => old.id === c.id),
+        );
+        cards.push(...unique);
+        if (!found.length)
+          notices.push(
+            `No eligible ${section} places found. Try a specific venue interest or leave that outing stop open.`,
+          );
+      } catch {
+        notices.push(
+          `${section} could not be refreshed. Your other discoveries are preserved.`,
+        );
+      }
+    }),
+  );
   debugEvent("passport.completed", {
     city,
     count: new Set(cards.map((c) => c.id)).size,

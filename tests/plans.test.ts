@@ -9,7 +9,7 @@ import UpcomingPlans from "../app/components/plans.tsx";
 const now = new Date("2026-10-17T12:00:00Z");
 function card(id: string, section: Section): Card {
   return { id, section, name: `Protocol ${id}`, detail: "Test fixture", address: "Fixture address", types: ["urn:entity:place"], evidence: {
-    source: "Qloo", operation: "/v2/insights/", queryId: "fixture-query", recordedAt: now.toISOString(), destination: "Toronto", locality: "physical-city", mode: "familiar", pool: "direct", inputs: [], params: {}, result: { id, type: "urn:entity:place", tags: [] },
+    source: "Qloo", operation: "/v2/insights/", queryId: "fixture-query", recordedAt: now.toISOString(), destination: "Toronto", locality: "physical-city", mode: "familiar", pool: "direct", inputs: [], params: {}, result: { id, type: "urn:entity:place", tags: [{ id: "urn:tag:genre:place:fixture", type: "urn:tag:genre:place", name: section === "Coffee" ? "Coffee shop" : section === "Culture" ? "Museum" : "Restaurant" }] },
   } };
 }
 function state() {

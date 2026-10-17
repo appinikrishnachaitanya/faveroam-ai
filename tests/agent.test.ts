@@ -274,7 +274,7 @@ test("duplicate model-selected concept tools result in one bounded call", async 
   await runTurn(state(), { message: "Tonight I want Indian food" }, d);
   assert.equal(calls, 1);
 });
-test("429-like discovery failure retains all sections and never fabricates a replacement", async () => {
+test("429-like discovery failure preserves unrelated results and honors the rejected ID", async () => {
   const d = dependencies();
   d.discover = async () => {
     throw Error("HTTP 429");
@@ -285,7 +285,7 @@ test("429-like discovery failure retains all sections and never fabricates a rep
     d,
   );
   assert.deepEqual(r.changed, []);
-  assert.deepEqual(r.state.cards, state().cards);
+  assert.deepEqual(r.state.cards, state().cards.filter(c => c.id !== id));
   assert.match(r.message, /preserved/);
 });
 test("rank workflow cannot introduce a generated entity or address", async () => {
