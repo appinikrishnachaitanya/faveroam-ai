@@ -53,6 +53,14 @@
   text-overflow: ellipsis;
 }
 
+.progressive-app select option,
+.account-dialog select option,
+.match-dialog select option {
+  background: var(--ui-surface);
+  color: var(--ui-ink);
+  font: inherit;
+}
+
 .progressive-app .field-with-icon select {
   border: 0;
   border-radius: 0;
