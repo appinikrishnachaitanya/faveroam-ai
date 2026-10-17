@@ -87,7 +87,7 @@ export function classify(e: Entity): Section | undefined {
   if (/restaurant|dining|cuisine|food|bistro|bakery|pizza/.test(tags))
     return "Eat";
   if (
-    /museum|gallery|theater|theatre|performing arts|concert|cinema|cultural/.test(
+    /museum|gallery|theater|theatre|performing arts|concert|cinema|cultural|nightclub|night club/.test(
       tags,
     )
   )

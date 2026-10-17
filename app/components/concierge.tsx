@@ -63,7 +63,7 @@ export default function ConciergeDrawer({
         <div className="concierge-heading-actions">
           <button
             className="icon-button assistant-close"
-            aria-label="Close Ask TastePassport"
+            aria-label="Close Taste Concierge"
             title="Close"
             onClick={onClose}
           >

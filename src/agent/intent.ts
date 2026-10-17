@@ -21,7 +21,11 @@ export function culturalText(value: string, max = 1000): string {
       "Please share cultural tastes only, without names identifying you, contact details or account identifiers.",
     );
   if (
-    [process.env.QLOO_API_KEY, process.env.AGENT_MODEL_API_KEY].some(
+    [
+      process.env.QLOO_API_KEY,
+      process.env.GEMINI_API_KEY,
+      process.env.AGENT_MODEL_API_KEY,
+    ].some(
       (secret) => secret && value.includes(secret),
     )
   )
@@ -64,16 +68,16 @@ export function interpret(text: string, fallback = "New York City"): Intent {
     /\b(?:not|no|without)\s+(?:ordinary\s+)?restaurants?\b/gi,
     "",
   );
-  if (/food|dining|restaurant|biryani|indian/i.test(positive))
+  if (/\b(?:eat|dinner|lunch|breakfast|food|dining|restaurant|biryani|indian)\b/i.test(positive))
     sections.push("Eat");
   if (/coffee|caf[eé]/i.test(text)) sections.push("Coffee");
   if (/music|musical|concert/i.test(text)) sections.push("Music");
-  if (/cultur(?:e|al)|museum|gallery|film/i.test(text))
+  if (/cultur(?:e|al)|museum|gallery|film|\bmovies?\b|cinema|\bparty\b|nightclub/i.test(text))
     sections.push("Culture");
   if (/book|lifestyle|shop/i.test(text) && !/coffee\s+shops?/i.test(text))
     sections.push("Lifestyle");
   const concepts = /indian|biryani/i.test(text)
-    ? [/biryani/i.test(text) ? "biryani" : "Indian cuisine"]
+    ? [/biryani/i.test(text) ? (/chicken\s+biryani/i.test(text) ? "chicken biryani" : "biryani") : "Indian cuisine"]
     : [];
   if (
     /independent\s+(?:coffee\s+)?shops?|local\s+coffee|specialty\s+coffee/i.test(
@@ -109,7 +113,7 @@ export function interpret(text: string, fallback = "New York City"): Intent {
   const activeSections = sections.filter((s) => !hidden.includes(s));
   const refine =
     !onboarding &&
-    /tonight|quieter|more|less|find|show|want|give|too |niche|refine|rank|reorder|trending|hidden gem|safe bet|surprise me|highly rated|make it/i.test(
+      /tonight|quieter|more|less|find|show|want|give|help|too |niche|refine|rank|reorder|trending|hidden gem|safe bet|surprise me|highly rated|make it/i.test(
       text,
     );
   return {
@@ -125,6 +129,10 @@ export function interpret(text: string, fallback = "New York City"): Intent {
     destination: onboarding ? draft.city : undefined,
     seeds: onboarding ? draft.tastes.map((s) => s.replace(/[.\s]+$/, "")) : [],
     concepts,
+    activityGenres: [
+      ...(/\bmovies?\b|cinema/i.test(text) ? ["cinema" as const] : []),
+      ...(/\bparty\b|nightclub/i.test(text) ? ["nightclub" as const] : []),
+    ],
     excludeConcepts: /\bno seafood\b/i.test(text)
       ? ["seafood", ...excludeConcepts]
       : excludeConcepts,

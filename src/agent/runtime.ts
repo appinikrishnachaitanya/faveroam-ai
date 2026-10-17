@@ -125,10 +125,11 @@ export async function discoverSection(
   if (type === "place" && tags.length)
     params["signal.interests.tags"] = tags.map((t) => t.id).join(",");
   if (section === "Eat") {
-    const cuisine = tags.filter(
+    const dishes = tags.filter((tag) => tag.id.startsWith("urn:tag:specialty_dish:place:"));
+    const cuisine = dishes.length ? dishes : tags.filter(
       (t) =>
         !t.id.includes(":ambience:") &&
-        /indian|biryani|cuisine|restaurant/i.test(
+        /indian|biryani|cuisine|restaurant|savour|savory|food|dish/i.test(
           `${t.id} ${t.name} ${t.detail}`,
         ),
     );
@@ -150,8 +151,11 @@ export async function discoverSection(
         (section === "Culture" &&
           /museum|culture|gallery|theatre/i.test(t.name)),
     );
-    if (relevant.length) {
-      params["filter.tags"] = relevant.map((t) => t.id).join(",");
+    const hardRelevant = section === "Coffee" && !state.categoryConcepts?.Coffee?.length
+      ? relevant.filter((tag) => /urn:tag:(?:genre|category):place:/.test(tag.id))
+      : relevant;
+    if (hardRelevant.length) {
+      params["filter.tags"] = hardRelevant.map((t) => t.id).join(",");
       params["operator.filter.tags"] = "intersection";
     }
   }
@@ -159,6 +163,7 @@ export async function discoverSection(
   // category starting point, not a fabricated personal taste or relationship.
   if (
     section === "Culture" &&
+    !state.intent?.activityGenres?.length &&
     !state.intent?.concepts.length &&
     !tags.some(
       (t) =>
@@ -177,7 +182,7 @@ export async function discoverSection(
   }
   // Resolve category taxonomy through Qloo; never substitute a cuisine pool.
   if (
-    (section === "Coffee" || section === "Culture") &&
+    (section === "Coffee" || (section === "Culture" && !state.intent?.activityGenres?.length)) &&
     !params["filter.tags"]
   ) {
     const options = await findTags(
@@ -200,6 +205,21 @@ export async function discoverSection(
   }
   if (excluded.length)
     params["filter.exclude.entities"] = excluded.slice(-50).join(",");
+  if (section === "Culture" && state.intent?.activityGenres?.length) {
+    const activityTags: string[] = [];
+    for (const genre of state.intent.activityGenres) {
+      const options = await findTags(genre === "cinema" ? "movie theater" : genre, signal);
+      const match = options.find((tag) =>
+        /urn:tag:(?:genre|category):place:/.test(tag.id) &&
+        (genre === "cinema" ? /cinema|movie theater|movie theatre/i : /nightclub|night club/i).test(tag.name),
+      );
+      if (match) activityTags.push(match.id);
+    }
+    // Never silently replace an explicit cinema/nightlife request with museums.
+    if (activityTags.length !== state.intent.activityGenres.length) return [];
+    params["filter.tags"] = activityTags.join(",");
+    params["operator.filter.tags"] = "union";
+  }
   if (constraints.includes("expensive") && type === "place")
     params["filter.price_level.max"] = "2";
   if (constraints.includes("mainstream"))

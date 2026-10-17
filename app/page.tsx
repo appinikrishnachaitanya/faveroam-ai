@@ -957,6 +957,18 @@ export default function Home() {
               <div className="pending-concept">
                 <strong>Choose what you meant</strong>
                 <p>{result.agent.pending.query}</p>
+                <div className="pending-match-options" aria-label="Matching interests">
+                  {result.session?.pending?.candidates.map((candidate) => (
+                    <button
+                      key={candidate.id}
+                      type="button"
+                      disabled={busy}
+                      onClick={() => void refine({ tagChoice: candidate.id })}
+                    >
+                      {candidate.name}
+                    </button>
+                  ))}
+                </div>
                 <button
                   className="quiet-button"
                   disabled={busy}

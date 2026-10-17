@@ -90,7 +90,7 @@ function tagScopes(state: AgentState): Partial<Record<Section, string[]>> {
         .filter((t) => {
           const text = `${t.id} ${t.name}`;
           return section === "Eat"
-            ? /cuisine|restaurant/i.test(text)
+            ? !/coffee|caf[eé]/i.test(text) && /cuisine|restaurant|biryani|savour|savory|food|dish/i.test(text)
             : section === "Coffee"
               ? /coffee|caf[eé]/i.test(text)
               : section === "Lifestyle"

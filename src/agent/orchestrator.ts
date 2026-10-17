@@ -162,8 +162,17 @@ export async function runTurn(
     state.providerHealth = "configured";
   if (input.message) {
     culturalText(input.message);
+    if (
+      state.pending &&
+      conceptKey(state.pending.request ?? "") === conceptKey(input.message)
+    )
+      return reply(
+        `I found matches for “${state.pending.query}”. Choose one of the options below to continue; you don't need to send the request again.`,
+      );
     delete state.pending;
   }
+  if (input.message && /^(?:hi|hello|hey|hi bro|hello bro)[!,.\s]*$/i.test(input.message.trim()))
+    return reply(`Hi! What would you like to do in ${state.city}? Try “find chicken biryani” or “find a cinema and dinner”.`);
   let intent = interpret(input.message ?? "", "New York City");
   if (input.familiarity) {
     state.categoryModes[input.familiarity.section] = input.familiarity.mode;
@@ -331,6 +340,15 @@ export async function runTurn(
     }
   }
   // Excluding a venue type is not permission to hide its whole chapter.
+  if (input.message) {
+    const explicit = interpret(input.message, state.city);
+    if (explicit.activityGenres?.length) {
+      intent.activityGenres = explicit.activityGenres;
+      intent.concepts = explicit.concepts;
+      intent.sections = [...new Set([...intent.sections, ...explicit.sections])];
+      intent.kind = "refine";
+    }
+  }
   if (input.message && !/\b(?:hide|remove|skip|forget)\b/i.test(input.message))
     intent.hide = [];
   debugEvent("agent.intent", {
@@ -588,6 +606,18 @@ export async function runTurn(
           !/quiet/i.test(concept) ||
           (t.id.includes(":ambience:") && /quiet|calm|tranquil/i.test(t.name)),
       );
+      // An explicitly named dish with one exact specialty-dish match needs no
+      // additional personal-taste disambiguation. Broader/partial matches do.
+      const exactDishes = choices.filter((tag) =>
+        tag.id.startsWith("urn:tag:specialty_dish:place:") &&
+        conceptKey(tag.name) === conceptKey(concept),
+      );
+      if (!excluding && targets.length === 1 && targets[0] === "Eat" && exactDishes.length === 1) {
+        const tag = exactDishes[0];
+        state.tags = [...state.tags.filter((old) => old.id !== tag.id), tag];
+        state.categoryTags!.Eat = [...new Set([...(state.categoryTags!.Eat ?? []), tag.id])];
+        continue;
+      }
       // Generic venue genres describe the requested output, not a new personal taste.
       // Resolve their actual Qloo taxonomy without another taste-confirmation dialog.
       const genericGenre =
@@ -659,7 +689,7 @@ export async function runTurn(
           exclude: excluding,
           remainingConcepts: excluding
             ? []
-            : concepts.slice(concepts.indexOf(concept) + 1, 2),
+            : concepts.slice(concepts.indexOf(concept) + 1, 4),
           remainingExcludeConcepts: excluding
             ? []
             : (intent.excludeConcepts ?? []).filter(

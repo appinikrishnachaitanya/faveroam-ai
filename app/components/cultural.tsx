@@ -20,10 +20,10 @@ export function FamiliarityControl({
       <div className="panel-heading">
         <div>
           <span className="micro-label">YOUR KIND OF DISCOVERY</span>
-          <h2 id="familiarity-title">How should your city feel?</h2>
+          <h2 id="familiarity-title">How should your {section === "Eat" ? "dining" : section.toLowerCase()} suggestions feel?</h2>
         </div>
         <label className="mode-category">
-          Apply to
+          Category to update
           <select
             aria-label="Discovery style category"
             disabled={disabled}

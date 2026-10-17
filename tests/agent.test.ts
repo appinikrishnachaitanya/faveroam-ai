@@ -8,6 +8,7 @@ import {
   isConcept,
 } from "../src/agent/intent.ts";
 import { TurnGuard } from "../src/agent/guard.ts";
+import { normalizeSession } from "../src/agent/session.ts";
 import { runTurn } from "../src/agent/orchestrator.ts";
 import { validateDiscoveries, tagCandidates } from "../src/agent/validation.ts";
 import type { AgentState, ModelProvider } from "../src/agent/types.ts";
@@ -91,6 +92,58 @@ test("onboarding separates destination, seeds and negative constraints", () => {
   assert.ok(i.constraints.includes("touristy"));
   assert.ok(!i.seeds.some((s) => s.includes("don't")));
 });
+test("fallback recognizes dinner, cinema and nightlife without treating party as a concert", () => {
+  const intent = interpret("bro, i want to go movie and then party and dinner bro, help me please");
+  assert.equal(intent.kind, "refine");
+  assert.deepEqual(intent.sections, ["Eat", "Culture"]);
+  assert.deepEqual(intent.activityGenres, ["cinema", "nightclub"]);
+});
+test("fallback preserves chicken biryani specificity", () => {
+  const intent = interpret("bro, i want to eat chicken biryani bro");
+  assert.deepEqual(intent.concepts, ["chicken biryani"]);
+  assert.deepEqual(intent.sections, ["Eat"]);
+});
+test("specialty coffee never becomes a dining dish requirement", () => {
+  const s = state();
+  s.tags = [
+    { id: "urn:tag:specialty_dish:place:specialty_coffee", name: "Specialty Coffee", types: ["urn:tag"], detail: "" },
+    { id: "urn:tag:genre:place:restaurant:indian", name: "Indian", types: ["urn:tag"], detail: "" },
+  ];
+  const normalized = normalizeSession(s);
+  assert.deepEqual(normalized.categoryTags.Eat, ["urn:tag:genre:place:restaurant:indian"]);
+  assert.deepEqual(normalized.categoryTags.Coffee, ["urn:tag:specialty_dish:place:specialty_coffee"]);
+});
+test("exact explicit dish applies once without another confirmation", async () => {
+  const deps = dependencies();
+  deps.workflow = async () => ({ status: "ok", results: [{
+    id: "urn:tag:specialty_dish:place:chicken_biryani",
+    name: "Chicken Biryani", type: "urn:tag:specialty_dish:place",
+  }] });
+  let applied = false;
+  deps.discover = async (s, section) => {
+    applied = Boolean(s.categoryTags?.Eat?.includes("urn:tag:specialty_dish:place:chicken_biryani"));
+    return [{ id: replacement, name: "Returned restaurant", types: ["urn:entity:place"], section, detail: "" }];
+  };
+  const reply = await runTurn(state(), { message: "find chicken biryani" }, deps);
+  assert.equal(applied, true);
+  assert.equal(reply.state.pending, undefined);
+  assert.deepEqual(reply.changed, ["Eat"]);
+});
+test("repeated pending request retains choices without another model or tool call", async () => {
+  const s = state();
+  s.pending = {
+    query: "chicken biryani",
+    request: "find chicken biryani",
+    candidates: [{ id: "urn:tag:specialty_dish:place:chicken_biryani", name: "Chicken biryani", types: ["urn:tag"], detail: "" }],
+    sections: ["Eat"], constraints: [],
+  };
+  const deps = dependencies();
+  deps.workflow = async () => { throw Error("must not call tools"); };
+  const reply = await runTurn(s, { message: "find chicken biryani" }, deps);
+  assert.deepEqual(reply.state.pending?.candidates, s.pending.candidates);
+  assert.deepEqual(reply.changed, []);
+  assert.match(reply.message, /don't need to send/);
+});
 test("model interpretation cannot smuggle fabricated recommendation data into state", () => {
   const i = validateIntent({
     ...interpret("Give me quieter cafés"),
@@ -101,6 +154,16 @@ test("model interpretation cannot smuggle fabricated recommendation data into st
   assert.ok(!("reasoning" in i));
   assert.throws(() => culturalText("email me at sample@example.com"));
   assert.throws(() => culturalText("my name is User Name"));
+});
+test("cultural input rejects a pasted native Gemini credential", () => {
+  const previous = process.env.GEMINI_API_KEY;
+  process.env.GEMINI_API_KEY = "native-gemini-test-secret";
+  try {
+    assert.throws(() => culturalText("native-gemini-test-secret"));
+  } finally {
+    if (previous === undefined) delete process.env.GEMINI_API_KEY;
+    else process.env.GEMINI_API_KEY = previous;
+  }
 });
 test("Not My Vibe changes only the rejected category, records feedback and excludes rejected ID", async () => {
   const s = state(),

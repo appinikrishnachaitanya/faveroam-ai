@@ -86,6 +86,10 @@ export async function passport(
   )
     throw new QlooError("Confirm three to five distinct taste matches.", 400);
   debugEvent("passport.started", { city, signalCount: selected.length });
+  const includeCulture = selected.some((taste) =>
+    taste.types.some((type) => /urn:entity:(?:movie|tv_show)/.test(type)) ||
+    (taste.id.startsWith("urn:tag:") && /museum|gallery|theatre|theater|cinema|culture/i.test(`${taste.id} ${taste.name}`)),
+  );
   const cards: Card[] = [];
   const notices: string[] = [];
   for (const type of ["place", "artist"]) {
@@ -138,6 +142,7 @@ export async function passport(
       for (const entity of result.entities) {
         if (ids.includes(entity.entity_id)) continue;
         const section = type === "artist" ? "Music" : validatedSection(entity);
+        if (section === "Culture" && !includeCulture) continue;
         if (section) {
           const validated = validateDiscoveries(
             { results: { entities: [entity] } },
@@ -201,8 +206,8 @@ export async function passport(
     notices,
   });
   await Promise.all(
-    ["Coffee", "Culture"].map(async (chapter) => {
-      const section = chapter as "Coffee" | "Culture";
+    ["Eat", "Coffee", ...(includeCulture ? ["Culture"] : [])].map(async (chapter) => {
+      const section = chapter as "Eat" | "Coffee" | "Culture";
       if (cards.filter((c) => c.section === section).length >= 3) return;
       try {
         const found = await discoverSection(

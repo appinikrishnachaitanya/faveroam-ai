@@ -55,7 +55,7 @@ export function validatedSection(e: Entity): Section | undefined {
     !/tiffin|delivery kitchen|meal delivery|catering service/.test(
       description,
     ) &&
-    /\b(?:museum|art gallery|gallery|theater|theatre|concert hall|cinema)\b/.test(
+    /\b(?:museum|art gallery|gallery|theater|theatre|concert hall|cinema|nightclub|night club)\b/.test(
       names,
     )
   )

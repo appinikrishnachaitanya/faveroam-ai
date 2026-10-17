@@ -31,10 +31,10 @@ html { scrollbar-gutter: stable; }
   border-bottom: 1px solid var(--ui-border);
 }
 .concierge-heading > div { min-width: 0; flex: 1; }
-.concierge-heading h2 { font: 25px/1.2 Georgia, serif; margin: 0; }
+.concierge-heading h2 { font: 650 23px/1.25 "Manrope", ui-sans-serif, system-ui, sans-serif; letter-spacing: -.6px; margin: 0; }
 .concierge-heading p { font-size: 13px; line-height: 1.5; color: var(--ui-muted); margin-top: 5px; }
-.concierge-heading .agent-avatar { width: 40px; height: 40px; background: var(--ui-tint); color: var(--ui-action); border: 0; }
-.concierge-heading-actions { display: flex; align-items: center; flex: 0 0 auto; }
+.concierge-heading .agent-avatar { width: 40px; height: 40px; flex: 0 0 40px; background: var(--ui-tint); color: var(--ui-action); border: 0; }
+.concierge-heading > .concierge-heading-actions { display: flex; align-items: center; flex: 0 0 auto; }
 .concierge-heading .icon-button { min-width: 44px; min-height: 44px; margin: 0; border-radius: 12px; color: var(--ui-ink); }
 .concierge-heading .icon-button:hover { background: var(--ui-tint); }
 .concierge-tabs { display: flex; flex: 0 0 auto; gap: 4px; padding: 4px; margin: 16px 24px; border-radius: 12px; background: var(--ui-tint); }
@@ -52,6 +52,8 @@ html { scrollbar-gutter: stable; }
   scrollbar-width: thin;
 }
 .concierge-intro { font-size: 15px; line-height: 1.6; color: var(--ui-muted); margin: 0 0 16px; }
+.pending-match-options { display: grid; gap: 8px; margin-block: 12px; }
+.pending-match-options button { min-height: 44px; padding: 10px 12px; text-align: left; border: 1px solid var(--ui-border); border-radius: 10px; background: var(--ui-surface); color: var(--ui-action); font-weight: 600; }
 .concierge-starters { display: grid; gap: 10px; margin-top: 24px; }
 .concierge-starters > span { color: var(--ui-muted); }
 .concierge-starters button { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; padding: 12px 14px; border: 1px solid var(--ui-border); border-radius: 12px; background: #f8faf4; color: var(--ui-ink); font-size: 14px; text-align: left; }

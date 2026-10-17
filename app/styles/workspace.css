@@ -69,9 +69,7 @@
   margin-block: 24px;
 }
 .progressive-app .passport-toolbar {
-  position: sticky;
-  top: var(--header-height);
-  z-index: 20;
+  position: static;
   padding-block: 8px;
   background: #edf3faf5;
 }

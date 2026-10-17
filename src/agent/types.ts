@@ -27,6 +27,7 @@ export interface Intent {
   familiarity?: import("../passport/evidence.ts").Familiarity;
   query?: import("../qloo/query-plan.ts").QueryPreferences;
   excludeConcepts?: string[];
+  activityGenres?: ("cinema" | "nightclub")[];
 }
 export interface AgentEvent {
   label: string;

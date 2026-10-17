@@ -115,7 +115,7 @@ export function MoveForm({
             <Icon name="arrow" size={22} />
           </span>
           <label htmlFor="destination">
-            Moving to
+            Moving to <span>5 supported cities</span>
             <div className="field-with-icon">
               <Icon name="pin" />
               <select
