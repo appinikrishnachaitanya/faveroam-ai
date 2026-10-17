@@ -18,6 +18,37 @@ export interface Card extends Candidate {
   trend?: import("../qloo/trending.ts").TrendResult;
   trendUnavailable?: boolean;
 }
+function resultBrand(card: Card, repeatedNames?: Map<string, number>) {
+  const tags = card.evidence?.result.tags ?? [];
+  const named = tags.find((tag) =>
+    /brand|franchise|business:place:chain/i.test(
+      `${tag.type ?? ""} ${tag.name}`,
+    ),
+  );
+  if (named) return named.name.toLowerCase().trim();
+  const token = card.name.toLowerCase().match(/[a-z][a-z0-9&'-]{3,}/)?.[0];
+  if (token && (repeatedNames?.get(token) ?? 0) > 1) return token;
+  return undefined;
+}
+
+/** Keep repeated branches from consuming a coffee chapter. */
+export function diversifyCards(cards: Card[], section: Section) {
+  if (section !== "Coffee" || cards.length < 3) return cards;
+  const nameCounts = new Map<string, number>();
+  for (const card of cards) {
+    const token = card.name.toLowerCase().match(/[a-z][a-z0-9&'-]{3,}/)?.[0];
+    if (token) nameCounts.set(token, (nameCounts.get(token) ?? 0) + 1);
+  }
+  const counts = new Map<string, number>();
+  return cards.filter((card) => {
+    const brand = resultBrand(card, nameCounts);
+    if (!brand) return true;
+    const count = counts.get(brand) ?? 0;
+    if (count >= 2) return false;
+    counts.set(brand, count + 1);
+    return true;
+  });
+}
 export function candidate(e: Entity): Candidate {
   const p = e.properties ?? {};
   return {

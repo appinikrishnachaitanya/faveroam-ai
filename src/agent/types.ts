@@ -83,6 +83,7 @@ export interface AgentState {
     request?: string;
     exclude?: boolean;
     remainingConcepts?: string[];
+    remainingExcludeConcepts?: string[];
   };
 }
 /** Fully initialized canonical state; AgentState also accepts legacy bootstrap fixtures. */

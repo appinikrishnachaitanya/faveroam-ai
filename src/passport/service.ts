@@ -6,7 +6,7 @@ import { culturalText } from "../agent/intent.ts";
 import { validatedSection, validateDiscoveries } from "../agent/validation.ts";
 import type { Constraint } from "../agent/types.ts";
 import { search, insights, QlooError, insightParams } from "../qloo/client.ts";
-import { candidates, classify, card } from "./model.ts";
+import { candidates, classify, card, diversifyCards } from "./model.ts";
 import type { Candidate, Card } from "./model.ts";
 export const cities = [
   "Toronto",
@@ -227,6 +227,20 @@ export async function passport(
         );
       }
     }),
+  );
+  // Apply the same coffee diversity guard to the initial passport pools so a
+  // single chain cannot consume the first page before the agent is opened.
+  const coffee = diversifyCards(
+    cards.filter((card) => card.section === "Coffee"),
+    "Coffee",
+  );
+  const coffeeIds = new Set(coffee.map((card) => card.id));
+  cards.splice(
+    0,
+    cards.length,
+    ...cards.filter(
+      (card) => card.section !== "Coffee" || coffeeIds.has(card.id),
+    ),
   );
   debugEvent("passport.completed", {
     city,

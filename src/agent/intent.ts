@@ -70,10 +70,23 @@ export function interpret(text: string, fallback = "New York City"): Intent {
   if (/music|musical|concert/i.test(text)) sections.push("Music");
   if (/cultur(?:e|al)|museum|gallery|film/i.test(text))
     sections.push("Culture");
-  if (/book|lifestyle|shop/i.test(text)) sections.push("Lifestyle");
+  if (/book|lifestyle|shop/i.test(text) && !/coffee\s+shops?/i.test(text))
+    sections.push("Lifestyle");
   const concepts = /indian|biryani/i.test(text)
     ? [/biryani/i.test(text) ? "biryani" : "Indian cuisine"]
     : [];
+  if (
+    /independent\s+(?:coffee\s+)?shops?|local\s+coffee|specialty\s+coffee/i.test(
+      text,
+    )
+  )
+    concepts.push("independent coffee shops");
+  const excludeConcepts =
+    /(?:instead of|without|not)\s+(?:starbucks|big\s+chains?|large\s+chains?|chains?)/i.test(
+      text,
+    )
+      ? ["Starbucks", "coffee chain"]
+      : [];
   if (/\bThai\b/i.test(text)) concepts.push("Thai cuisine");
   if (/\bvegetarian\b/i.test(text)) concepts.push("vegetarian");
   if (
@@ -112,7 +125,9 @@ export function interpret(text: string, fallback = "New York City"): Intent {
     destination: onboarding ? draft.city : undefined,
     seeds: onboarding ? draft.tastes.map((s) => s.replace(/[.\s]+$/, "")) : [],
     concepts,
-    excludeConcepts: /\bno seafood\b/i.test(text) ? ["seafood"] : [],
+    excludeConcepts: /\bno seafood\b/i.test(text)
+      ? ["seafood", ...excludeConcepts]
+      : excludeConcepts,
     query: preferencesFromText(text),
     constraints,
     sections: hide && !activeSections.length ? hidden : activeSections,

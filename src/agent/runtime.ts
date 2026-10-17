@@ -12,10 +12,12 @@ import { search, insights, insightParams, QlooError } from "../qloo/client.ts";
 import { candidates } from "../passport/model.ts";
 import type { AgentDependencies } from "./orchestrator.ts";
 import type { AgentState, Constraint } from "./types.ts";
+import { diversifyCards } from "../passport/model.ts";
 import type { Card, Section } from "../passport/model.ts";
 import { buildQuery } from "../qloo/query-plan.ts";
 import { findTags } from "../qloo/lookups.ts";
 import { enrichTrends } from "../qloo/enrichment.ts";
+
 export function agentDependencies(): AgentDependencies {
   let provider;
   try {
@@ -108,13 +110,18 @@ export async function discoverSection(
   params[type === "place" ? "filter.location.query" : "signal.location.query"] =
     state.city;
   if (type === "place") params["filter.location.radius"] = "0";
-  const tags = sectionTags(state, section).filter(
-    (t) =>
-      t.id.includes(":place:") ||
-      t.id.includes(":restaurant:") ||
-      t.id.includes(":cuisine:") ||
-      t.id.includes(":ambience:"),
+  const excludedTags = new Set(
+    state.queryPreferences?.[section]?.excludeTags ?? [],
   );
+  const tags = sectionTags(state, section)
+    .filter((tag) => !excludedTags.has(tag.id))
+    .filter(
+      (t) =>
+        t.id.includes(":place:") ||
+        t.id.includes(":restaurant:") ||
+        t.id.includes(":cuisine:") ||
+        t.id.includes(":ambience:"),
+    );
   if (type === "place" && tags.length)
     params["signal.interests.tags"] = tags.map((t) => t.id).join(",");
   if (section === "Eat") {
@@ -353,7 +360,7 @@ export async function discoverSection(
       pools.push(local);
     }
   }
-  const cards = mixPools(pools);
+  const cards = diversifyCards(mixPools(pools), section);
   if (preferences.goal === "trending") {
     await enrichTrends(cards, signal);
     debugEvent("qloo.enrichment", {

@@ -6,6 +6,10 @@ import {
 } from "../src/agent/validation.ts";
 import { relaxationSteps } from "../src/agent/session.ts";
 import { sendAgentTurn } from "../src/agent/browser.ts";
+import { runTurn } from "../src/agent/orchestrator.ts";
+import { normalizeSession } from "../src/agent/session.ts";
+import { diversifyCards } from "../src/passport/model.ts";
+import type { Card } from "../src/passport/model.ts";
 import type { Entity } from "../src/qloo/types.ts";
 const id = "11111111-1111-4111-8111-111111111111";
 function venue(names: string[], description = ""): Entity {
@@ -55,6 +59,111 @@ test("sparse search never silently relaxes explicit budget or other requirements
   assert.deepEqual(relaxationSteps(["expensive", "crowded", "touristy"]), [
     ["expensive", "crowded", "touristy"],
   ]);
+});
+
+test("coffee shortlists cap repeated chain branches without fabricating alternatives", () => {
+  const cards = [
+    "Starbucks Union Square",
+    "Starbucks Midtown",
+    "Starbucks SoHo",
+    "Starbucks Chelsea",
+    "Kaffe 1668",
+  ].map((name, index): Card => ({
+    id: `coffee-${index}`,
+    name,
+    types: ["urn:entity:place"],
+    detail: "",
+    section: "Coffee",
+  }));
+  const shortlist = diversifyCards(cards, "Coffee");
+  assert.deepEqual(shortlist.map((card) => card.name), [
+    "Starbucks Union Square",
+    "Starbucks Midtown",
+    "Kaffe 1668",
+  ]);
+});
+
+test("independent coffee refinement applies once and preserves other chapters", async () => {
+  const state = normalizeSession({
+    id: "coffee-session",
+    revision: 0,
+    expires: Date.now() + 90_000,
+    city: "New York City",
+    selected: [],
+    tags: [],
+    constraints: [],
+    categoryConstraints: {},
+    cards: [
+      {
+        id: "eat",
+        name: "Dinner",
+        types: ["urn:entity:place"],
+        detail: "",
+        section: "Eat",
+      },
+      {
+        id: "old-coffee",
+        name: "Starbucks",
+        types: ["urn:entity:place"],
+        detail: "",
+        section: "Coffee",
+      },
+    ],
+    previous: [],
+    feedback: [],
+    notices: [],
+  });
+  const deps = {
+    tools: async () => [],
+    workflow: async (
+      _transport: string,
+      _tool: string,
+      args: { query: string },
+    ) => ({
+      status: "ok",
+      results: [
+        {
+          id: args.query.includes("independent")
+            ? "urn:tag:nearby_attraction:qloo:independent_coffee_shops"
+            : "urn:tag:business:place:chain",
+          name: args.query.includes("independent")
+            ? "Independent Coffee Shops"
+            : "Chain",
+          type: "urn:tag:nearby_attraction",
+        },
+      ],
+    }),
+    discover: async (_state: unknown, section: string) =>
+      section === "Coffee"
+        ? [
+            {
+              id: "local-coffee",
+              name: "Local Coffee",
+              types: ["urn:entity:place"],
+              detail: "",
+              section: "Coffee",
+            },
+          ]
+        : [],
+  } as any;
+  const first = await runTurn(
+    state,
+    {
+      message:
+        "Find independent coffee shops instead of Starbucks or other big chains",
+    },
+    deps,
+  );
+  assert.ok(first.state.pending);
+  const result = await runTurn(
+    first.state,
+    { tagChoice: "urn:tag:nearby_attraction:qloo:independent_coffee_shops" },
+    deps,
+  );
+  assert.deepEqual(result.changed, ["Coffee"]);
+  assert.equal(result.state.pending, undefined);
+  assert.ok(result.state.cards.some((card) => card.id === "eat"));
+  assert.ok(result.state.cards.some((card) => card.id === "local-coffee"));
 });
 test("refinement rejects malformed or stale result streams and supports cancellation", async () => {
   const original = globalThis.fetch;

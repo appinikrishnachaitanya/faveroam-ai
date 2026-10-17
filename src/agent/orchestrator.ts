@@ -29,6 +29,51 @@ import type {
   ToolDefinition,
   ToolResult,
 } from "./types.ts";
+
+function conceptKey(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/\b(?:in|near|around|within|for)\b.*$/i, "")
+    .replace(
+      /\b(?:new york city|new york|nyc|toronto|london|paris|tokyo)\b/g,
+      "",
+    )
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+function conceptAlreadyApplied(
+  state: AgentState,
+  section: Section,
+  concept: string,
+) {
+  const wanted = conceptKey(concept);
+  if (!wanted) return true;
+  const words = wanted
+    .split(" ")
+    .filter(
+      (word) =>
+        ![
+          "cuisine",
+          "food",
+          "restaurant",
+          "restaurants",
+          "shop",
+          "shops",
+        ].includes(word),
+    );
+  return (state.categoryTags?.[section] ?? []).some((id) => {
+    const tag = state.tags.find((candidate) => candidate.id === id);
+    if (!tag) return false;
+    const current = conceptKey(`${tag.name} ${tag.detail}`);
+    return (
+      current.includes(wanted) ||
+      wanted.includes(conceptKey(tag.name)) ||
+      words.every((word) => current.includes(word))
+    );
+  });
+}
 export interface AgentDependencies {
   provider?: ModelProvider;
   tools: () => Promise<ToolDefinition[]>;
@@ -256,6 +301,7 @@ export async function runTurn(
           : [pending.query, ...(pending.remainingConcepts ?? [])],
       sections: pending.sections,
       constraints: pending.constraints,
+      excludeConcepts: pending.remainingExcludeConcepts,
       strategy: pending.strategy ?? "discover",
     };
     rememberedRank = Boolean(pending.rankMcp);
@@ -438,7 +484,7 @@ export async function runTurn(
       event("Guided refinement is available", "attention");
     }
   }
-  const concepts = [...(intent.excludeConcepts ?? []), ...intent.concepts];
+  const concepts = [...intent.concepts, ...(intent.excludeConcepts ?? [])];
   if (
     intent.constraints.includes("crowded") &&
     !concepts.some((c) => /quiet/i.test(c))
@@ -453,7 +499,7 @@ export async function runTurn(
       culturalText(q, 100);
       if (!concepts.includes(q)) concepts.push(q);
     }
-  for (const concept of concepts.slice(0, 2)) {
+  for (const concept of concepts.slice(0, 4)) {
     const excluding = intent.excludeConcepts?.includes(concept) ?? false;
     const words = concept
       .toLowerCase()
@@ -461,17 +507,60 @@ export async function runTurn(
       .filter((w) => !["cuisine", "food"].includes(w));
     if (
       !excluding &&
-      state.tags
-        .filter((t) =>
-          targets.some((section) =>
-            state.categoryTags![section]?.includes(t.id),
-          ),
-        )
-        .some((t) =>
-          words.every((w) => `${t.name} ${t.detail}`.toLowerCase().includes(w)),
-        )
+      targets.some((section) => conceptAlreadyApplied(state, section, concept))
     )
       continue;
+    if (excluding && (input.message || input.tagChoice)) {
+      // Explicit exclusions are already user-confirmed. Resolve their Qloo tags
+      // and apply them directly so the agent does not ask the same question twice.
+      try {
+        const resolved = tagCandidates(
+          await guard.run("qloo_find_tags_exclusion", { query: concept }, () =>
+            deps.workflow(
+              "exec",
+              "qloo_find_tags",
+              { query: concept, limit: 5 },
+              guard.signal,
+            ),
+          ),
+          concept,
+        ).filter((tag) =>
+          /starbucks/i.test(concept)
+            ? /starbucks/i.test(`${tag.name} ${tag.id}`)
+            : /chain/i.test(`${tag.name} ${tag.id}`),
+        );
+        if (resolved.length) {
+          state.tags = [
+            ...new Map(
+              [...state.tags, ...resolved].map((tag) => [tag.id, tag]),
+            ).values(),
+          ];
+          for (const section of targets) {
+            state.categoryTags![section] = [
+              ...new Set([
+                ...(state.categoryTags![section] ?? []),
+                ...resolved.map((tag) => tag.id),
+              ]),
+            ];
+            state.queryPreferences![section] = patchPreferences(
+              state.queryPreferences![section] ?? {},
+              {
+                excludeTags: [
+                  ...new Set([
+                    ...(state.queryPreferences![section]?.excludeTags ?? []),
+                    ...resolved.map((tag) => tag.id),
+                  ]),
+                ],
+              },
+            );
+          }
+        }
+      } catch {
+        // The positive independent/local category still runs; no unverified
+        // chain claim is presented when exclusion taxonomy is unavailable.
+      }
+      continue;
+    }
     event(`Finding matching concepts for ${concept}`, "active");
     try {
       const transport =
@@ -571,6 +660,11 @@ export async function runTurn(
           remainingConcepts: excluding
             ? []
             : concepts.slice(concepts.indexOf(concept) + 1, 2),
+          remainingExcludeConcepts: excluding
+            ? []
+            : (intent.excludeConcepts ?? []).filter(
+                (candidate) => candidate !== concept,
+              ),
         };
         event("Concept matches returned · your choice needed", "complete");
         if (!/quiet/i.test(concept))
