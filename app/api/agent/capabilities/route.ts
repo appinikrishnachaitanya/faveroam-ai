@@ -1,10 +1,11 @@
+import { debugRequest } from "../../../../src/agent/debug";
 import {
   providerHealth,
   conciergeUnavailable,
 } from "../../../../src/agent/health";
 import { NextResponse } from "next/server";
 import { configuredProvider } from "../../../../src/agent/provider";
-export async function GET() {
+async function handleGET() {
   let enabled = false;
   try {
     enabled = Boolean(configuredProvider());
@@ -20,4 +21,8 @@ export async function GET() {
     },
     { headers: { "Cache-Control": "no-store" } },
   );
+}
+
+export function GET() {
+  return debugRequest("agent.capabilities", () => handleGET());
 }

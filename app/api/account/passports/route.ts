@@ -1,3 +1,4 @@
+import { debugRequest } from "../../../../src/agent/debug";
 import {
   accountClient,
   accountConfigured,
@@ -14,7 +15,7 @@ import {
 import { registerRestoredSession } from "../../../../src/agent/store";
 import { passportView } from "../../../../src/workspace/state";
 export const runtime = "nodejs";
-export async function GET() {
+async function handleGET() {
   if (!accountConfigured())
     return privateJson({ error: "Accounts are not configured." }, 503);
   try {
@@ -40,7 +41,7 @@ export async function GET() {
     );
   }
 }
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   if (!sameOrigin(request))
     return privateJson({ error: "Please use this app." }, 403);
   if (!storageConfigured())
@@ -96,17 +97,15 @@ export async function POST(request: Request) {
         409,
       );
     const snapshot = passportSnapshot(state);
-    const { error } = await storageWriter()
-      .from("saved_passports")
-      .upsert(
-        {
-          user_id: user.id,
-          city: state.city,
-          snapshot,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "user_id,city" },
-      );
+    const { error } = await storageWriter().from("saved_passports").upsert(
+      {
+        user_id: user.id,
+        city: state.city,
+        snapshot,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id,city" },
+    );
     if (error) throw Error();
     return privateJson({ saved: true, city: state.city });
   } catch {
@@ -118,7 +117,7 @@ export async function POST(request: Request) {
     );
   }
 }
-export async function DELETE(request: Request) {
+async function handleDELETE(request: Request) {
   if (!sameOrigin(request))
     return privateJson({ error: "Please use this app." }, 403);
   try {
@@ -153,4 +152,16 @@ function uuid(value: string) {
   return /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(
     value,
   );
+}
+
+export function GET() {
+  return debugRequest("account.passports", () => handleGET());
+}
+
+export function POST(request: Request) {
+  return debugRequest("account.passports", () => handlePOST(request));
+}
+
+export function DELETE(request: Request) {
+  return debugRequest("account.passports", () => handleDELETE(request));
 }

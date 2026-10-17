@@ -1,3 +1,4 @@
+import { debugRequest } from "../../../src/agent/debug";
 import {
   accountClient,
   accountConfigured,
@@ -8,7 +9,7 @@ import {
   privateJson,
 } from "../../../src/account/server";
 export const runtime = "nodejs";
-export async function GET() {
+async function handleGET() {
   if (!accountConfigured())
     return privateJson({ configured: false, storage: false, user: null });
   try {
@@ -31,7 +32,7 @@ export async function GET() {
     );
   }
 }
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   if (!sameOrigin(request))
     return privateJson(
       { error: "Please use this app to manage your account." },
@@ -142,7 +143,7 @@ export async function POST(request: Request) {
     );
   }
 }
-export async function DELETE(request: Request) {
+async function handleDELETE(request: Request) {
   if (!sameOrigin(request))
     return privateJson({ error: "Please use this app." }, 403);
   if (!storageConfigured())
@@ -188,4 +189,16 @@ export async function DELETE(request: Request) {
       502,
     );
   }
+}
+
+export function GET() {
+  return debugRequest("account", () => handleGET());
+}
+
+export function POST(request: Request) {
+  return debugRequest("account", () => handlePOST(request));
+}
+
+export function DELETE(request: Request) {
+  return debugRequest("account", () => handleDELETE(request));
 }

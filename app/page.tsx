@@ -78,7 +78,10 @@ export default function Home() {
   const [chosen, setChosen] = useState<Record<number, string>>({});
   const [removed, setRemoved] = useState<number[]>([]);
   const [result, setResult] = useState<Passport>();
-  const [accountSignedIn,setAccountSignedIn] = useState(false);
+  const [workspaceView, setWorkspaceView] = useState<
+    "discover" | "plan" | "preferences" | "connections"
+  >("discover");
+  const [accountSignedIn, setAccountSignedIn] = useState(false);
 
   const [error, setError] = useState("");
   const [dialog, setDialog] = useState<number>();
@@ -117,9 +120,13 @@ export default function Home() {
     ]),
   );
   const sessionHistory = result?.session?.history ?? [];
-  const conversationStart = sessionHistory.findIndex((message) => message.role === "user");
+  const conversationStart = sessionHistory.findIndex(
+    (message) => message.role === "user",
+  );
   const visibleMessages = result
-    ? (conversationStart < 0 ? [] : sessionHistory.slice(conversationStart))
+    ? conversationStart < 0
+      ? []
+      : sessionHistory.slice(conversationStart)
     : messages;
   const conciergeAvailable =
     providerHealth === "healthy" || providerHealth === "configured";
@@ -142,10 +149,15 @@ export default function Home() {
   useEffect(() => {
     const body = agentScroll.current;
     if (!assistantOpen || !body) return;
-    body.scrollTop = assistantTab === "ask" && !result?.agent?.pending
-      ? body.scrollHeight
-      : 0;
-  }, [assistantOpen, assistantTab, messages, result?.session?.history, result?.agent?.pending]);
+    body.scrollTop =
+      assistantTab === "ask" && !result?.agent?.pending ? body.scrollHeight : 0;
+  }, [
+    assistantOpen,
+    assistantTab,
+    messages,
+    result?.session?.history,
+    result?.agent?.pending,
+  ]);
   function say(text: string) {
     setMessages((m) => [...m, { role: "agent", text }]);
   }
@@ -303,6 +315,20 @@ export default function Home() {
     }
   }
 
+  function selectWorkspaceView(next: typeof workspaceView) {
+    setWorkspaceView(next);
+    requestAnimationFrame(() =>
+      document
+        .getElementById(`view-${next}`)
+        ?.scrollIntoView({
+          behavior: window.matchMedia("(prefers-reduced-motion: reduce)")
+            .matches
+            ? "instant"
+            : "smooth",
+          block: "start",
+        }),
+    );
+  }
   function updateDraft(index: number, value: string) {
     setDraft((d) => d.map((s, i) => (i === index ? value : s)));
     resetMatches();
@@ -473,6 +499,7 @@ export default function Home() {
         body: JSON.stringify({ sessionId: result.agent.sessionId }),
       });
     setShowSaved(false);
+    setWorkspaceView("discover");
     setAdaptation("");
     setCity("");
     setOrigin("");
@@ -505,7 +532,9 @@ export default function Home() {
   return (
     <main className="app-shell progressive-app">
       <ToastNotice />
-      <a href="#passport-content" className="skip-link">Skip to main content</a>
+      <a href="#passport-content" className="skip-link">
+        Skip to main content
+      </a>
       <header className="workspace-topbar">
         <a className="brand" href="/" aria-label="TastePassport home">
           <span className="brand-symbol">
@@ -544,10 +573,17 @@ export default function Home() {
                 <Icon name="pin" size={14} />
                 {city}
               </span>
-              <button className="quiet-button" aria-label="Start a new Passport" onClick={fresh} disabled={busy}>
+              <button
+                className="quiet-button"
+                aria-label="Start a new Passport"
+                onClick={fresh}
+                disabled={busy}
+              >
                 <Icon name="plus" size={14} />
                 <span className="new-passport-label">New Passport</span>
-                <span className="new-passport-short" aria-hidden="true">New</span>
+                <span className="new-passport-short" aria-hidden="true">
+                  New
+                </span>
               </button>
             </div>
           )}
@@ -628,14 +664,7 @@ export default function Home() {
               passport={result}
               origin={origin}
               onConnections={() => {
-                const reveal =
-                  document.querySelector<HTMLDetailsElement>(
-                    ".cultural-reveal",
-                  );
-                if (reveal) {
-                  reveal.open = true;
-                  reveal.scrollIntoView({ behavior: "smooth", block: "start" });
-                }
+                selectWorkspaceView("connections");
               }}
             />
             <div className="passport-toolbar">
@@ -645,16 +674,40 @@ export default function Home() {
                 aria-label="Passport view"
               >
                 <button
-                  aria-pressed={!showSaved}
-                  onClick={() => setShowSaved(false)}
+                  aria-pressed={workspaceView === "discover" && !showSaved}
+                  onClick={() => {
+                    selectWorkspaceView("discover");
+                    setShowSaved(false);
+                  }}
                 >
                   Discover
                 </button>
                 <button
-                  aria-pressed={showSaved}
-                  onClick={() => setShowSaved(true)}
+                  aria-pressed={workspaceView === "discover" && showSaved}
+                  onClick={() => {
+                    selectWorkspaceView("discover");
+                    setShowSaved(true);
+                  }}
                 >
                   My Vibe <span>{result.session?.savedCards.length ?? 0}</span>
+                </button>
+                <button
+                  aria-pressed={workspaceView === "plan"}
+                  onClick={() => selectWorkspaceView("plan")}
+                >
+                  Plan a day
+                </button>
+                <button
+                  aria-pressed={workspaceView === "preferences"}
+                  onClick={() => selectWorkspaceView("preferences")}
+                >
+                  Preferences &amp; Together
+                </button>
+                <button
+                  aria-pressed={workspaceView === "connections"}
+                  onClick={() => selectWorkspaceView("connections")}
+                >
+                  Your connections
                 </button>
               </div>
               <button
@@ -680,13 +733,19 @@ export default function Home() {
                 </button>
               </div>
             )}
-            {result.session && (
-              <FamiliarityControl
-                session={result.session}
-                disabled={busy}
-                onChange={(input) => void refine(input)}
-              />
-            )}
+            <div
+              id="view-discover"
+              className="workspace-view-anchor"
+              hidden={workspaceView !== "discover"}
+            >
+              {result.session && (
+                <FamiliarityControl
+                  session={result.session}
+                  disabled={busy}
+                  onChange={(input) => void refine(input)}
+                />
+              )}
+            </div>
             {result.agent?.pending && (
               <div className="pending-concept">
                 <strong>A little clarity for your next discovery</strong>
@@ -719,56 +778,106 @@ export default function Home() {
                 You can bring them back with manual refinement.
               </p>
             ) : null}
-            {showSaved ? (
-              <SavedDiscoveries
-                cards={result.session?.savedCards ?? []}
-                feedback={feedback}
-                onFeedback={recordFeedback}
-                disabled={busy}
-              />
-            ) : (
-              <>
-                <PassportSections
-                  result={{
-                    ...result,
-                    cards: result.cards.filter(
-                      (c) =>
-                        !result.session?.hiddenCategories.includes(c.section),
-                    ),
-                  }}
+            <div hidden={workspaceView !== "discover"}>
+              {showSaved ? (
+                <SavedDiscoveries
+                  cards={result.session?.savedCards ?? []}
                   feedback={feedback}
                   onFeedback={recordFeedback}
-                  updates={updates}
-                  updating={updating}
+                  disabled={busy}
                 />
-              </>
-            )}
-            <DayOutPlan key={`day-out:${result.session?.id ?? result.city}`} passport={result} disabled={busy} signedIn={accountSignedIn} />
-            <TasteIntelligence key={`intelligence:${result.session?.id ?? result.city}`} passport={result} busy={busy} onRefine={input=>void refine(input)} />
-            <details className="secondary-reveal cultural-reveal">
-              <summary>
-                Why these suggestions? <Icon name="arrow" size={16} />
-              </summary>
-              <ConnectionExplorer passport={result} onExplore={(section) => {
-                setShowSaved(false);
-                requestAnimationFrame(() => document.getElementById(`section-${section}`)?.scrollIntoView({ behavior: "smooth", block: "start" }));
-              }} />
-              <details className="all-query-routes">
-                <summary>Technical recommendation details</summary>
-                <TranslationMap signals={signals} result={result} />
-              </details>
-              <TasteDNA
-                signals={signals}
-                onRemove={removeSignal}
+              ) : (
+                <>
+                  <PassportSections
+                    result={{
+                      ...result,
+                      cards: result.cards.filter(
+                        (c) =>
+                          !result.session?.hiddenCategories.includes(c.section),
+                      ),
+                    }}
+                    feedback={feedback}
+                    onFeedback={recordFeedback}
+                    updates={updates}
+                    updating={updating}
+                  />
+                </>
+              )}
+            </div>
+            <div
+              id="view-plan"
+              className="workspace-panel"
+              hidden={workspaceView !== "plan"}
+            >
+              <DayOutPlan
+                key={`day-out:${result.session?.id ?? result.city}`}
+                expanded={workspaceView === "plan"}
+                passport={result}
                 disabled={busy}
+                signedIn={accountSignedIn}
               />
-            </details>
+            </div>
+            <div
+              className="workspace-panel"
+              id="view-preferences"
+              hidden={workspaceView !== "preferences"}
+            >
+              <TasteIntelligence
+                key={`intelligence:${result.session?.id ?? result.city}`}
+                expanded={workspaceView === "preferences"}
+                passport={result}
+                busy={busy}
+                onRefine={(input) => void refine(input)}
+              />
+            </div>
+            <div
+              className="workspace-panel"
+              id="view-connections"
+              hidden={workspaceView !== "connections"}
+            >
+              <details
+                className="secondary-reveal cultural-reveal"
+                open={workspaceView === "connections"}
+              >
+                <summary>
+                  Why these suggestions? <Icon name="arrow" size={16} />
+                </summary>
+                <ConnectionExplorer
+                  passport={result}
+                  onExplore={(section) => {
+                    setWorkspaceView("discover");
+                    setShowSaved(false);
+                    requestAnimationFrame(() =>
+                      document
+                        .getElementById(`section-${section}`)
+                        ?.scrollIntoView({
+                          behavior: "smooth",
+                          block: "start",
+                        }),
+                    );
+                  }}
+                />
+                {process.env.NODE_ENV === "development" && (
+                  <details className="all-query-routes">
+                    <summary>Technical recommendation details</summary>
+                    <TranslationMap signals={signals} result={result} />
+                  </details>
+                )}
+                <TasteDNA
+                  signals={signals}
+                  onRemove={removeSignal}
+                  disabled={busy}
+                />
+              </details>
+            </div>
             {result.session &&
+              process.env.NODE_ENV === "development" &&
               conciergeAvailable &&
               result.session.comparison && (
                 <details className="secondary-reveal comparison-reveal">
                   <summary>
-                    Compare recommendation approaches <Icon name="arrow" size={16} />
+                    Compare recommendation approaches{" "}
+                    <Icon name="arrow" size={16} />
                   </summary>
                   <ModelComparison
                     key={result.session.id}
@@ -777,16 +886,16 @@ export default function Home() {
                   />
                 </details>
               )}
-            <footer className="workspace-footer">
-              <span>
-                <Icon name="star" size={12} />
-                Move anywhere. Keep your vibe.
-              </span>
-              <span>Your tastes. A new perspective.</span>
-            </footer>
           </section>
         )}
       </div>
+      <footer className="workspace-footer">
+        <span>Move anywhere. Keep your vibe.</span>
+        <nav aria-label="About TastePassport">
+          <a href="/about">About us</a>
+          <a href="/privacy">Privacy</a>
+        </nav>
+      </footer>
       {result && (
         <ConciergeDrawer
           open={assistantOpen}
@@ -840,11 +949,15 @@ export default function Home() {
                 </p>
                 {!conciergeAvailable && (
                   <p className="helper">
-                    Live chat is unavailable. Use Adjust filters to keep exploring.
+                    Live chat is unavailable. Use Adjust filters to keep
+                    exploring.
                   </p>
                 )}
                 {!visibleMessages.length && (
-                  <div className="concierge-starters" aria-label="Suggested requests">
+                  <div
+                    className="concierge-starters"
+                    aria-label="Suggested requests"
+                  >
                     <span className="micro-label">TRY A REQUEST</span>
                     {[
                       "Find somewhere quieter to eat",
@@ -857,7 +970,11 @@ export default function Home() {
                         disabled={busy}
                         onClick={() => {
                           setComposer(text);
-                          document.querySelector<HTMLTextAreaElement>("#conversation-input")?.focus();
+                          document
+                            .querySelector<HTMLTextAreaElement>(
+                              "#conversation-input",
+                            )
+                            ?.focus();
                         }}
                       >
                         {text} <Icon name="arrow" size={15} />
@@ -924,13 +1041,15 @@ export default function Home() {
               </div>
             </form>
           )}
-          {visibleMessages.length > 0 && <button
-            className="text-button reset-conversation"
-            disabled={busy}
-            onClick={() => void refine({ reset: "conversation" })}
-          >
-            Reset conversation
-          </button>}
+          {visibleMessages.length > 0 && (
+            <button
+              className="text-button reset-conversation"
+              disabled={busy}
+              onClick={() => void refine({ reset: "conversation" })}
+            >
+              Reset conversation
+            </button>
+          )}
         </ConciergeDrawer>
       )}
       {rejectionId &&

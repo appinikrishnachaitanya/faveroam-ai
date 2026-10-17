@@ -2,6 +2,7 @@ import "server-only";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
+import { debugEvent } from "../agent/debug";
 export function accountConfigured() {
   return Boolean(
     process.env.SUPABASE_URL && process.env.SUPABASE_PUBLISHABLE_KEY,
@@ -10,13 +11,31 @@ export function accountConfigured() {
 export function storageConfigured() {
   return accountConfigured() && Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY);
 }
-const safeFetch: typeof fetch = (url, init) =>
-  fetch(url, {
-    ...init,
-    signal: init?.signal
-      ? AbortSignal.any([init.signal, AbortSignal.timeout(15_000)])
-      : AbortSignal.timeout(15_000),
-  });
+const safeFetch: typeof fetch = async (url, init) => {
+  const path = new URL(url instanceof Request ? url.url : String(url)).pathname;
+  const service = path.startsWith("/auth/")
+    ? "supabase-auth"
+    : "supabase-storage";
+  const started = Date.now();
+  debugEvent("service.invoked", { service });
+  try {
+    const response = await fetch(url, {
+      ...init,
+      signal: init?.signal
+        ? AbortSignal.any([init.signal, AbortSignal.timeout(15_000)])
+        : AbortSignal.timeout(15_000),
+    });
+    debugEvent("service.response", {
+      service,
+      status: response.status,
+      elapsedMs: Date.now() - started,
+    });
+    return response;
+  } catch (error) {
+    debugEvent("service.failed", { service, elapsedMs: Date.now() - started });
+    throw error;
+  }
+};
 export async function accountClient() {
   if (!accountConfigured()) throw Error("Accounts are not configured");
   const jar = await cookies();

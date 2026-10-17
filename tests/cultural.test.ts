@@ -189,12 +189,9 @@ test("Qloo evidence uses raw returned fields and excludes headers and fabricated
       onFeedback: () => {},
     }),
   );
-  assert.match(html, /Technical details/);
-  assert.match(html, /query.affinity/);
-  assert.match(html, /0.125/);
-  assert.match(html, /physical place filter/);
+  assert.doesNotMatch(html, /Technical details|query.affinity|0\.125|physical place filter/);
   assert.match(html, /Returned address/);
-  assert.match(html, /Restaurant/);
+  assert.match(html, /Returned dining/);
   assert.doesNotMatch(
     html,
     /999|confidence|rating|neighborhood|probability.*%/,

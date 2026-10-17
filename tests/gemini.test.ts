@@ -8,7 +8,7 @@ import assert from 'node:assert/strict';
 import { configuredProvider } from './src/agent/provider.ts';
 import { debugEvent } from './src/agent/debug.ts';
 process.env.GEMINI_API_KEY='native-test-secret';process.env.GEMINI_MODEL='gemini-2.5-flash';process.env.AGENT_MODEL_BASE_URL='invalid-unused-base';process.env.QLOO_API_KEY='qloo-test-secret';process.env.AGENT_DEBUG='1';
-const logs=[];console.info=(line)=>logs.push(JSON.parse(line));const requests=[];let bad=false,fail=false;
+const logs=[];console.info=console.error=(line)=>logs.push(JSON.parse(line));const requests=[];let bad=false,fail=false;
 globalThis.fetch=async (url,options)=>{
  assert.ok(String(url).includes('generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent'));
  const body=JSON.parse(options.body);requests.push(body);

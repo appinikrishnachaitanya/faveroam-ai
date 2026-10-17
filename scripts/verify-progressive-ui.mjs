@@ -233,9 +233,8 @@ for (const width of [320, 390, 640, 768, 1024, 1440]) {
   assert.ok(await evaluate(`(()=>{
     const toolbar=document.querySelector('.passport-toolbar').getBoundingClientRect();
     const button=document.querySelector('.assistant-launch').getBoundingClientRect();
-    return getComputedStyle(document.querySelector('.assistant-launch')).position==='static' &&
-      button.left>=toolbar.left-1 && button.right<=toolbar.right+1 && button.top>=toolbar.top-1 && button.bottom<=toolbar.bottom+1;
-  })()`), "Ask action must stay inside its toolbar");
+    return getComputedStyle(document.querySelector('.assistant-launch')).position==='fixed' && button.left>=0 && button.right<=innerWidth && button.top>=0 && button.bottom<=innerHeight && button.height>=44;
+  })()`), "Ask action must stay inside the viewport");
 }
 await call("Emulation.setDeviceMetricsOverride", { width: 1440, height: 1100, deviceScaleFactor: 1, mobile: false });
 assert.equal(
@@ -249,7 +248,7 @@ assert.ok(
   !(await evaluate("Boolean(document.querySelector('.why-section[open]'))")),
 );
 assert.ok(!(await evaluate("document.querySelector('#taste-concierge').open")));
-await evaluate("document.querySelector('.day-out-reveal').open=true");
+await clickText('Plan a day');
 await evaluate("document.querySelector('.day-out-reveal').scrollIntoView({behavior:'instant',block:'start'})");
 const outingBefore = await evaluate("[...document.querySelectorAll('.day-out-stops select')].map(s=>s.value)");
 assert.ok(outingBefore.some(Boolean));
@@ -263,7 +262,7 @@ assert.ok(await evaluate("document.querySelector('.day-out-plan').textContent.in
 await evaluate("window.__outingBlob=null;window.__originalCreateObjectURL=URL.createObjectURL;URL.createObjectURL=(blob)=>{window.__outingBlob=blob;return window.__originalCreateObjectURL(blob)}");
 await evaluate("document.querySelector('.download-plan').click()");
 assert.match(await evaluate("window.__outingBlob.text()"), /My day out in Toronto/);
-await evaluate("URL.createObjectURL=window.__originalCreateObjectURL;document.querySelector('.day-out-reveal').open=false");
+await evaluate("URL.createObjectURL=window.__originalCreateObjectURL");await clickText('Discover');
 assert.equal(
   await evaluate(
     "document.querySelector('#section-Eat').closest('section').querySelectorAll('.discovery-card').length",
@@ -348,21 +347,14 @@ assert.deepEqual(
   ),
   initialIds,
 );
-await evaluate(
-  "document.querySelector('.why-section').open=true;document.querySelector('.qloo-evidence').open=true",
-);
-assert.ok(
-  await evaluate(
-    "document.querySelector('.qloo-evidence').textContent.includes('Toronto')",
-  ),
-);
-await evaluate(
-  "document.querySelector('.why-section').open=false;document.querySelector('.cultural-reveal').open=true",
-);
+await evaluate("document.querySelector('.why-section').open=true");
+assert.equal(await evaluate("document.querySelector('.qloo-evidence')===null"),true);
+await evaluate("document.querySelector('.why-section').open=false");
+await clickText('Your connections');
 assert.ok(
   await evaluate("document.querySelectorAll('.bridge-route').length>0"),
 );
-await evaluate("document.querySelector('.cultural-reveal').open=false");
+await clickText('Discover');
 const first = await evaluate(
   "document.querySelector('#section-Eat').closest('section').querySelectorAll('.discovery-card')[1].dataset.entityId",
 );
@@ -483,7 +475,7 @@ await call("Emulation.setDeviceMetricsOverride", {
   deviceScaleFactor: 1,
   mobile: true,
 });
-await evaluate("document.querySelector('.day-out-reveal').open=true");
+await clickText('Plan a day');
 assert.equal(
   await evaluate("document.documentElement.scrollWidth>innerWidth"),
   false,

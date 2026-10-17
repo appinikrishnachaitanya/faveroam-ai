@@ -1,5 +1,6 @@
+import { debugRequest } from "../../../src/agent/debug";
 import { accountClient, requestOrigin } from "../../../src/account/server";
-export async function GET(request: Request) {
+async function handleGET(request: Request) {
   const url = new URL(request.url);
   const base = requestOrigin(request);
   const code = url.searchParams.get("code");
@@ -18,4 +19,8 @@ export async function GET(request: Request) {
         );
     } catch {}
   return Response.redirect(new URL("/?account=retry", base));
+}
+
+export function GET(request: Request) {
+  return debugRequest("auth.callback", () => handleGET(request));
 }

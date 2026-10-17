@@ -12,6 +12,11 @@ const routes = [
   "agent.session",
   "agent.comparison",
   "agent.intelligence",
+  "account",
+  "account.passports",
+  "account.plans",
+  "auth.callback",
+  "agent.capabilities",
 ] as const;
 type DebugEvent =
   | "gemini.request"
@@ -46,8 +51,15 @@ type DebugEvent =
   | "agent.completed"
   | "agent.fallback"
   | "feedback.recorded"
-  | "session.reset";
+  | "session.reset"
+  | "session.created"
+  | "session.updated"
+  | "session.expired"
+  | "service.invoked"
+  | "service.response"
+  | "service.failed";
 interface DebugMeta {
+  service?: "supabase-auth" | "supabase-storage";
   trace?: string;
   operation?: "interpret" | "choose" | "baseline" | "explain";
   tool?: string;
@@ -82,16 +94,30 @@ interface DebugMeta {
 }
 /** Strict metadata allowlist. Never log bodies, cache keys, tokens, arguments or errors. */
 export function debugEvent(event: DebugEvent, meta: DebugMeta = {}) {
-  if (process.env.AGENT_DEBUG !== "1") return;
+  const error =
+    event.endsWith(".failed") ||
+    event === "session.expired" ||
+    (typeof meta.status === "number" && meta.status >= 400);
+  const primary = ![
+    "qloo.cache_hit",
+    "discovery.pool",
+    "resolution.candidates",
+  ].includes(event);
+  if (!error && !primary && process.env.AGENT_DEBUG !== "1") return;
+  if (!error && process.env.LOG_LEVEL === "error") return;
   const allowed = (value: unknown, values: readonly string[]) =>
     typeof value === "string" && values.includes(value) ? value : undefined;
   const number = (value: unknown) =>
     typeof value === "number" && Number.isSafeInteger(value) && value >= 0
       ? value
       : undefined;
-  console.info(
+  const write = error ? console.error : console.info;
+  write(
     JSON.stringify({
       event,
+      timestamp: new Date().toISOString(),
+      level: error ? "error" : "info",
+      service: allowed(meta.service, ["supabase-auth", "supabase-storage"]),
       requestTrace: context.getStore(),
       trace:
         meta.trace && /^[a-f0-9-]{36}$/.test(meta.trace)
@@ -186,7 +212,7 @@ export function debugRequest(
     debugEvent("api.started", { route });
     try {
       const response = await run();
-      debugEvent(response.ok ? "api.completed" : "api.failed", {
+      debugEvent(response.status < 400 ? "api.completed" : "api.failed", {
         route,
         status: response.status,
         elapsedMs: Date.now() - started,

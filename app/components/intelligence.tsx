@@ -8,6 +8,7 @@ import type { TasteComparison } from "../../src/qloo/compare";
 import type { DiscoveryGoal } from "../../src/qloo/query-plan";
 import { CandidateChoices } from "./disambiguation";
 import { ResultMetrics, WhyEvidence } from "./intelligence-evidence";
+import { priceLabel } from "../../src/passport/pricing";
 const modes: { id: DiscoveryGoal; name: string; detail: string }[] = [
   {
     id: "discover",
@@ -23,35 +24,40 @@ const modes: { id: DiscoveryGoal; name: string; detail: string }[] = [
   {
     id: "hidden-gems",
     name: "Hidden gems",
-    detail:
-      "Quality ranking with popularity below the 75th percentile. This does not establish tourist or crowd levels.",
+    detail: "Find quality suggestions beyond the most popular choices.",
   },
   {
     id: "safe-bets",
     name: "Safe bets",
-    detail: "Quality ranking and business ratings of at least 4/5 for places.",
+    detail: "Well-rated places that connect to your interests.",
   },
   {
     id: "surprise",
     name: "Surprise me",
     detail:
-      "Broaden soft preferences while preserving your cultural anchors and hard filters.",
+      "Try something a little different, with your interests as the starting point.",
   },
 ];
 export default function TasteIntelligence({
   passport,
   busy,
   onRefine,
+  expanded,
 }: {
   passport: Passport;
   busy: boolean;
   onRefine: (input: AgentInput) => void;
+  expanded?: boolean;
 }) {
   const [section, setSection] = useState<Section>("Eat");
   const prefs = passport.session?.queryPreferences?.[section];
-  const [goal, setGoal] = useState<DiscoveryGoal>("discover");
-  const [price, setPrice] = useState("");
-  const [rating, setRating] = useState("");
+  const [goal, setGoal] = useState<DiscoveryGoal>(
+    () => prefs?.goal ?? "discover",
+  );
+  const [price, setPrice] = useState(() => prefs?.priceMax?.toString() ?? "4");
+  const [rating, setRating] = useState(
+    () => prefs?.businessRatingMin?.toString() ?? "",
+  );
   const [area, setArea] = useState(""),
     [avoidArea, setAvoidArea] = useState(""),
     [source, setSource] = useState(""),
@@ -117,23 +123,26 @@ export default function TasteIntelligence({
     }
   }
   return (
-    <details className="secondary-reveal taste-intelligence">
+    <details className="secondary-reveal taste-intelligence" open={expanded}>
       <summary>Make it more you · discover together</summary>
       <div className="intelligence-content">
-        <h2>A little more intention.</h2>
+        <h2>Find your next favorite.</h2>
         <p>
           Find what fits your budget, explore a different mood, or meet someone
           else halfway.
         </p>
         <label className="intelligence-section">
-          Choose a chapter
+          Category
           <select
             value={section}
             disabled={busy || loading}
             onChange={(e) => {
               setSection(e.target.value as Section);
-              setPrice("");
-              setRating("");
+              const next =
+                passport.session?.queryPreferences?.[e.target.value as Section];
+              setGoal(next?.goal ?? "discover");
+              setPrice(next?.priceMax?.toString() ?? "4");
+              setRating(next?.businessRatingMin?.toString() ?? "");
               setTogether(undefined);
             }}
           >
@@ -191,22 +200,34 @@ export default function TasteIntelligence({
           {section !== "Music" && (
             <div className="intelligence-filters">
               <label>
-                Maximum price
+                Budget
                 <select
                   value={price}
-                  onChange={(e) => setPrice(e.target.value)}
+                  aria-label="Maximum price"
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setPrice(value);
+                    if (value)
+                      onRefine({
+                        discovery: {
+                          section,
+                          preferences: { priceMax: Number(value) },
+                        },
+                      });
+                  }}
                   disabled={busy || loading}
                 >
-                  <option value="">Keep current preference</option>
                   {[1, 2, 3, 4].map((n) => (
                     <option value={n} key={n}>
-                      {"$".repeat(n)}
+                      {n === 4
+                        ? "Any budget"
+                        : `${priceLabel(n)}${n > 1 ? " or less" : ""}`}
                     </option>
                   ))}
                 </select>
               </label>
               <label>
-                Minimum business rating
+                Minimum rating
                 <select
                   value={rating}
                   onChange={(e) => setRating(e.target.value)}
@@ -281,9 +302,7 @@ export default function TasteIntelligence({
           {prefs && (
             <p className="helper">
               Active settings: {prefs.goal ?? "For you"}
-              {prefs.priceMax
-                ? ` · price up to ${"$".repeat(prefs.priceMax)}`
-                : ""}
+              {prefs.priceMax ? ` · ${priceLabel(prefs.priceMax)} budget` : ""}
               {prefs.businessRatingMin
                 ? ` · business rating ≥ ${prefs.businessRatingMin}`
                 : ""}
@@ -295,7 +314,7 @@ export default function TasteIntelligence({
             className="primary-button"
             disabled={busy || loading || !passport.agent}
           >
-            {busy ? "Finding your next fit…" : "Update this chapter"}
+            {busy ? "Finding your next fit…" : "Update suggestions"}
           </button>
         </form>
         <details className="together-reveal">

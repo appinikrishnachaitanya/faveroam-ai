@@ -1,4 +1,5 @@
 import "server-only";
+import { debugEvent } from "./debug.ts";
 import { normalizeSession, clearPassport } from "./session.ts";
 import { randomUUID } from "node:crypto";
 import type { Candidate } from "../passport/model.ts";
@@ -38,14 +39,17 @@ export function createSession(
   };
   const session = normalizeSession(state);
   sessions.set(state.id, session);
+  debugEvent("session.created", { count: sessions.size });
   return session;
 }
 export function getSession(id: string): AgentState {
   const state = sessions.get(id);
-  if (!state || state.expires < Date.now())
+  if (!state || state.expires < Date.now()) {
+    debugEvent("session.expired");
     throw Error(
       "Your refinement session expired. Build a passport again; your taste draft remains available.",
     );
+  }
   return state;
 }
 export async function inSession<T>(
@@ -64,6 +68,7 @@ export async function inSession<T>(
     next.state.expires = Date.now() + 30 * 60_000;
     if (!sessions.has(id)) throw Error("Passport was reset.");
     sessions.set(id, next.state);
+    debugEvent("session.updated", { count: next.state.cards.length });
     return next.value;
   } finally {
     locks.delete(id);

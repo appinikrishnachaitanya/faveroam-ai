@@ -13,15 +13,17 @@ export default function DayOutPlan({
   passport,
   disabled,
   signedIn = false,
+  expanded,
 }: {
   passport: Passport;
   disabled: boolean;
   signedIn?: boolean;
+  expanded?: boolean;
 }) {
   const [choices, setChoices] = useState<Record<string, string>>({});
   const [omitted, setOmitted] = useState<Record<string, boolean>>({});
   const [status, setStatus] = useState("");
-  const [date, setDate] = useState(() => nextWeekend(passport.city));
+  const [date, setDate] = useState(() => cityDate(passport.city));
   const [saving, setSaving] = useState(false);
   const options = dayOutOptions(passport.cards, passport.city);
   const stops = dayOutStops.map((stop) => {
@@ -86,7 +88,7 @@ export default function DayOutPlan({
   }
 
   return (
-    <details className="secondary-reveal day-out-reveal">
+    <details className="secondary-reveal day-out-reveal" open={expanded}>
       <summary>Plan a day out in {passport.city}</summary>
       <div className="day-out-plan">
         <span className="micro-label">MAKE THE CITY YOURS</span>
@@ -116,7 +118,13 @@ export default function DayOutPlan({
             className="quiet-button"
             type="button"
             disabled={disabled || saving}
-            onClick={() => setDate(nextWeekend(passport.city))}
+            onClick={() => {
+              const weekend = nextWeekend(passport.city);
+              setDate(weekend);
+              setStatus(
+                `Your plan is set for ${new Date(`${weekend}T12:00:00Z`).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric", timeZone: "UTC" })}.`,
+              );
+            }}
           >
             Next weekend
           </button>

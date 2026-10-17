@@ -1,0 +1,341 @@
+/* Focused consumer workspace, floating concierge and editorial About page. */
+[hidden] {
+  display: none !important;
+}
+.progressive-app {
+  padding-bottom: 120px;
+}
+.account-dialog h2,
+.account-dialog h3,
+.account-library-dialog .saved-passport-list strong,
+.saved-plan h3,
+.plan-date strong,
+.journey-loading strong {
+  font-family: "Manrope", ui-sans-serif, system-ui, sans-serif;
+  font-weight: 650;
+}
+.progressive-app h1,
+.progressive-app h2,
+.progressive-app h3,
+.progressive-app h4,
+.about-page h1,
+.about-page h2 {
+  font-family: "Manrope", ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: -0.035em;
+  font-weight: 650;
+}
+.progressive-app p {
+  text-align: left;
+}
+.passport-cover {
+  background: linear-gradient(115deg, #123b56, #086b67);
+  border-color: #205a68;
+  color: #effffd;
+  padding: 32px;
+}
+.passport-cover h1 {
+  font-size: clamp(32px, 4vw, 52px);
+  line-height: 1.12;
+  color: #fff;
+}
+.passport-cover h1 em {
+  color: #a9f2db;
+  font-style: normal;
+}
+.passport-cover .micro-label,
+.passport-cover .cover-journey,
+.passport-cover .cover-copy > p {
+  color: #d4ecee;
+}
+.passport-cover .passport-taste-preview span {
+  color: #fff;
+  border-color: #ffffff40;
+  background: #ffffff12;
+}
+.passport-cover .cover-connection {
+  color: #fff;
+  border-color: #ffffff70;
+}
+.passport-cover .cover-art {
+  transform: scale(0.86);
+}
+.progressive-app .workspace-topbar {
+  background: #ffffffed;
+  border-color: var(--ui-border);
+}
+.progressive-app .passport-toolbar {
+  display: block;
+  min-width: 0;
+  margin-block: 24px;
+}
+.progressive-app .passport-toolbar {
+  position: sticky;
+  top: var(--header-height);
+  z-index: 20;
+  padding-block: 8px;
+  background: #edf3faf5;
+}
+.progressive-app .discovery-card .card-address,
+.progressive-app .discovery-card .card-description {
+  font-size: 14px;
+  line-height: 1.7;
+}
+.progressive-app .discovery-view-tabs {
+  display: flex;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  gap: 6px;
+  padding: 6px;
+  overflow-x: auto;
+  flex-wrap: nowrap;
+  background: #e1eaf4;
+  border: 1px solid #cddaea;
+  border-radius: 16px;
+  scrollbar-width: thin;
+}
+.progressive-app .discovery-view-tabs button {
+  flex: 1 0 auto;
+  min-height: 48px;
+  padding: 10px 18px;
+  white-space: nowrap;
+  border-radius: 11px;
+  font-size: 14px;
+  font-weight: 650;
+}
+.progressive-app .discovery-view-tabs button[aria-pressed="true"] {
+  background: var(--ui-action);
+  color: #fff;
+  box-shadow: 0 3px 8px #073e4720;
+}
+.progressive-app .assistant-launch {
+  position: fixed;
+  z-index: 35;
+  right: max(24px, env(safe-area-inset-right));
+  bottom: max(24px, env(safe-area-inset-bottom));
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 56px;
+  padding: 16px 22px;
+  width: auto;
+  border: 1px solid #0a8277;
+  border-radius: 999px;
+  background: #075f59;
+  color: #fff;
+  box-shadow: 0 10px 30px #123b5630;
+  font:
+    650 15px/1.4 "Manrope",
+    sans-serif;
+}
+.progressive-app .assistant-launch:hover {
+  background: #064e49;
+  box-shadow: 0 12px 34px #123b5640;
+}
+.workspace-panel {
+  margin-top: 24px;
+}
+.workspace-panel,
+.workspace-view-anchor {
+  scroll-margin-top: calc(var(--header-height) - 12px);
+}
+.progressive-app .workspace-panel > .secondary-reveal {
+  background: #fff;
+}
+.workspace-panel > details {
+  margin: 0;
+  padding: 28px;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-border);
+  border-radius: 24px;
+  box-shadow: var(--ui-shadow);
+}
+.workspace-panel > details > summary {
+  display: none;
+}
+.workspace-panel .intelligence-content {
+  padding: 0;
+}
+.progressive-app .intelligence-content h2,
+.progressive-app .day-out-plan h2,
+.progressive-app .connection-explorer h2 {
+  font-size: clamp(26px, 3vw, 36px);
+  line-height: 1.25;
+  margin-bottom: 16px;
+}
+.progressive-app .intelligence-content > p,
+.progressive-app .day-out-plan > p {
+  max-width: 70ch;
+  margin-block: 12px 20px;
+}
+.progressive-app .secondary-reveal .helper {
+  color: var(--ui-muted);
+  font-size: 14px;
+  line-height: 1.7;
+}
+.progressive-app select {
+  appearance: auto;
+  font-size: 16px;
+}
+.why-actions {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.progressive-app .why-section .why-evidence p {
+  font-size: 14px;
+}
+.workspace-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 48px;
+  border-top: 1px solid var(--ui-border);
+  padding-top: 20px;
+  color: var(--ui-muted);
+  font-size: 14px;
+}
+.workspace-footer nav {
+  display: flex;
+  gap: 12px;
+}
+.workspace-footer a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 8px;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.toast-notice {
+  bottom: calc(94px + env(safe-area-inset-bottom));
+}
+.about-page {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 24px 32px 56px;
+}
+.about-page > nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  min-height: 64px;
+}
+.about-page nav a {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  font-weight: 650;
+}
+.about-brand {
+  font-size: 24px;
+  gap: 6px;
+}
+.about-brand small {
+  font-size: 12px;
+}
+.about-hero {
+  margin: 36px 0 56px;
+  padding: clamp(28px, 6vw, 72px);
+  border-radius: 32px;
+  background: linear-gradient(120deg, #123b56, #086b67);
+  color: #fff;
+}
+.about-hero h1 {
+  font-size: clamp(40px, 6vw, 72px);
+  line-height: 1.1;
+  margin-block: 24px;
+}
+.about-hero .micro-label {
+  color: #bceee6;
+}
+.about-hero p {
+  max-width: 62ch;
+  font-size: 18px;
+  line-height: 1.8;
+  color: #d8eeee;
+}
+.about-page > section {
+  margin-block: 48px;
+}
+.about-page h2 {
+  font-size: clamp(24px, 3vw, 34px);
+  line-height: 1.3;
+  margin-bottom: 18px;
+}
+.about-page section p {
+  max-width: 75ch;
+  line-height: 1.85;
+  margin-block: 12px;
+}
+.about-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+}
+.about-steps article {
+  padding: 28px;
+  border: 1px solid var(--ui-border);
+  border-radius: 24px;
+  background: #fff;
+}
+.about-steps article > span {
+  display: inline-block;
+  margin-bottom: 24px;
+  color: var(--ui-action);
+  font-weight: 750;
+}
+.about-steps h2 {
+  font-size: 23px;
+}
+.about-cta {
+  padding: 36px;
+  border-radius: 24px;
+  background: #d8eee9;
+}
+.about-cta .primary-button {
+  display: inline-flex;
+  margin-top: 20px;
+  padding: 14px 22px;
+  background: var(--ui-action);
+  color: #fff;
+  border-radius: 14px;
+}
+@media (max-width: 640px) {
+  .passport-cover {
+    padding: 24px;
+  }
+  .workspace-panel > details {
+    padding: 20px;
+    border-radius: 20px;
+  }
+  .progressive-app .discovery-view-tabs button {
+    min-height: 44px;
+    padding-inline: 14px;
+    font-size: 13px;
+  }
+  .progressive-app .assistant-launch {
+    right: 16px;
+    bottom: max(16px, env(safe-area-inset-bottom));
+    min-height: 52px;
+    padding: 14px 18px;
+    font-size: 14px;
+  }
+  .about-page {
+    padding-inline: 20px;
+  }
+  .about-steps {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .about-hero {
+    margin-top: 24px;
+    border-radius: 24px;
+  }
+  .about-cta {
+    padding: 24px;
+  }
+}

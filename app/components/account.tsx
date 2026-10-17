@@ -82,7 +82,7 @@ export default function AccountControl({
   }
   const dialog = useRef<HTMLDialogElement>(null);
   const opener = useRef<HTMLElement | null>(null);
-  async function refresh() {
+  async function refresh(loadLibrary = false) {
     const epoch = ++authEpoch.current;
     try {
       const data = await request("/api/account");
@@ -96,7 +96,7 @@ export default function AccountControl({
       setAccount(data);
       onAccountChange?.(Boolean(data.user));
       accountChanged();
-      if (data.user) {
+      if (data.user && loadLibrary) {
         try {
           const list = await request("/api/account/passports");
           if (epoch === authEpoch.current) setEntries(list.passports);
@@ -107,7 +107,7 @@ export default function AccountControl({
             );
         }
         if (epoch === authEpoch.current) await refreshPlans();
-      } else {
+      } else if (!data.user) {
         setEntries([]);
         setPlans([]);
       }
@@ -133,9 +133,9 @@ export default function AccountControl({
     window.addEventListener("tastepassport:plans-updated", plansUpdated);
     const notice = new URLSearchParams(window.location.search).get("account");
     if (notice) {
-      setOpen(true);
+      if (notice !== "confirmed") setOpen(true);
       if (notice === "confirmed")
-        setMessage("Email verified. Your account is ready.");
+        showNotice("Email verified. Your account is ready.");
       if (notice === "retry")
         setMessage(
           "That confirmation link could not complete. Sign in or request a new recovery link.",
@@ -190,7 +190,7 @@ export default function AccountControl({
       setMessage(
         `Your latest ${passport.city} Passport is saved. It includes your My Vibe shortlist.`,
       );
-      await refresh();
+      await refresh(true);
       showNotice("Your Passport is saved.");
     } catch (e) {
       setMessage(e instanceof Error ? e.message : "Could not save.");
@@ -219,15 +219,18 @@ export default function AccountControl({
         setMessage("If an account exists, a recovery link is on its way.");
       else {
         setTab("login");
+        setOpen(false);
         const current = await refresh();
         if (current?.user) {
           setVerificationPending(false);
           setOpen(false);
           showNotice("Welcome back. Your saved Passports and plans are ready.");
-        } else
+        } else {
+          setOpen(true);
           setMessage(
             "Your sign-in completed. Please reopen your account to check the connection.",
           );
+        }
       }
     } catch (e) {
       setMessage(e instanceof Error ? e.message : "Account request failed.");
@@ -255,7 +258,7 @@ export default function AccountControl({
     setBusy(true);
     try {
       await request("/api/account/passports", { id }, "DELETE");
-      await refresh();
+      await refresh(true);
       setMessage("Saved Passport deleted.");
     } catch (e) {
       setMessage(e instanceof Error ? e.message : "Could not delete.");
@@ -336,7 +339,7 @@ export default function AccountControl({
           setVerificationPending(false);
           setLibraryTab("passports");
           setOpen(true);
-          if (account?.user) void refresh();
+          if (account?.user) void refresh(true);
         }}
       >
         {account?.user ? (

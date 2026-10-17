@@ -1,6 +1,5 @@
 "use client";
 import { useState } from "react";
-import EvidenceDetails from "./evidence";
 import { ResultMetrics, WhyEvidence } from "./intelligence-evidence";
 import { bridgeRoutes, sparseSections } from "../../src/passport/evidence";
 import type { Candidate, Card, Section } from "../../src/passport/model";
@@ -377,7 +376,6 @@ export function DiscoveryCard({
           <Icon name={card.section} size={14} />
           {card.section}
         </span>
-        <span className="card-type">{typeLabel(card)}</span>
       </div>
       <div className="discovery-title">
         <span className="card-cultural-mark" aria-hidden="true">
@@ -429,7 +427,6 @@ export function DiscoveryCard({
               <span key={name}>{name}</span>
             ))}
         </div>
-        <EvidenceDetails card={card} />
         <WhyEvidence card={card} session={session} />
       </details>
       <div className="feedback-actions">
