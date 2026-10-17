@@ -79,6 +79,72 @@
   font: inherit;
 }
 
+/* Style the opened picker as well as its trigger. Supporting browsers retain
+   native keyboard, typeahead, focus and form behavior. Older browsers keep the
+   accessible platform picker rather than an incomplete scripted replacement. */
+@supports (appearance: base-select) {
+  :is(.progressive-app, .account-dialog, .match-dialog) select,
+  :is(.progressive-app, .account-dialog, .match-dialog) select::picker(select) {
+    appearance: base-select;
+  }
+
+  :is(.progressive-app, .account-dialog, .match-dialog) select::picker(select) {
+    margin-block: 8px;
+    padding: 6px;
+    border: 1px solid var(--ui-border);
+    border-radius: 14px;
+    background: var(--ui-surface);
+    color: var(--ui-ink);
+    box-shadow: 0 16px 40px #17334824, 0 3px 8px #1733480c;
+    max-block-size: min(360px, 50dvh);
+    max-inline-size: calc(100vw - 32px);
+    overflow: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    font: 500 14px/1.5 "Manrope", ui-sans-serif, system-ui, sans-serif;
+  }
+
+  :is(.progressive-app, .account-dialog, .match-dialog) select::picker-icon {
+    display: none;
+  }
+
+  :is(.progressive-app, .account-dialog, .match-dialog) select option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-block-size: 44px;
+    padding: 10px 12px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--ui-ink);
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  :is(.progressive-app, .account-dialog, .match-dialog) select option:checked {
+    background: #e8f4ef;
+    color: #075f59;
+    font-weight: 700;
+  }
+
+  :is(.progressive-app, .account-dialog, .match-dialog) select option:is(:hover, :focus-visible) {
+    background: #edf3f9;
+    color: var(--ui-ink);
+    outline: 2px solid var(--ui-action);
+    outline-offset: -2px;
+  }
+
+  :is(.progressive-app, .account-dialog, .match-dialog) select option:disabled {
+    color: var(--ui-muted);
+    opacity: .65;
+  }
+
+  :is(.progressive-app, .account-dialog, .match-dialog) select option::checkmark {
+    color: var(--ui-action);
+  }
+}
+
 .progressive-app .field-with-icon select {
   border: 0;
   border-radius: 0;

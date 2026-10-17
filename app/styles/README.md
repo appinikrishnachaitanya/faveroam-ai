@@ -13,4 +13,6 @@
 
 Compound controls have one border owner: their wrapper. Their inner input/select has no border, outline or glow. Standalone fields use their own border. Keyboard focus remains visible through the wrapper border change; button/link focus rings are retained. Keep these rules in `controls.css` rather than adding competing focus rules elsewhere.
 
+Opened select menus use `appearance: base-select` and `::picker(select)` inside a feature query. This styles option rows, selection, scrolling and the popup surface in supporting browsers while preserving real select elements and React change handlers. Unsupported browsers retain the platform picker. Chromium 154 checks verified open-menu styles at 390/1280px and a real option click dispatching change; automated keyboard selection was not established in that headless check.
+
 The old global/component baselines remain and have not been represented as a complete CSS rewrite. When migrating an existing rule, remove the superseded declaration where practical. Avoid appending a new catch-all override file. Use the browser layout assertions to catch cascade changes at all supported widths.
