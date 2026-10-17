@@ -7,11 +7,11 @@ import './styles/navigation.css';
 import './styles/onboarding.css';
 import './styles/discoveries.css';
 import './styles/dialogs.css';
-import './styles/controls.css';
 import './styles/assistant.css';
 import './styles/library.css';
 import './styles/feedback.css';
 import './styles/intelligence.css';
+import './styles/controls.css';
 import './styles/workspace.css';
 export const metadata:Metadata={title:'TastePassport — Move anywhere. Keep your vibe.',description:'Turn your tastes into discoveries in a new city.'};
 export default function Layout({children}:{children:React.ReactNode}){return <html lang="en"><body>{children}</body></html>}

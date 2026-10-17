@@ -37,9 +37,6 @@
   max-width: 300px;
   margin-block: 22px;
 }
-.intelligence-content select {
-  appearance: auto;
-}
 .intelligence-modes {
   display: flex;
   flex-wrap: wrap;
