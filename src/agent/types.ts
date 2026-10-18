@@ -50,6 +50,8 @@ export interface AgentState {
   constraints: Constraint[];
   categoryConstraints: Partial<Record<Section, Constraint[]>>;
   categoryConcepts?: Partial<Record<Section, string[]>>;
+  activityGenres?: Partial<Record<Section, ("cinema" | "nightclub")[]>>;
+  outingActivities?: string[];
   cards: Card[];
   previous: Card[];
   savedCards?: Card[];
@@ -85,6 +87,8 @@ export interface AgentState {
     exclude?: boolean;
     remainingConcepts?: string[];
     remainingExcludeConcepts?: string[];
+    conceptSections?: Section[];
+    activityGenres?: Intent["activityGenres"];
   };
 }
 /** Fully initialized canonical state; AgentState also accepts legacy bootstrap fixtures. */

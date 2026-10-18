@@ -1,4 +1,8 @@
 /* Discoveries: shared TastePassport presentation. */
+.discovery-photo { width: calc(100% + 48px); margin: -24px -24px 20px; aspect-ratio: 16 / 10; border-radius: var(--ui-radius) var(--ui-radius) 0 0; overflow: hidden; background: #eee8c8; }
+.discovery-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.photo-placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: var(--ui-action); background: radial-gradient(circle at 60% 35%, #f9dda0, transparent 65%), #eef0d9; }
+.photo-placeholder span { font-size: 13px; font-weight: 600; }
 
 .mode-category {
   display: flex;
@@ -157,6 +161,7 @@
 }
 
 .progressive-app .discovery-grid {
+  grid-template-columns: repeat(3, minmax(0,1fr));
   gap: 20px;
 }
 
@@ -169,7 +174,7 @@
 }
 
 .progressive-app .discovery-card h4 {
-  font-size: clamp(23px, 2.1vw, 28px);
+  font-size: clamp(21px, 1.8vw, 25px);
   line-height: 1.2;
   overflow-wrap: anywhere;
 }

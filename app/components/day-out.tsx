@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { Passport } from "../../src/workspace/state";
 import {
   dayOutOptions,
@@ -28,7 +28,10 @@ export default function DayOutPlan({
   const [status, setStatus] = useState("");
   const [date, setDate] = useState(() => cityDate(passport.city));
   const [saving, setSaving] = useState(false);
-  const [activities, setActivities] = useState<string[]>(["Coffee", "Culture", "Eat"]);
+  const requestOrder = passport.session?.outingActivities?.filter(id=>outingActivities.some(a=>a.id===id));
+  const [activities, setActivities] = useState<string[]>(()=>requestOrder?.length ? requestOrder : ["Coffee","Culture","Eat"].filter(id=>dayOutOptions(passport.cards,passport.city).some(c=>activityMatches(c,id))));
+  const orderKey=requestOrder?.join(',') ?? '';
+  useEffect(()=>{if(orderKey)setActivities(orderKey.split(','));},[orderKey]);
   const options = dayOutOptions(passport.cards, passport.city);
   const stops = activities.map(id => ({ ...outingActivities.find(a => a.id === id)!, id })).map((stop) => {
     const pool = options.filter((card) => activityMatches(card, stop.id));

@@ -43,6 +43,8 @@ export function resetConversation(original: AgentState): TastePassportSession {
   state.relaxed = [];
   state.previous = [];
   state.queryPreferences = {};
+  state.activityGenres = {};
+  delete state.outingActivities;
   delete state.pending;
   delete state.intent;
   delete state.comparison;

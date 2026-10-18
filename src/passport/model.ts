@@ -1,6 +1,13 @@
 import { isObject } from "../qloo/types.ts";
 import type { Entity } from "../qloo/types.ts";
-export type Section = "Eat" | "Coffee" | "Culture" | "Lifestyle" | "Music";
+export const sectionTypes = {
+  Eat: "place", Coffee: "place", Culture: "place", Lifestyle: "place",
+  Music: "artist", Movies: "movie", Books: "book", Podcasts: "podcast",
+  Shows: "tv_show", Games: "video_game", Brands: "brand", People: "person",
+  Destinations: "destination",
+} as const;
+export type Section = keyof typeof sectionTypes;
+export const isPlaceSection = (section: Section) => sectionTypes[section] === "place";
 export interface Candidate {
   id: string;
   name: string;
@@ -18,7 +25,7 @@ export interface Card extends Candidate {
   trend?: import("../qloo/trending.ts").TrendResult;
   trendUnavailable?: boolean;
 }
-function resultBrand(card: Card, repeatedNames?: Map<string, number>) {
+export function resultBrand(card: Card, repeatedNames?: Map<string, number>) {
   const tags = card.evidence?.result.tags ?? [];
   const named = tags.find((tag) =>
     /brand|franchise|business:place:chain/i.test(
@@ -87,7 +94,7 @@ export function classify(e: Entity): Section | undefined {
   if (/restaurant|dining|cuisine|food|bistro|bakery|pizza/.test(tags))
     return "Eat";
   if (
-    /museum|gallery|theater|theatre|performing arts|concert|cinema|cultural|nightclub|night club/.test(
+    /museum|gallery|theater|theatre|performing arts|concert|cinema|cultural|nightclub|night club|live music|music venue/.test(
       tags,
     )
   )

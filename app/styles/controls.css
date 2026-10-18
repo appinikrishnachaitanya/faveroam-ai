@@ -52,22 +52,22 @@
   background-position: right 12px center;
   text-overflow: ellipsis;
   color-scheme: light;
-  box-shadow: 0 2px 0 #17334808;
+  box-shadow: 0 2px 0 #193e3108;
   transition: border-color .16s ease, box-shadow .16s ease, background-color .16s ease;
 }
 
 .progressive-app select:hover:not(:disabled),
 .account-dialog select:hover:not(:disabled),
 .match-dialog select:hover:not(:disabled) {
-  border-color: #94afc1;
-  background-color: #fbfdff;
+  border-color: #9baf7e;
+  background-color: #fffcef;
 }
 
 .progressive-app select:focus-visible,
 .account-dialog select:focus-visible,
 .match-dialog select:focus-visible {
   border-color: var(--ui-action);
-  box-shadow: 0 0 0 3px #075f5920;
+  box-shadow: 0 0 0 3px #1d513b20;
   outline: none;
 }
 
@@ -95,7 +95,7 @@
     border-radius: 14px;
     background: var(--ui-surface);
     color: var(--ui-ink);
-    box-shadow: 0 16px 40px #17334824, 0 3px 8px #1733480c;
+    box-shadow: 0 16px 40px #193e3124, 0 3px 8px #193e310c;
     max-block-size: min(360px, 50dvh);
     max-inline-size: calc(100vw - 32px);
     overflow: auto;
@@ -124,12 +124,12 @@
 
   :is(.progressive-app, .account-dialog, .match-dialog) select option:checked {
     background: #e8f4ef;
-    color: #075f59;
+    color: #1d513b;
     font-weight: 700;
   }
 
   :is(.progressive-app, .account-dialog, .match-dialog) select option:is(:hover, :focus-visible) {
-    background: #edf3f9;
+    background: #f3edcf;
     color: var(--ui-ink);
     outline: 2px solid var(--ui-action);
     outline-offset: -2px;

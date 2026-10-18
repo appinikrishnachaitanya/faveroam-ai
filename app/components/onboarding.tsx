@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import type { Candidate } from "../../src/passport/model";
+import type { Candidate, Section } from "../../src/passport/model";
 import type { Familiarity } from "../../src/passport/evidence";
 import type { Resolution } from "../../src/workspace/state";
 import { destinations, typeLabel } from "../../src/workspace/state";
@@ -45,6 +45,8 @@ export function MoveForm({
   onOrigin,
   onDraft,
   onSubmit,
+  activities = [],
+  onActivities,
 }: {
   city: string;
   origin: string;
@@ -54,6 +56,8 @@ export function MoveForm({
   onOrigin: (value: string) => void;
   onDraft: (values: string[]) => void;
   onSubmit: () => void;
+  activities?: Section[];
+  onActivities?: (values: Section[]) => void;
 }) {
   const [input, setInput] = useState("");
   const add = (text: string) => {
@@ -75,9 +79,9 @@ export function MoveForm({
           MAKE YOUR NEXT CHAPTER FEEL LIKE YOU
         </span>
         <h1 id="move-title">
-          Build your
+          Your taste.
           <br />
-          <em>TastePassport</em>
+          <em>A new city.</em>
         </h1>
         <p>Tell us where you’re moving and a few things you already love.</p>
         <div className="onboarding-story">
@@ -210,6 +214,21 @@ export function MoveForm({
               : " · Ready to discover"}
           </p>
         </div>
+        {onActivities && <fieldset className="activity-picker">
+          <legend>What would you like to discover?</legend>
+          <p className="helper">Choose up to five, or let your interests suggest a starting point.</p>
+          <div className="activity-options">
+            {(["Eat","Coffee","Culture","Music","Movies","Books","Podcasts","Lifestyle"] as Section[]).map(section=><button
+              key={section} type="button" aria-pressed={activities.includes(section)}
+              disabled={disabled || (!activities.includes(section) && activities.length >= 5)}
+              onClick={()=>onActivities(activities.includes(section) ? activities.filter(s=>s!==section) : [...activities,section])}
+            ><Icon name={section} size={16}/>{section === "Eat" ? "Dining" : section === "Culture" ? "Places & culture" : section}</button>)}
+          </div>
+          <details className="more-activities"><summary>More ways to explore</summary><div className="activity-options">
+            {(["Shows","Games","Destinations","Brands","People"] as Section[]).map(section=><button key={section} type="button" aria-pressed={activities.includes(section)} disabled={disabled || (!activities.includes(section) && activities.length>=5)} onClick={()=>onActivities(activities.includes(section)?activities.filter(s=>s!==section):[...activities,section])}><Icon name={section} size={16}/>{section}</button>)}
+          </div></details>
+          {!!activities.length && <p className="helper">Selected: {activities.map(s=>s==='Eat'?'Dining':s).join(', ')}</p>}
+        </fieldset>}
         <button
           className="primary-button build-map"
           type="submit"

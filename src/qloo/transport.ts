@@ -53,8 +53,10 @@ export function paced<T>(
   key: string,
   run: () => Promise<T>,
   ttl = 300_000,
+  signal?: AbortSignal,
 ): Promise<T> {
   const job = queue.then(async () => {
+    signal?.throwIfAborted();
     const hit = cache.get(key);
     if (hit && hit.until > Date.now()) {
       debugEvent("qloo.cache_hit");
@@ -63,6 +65,7 @@ export function paced<T>(
     await new Promise((resolve) =>
       setTimeout(resolve, Math.max(0, 800 - (Date.now() - last))),
     );
+    signal?.throwIfAborted();
     try {
       const value = await run();
       if (cache.size >= 100) cache.delete(cache.keys().next().value!);
@@ -73,5 +76,10 @@ export function paced<T>(
     }
   });
   queue = job.catch(() => undefined);
-  return job;
+  if (!signal) return job;
+  let abort: (()=>void) | undefined;
+  return Promise.race([job, new Promise<never>((_,reject)=>{
+    abort=()=>reject(signal.reason ?? Error("Qloo request cancelled"));
+    if(signal.aborted)abort();else signal.addEventListener("abort",abort,{once:true});
+  })]).finally(()=>{if(abort)signal.removeEventListener("abort",abort);});
 }

@@ -1,5 +1,8 @@
 /* Account navigation, verification and personal plan library. */
 .nav-label-short { display: none; }
+.reusable-tastes { margin-block: 20px; padding: 20px; border: 1px solid var(--ui-border); border-radius: 14px; background: var(--ui-surface); }
+.reusable-tastes p { margin-block: 8px; font-size: 14px; line-height: 1.6; }
+.reusable-tastes small { display: block; margin-top: 12px; color: var(--ui-muted); }
 .account-dialog { scrollbar-width: thin; }
 .account-library-dialog { width: min(840px, calc(100vw - 32px)); }
 .account-library-tabs { display: flex; gap: 6px; padding: 5px; margin: 18px 0 24px; border: 1px solid var(--ui-border); border-radius: 14px; background: var(--ui-tint); }

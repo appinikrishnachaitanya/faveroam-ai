@@ -173,6 +173,9 @@ await input("#origin", "Bengaluru");
 await input("#destination", "Toronto", "HTMLSelectElement");
 for (const taste of ["A.R. Rahman", "Interstellar", "Indian cuisine"])
   await clickText(taste);
+// Activities are now explicit; tastes alone must not force these chapters.
+for(const activity of ['Dining','Coffee','Music','Places & culture'])
+  await evaluate(`[...document.querySelectorAll('.activity-options button')].find(b=>b.textContent.trim()===${JSON.stringify(activity)}).click()`);
 assert.equal(
   await evaluate("document.querySelectorAll('.taste-chip').length"),
   3,
@@ -352,7 +355,7 @@ assert.equal(await evaluate("document.querySelector('.qloo-evidence')===null"),t
 await evaluate("document.querySelector('.why-section').open=false");
 await clickText('Your connections');
 assert.ok(
-  await evaluate("document.querySelectorAll('.bridge-route').length>0"),
+  await evaluate("document.querySelectorAll('.connection-routes button').length>0 && document.querySelectorAll('.connected-results li').length>0"),
 );
 await clickText('Discover');
 const first = await evaluate(
@@ -436,7 +439,7 @@ if (comparisonAvailable) {
   await evaluate("document.querySelector('.comparison-reveal').open=false");
 } else {
   console.log(
-    "Live comparison UNRUN: Gemini returned unavailable; comparison hidden and guided fallback retained.",
+    "Model-only comparison UNRUN: this production view hides the development-only comparison. Native Gemini acceptance is checked separately.",
   );
   assert.ok(
     !(await evaluate("Boolean(document.querySelector('.compare-control'))")),

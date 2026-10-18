@@ -50,7 +50,7 @@ export function constraintsFrom(text: string): Constraint[] {
   return values;
 }
 export function isConcept(text: string) {
-  return /^(?:biryani|indian(?: cuisine| food)?|specialty coffee|coffee|quiet (?:caf[eé]s?|bookstores?)|independent bookstores?|independent culture|cuisine|food|bookstores?)$/i.test(
+  return /^(?:(?:chicken|mutton|vegetable|hyderabadi)\s+biryani|biryani|\w+(?:\s+\w+)?\s+cuisine|indian(?: cuisine| food)?|specialty coffee|coffee|quiet (?:caf[eé]s?|bookstores?)|independent bookstores?|independent culture|cuisine|food|bookstores?)$/i.test(
     text.trim(),
   );
 }
@@ -67,17 +67,26 @@ export function interpret(text: string, fallback = "New York City"): Intent {
   const positive = text.replace(
     /\b(?:not|no|without)\s+(?:ordinary\s+)?restaurants?\b/gi,
     "",
-  );
+  ).replace(/\b(?:connected to|based on|inspired by|matching|using)\s+my\b[^.!?]*(?:tastes|interests|favorites)\b/gi, "");
   if (/\b(?:eat|dinner|lunch|breakfast|food|dining|restaurant|biryani|indian)\b/i.test(positive))
     sections.push("Eat");
-  if (/coffee|caf[eé]/i.test(text)) sections.push("Coffee");
-  if (/music|musical|concert/i.test(text)) sections.push("Music");
-  if (/cultur(?:e|al)|museum|gallery|film|\bmovies?\b|cinema|\bparty\b|nightclub/i.test(text))
+  if (/coffee|caf[eé]/i.test(positive)) sections.push("Coffee");
+  const screenContent = /(?:movies?|films?).*(?:to watch|recommendations?|suggestions?|stream)|(?:recommend|suggest|watch|stream).*(?:movies?|films?)/i.test(positive) && !/cinema|theat(?:er|re)|go.*movie/i.test(positive) && !(/dinner|party|nightlife|nightclub/i.test(positive) && /then|after|before/i.test(positive));
+  if (screenContent) sections.push("Movies");
+  if (/music|musical|artist|bands?/i.test(positive) && !/live music|music.friendly|concert/i.test(positive)) sections.push("Music");
+  if (/cultur(?:e|al)|\bart\b|museum|gallery|cinema|\bparty\b|nightclub|nightlife|concert|live music|music.friendly/i.test(positive) || (!screenContent && /\bmovies?\b|\bfilms?\b/i.test(positive)))
     sections.push("Culture");
-  if (/book|lifestyle|shop/i.test(text) && !/coffee\s+shops?/i.test(text))
+  if (/bookstore|book shop|lifestyle|shopping|boutique/i.test(positive) && !/coffee\s+shops?/i.test(positive))
     sections.push("Lifestyle");
-  const concepts = /indian|biryani/i.test(text)
-    ? [/biryani/i.test(text) ? (/chicken\s+biryani/i.test(text) ? "chicken biryani" : "biryani") : "Indian cuisine"]
+  if (/\bbooks?\b/i.test(positive) && !/bookstore|book shop|book\s+(?:a|the|my)\b/i.test(positive)) sections.push("Books");
+  if (/podcast/i.test(positive)) sections.push("Podcasts");
+  if (/tv shows?|television|series to watch/i.test(positive)) sections.push("Shows");
+  if (/video games?|games? to play/i.test(positive)) sections.push("Games");
+  if (/\bbrands?\b/i.test(positive)) sections.push("Brands");
+  if (/\bactors?|directors?|authors?|people\b/i.test(positive)) sections.push("People");
+  if (/destinations?|cities to visit|where to travel/i.test(positive)) sections.push("Destinations");
+  const concepts = /indian|biryani/i.test(positive)
+    ? [/biryani/i.test(positive) ? (/chicken\s+biryani/i.test(positive) ? "chicken biryani" : "biryani") : "Indian cuisine"]
     : [];
   if (
     /independent\s+(?:coffee\s+)?shops?|local\s+coffee|specialty\s+coffee/i.test(
@@ -91,8 +100,9 @@ export function interpret(text: string, fallback = "New York City"): Intent {
     )
       ? ["Starbucks", "coffee chain"]
       : [];
-  if (/\bThai\b/i.test(text)) concepts.push("Thai cuisine");
-  if (/\bvegetarian\b/i.test(text)) concepts.push("vegetarian");
+  if (/\bThai\b/i.test(positive)) concepts.push("Thai cuisine");
+  if (/\bvegetarian\b/i.test(positive)) concepts.push("vegetarian");
+  if (/live music|\bconcerts?\b/i.test(positive)) concepts.push("live music venue");
   if (
     !onboarding &&
     /show|find|want/i.test(text) &&
@@ -130,8 +140,8 @@ export function interpret(text: string, fallback = "New York City"): Intent {
     seeds: onboarding ? draft.tastes.map((s) => s.replace(/[.\s]+$/, "")) : [],
     concepts,
     activityGenres: [
-      ...(/\bmovies?\b|cinema/i.test(text) ? ["cinema" as const] : []),
-      ...(/\bparty\b|nightclub/i.test(text) ? ["nightclub" as const] : []),
+      ...(!screenContent && /\bmovies?\b|cinema/i.test(text) ? ["cinema" as const] : []),
+      ...(/\bparty\b|nightclub|nightlife/i.test(text) ? ["nightclub" as const] : []),
     ],
     excludeConcepts: /\bno seafood\b/i.test(text)
       ? ["seafood", ...excludeConcepts]

@@ -14,6 +14,13 @@ import type { AgentEvent } from "../../src/agent/types";
 import type { Phase, Resolution, Passport } from "../../src/workspace/state";
 export function Icon({ name, size = 18 }: { name: string; size?: number }) {
   const paths: Record<string, React.ReactNode> = {
+    Movies: <><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 4v16M17 4v16M3 9h4M3 15h4M17 9h4M17 15h4"/></>,
+    Books: <><path d="M12 5v16M3 4c4-1 6 0 9 2 3-2 5-3 9-2v15c-4-1-6 0-9 2-3-2-5-3-9-2Z"/></>,
+    Podcasts: <><rect x="8" y="2" width="8" height="13" rx="4"/><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3M8 22h8"/></>,
+    Shows: <><rect x="3" y="6" width="18" height="14" rx="2"/><path d="m8 2 4 4 4-4"/></>,
+    Games: <><path d="M7 7h10c4 0 7 12 3 13-2 0-3-4-5-4H9c-2 0-3 4-5 4C0 19 3 7 7 7ZM6 10v5M4 12h4M16 11h.01M19 14h.01"/></>,
+    People: <><circle cx="12" cy="7" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/></>,
+    Destinations: <><path d="m3 5 6-2 6 2 6-2v16l-6 2-6-2-6 2ZM9 3v16M15 5v16"/></>,
     star: (
       <>
         <path d="m12 2 2.3 6.5L21 11l-6.7 2.5L12 21l-2.3-7.5L3 11l6.7-2.5L12 2Z" />
@@ -351,6 +358,13 @@ export function TranslationMap({
 }
 
 export type Feedback = "like" | "dislike";
+function EntityPhoto({url,name,section}:{url?:string;name:string;section:Section}) {
+  const [failed,setFailed]=useState(false);
+  return <div className={`discovery-photo${!url || failed ? " photo-placeholder" : ""}`}>
+    {url && !failed ? <img src={url} alt={name} loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={()=>setFailed(true)}/>
+      : <><Icon name={section} size={44}/><span>{section === "Eat" ? "Dining discovery" : `${section} discovery`}</span></>}
+  </div>;
+}
 export function DiscoveryCard({
   session,
   card,
@@ -373,6 +387,7 @@ export function DiscoveryCard({
       data-entity-id={card.id}
       className={`discovery-card card-${card.section.toLowerCase()} ${feedback === "dislike" ? "muted-card" : ""}`}
     >
+      <EntityPhoto key={card.intelligence?.image ?? card.id} url={card.intelligence?.image} name={card.name} section={card.section}/>
       <div className="card-header">
         <span className="category-token">
           <Icon name={card.section} size={14} />
@@ -385,23 +400,10 @@ export function DiscoveryCard({
         </span>
         <h4>{card.name}</h4>
       </div>
-      {card.evidence && (
-        <p className="card-query-inputs">
-          {card.evidence.strategyNote?.startsWith("Broader local")
-            ? "Broader local suggestion"
-            : "Your interests were considered together"}{" "}
-          ·{" "}
-          {[
-            ...new Set(
-              card.evidence.inputs
-                .filter((i) => !i.name.startsWith("urn:"))
-                .map((i) => i.name),
-            ),
-          ]
-            .slice(0, 3)
-            .join(" + ")}
-        </p>
-      )}
+      {card.evidence && <p className="card-query-inputs">{(() => {
+        const facts=evidenceFacts(card);
+        return facts.find(f=>/helped shape/.test(f)) ?? facts.find(f=>/returned tags include/.test(f)) ?? facts.find(f=>/Listed as/.test(f)) ?? facts[0];
+      })()}</p>}
       {card.address && (
         <p className="card-address">
           <Icon name="pin" size={13} />

@@ -7,13 +7,18 @@ export async function findTags(
 ): Promise<Candidate[]> {
   if (!query.trim() || query.length > 100)
     throw Error("Invalid concept query.");
-  const b = await request(
+  let b = await request(
     "/v2/tags",
-    { "filter.query": query, take: "5" },
+    { "filter.query": query, "feature.typo_tolerance":"true", take: "5" },
     signal,
   );
-  const tags = isObject(b) && isObject(b.results) ? b.results.tags : undefined;
+  let tags = isObject(b) && isObject(b.results) ? b.results.tags : undefined;
   if (!Array.isArray(tags)) throw Error("Unexpected Qloo tags response.");
+  if (!tags.length) {
+    b=await request("/v2/tags",{"filter.query":query,"feature.semantic_search":"true",take:"5"},signal);
+    tags=isObject(b)&&isObject(b.results)?b.results.tags:undefined;
+    if(!Array.isArray(tags))throw Error("Unexpected Qloo tags response.");
+  }
   return tags
     .filter(isObject)
     .filter(

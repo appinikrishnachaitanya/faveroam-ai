@@ -3,6 +3,7 @@ import { useState } from "react";
 import type { Passport } from "../../src/workspace/state";
 import type { Candidate, Card, Section } from "../../src/passport/model";
 import { bridgeRoutes } from "../../src/passport/evidence";
+import { evidenceFacts } from "../../src/qloo/explanation";
 import { DiscoveryCard, Icon } from "./passport";
 import type { Feedback } from "./passport";
 export function PassportCover({
@@ -183,10 +184,10 @@ export function ConnectionExplorer({ passport, onExplore }: { passport: Passport
             {!!card.evidence?.result.tags.length && <div className="connection-result-tags" aria-label="Place details">{card.evidence.result.tags.slice(0, 3).map((tag) => <span key={tag.id}>{tag.name}</span>)}</div>}
             <details>
               <summary>How this was suggested</summary>
-              <p>
-                Suggested using the interests above together. We cannot measure
-                how much each individual interest contributed.
-              </p>
+              {(() => {
+                const facts=evidenceFacts(card).filter(f=>/helped shape|returned tags include/.test(f)).slice(0,2);
+                return facts.length ? facts.map(f=><p key={f}>{f}</p>) : <p>These interests were considered together. Individual contribution evidence was not returned for this suggestion.</p>;
+              })()}
               <small>Based on the interests shown above.</small>
               <small>
                 Recorded{" "}

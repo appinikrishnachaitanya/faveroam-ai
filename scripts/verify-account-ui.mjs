@@ -120,6 +120,7 @@ const passport = {
   agent: { sessionId: uuid, revision: 0, tags: [], constraints: [] },
 };
 let signedIn = false;
+let reusableProfile = null;
 let libraryReads = 0,
   budgetUpdates = 0;
 let plans = [];
@@ -202,15 +203,37 @@ ws.addEventListener("message", async (event) => {
           storage: true,
           user: signedIn ? { email: "protocol@example.test" } : null,
         };
-      else if (body.action === "register")
+      else if (body.action === "register") {
+        assert.equal(body.firstName,"Protocol");
+        assert.equal(body.lastName,"Tester");
         value = { signedIn: false, confirmationRequired: true };
+      }
       else if (body.action === "logout") {
         signedIn = false;
         value = { signedOut: true };
+      } else if (body.action === "change-password") {
+        assert.equal(body.currentPassword,"Protocol-only-1234");
+        assert.equal(body.password,"Updated-protocol-1234");
+        value={signedIn:true};
       } else {
         signedIn = true;
         value = { signedIn: true, confirmationRequired: false };
       }
+    } else if (path === "/api/account/preferences") {
+      if (request.method === "GET") value={profile:reusableProfile};
+      else if (body.action === "save") {
+        assert.equal(body.sessionId,uuid);
+        reusableProfile={version:1,selected:session.selected,tags:[],constraints:[],categoryConstraints:{},categoryTags:{},queryPreferences:{Eat:{priceMax:2}},discoveryMode:"familiar",categoryModes:{},hiddenCategories:[]};
+        value={saved:true,profile:reusableProfile};
+      } else if (body.action === "apply") {
+        assert.equal(body.city,"London");
+        assert.ok(reusableProfile);
+        const fresh=structuredClone(passport);
+        fresh.city="London";fresh.session.city="London";
+        fresh.cards.forEach(card=>card.evidence.destination="London");
+        fresh.session.cards=fresh.cards;
+        value={passport:fresh};
+      } else { reusableProfile=null;value={deleted:true}; }
     } else if (path === "/api/account/passports") {
       if (request.method === "GET") libraryReads++;
       value =
@@ -265,6 +288,11 @@ ws.addEventListener("message", async (event) => {
         })),
       };
     } else if (path === "/api/agent/intelligence") {
+      if (body.action === "analysis") {
+        value={analysis:body.kind === "taste" ? {kind:"taste",tags:[{id:"urn:tag:genre:media:fixture",name:"Fixture cultural theme"}],recordedAt:new Date().toISOString()}
+          : body.kind === "heatmap" ? {kind:"heatmap",points:[{latitude:43.65,longitude:-79.38,affinity:.9},{latitude:43.69,longitude:-79.42,affinity:.5},{latitude:43.61,longitude:-79.35,affinity:.7}],recordedAt:new Date().toISOString()}
+          : {kind:"demographics",records:[{id:session.selected[0].id,age:{'25_to_29':.2},gender:{female:-.1}}],recordedAt:new Date().toISOString()}};
+      } else {
       assert.equal(body.action, "together");
       assert.deepEqual(body.ids, ["partner-0", "partner-1", "partner-2"]);
       assert.equal(body.token, "protocol-only-token");
@@ -280,6 +308,7 @@ ws.addEventListener("message", async (event) => {
         cards,
         notice: "Protocol shared taste suggestions",
       };
+      }
     } else value = { deleted: true };
     await call("Fetch.fulfillRequest", {
       requestId,
@@ -327,6 +356,8 @@ assert.equal(
   "Account modal locks background scroll",
 );
 await textClick("Create account");
+await input('.account-dialog input[autocomplete="given-name"]', "Protocol");
+await input('.account-dialog input[autocomplete="family-name"]', "Tester");
 await input(".account-dialog input[type=email]", "protocol@example.test");
 await input(".account-dialog input[type=password]", "Protocol-only-1234");
 await evaluate(
@@ -382,6 +413,14 @@ assert.ok(
     "document.querySelector('[aria-label=\"My Saved Passports\"]')!==null && document.querySelector('.upcoming-launch')!==null",
   ),
 );
+await click(".account-launch");
+await wait("Boolean(document.querySelector('.saved-passport-list article'))");
+await textClick("Update password");
+await input('.account-dialog input[autocomplete="current-password"]', "Protocol-only-1234");
+await input('.account-dialog input[autocomplete="new-password"]', "Updated-protocol-1234");
+await evaluate(`(()=>{const fields=document.querySelectorAll('.account-dialog input[autocomplete="new-password"]');const field=fields[1];Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(field,'Updated-protocol-1234');field.dispatchEvent(new Event('input',{bubbles:true}));})()`);
+await evaluate("document.querySelector('.account-dialog form').requestSubmit()");
+await wait("!document.querySelector('.account-dialog[open]')");
 await click(".account-launch");
 await wait("Boolean(document.querySelector('.saved-passport-list article'))");
 await textClick("Open");
@@ -453,7 +492,26 @@ assert.ok(
     "document.querySelector('.common-tags').textContent.includes('Protocol common ground')",
   ),
 );
+await textClick("Why these suggestions");
+await textClick("Explore my taste connections");
+await wait("Boolean(document.querySelector('.taste-theme-list'))");
+assert.ok(await evaluate("document.querySelector('.taste-theme-list').textContent.includes('Fixture cultural theme')"));
+await textClick("Find areas to explore in Toronto");
+await wait("Boolean(document.querySelector('.affinity-plot'))");
+assert.equal(await evaluate("document.querySelectorAll('.affinity-plot circle').length"),3);
+await evaluate("document.querySelector('.audience-context').open=true");
+await textClick("Show audience context");
+await wait("Boolean(document.querySelector('.audience-values'))");
+for(const width of [320,390,1440]) {
+  await call("Emulation.setDeviceMetricsOverride",{width,height:900,deviceScaleFactor:1,mobile:width<768});
+  assert.equal(await evaluate("document.documentElement.scrollWidth>innerWidth"),false,`Analysis UI overflow at ${width}`);
+}
+await textClick("Preferences & Together");
 await evaluate("document.querySelector('.advanced-taste-filters').open=true");
+await input('.advanced-taste-filters input','Fixture unsaved area');
+await input('.intelligence-section select','Coffee','HTMLSelectElement');
+assert.equal(await evaluate("document.querySelector('.advanced-taste-filters input').value"),'','Unsaved dining geography must not leak into coffee');
+await input('.intelligence-section select','Eat','HTMLSelectElement');
 for (const width of [320, 390, 768, 1440]) {
   await call("Emulation.setDeviceMetricsOverride", {
     width,
@@ -576,6 +634,15 @@ await wait(
   "!document.querySelector('#conversation-input').disabled && ![...document.querySelectorAll('#taste-concierge button')].some(b=>b.textContent.includes('Retry last refinement'))",
 );
 await click('[aria-label="Close Taste Concierge"]');
+await textClick("Preferences & Together");
+await textClick("Save my tastes");
+await wait("[...document.querySelectorAll('button')].some(b=>b.textContent.includes('Update saved tastes'))");
+await click('[aria-label="Start a new Passport"]');
+await wait("Boolean(document.querySelector('#destination'))");
+await input("#destination","London","HTMLSelectElement");
+await textClick("Use my tastes in London");
+await wait("Boolean(document.querySelector('.passport-cover')) && document.querySelector('.passport-cover').textContent.includes('London')");
+assert.ok(await evaluate("document.querySelector('#passport-content').textContent.includes('Fresh discoveries using your saved tastes')"),"Saved tastes apply to a different city without retyping preferences");
 await click(".signout-button");
 await wait(
   "!document.querySelector('.signout-button') && !document.querySelector('.upcoming-launch') && !document.querySelector('.passport-cover')",
@@ -602,5 +669,5 @@ await call("Fetch.disable");
 ws.close();
 if (failure) throw failure;
 console.log(
-  "UI contract PASS (mocked APIs, including provider error, malformed response, deadline, cancellation and retry): no sign-in library flash, automatic budget updates, next-weekend date selection, focused views, floating assistant, Together, saved plans/calendar, responsive About and self-hosted font. Live providers remain separate acceptance.",
+  "UI contract PASS (mocked APIs): registration names, password change, reusable tastes across cities, no sign-in library flash, budget updates, planner reordering, Together, saved plans/calendar, provider failure/cancellation/retry and responsive containment. Live providers remain separate acceptance.",
 );

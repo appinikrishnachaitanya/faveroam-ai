@@ -22,6 +22,8 @@ export function passportSnapshot(original: AgentState) {
     constraints: s.constraints,
     categoryConstraints: s.categoryConstraints,
     categoryConcepts: s.categoryConcepts,
+    activityGenres: s.activityGenres,
+    outingActivities: s.outingActivities,
     feedback: s.feedback,
     activeCategories: s.activeCategories,
     hiddenCategories: s.hiddenCategories,
@@ -48,7 +50,7 @@ export function restoreSnapshot(value: unknown) {
     v.selected.length < 3 ||
     v.selected.length > 5 ||
     !Array.isArray(v.cards) ||
-    v.cards.length > 120 ||
+    v.cards.length > 300 ||
     !Array.isArray(v.savedCards) ||
     v.savedCards.length > 100
   )

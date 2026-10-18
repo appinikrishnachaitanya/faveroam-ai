@@ -4,6 +4,7 @@ import type { Entity } from "./types.ts";
 export function verifyResult(entity: Entity, params: Record<string, string>) {
   const m = normalizeEntity(entity),
     unverified: string[] = [];
+  let eligible = true;
   const values: Record<string, number | undefined> = {
     "filter.price_level": m.commercial.priceLevel,
     "filter.popularity": m.quality.popularity,
@@ -17,7 +18,7 @@ export function verifyResult(entity: Entity, params: Record<string, string>) {
     const root = parameter.replace(/\.(min|max)$/, "");
     if (root in values && /\.(min|max)$/.test(parameter)) {
       const value = values[root];
-      if (value === undefined) unverified.push(parameter);
+      if (value === undefined) { unverified.push(parameter); eligible = false; }
       else if (
         parameter.endsWith(".min")
           ? value < Number(bound)
@@ -25,17 +26,22 @@ export function verifyResult(entity: Entity, params: Record<string, string>) {
       )
         return { eligible: false, unverified };
     }
+    if (parameter === "filter.exists") {
+      if (bound.split(",").some(field=>field === "properties.image" ? !m.image : field === "properties.description" ? !m.description : true)) eligible=false;
+    }
     if (
       [
         "filter.exclude.location.query",
         "filter.location.query",
+        "filter.location",
         "diversify.by",
         "filter.external.exists",
         "filter.tags",
         "filter.exclude.tags",
+        "filter.exists",
       ].includes(parameter)
     )
       unverified.push(parameter);
   }
-  return { eligible: true, unverified };
+  return { eligible, unverified };
 }

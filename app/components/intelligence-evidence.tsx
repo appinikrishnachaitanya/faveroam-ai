@@ -4,8 +4,7 @@ import type { Card } from "../../src/passport/model";
 import type { TasteResult } from "../../src/qloo/normalizer";
 import { priceLabel } from "../../src/passport/pricing";
 export function ResultMetrics({ card }: { card: Card }) {
-  const m = card.intelligence,
-    point = card.trend?.points.at(-1);
+  const m = card.intelligence;
   if (
     m?.quality.businessRating === undefined &&
     !priceLabel(m?.commercial.priceLevel) &&
@@ -51,7 +50,6 @@ export function WhyEvidence({
   const [error, setError] = useState("");
   const [explanation, setExplanation] = useState<string[]>([]);
   const m = card.intelligence,
-    point = card.trend?.points.at(-1),
     inputs = card.evidence?.inputs ?? [];
   async function more() {
     if (!session) return;
@@ -169,6 +167,7 @@ export function WhyEvidence({
           suggestion. Your other preferences were kept.
         </p>
       )}
+      {!!card.evidence?.diagnostics?.unverified?.length && <p className="helper">Some preferences cannot be independently checked from this listing. Verify important requirements with the venue.</p>}
       {m?.commercial.priceLevel !== undefined && (
         <p className="helper">
           Budget categories are relative. Check current menus and prices before

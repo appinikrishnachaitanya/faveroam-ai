@@ -6,6 +6,7 @@ import type { Constraint } from "../../../src/agent/types.ts";
 import { QlooError } from "../../../src/qloo/client.ts";
 import { validDestination } from "../../../src/workspace/location";
 import { supportedCity } from "../../../src/workspace/state";
+import { sectionTypes, type Section } from "../../../src/passport/model";
 async function handlePOST(request: Request) {
   try {
     const raw = await request.text();
@@ -34,8 +35,11 @@ async function handlePOST(request: Request) {
           ].includes(String(c)),
         )
       : [];
-    const result = await passport(supportedCity(b.city)!, b.token, b.ids, constraints);
+    if (b.activities !== undefined && (!Array.isArray(b.activities) || b.activities.length > 5 || b.activities.some((s: unknown)=>typeof s !== "string" || !Object.hasOwn(sectionTypes,s))))
+      throw new QlooError("Choose up to five supported activities.",400);
+    const result = await passport(supportedCity(b.city)!, b.token, b.ids, constraints, b.activities as Section[] | undefined);
     const state = createSession(result, constraints);
+    state.activeCategories = result.requestedActivities;
     if (Array.isArray(b.history))
       state.history = b.history
         .filter(

@@ -55,6 +55,7 @@ export const sectionOrder: Section[] = [
   "Music",
   "Culture",
   "Lifestyle",
+  "Movies", "Books", "Podcasts", "Shows", "Games", "Brands", "People", "Destinations",
 ];
 /** Deliberately deterministic, editable extraction. No LLM or inferred interests.
  * Commas/newlines separate tastes; a final "and" is recognized. Users review
@@ -126,7 +127,7 @@ export function activities(
   for (const signal of signals)
     rows.push({ label: `Confirmed ${signal.name}`, state: "complete" });
   rows.push({
-    label: `Explore ${city} places & music`,
+    label: `Explore ${city} using your tastes and activities`,
     state:
       phase === "exploring"
         ? "active"

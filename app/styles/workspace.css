@@ -1,7 +1,7 @@
 /* Focused consumer workspace, floating concierge and editorial About page. */
 .shortlist-choice { min-width: 0; display: flex; flex-direction: column; gap: 10px; }
 .shortlist-choice > .discovery-card { flex: 1; }
-.shortlist-label { padding: 12px 16px; border-radius: 12px; background: #e8f4ef; color: #075f59; font-size: 14px; font-weight: 700; }
+.shortlist-label { padding: 12px 16px; border-radius: 12px; background: #e8f4ef; color: #1d513b; font-size: 14px; font-weight: 700; }
 .shortlist-label small { display: block; font-size: 12px; font-weight: 500; line-height: 1.5; margin-top: 4px; color: var(--ui-muted); }
 .outing-activities { display: flex; flex-wrap: wrap; gap: 10px; border: 1px solid var(--ui-border); border-radius: 14px; padding: 16px; margin: 20px 0; }
 .outing-activities legend { font-weight: 650; padding-inline: 6px; }
@@ -37,9 +37,9 @@
   text-align: left;
 }
 .passport-cover {
-  background: linear-gradient(115deg, #123b56, #086b67);
-  border-color: #205a68;
-  color: #effffd;
+  background: linear-gradient(115deg, #214b36, #316447);
+  border-color: #476744;
+  color: #fff9df;
   padding: 32px;
 }
 .passport-cover h1 {
@@ -48,13 +48,13 @@
   color: #fff;
 }
 .passport-cover h1 em {
-  color: #a9f2db;
+  color: #f5d96c;
   font-style: normal;
 }
 .passport-cover .micro-label,
 .passport-cover .cover-journey,
 .passport-cover .cover-copy > p {
-  color: #d4ecee;
+  color: #e9edcf;
 }
 .passport-cover .passport-taste-preview span {
   color: #fff;
@@ -69,7 +69,7 @@
   transform: scale(0.86);
 }
 .progressive-app .workspace-topbar {
-  background: #ffffffed;
+  background: #fffdf3ed;
   border-color: var(--ui-border);
 }
 .progressive-app .passport-toolbar {
@@ -80,7 +80,7 @@
 .progressive-app .passport-toolbar {
   position: static;
   padding-block: 8px;
-  background: #edf3faf5;
+  background: #faf5dff5;
 }
 .progressive-app .discovery-card .card-address,
 .progressive-app .discovery-card .card-description {
@@ -96,8 +96,8 @@
   padding: 6px;
   overflow-x: auto;
   flex-wrap: nowrap;
-  background: #e1eaf4;
-  border: 1px solid #cddaea;
+  background: #f0e8c7;
+  border: 1px solid #d9d4b3;
   border-radius: 16px;
   scrollbar-width: thin;
 }
@@ -129,16 +129,16 @@
   width: auto;
   border: 1px solid #0a8277;
   border-radius: 999px;
-  background: #075f59;
+  background: #1d513b;
   color: #fff;
-  box-shadow: 0 10px 30px #123b5630;
+  box-shadow: 0 10px 30px #214b3630;
   font:
     650 15px/1.4 "Manrope",
     sans-serif;
 }
 .progressive-app .assistant-launch:hover {
-  background: #064e49;
-  box-shadow: 0 12px 34px #123b5640;
+  background: #143e2c;
+  box-shadow: 0 12px 34px #214b3640;
 }
 
 /* The destination picker already has a pin icon; keep one dropdown affordance. */
@@ -256,7 +256,7 @@
   margin: 36px 0 56px;
   padding: clamp(28px, 6vw, 72px);
   border-radius: 32px;
-  background: linear-gradient(120deg, #123b56, #086b67);
+  background: linear-gradient(120deg, #214b36, #316447);
   color: #fff;
 }
 .about-hero h1 {
@@ -357,23 +357,23 @@
 /* Result navigation remains legible on both pale surfaces and selected tabs. */
 .workspace-tabs button,
 .concierge-tabs button {
-  color: #243c50;
+  color: var(--ui-ink);
 }
 .workspace-tabs button[aria-selected="true"],
 .concierge-tabs button[aria-selected="true"] {
-  background: #123b4d;
+  background: var(--ui-action);
   color: #ffffff;
 }
 .workspace-tabs button:focus-visible,
 .concierge-tabs button:focus-visible {
-  outline: 3px solid #087c78;
+  outline: 3px solid #486d3e;
   outline-offset: 3px;
 }
 
 .progressive-app .discovery-view-tabs button {
-  color: #243c50;
+  color: var(--ui-ink);
 }
 .progressive-app .discovery-view-tabs button[aria-pressed="true"] {
   color: #fff;
-  background: #123b4d;
+  background: var(--ui-action);
 }

@@ -2,9 +2,11 @@
 
 TastePassport keeps its existing product and uses Qloo for discovery, ranking, constraints, returned contribution evidence and multi-person taste analysis. Gemini extracts partial query preferences through native function calling and selects grounded explanation facts. It does not generate replacement venues or metrics.
 
+Current implementation and acceptance: [2026-10-18 accuracy and Forest & Butter pass](ACCURACY_AND_FOREST_PASS.md). Earlier counts below describe the original upgrade, not the current complete suite.
+
 ## Architecture and changed files
 
-- `src/qloo/query-plan.ts`, `capabilities.ts`, `verify-result.ts`: one parameter mapper and entity-aware validator, based on the official entity-type guide inspected 2026-10-17. Legacy callers also pass through validation before Insights network requests. Known returned violations of price, rating or popularity constraints are rejected; missing metadata is disclosed as unverified.
+- `src/qloo/query-plan.ts`, `capabilities.ts`, `verify-result.ts`: parameter mapper and entity-aware validation reconciled with the live reference on 2026-10-18. Legacy callers also pass through validation. Explicit numeric limits reject missing and violating values; other unverifiable requirements remain disclosed. Special analysis collections have separate parsers in `analysis.ts`.
 - `src/qloo/client.ts`, `transport.ts`: server requests on the existing secure gateway, bounded pacing, private TTL caches (lookup: one hour; Insights/Compare: five minutes; trends: one minute), safe endpoint/count logging and optional private diagnostics.
 - `src/qloo/lookups.ts`, `compare.ts`, `trending.ts`, `normalizer.ts`, `enrichment.ts`, `explanation.ts`, `diagnostics.ts`: lookup, normalization, comparison, historical trend enrichment and grounded evidence helpers. Raw Insights responses are retained only in a bounded, private development inspector; they are never placed in account snapshots or this repository.
 - `src/agent/{provider,intent,orchestrator,runtime,session,types,debug,harness}.ts`: native function-call query preferences, per-chapter patches, confirmed negative concepts, sequential concept confirmation, optional enrichment, preserved MCP ranking/tag workflows and guided fallback.
@@ -19,7 +21,7 @@ Existing named-entity confirmation, cuisine/semantic confirmation, strict destin
 
 ## Product flows
 
-Open **Preferences & Together** in the workspace navigation. Choose a chapter and a discovery style, optionally set budget/business rating, then Update this chapter. Location exclusions, provider listings and Tripadvisor review-count filters are under Location and more preferences. Hidden gems requests quality ranking and popularity below the 75th percentile; it does not promise uncrowded or non-touristy places. Safe bets requests quality ranking and business ratings of at least 4/5. Surprise me uses the existing soft-signal exploration strategy and documented city diversification, preserving hard filters and cultural anchors.
+Open **Preferences & Together** in the workspace navigation. Choose a chapter and a discovery style, optionally set budget/business rating, then Update this chapter. Location exclusions, provider listings and Tripadvisor review-count filters are under Location and more preferences. Hidden gems requests quality ranking and popularity below the 75th percentile; it does not promise uncrowded or non-touristy places. Safe bets requests quality ranking and business ratings of at least 4/5. Surprise me uses soft-signal exploration and documented content weighting, preserving hard filters and cultural anchors without imposing a per-city result cap.
 
 Trending for you first requests Qloo Insights with trend bias. It preserves Qloo ordering, then requests historical observations for up to three returned entities. Optional enrichment has a separate eight-second total deadline; missing, failed or empty history cannot discard successful recommendations. No invented momentum score or local reranking is used.
 
@@ -41,7 +43,7 @@ Follow-ups patch per-chapter query state: “Make it cheaper” retains the prev
 | `/v2/analysis/compare` | Implemented | Together with real shared-tag output feeding Insights |
 | `/v2/trending` | Partially implemented | Consumer enrichment implemented; live place request returned HTTP 400, artist/movie requests returned empty histories |
 
-No legacy `/recs` or `/recommendations` calls were added. Audience/heatmap output modes, external-ID input entry and other unrelated product experiences are not implemented just to increase endpoint count.
+No legacy `/recs` or `/recommendations` calls were added. On-demand `urn:tag`, `urn:heatmap` and `urn:demographics` modes now use Insights with separate schemas. External-ID input entry remains outside the consumer workflow.
 
 ## Insights capability coverage
 
@@ -50,7 +52,7 @@ No legacy `/recs` or `/recommendations` calls were added. Audience/heatmap outpu
 | Entity signals | Implemented; resolved UUIDs only |
 | Tag signals | Implemented; returned/confirmed tag IDs |
 | Price | Implemented; 1–4 min/max; natural-language and UI budget mapping |
-| Qloo rating | Implemented in query layer for film/TV types; rejected for place/artist output. Product chapters still output places/artists. |
+| Qloo rating | Implemented for film/TV types; rejected for place/artist output. Requested content chapters now route to their corresponding entity types. |
 | Business rating | Implemented separately for places; UI minimum and query min/max |
 | Tripadvisor | Implemented place rating/review-count min/max mapping; review-count UI. Missing result metrics are omitted and marked unverifiable. |
 | Resy | Provider-presence filter implemented. Rating/count/party filters deliberately dropped: official general reference and entity-type guide disagree on their names. No reservation functionality. |
@@ -59,10 +61,10 @@ No legacy `/recs` or `/recommendations` calls were added. Audience/heatmap outpu
 | Trend bias | Implemented through Qloo ranking; historical availability is separate |
 | Content-based bias | Not implemented: `bias.content_based` is absent from the inspected official parameter reference. Requested value produces a dropped-parameter diagnostic; exploration uses the supported existing strategy. |
 | Explainability | Implemented; observed `query.explainability["signal.interests.entities"]` contribution entries. Aggregate effects are retained only in private raw inspection, never substituted for per-result contributions. |
-| Geography | Named locality/radius, country and region mapping, strict city checks, named location exclusions and query-layer city/metro diversification. Locality radius pads boundaries; it is not a guarantee of walking distance from a landmark. Unverified metro-filter names are dropped. |
+| Geography | Named locality/radius, country and region mapping, strict city checks, exclusions and city/metro diversification. Metro uses documented `filter.location.metro`. Heatmap actions use explicit WKT points; locality radius otherwise pads boundaries and does not establish walking distance. |
 | Exclusions | Dismissed entity IDs, confirmed negative tags and named location exclusions |
 | Tag operators | Union/intersection mapped distinctly; confirmed multiple concepts supported. A union restaurant query omits the generic restaurant tag from the OR list and retains server-side restaurant classification. |
-| Existence filtering | Required image/description filtering is not documented under `filter.properties.exists`; requested controls are reported as dropped. Missing card fields remain optional. |
+| Existence filtering | Uses documented `filter.exists` for image or description; observable missing properties are rejected when required. Photos remain optional otherwise. |
 | External-provider filtering | Implemented documented Resy/Michelin/Tablet presence; no claim of reservations, opening hours or present availability |
 | Diversification | Implemented documented city/metro fields; unsupported category fields are dropped. Single-city diversification does not create geographic coverage outside the chosen destination. |
 
@@ -89,7 +91,7 @@ Live numerical effectiveness of every optional filter (especially provider listi
 ### Manual checks on Railway
 
 1. Build a Passport with confirmed artists, films and a cuisine. Open a card's Why section and inspect actual contribution/rating/price fields.
-2. Set a dining budget and business rating. Confirm returned known values satisfy the limits; missing evidence must be described as unverified.
+2. Set a dining budget and business rating. Confirm every retained result has known values satisfying explicit limits; unknown numeric values must not count as eligible.
 3. Ask for a cheaper follow-up, then trending. Confirm price/area persist and missing history has no momentum claim.
 4. Open Together, confirm three distinct partner matches and find common ground. Check shared tags and recommendations; original Passport and saved plans must remain intact.
 5. Ask to exclude seafood and confirm the returned concept. Try a named area exclusion. Verify request receipts and retained constraints; if no result fits, old discoveries remain.

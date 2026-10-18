@@ -6,6 +6,7 @@ import { compareProfiles } from "../src/qloo/compare.ts";
 import { trending } from "../src/qloo/trending.ts";
 import { buildQuery } from "../src/qloo/query-plan.ts";
 import { normalizeEntity } from "../src/qloo/normalizer.ts";
+import { analyze } from "../src/qloo/analysis.ts";
 if (!process.env.QLOO_API_KEY) {
   console.log("Live Qloo intelligence UNRUN: QLOO_API_KEY is absent.");
   process.exitCode = 2;
@@ -51,6 +52,12 @@ if (!process.env.QLOO_API_KEY) {
       [film.entity_id],
       [partner.entity_id],
     );
+    for (const kind of ["taste","heatmap","demographics"] as const) {
+      const data=await analyze(kind,{entities:[artist.entity_id],tags:[]},"New York City",AbortSignal.timeout(25000));
+      const count=data.kind === "taste" ? data.tags.length : data.kind === "heatmap" ? data.points.length : data.records.length;
+      assert.ok(count>0,`${kind} should return observed analysis data`);
+      console.log(`PASS ${kind} Insights: ${count} parsed records; no entity parser used.`);
+    }
     assert.ok(comparison.shared.length);
     console.log(
       `PASS /v2/analysis/compare: ${comparison.shared.length} shared tags.`,

@@ -17,6 +17,8 @@ import {
 } from "./intent.ts";
 import { tagCandidates } from "./validation.ts";
 import { sectionOrder } from "../workspace/state.ts";
+import { conceptSections } from "../passport/routing.ts";
+import { sectionTypes } from "../passport/model.ts";
 import { isObject } from "../qloo/types.ts";
 import type { Card, Section } from "../passport/model.ts";
 import type {
@@ -69,8 +71,7 @@ function conceptAlreadyApplied(
     const current = conceptKey(`${tag.name} ${tag.detail}`);
     return (
       current.includes(wanted) ||
-      wanted.includes(conceptKey(tag.name)) ||
-      words.every((word) => current.includes(word))
+      (words.length > 0 && words.every((word) => current.includes(word)))
     );
   });
 }
@@ -283,7 +284,7 @@ export async function runTurn(
           ],
         };
     }
-    for (const section of pending.sections) {
+    for (const section of pending.conceptSections ?? pending.sections) {
       if (pending.exclude) continue;
       const replacesCuisine =
         section === "Eat" &&
@@ -311,6 +312,7 @@ export async function runTurn(
       sections: pending.sections,
       constraints: pending.constraints,
       excludeConcepts: pending.remainingExcludeConcepts,
+      activityGenres: pending.activityGenres,
       strategy: pending.strategy ?? "discover",
     };
     rememberedRank = Boolean(pending.rankMcp);
@@ -342,10 +344,13 @@ export async function runTurn(
   // Excluding a venue type is not permission to hide its whole chapter.
   if (input.message) {
     const explicit = interpret(input.message, state.city);
-    if (explicit.kind === "refine" && (explicit.constraints.length || explicit.excludeConcepts?.length)) {
+    if(explicit.kind === "refine" && explicit.sections.length)
+      intent.sections = explicit.sections;
+    if (explicit.kind === "refine" && (explicit.constraints.length || explicit.excludeConcepts?.length || explicit.concepts.length)) {
       intent.kind = "refine";
       intent.constraints = [...new Set([...intent.constraints, ...explicit.constraints])];
       if (!intent.sections.length) intent.sections = explicit.sections;
+      if (explicit.concepts.length) intent.concepts = [...new Set([...explicit.concepts,...intent.concepts])];
     }
     if (explicit.excludeConcepts?.length)
       intent.excludeConcepts = [...new Set([...(intent.excludeConcepts ?? []), ...explicit.excludeConcepts])];
@@ -405,10 +410,29 @@ export async function runTurn(
     if (!intent.concepts.length && targets.length === 1)
       intent.concepts = [...(state.categoryConcepts[targets[0]] ?? [])];
     for (const section of targets)
-      if (intent.concepts.length)
-        state.categoryConcepts[section] = [...intent.concepts];
+      if (intent.concepts.some(concept=>conceptSections(concept, targets).includes(section)))
+        state.categoryConcepts[section] = intent.concepts.filter(concept=>conceptSections(concept, targets).includes(section));
   }
   state.intent = { ...intent, sections: targets };
+  if (intent.activityGenres?.length) {
+    state.activityGenres ??= {};
+    state.activityGenres.Culture = intent.activityGenres;
+    delete state.categoryConcepts.Culture;
+    const venueGenre=(id:string)=>/^urn:tag:(?:genre|category):place:/.test(id);
+    state.categoryTags.Culture=(state.categoryTags.Culture ?? []).filter(id=>!venueGenre(id));
+    if(state.queryPreferences?.Culture?.includeTags)
+      state.queryPreferences.Culture.includeTags=state.queryPreferences.Culture.includeTags.filter(id=>!venueGenre(id));
+    if(input.message) {
+      state.outingActivities = [
+        {id:"Coffee",index:input.message.search(/coffee|caf[eé]/i)},
+        {id:"Cinema",index:input.message.search(/cinema|movies?/i)},
+        {id:"Eat",index:input.message.search(/dinner|lunch|breakfast|\beat\b|biryani|restaurant/i)},
+        {id:"Nightlife",index:input.message.search(/party|nightclub|nightlife/i)},
+      ].filter(a=>a.index>=0).sort((a,b)=>a.index-b.index).map(a=>a.id);
+    }
+  } else if(input.message && targets.includes("Culture") && intent.concepts.some(concept=>conceptSections(concept,targets).includes("Culture"))) {
+    if(state.activityGenres)delete state.activityGenres.Culture;
+  }
   state.queryPreferences ??= {};
   if (input.message && intent.constraints.includes("expensive") && intent.query?.priceMax === undefined) {
     for (const section of targets) {
@@ -498,7 +522,7 @@ export async function runTurn(
   ) {
     try {
       tools = (await deps.tools()).filter((t) =>
-        ["qloo_find_tags", "qloo_rank"].includes(t.name),
+        t.name === "qloo_find_tags" || (t.name === "qloo_rank" && intent.strategy === "rank" && state.cards.some(card=>targets.includes(card.section))),
       );
       modelChoices = await deps.provider.choose(
         input.message ?? "",
@@ -524,24 +548,19 @@ export async function runTurn(
     !concepts.some((c) => /quiet/i.test(c))
   )
     concepts.push("quiet");
-  if (mode === "model-mcp")
-    for (const choice of modelChoices.filter(
-      (c) => c.name === "qloo_find_tags",
-    )) {
-      const q = choice.arguments.query;
-      if (typeof q !== "string") continue;
-      culturalText(q, 100);
-      if (!concepts.includes(q)) concepts.push(q);
-    }
+  // Tool selection must not introduce a second, reworded concept after the
+  // user confirms the original one. Intent is the source of requested concepts.
   for (const concept of concepts.slice(0, 4)) {
     const excluding = intent.excludeConcepts?.includes(concept) ?? false;
+    const scopedTargets = excluding ? targets : conceptSections(concept, targets);
+    if (!scopedTargets.length) continue;
     const words = concept
       .toLowerCase()
       .split(/\s+/)
       .filter((w) => !["cuisine", "food"].includes(w));
     if (
       !excluding &&
-      targets.some((section) => conceptAlreadyApplied(state, section, concept))
+      scopedTargets.every((section) => conceptAlreadyApplied(state, section, concept))
     )
       continue;
     if (excluding && (input.message || input.tagChoice)) {
@@ -630,7 +649,7 @@ export async function runTurn(
         tag.id.startsWith("urn:tag:specialty_dish:place:") &&
         conceptKey(tag.name) === conceptKey(concept),
       );
-      if (!excluding && targets.length === 1 && targets[0] === "Eat" && exactDishes.length === 1) {
+      if (!excluding && scopedTargets.includes("Eat") && exactDishes.length === 1) {
         const tag = exactDishes[0];
         state.tags = [...state.tags.filter((old) => old.id !== tag.id), tag];
         state.categoryTags!.Eat = [...new Set([...(state.categoryTags!.Eat ?? []), tag.id])];
@@ -695,6 +714,8 @@ export async function runTurn(
           query: concept,
           candidates: choices,
           sections: targets,
+          conceptSections: scopedTargets,
+          activityGenres: intent.activityGenres,
           constraints: intent.constraints,
           strategy:
             intent.strategy === "rank" ||
@@ -783,7 +804,7 @@ export async function runTurn(
           .slice(0, 10);
         const args = {
           options: existing.map((c) => c.id),
-          option_type: section === "Music" ? "artist" : "place",
+          option_type: sectionTypes[section],
           signals: state.selected
             .filter((s) => !s.id.startsWith("urn:tag:"))
             .map((s) => s.id),

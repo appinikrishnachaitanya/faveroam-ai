@@ -5,11 +5,11 @@
   margin-top: 16px;
   z-index: 30;
   height: var(--header-height);
-  background: #f8f7f1ed;
+  background: #fffdf4ed;
   backdrop-filter: blur(16px);
   border: 1px solid var(--ui-border);
   border-radius: 18px;
-  box-shadow: 0 10px 28px #17334812;
+  box-shadow: 0 10px 28px #193e3112;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 24px;

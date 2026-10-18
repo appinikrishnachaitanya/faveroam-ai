@@ -1,5 +1,7 @@
 export async function accountRequest(path: string, body?: unknown, method = "POST") {
-  const response = await fetch(path, body === undefined ? { cache: "no-store" } : {
+  const signal = AbortSignal.timeout(path === "/api/account/preferences" ? 100_000 : 25_000);
+  const response = await fetch(path, body === undefined ? { cache: "no-store", signal } : {
+    signal,
     method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
   });
   const value = await response.json();

@@ -9,6 +9,7 @@ import {
   privateJson,
 } from "../../../src/account/server";
 export const runtime = "nodejs";
+import { accountName } from "../../../src/account/identity";
 async function handleGET() {
   if (!accountConfigured())
     return privateJson({ configured: false, storage: false, user: null });
@@ -18,7 +19,11 @@ async function handleGET() {
     return privateJson({
       configured: true,
       storage: storageConfigured(),
-      user: error ? null : data.user ? { email: data.user.email } : null,
+      user: error ? null : data.user ? {
+        email: data.user.email,
+        firstName: typeof data.user.user_metadata?.first_name === "string" ? data.user.user_metadata.first_name.slice(0,80) : "",
+        lastName: typeof data.user.user_metadata?.last_name === "string" ? data.user.user_metadata.last_name.slice(0,80) : "",
+      } : null,
     });
   } catch {
     return privateJson(
@@ -70,7 +75,7 @@ async function handlePOST(request: Request) {
       });
       return privateJson({ requested: true });
     }
-    if (b.action === "password") {
+    if (b.action === "password" || b.action === "change-password") {
       if (
         typeof b.password !== "string" ||
         b.password.length < 12 ||
@@ -86,8 +91,15 @@ async function handlePOST(request: Request) {
           { error: "Open your email recovery link first." },
           401,
         );
+      if (b.action === "change-password") {
+        if (!user.email || typeof b.currentPassword !== "string" || !b.currentPassword || b.currentPassword.length > 128)
+          return privateJson({ error: "Enter your current password." },400);
+        const verified = await client.auth.signInWithPassword({ email:user.email, password:b.currentPassword });
+        if (verified.error || verified.data.user?.id !== user.id)
+          return privateJson({ error: "Your current password could not be confirmed." },400);
+      }
       const { error } = await client.auth.updateUser({ password: b.password });
-      if (error) throw Error();
+      if (error) return privateJson({error:"Password update could not complete. Sign in again or request an email recovery link."},400);
       return privateJson({ signedIn: true });
     }
     if (
@@ -106,12 +118,18 @@ async function handlePOST(request: Request) {
         },
         400,
       );
+    let names: { first_name: string; last_name: string } | undefined;
+    if (b.action === "register") {
+      try { names = { first_name: accountName(b.firstName), last_name: accountName(b.lastName) }; }
+      catch { return privateJson({ error: "Enter your first and last name using up to 80 characters each." },400); }
+    }
     const result =
       b.action === "register"
         ? await client.auth.signUp({
             email: b.email.trim(),
             password: b.password,
             options: {
+              data: names,
               emailRedirectTo: `${requestOrigin(request)}/auth/callback`,
             },
           })

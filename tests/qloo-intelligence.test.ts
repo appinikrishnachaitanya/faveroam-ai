@@ -74,11 +74,11 @@ test("entity-aware plans separate film ratings from place/business ratings and r
   });
   assert.equal(place.params["filter.properties.business_rating.min"], "4.5");
   assert.equal(place.params["filter.price_level.max"], "2");
+  assert.equal(place.params["bias.content_based"], "0.5");
+  assert.equal(place.params["filter.exists"], "properties.image");
   for (const name of [
     "filter.rating.min",
-    "bias.content_based",
     "filter.external.resy.rating.min",
-    "filter.properties.exists",
   ]) {
     assert.equal(place.params[name], undefined);
     assert.ok(place.diagnostics.dropped.some((d) => d.parameter === name));
@@ -222,7 +222,7 @@ test("successful HTTP envelopes cannot certify unsupported or observably violate
       "filter.location.query": "Manhattan",
     },
   );
-  assert.equal(missing.eligible, true);
+  assert.equal(missing.eligible, false);
   assert.ok(
     missing.unverified.includes("filter.properties.business_rating.min"),
   );
@@ -428,7 +428,7 @@ test("HTTP integration maps lookup, insights, compare and trend endpoints; unsup
     return Response.json({
       results: {
         entities: [
-          { entity_id: a, name: "Protocol", type: "urn:entity:place" },
+          { entity_id: a, name: "Protocol", type: "urn:entity:place", properties:{business_rating:4.6} },
         ],
       },
     });

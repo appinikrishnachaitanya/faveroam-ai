@@ -24,6 +24,7 @@ export interface QueryPreferences {
   resyReviewCountMin?: number;
   partySize?: number;
   locationQuery?: string;
+  locationPoint?: string;
   radius?: number;
   excludeLocation?: string;
   countryCode?: string;
@@ -90,10 +91,16 @@ export function validatePreferences(input: unknown): QueryPreferences {
         typeof value !== "number" ||
         !Number.isFinite(value) ||
         value < min ||
-        value > max
+        value > max ||
+        (["priceMin","priceMax","partySize","diversifyTake","tripAdvisorReviewCountMin","tripAdvisorReviewCountMax","resyReviewCountMin","radius"].includes(key) && !Number.isInteger(value))
       )
         throw Error(`Invalid ${key}.`);
       result[key] = value;
+    } else if (key === "locationPoint") {
+      if (typeof value !== "string") throw Error("Invalid location point.");
+      const match=value.match(/^POINT\((-?\d+(?:\.\d+)?) (-?\d+(?:\.\d+)?)\)$/);
+      if (!match || Math.abs(Number(match[1])) > 180 || Math.abs(Number(match[2])) > 90) throw Error("Invalid location point.");
+      result[key]=value;
     } else if (
       [
         "locationQuery",
@@ -130,6 +137,9 @@ export function validatePreferences(input: unknown): QueryPreferences {
         throw Error("Resolve tags before applying filters.");
       if (key === "excludeEntities" && value.some((v) => !uuid.test(v)))
         throw Error("Resolve entities before applying exclusions.");
+      if (key === "requiredProperties" && value.some(v=>!["image","description","properties.image","properties.description"].includes(v)))
+        throw Error("Unsupported required property.");
+      if (key === "requiredProperties" && value.length>1) throw Error("Choose one required listing property.");
       result[key] = [...new Set(value)];
     } else {
       const choices: Record<string, string[]> = {
@@ -182,10 +192,7 @@ export function preferenceParams(
       "filter.properties.business_rating.min": "4",
     });
   if (p.goal === "surprise")
-    Object.assign(params, {
-      "diversify.by": "properties.geocode.city",
-      "diversify.take": "3",
-    });
+    params["bias.content_based"] = "0.3";
   const mapping: Record<string, string> = {
     priceMin: "filter.price_level.min",
     priceMax: "filter.price_level.max",
@@ -204,16 +211,17 @@ export function preferenceParams(
     resyReviewCountMin: "filter.external.resy.count.min",
     partySize: "filter.external.resy.party_size.min",
     locationQuery: "filter.location.query",
+    locationPoint: "filter.location",
     radius: "filter.location.radius",
     excludeLocation: "filter.exclude.location.query",
     countryCode: "filter.geocode.country_code",
     region: "filter.geocode.admin1_region",
-    metro: "filter.geocode.metro",
+    metro: "filter.location.metro",
     includeTags: "filter.tags",
     excludeTags: "filter.exclude.tags",
     excludeEntities: "filter.exclude.entities",
     tagOperator: "operator.filter.tags",
-    requiredProperties: "filter.properties.exists",
+    requiredProperties: "filter.exists",
     requiredExternalSources: "filter.external.exists",
     qualityBias: "bias.quality",
     trendBias: "bias.trends",
@@ -224,8 +232,10 @@ export function preferenceParams(
   for (const [key, value] of Object.entries(p))
     if (mapping[key])
       params[mapping[key]] = Array.isArray(value)
-        ? value.join(",")
+        ? (key === "requiredProperties" ? value.map(v=>v.startsWith("properties.")?v:`properties.${v}`) : value).join(",")
         : String(value);
+  // "Any budget" is not a requirement to have a known price field.
+  if (p.priceMax === 4 && p.priceMin === undefined) delete params["filter.price_level.max"];
   return params;
 }
 /** The compatibility entry point also validates legacy callers before network I/O. */
@@ -259,6 +269,7 @@ export function validateInsightParams(input: Record<string, string>): {
     if (key === "operator.filter.tags" || key === "operator.exclude.tags")
       if (!["union", "intersection"].includes(value))
         reason = "Invalid tag operator";
+    if(key === "filter.exists" && !["properties.image","properties.description"].includes(value))throw Error("Unsupported required property.");
     if (
       key === "bias.quality" &&
       !["low", "medium", "high"].includes(value) &&
@@ -270,7 +281,7 @@ export function validateInsightParams(input: Record<string, string>): {
       !["low", "medium", "high", "off"].includes(value)
     )
       throw Error("Invalid trend weight.");
-    const range = key.includes("price_level.")
+    const range = key === "bias.content_based" ? [0,1] : key.includes("price_level.")
       ? [1, 4]
       : key.includes("popularity.")
         ? [0, 1]
@@ -288,6 +299,7 @@ export function validateInsightParams(input: Record<string, string>): {
         Number(value) > range[1])
     )
       throw Error("Qloo numeric filter is outside its supported range.");
+    if((key === "take" || key === "filter.location.radius" || key.includes("price_level.")) && !Number.isInteger(Number(value)))throw Error("Qloo requires an integer for this filter.");
     if (
       /^(?:signal.interests.entities|filter.exclude.entities|filter.results.entities)$/.test(
         key,
@@ -315,12 +327,15 @@ export function supportedParameterNames(type: string) {
   const allowed = new Set(entityParameters[type] ?? []);
   allowed.add("feature.explainability");
   allowed.add("signal.location.query");
+  allowed.add("bias.content_based");
+  allowed.add("filter.exists");
   // General reference explicitly documents these, despite omissions in the type table.
   if (["place", "destination"].includes(type))
     for (const key of [
       "filter.location.query",
       "filter.exclude.location",
       "filter.exclude.location.query",
+      "filter.location.metro",
       "diversify.by",
       "diversify.take",
     ])
@@ -334,6 +349,8 @@ export function patchPreferences(
 ): QueryPreferences {
   const update = validatePreferences(patch),
     merged = { ...previous, ...update };
+  if (update.locationPoint !== undefined) delete merged.locationQuery;
+  if (update.locationQuery !== undefined) delete merged.locationPoint;
   for (const [low, high] of [
     ["priceMin", "priceMax"],
     ["popularityMin", "popularityMax"],

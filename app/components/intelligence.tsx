@@ -10,6 +10,7 @@ import { CandidateChoices } from "./disambiguation";
 import { ResultMetrics, WhyEvidence } from "./intelligence-evidence";
 import { priceLabel } from "../../src/passport/pricing";
 import { suggestedMatches } from "../../src/passport/matching";
+import { isPlaceSection } from "../../src/passport/model";
 const modes: { id: DiscoveryGoal; name: string; detail: string }[] = [
   {
     id: "discover",
@@ -50,7 +51,7 @@ export default function TasteIntelligence({
   onRefine: (input: AgentInput) => void;
   expanded?: boolean;
 }) {
-  const [section, setSection] = useState<Section>("Eat");
+  const [section, setSection] = useState<Section>(()=>sectionOrder.find(s=>passport.cards.some(c=>c.section===s)) ?? "Eat");
   const prefs = passport.session?.queryPreferences?.[section];
   const [goal, setGoal] = useState<DiscoveryGoal>(
     () => prefs?.goal ?? "discover",
@@ -59,10 +60,10 @@ export default function TasteIntelligence({
   const [rating, setRating] = useState(
     () => prefs?.businessRatingMin?.toString() ?? "",
   );
-  const [area, setArea] = useState(""),
-    [avoidArea, setAvoidArea] = useState(""),
-    [source, setSource] = useState(""),
-    [reviews, setReviews] = useState("");
+  const [area, setArea] = useState(prefs?.locationQuery ?? ""),
+    [avoidArea, setAvoidArea] = useState(prefs?.excludeLocation ?? ""),
+    [source, setSource] = useState(prefs?.requiredExternalSources?.[0] ?? ""),
+    [reviews, setReviews] = useState(prefs?.tripAdvisorReviewCountMin?.toString() ?? "");
   const [partner, setPartner] = useState(["", "", ""]);
   const [resolution, setResolution] = useState<Resolution>();
   const [ids, setIds] = useState<Record<number, string>>({});
@@ -146,6 +147,10 @@ export default function TasteIntelligence({
               setGoal(next?.goal ?? "discover");
               setPrice(next?.priceMax?.toString() ?? "4");
               setRating(next?.businessRatingMin?.toString() ?? "");
+              setArea(next?.locationQuery ?? "");
+              setAvoidArea(next?.excludeLocation ?? "");
+              setSource(next?.requiredExternalSources?.[0] ?? "");
+              setReviews(next?.tripAdvisorReviewCountMin?.toString() ?? "");
               setTogether(undefined);
             }}
           >
@@ -200,7 +205,7 @@ export default function TasteIntelligence({
             ))}
           </div>
           <p className="helper">{modes.find((m) => m.id === goal)?.detail}</p>
-          {section !== "Music" && (
+          {isPlaceSection(section) && (
             <div className="intelligence-filters">
               <label>
                 Budget
@@ -243,7 +248,7 @@ export default function TasteIntelligence({
               </label>
             </div>
           )}
-          {section !== "Music" && (
+          {isPlaceSection(section) && (
             <details className="advanced-taste-filters">
               <summary>Location and more preferences</summary>
               <p className="helper">

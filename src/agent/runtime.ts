@@ -12,7 +12,7 @@ import { search, insights, insightParams, QlooError } from "../qloo/client.ts";
 import { candidates } from "../passport/model.ts";
 import type { AgentDependencies } from "./orchestrator.ts";
 import type { AgentState, Constraint } from "./types.ts";
-import { diversifyCards } from "../passport/model.ts";
+import { diversifyCards, sectionTypes } from "../passport/model.ts";
 import type { Card, Section } from "../passport/model.ts";
 import { buildQuery } from "../qloo/query-plan.ts";
 import { findTags } from "../qloo/lookups.ts";
@@ -26,7 +26,15 @@ export function agentDependencies(): AgentDependencies {
   return {
     provider,
     tools: discoverTools,
-    workflow,
+    workflow: async (transport,name,args,signal) => {
+      try {
+        const result=await workflow(transport,name,args,signal);
+        if(name !== "qloo_find_tags" || tagCandidates(result,String(args.query ?? "")).length) return result;
+      } catch(error) { if(name !== "qloo_find_tags") throw error; }
+      if(typeof args.query !== "string")throw Error("Invalid concept lookup");
+      const tags=await findTags(args.query,signal);
+      return {status:"ok",results:tags.map(tag=>({id:tag.id,name:tag.name,type:tag.types[0]})),execution:{transport:"native"}};
+    },
     discover: discoverSection,
   };
 }
@@ -35,35 +43,31 @@ export async function resolveCulturalSeeds(
   concepts: string[] = [],
 ) {
   debugEvent("resolution.started", { count: queries.length });
-  const guard = new TurnGuard(5, 90_000);
+  const deadline=AbortSignal.timeout(75_000);
+  const guard = new TurnGuard(5, 75_000, deadline);
   const items = [];
   for (const query of queries) {
     culturalText(query, 100);
     if (isConcept(query) || concepts.includes(query)) {
+      let matches: ReturnType<typeof tagCandidates> = [];
       try {
         const result = await guard.run(
           "qloo_find_tags",
           { query, limit: 5 },
-          () => workflow("exec", "qloo_find_tags", { query, limit: 5 }),
+          () => workflow("exec", "qloo_find_tags", { query, limit: 5 }, deadline),
         );
-        items.push({ query, candidates: tagCandidates(result, query) });
-      } catch {
-        try {
-          items.push({ query, candidates: await findTags(query) });
-        } catch {
-          items.push({ query, candidates: [] });
-        }
-      }
+        matches=tagCandidates(result, query);
+      } catch { /* Native lookup below is the bounded supported fallback. */ }
+      items.push({query,candidates:matches.length ? matches : await findTags(query,deadline)});
     } else {
       try {
         const entities = await guard.run("entity_search", { query }, () =>
-          search(query),
+          search(query,deadline),
         );
         items.push({ query, candidates: candidates(entities) });
       } catch (e) {
-        if (e instanceof QlooError && e.status === 404)
-          items.push({ query, candidates: [] });
-        else items.push({ query, candidates: [] });
+        if (e instanceof QlooError && e.status === 404) items.push({ query, candidates: [] });
+        else throw e;
       }
     }
   }
@@ -94,7 +98,9 @@ export async function discoverSection(
     signalCount: state.selected.length,
     excludedCount: excluded.length,
   });
-  const type = section === "Music" ? "artist" : "place";
+  const type = sectionTypes[section];
+  const activityGenres = section === "Culture" ? state.intent?.activityGenres ?? state.activityGenres?.Culture : undefined;
+  const activityFilters: string[] = [];
   const entityIds = state.selected
     .filter((s) => !s.id.startsWith("urn:tag:"))
     .map((s) => s.id);
@@ -149,7 +155,7 @@ export async function discoverSection(
         (section === "Coffee" && /coffee|caf[eé]/i.test(t.name)) ||
         (section === "Lifestyle" && /book|shop/i.test(t.name)) ||
         (section === "Culture" &&
-          /museum|culture|gallery|theatre/i.test(t.name)),
+          /museum|culture|gallery|theatre|concert|live music|music venue/i.test(t.name)),
     );
     const hardRelevant = section === "Coffee" && !state.categoryConcepts?.Coffee?.length
       ? relevant.filter((tag) => /urn:tag:(?:genre|category):place:/.test(tag.id))
@@ -163,7 +169,7 @@ export async function discoverSection(
   // category starting point, not a fabricated personal taste or relationship.
   if (
     section === "Culture" &&
-    !state.intent?.activityGenres?.length &&
+    !activityGenres?.length &&
     !state.intent?.concepts.length &&
     !tags.some(
       (t) =>
@@ -182,16 +188,16 @@ export async function discoverSection(
   }
   // Resolve category taxonomy through Qloo; never substitute a cuisine pool.
   if (
-    (section === "Coffee" || (section === "Culture" && !state.intent?.activityGenres?.length)) &&
+    (section === "Coffee" || section === "Lifestyle" || (section === "Culture" && !activityGenres?.length)) &&
     !params["filter.tags"]
   ) {
     const options = await findTags(
-      section === "Coffee" ? "coffee shop" : "museum",
+      section === "Coffee" ? "coffee shop" : section === "Lifestyle" ? "bookstore" : "museum",
     );
     const category = options.find(
       (t) =>
         t.id.includes(":place:") &&
-        (section === "Coffee" ? /coffee|café|cafe/i : /museum/i).test(t.name),
+        (section === "Coffee" ? /coffee|café|cafe/i : section === "Lifestyle" ? /bookstore|book store|book shop/i : /museum/i).test(t.name),
     );
     if (!category) return [];
     params["filter.tags"] = category.id;
@@ -203,21 +209,22 @@ export async function discoverSection(
     if (musicTags.length)
       params["signal.interests.tags"] = musicTags.map((t) => t.id).join(",");
   }
+  if (type !== "place" && !params["signal.interests.tags"] && state.selected.some(s=>s.id.startsWith("urn:tag:")))
+    params["signal.interests.tags"] = state.selected.filter(s=>s.id.startsWith("urn:tag:")).map(s=>s.id).join(",");
   if (excluded.length)
     params["filter.exclude.entities"] = excluded.slice(-50).join(",");
-  if (section === "Culture" && state.intent?.activityGenres?.length) {
-    const activityTags: string[] = [];
-    for (const genre of state.intent.activityGenres) {
+  if (section === "Culture" && activityGenres?.length) {
+    for (const genre of activityGenres) {
       const options = await findTags(genre === "cinema" ? "movie theater" : genre, signal);
       const match = options.find((tag) =>
         /urn:tag:(?:genre|category):place:/.test(tag.id) &&
         (genre === "cinema" ? /cinema|movie theater|movie theatre/i : /nightclub|night club/i).test(tag.name),
       );
-      if (match) activityTags.push(match.id);
+      if (match) activityFilters.push(match.id);
     }
     // Never silently replace an explicit cinema/nightlife request with museums.
-    if (activityTags.length !== state.intent.activityGenres.length) return [];
-    params["filter.tags"] = activityTags.join(",");
+    if (activityFilters.length !== activityGenres.length) return [];
+    params["filter.tags"] = [...activityFilters,...(constraints.includes("crowded")?tags.filter(t=>t.id.includes(":ambience:")).map(t=>t.id):[])].join(",");
     params["operator.filter.tags"] = "union";
   }
   if (constraints.includes("expensive") && type === "place")
@@ -245,6 +252,7 @@ export async function discoverSection(
   // Omitted settings remain in the server session; unrelated categories are untouched.
   const categoryFilter = params["filter.tags"];
   Object.assign(params, planned.params);
+  if (planned.params["filter.location"]) delete params["filter.location.query"];
   if (preferences.includeTags?.length && type === "place") {
     params["filter.tags"] = [
       ...new Set([
@@ -273,7 +281,7 @@ export async function discoverSection(
       `Some requested settings could not be applied: ${planned.diagnostics.dropped.map((d) => d.parameter).join(", ")}. Open Why this suggestion for details.`,
     );
   if (preferences.goal === "surprise") {
-    // No undocumented bias.content_based. Existing exploration broadens only soft taste filters.
+    // Exploration changes soft taste signals while explicit venue requirements remain hard filters.
     state.categoryModes ??= {};
     state.categoryModes[section] = "explore";
   }
@@ -282,7 +290,10 @@ export async function discoverSection(
     state,
     section,
     preferences.goal === "surprise" ? "explore" : mode,
-  );
+  ).flatMap(query=>activityFilters.length ? activityFilters.map(activity=>({
+    ...query,
+    params:{...query.params,"filter.tags":[activity,...(query.params["filter.tags"] ?? '').split(',').filter(tag=>tag && !activityFilters.includes(tag))].join(','),"operator.filter.tags":"intersection"},
+  })) : [query]);
   const sources = [
     ...state.selected,
     ...state.tags,

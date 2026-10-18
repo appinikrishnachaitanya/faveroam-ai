@@ -104,7 +104,7 @@ export function withEvidence(
       queryId,
       recordedAt,
       destination,
-      locality: params["filter.location.query"]
+      locality: params["filter.location.query"] || params["filter.location"]
         ? "physical-city"
         : "audience-context",
       mode,

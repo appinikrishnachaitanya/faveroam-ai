@@ -34,6 +34,7 @@ import {
 import ConciergeDrawer from "./components/concierge";
 import { suggestedMatches } from "../src/passport/matching";
 import AccountControl from "./components/account";
+import ReusableTastes from "./components/taste-profile";
 import DayOutPlan from "./components/day-out";
 import TasteIntelligence from "./components/intelligence";
 import { JourneyLoading, ToastNotice } from "./components/status";
@@ -43,6 +44,7 @@ import {
   ConnectionExplorer,
 } from "./components/passport-overview";
 import { sectionOrder } from "../src/workspace/state";
+import TasteAnalysis from "./components/taste-analysis";
 import type { Familiarity } from "../src/passport/evidence";
 interface Message {
   role: "agent" | "user";
@@ -57,6 +59,7 @@ async function post<T>(path: string, body: unknown): Promise<T> {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
+    signal: AbortSignal.timeout(95_000),
   });
   const data = await response.json();
   if (!response.ok)
@@ -69,6 +72,7 @@ export default function Home() {
   const [city, setCity] = useState("");
   const [origin, setOrigin] = useState("");
   const [initialMode, setInitialMode] = useState<Familiarity>("familiar");
+  const [requestedActivities, setRequestedActivities] = useState<Section[]>([]);
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [assistantTab, setAssistantTab] = useState<"ask" | "manual">("ask");
   const [composer, setComposer] = useState("");
@@ -454,7 +458,7 @@ export default function Home() {
     setUpdating([]);
     setPhase("exploring");
     say(
-      `I’m exploring ${city} using your confirmed tastes. I’ll check local places and music suggestions, then assemble your passport.`,
+      `I’m exploring ${city} using your confirmed tastes and chosen activities.`,
     );
     try {
       const r = await post<Passport>("/api/passport", {
@@ -462,6 +466,7 @@ export default function Home() {
         token: resolution.token,
         ids: signals.map((s) => s.id),
         constraints,
+        activities: requestedActivities,
         // Onboarding progress is not assistant chat history.
         history: [],
       });
@@ -533,6 +538,7 @@ export default function Home() {
     setCity("");
     setOrigin("");
     setInitialMode("familiar");
+    setRequestedActivities([]);
     setAssistantOpen(false);
     setAssistantTab("ask");
     setComposer("");
@@ -619,6 +625,10 @@ export default function Home() {
         </nav>
       </header>
       <div className="progressive-content" id="passport-content" tabIndex={-1}>
+        {!result && <ReusableTastes signedIn={accountSignedIn} city={city} disabled={busy}
+          onBusy={value=>setPhase(value?"exploring":"idle")}
+          onApply={passport=>{setResult(passport);setCity(passport.city);setDraft(passport.selected.map(s=>s.name));setPhase("ready");setAdaptation("Fresh discoveries using your saved tastes.");}}
+        />}
         {!result && <StepIndicator step={step} />}
         {step === 1 && (
           <MoveForm
@@ -641,6 +651,8 @@ export default function Home() {
               resetMatches();
             }}
             onSubmit={resolve}
+            activities={requestedActivities}
+            onActivities={setRequestedActivities}
           />
         )}
         {step === 2 && resolution && (
@@ -858,6 +870,10 @@ export default function Home() {
                 busy={busy}
                 onRefine={(input) => void refine(input)}
               />
+              <ReusableTastes signedIn={accountSignedIn} passport={result} city={city} disabled={busy}
+                onBusy={value=>setPhase(value?"exploring":"ready")}
+                onApply={passport=>{setResult(passport);setCity(passport.city);setPhase("ready");}}
+              />
             </div>
             <div
               className="workspace-panel"
@@ -886,6 +902,7 @@ export default function Home() {
                     );
                   }}
                 />
+                <TasteAnalysis key={`analysis:${result.session?.id ?? result.city}`} passport={result} busy={busy} onRefine={input=>{setWorkspaceView("discover");void refine(input);}}/>
                 {process.env.NODE_ENV === "development" && (
                   <details className="all-query-routes">
                     <summary>Technical recommendation details</summary>

@@ -4,6 +4,7 @@ import { debugEvent } from "./debug.ts";
 import { recordProviderHealth } from "./health.ts";
 import { culturalText, validateIntent } from "./intent.ts";
 import { isObject } from "../qloo/types.ts";
+import { sectionTypes } from "../passport/model.ts";
 import type {
   AgentState,
   ModelProvider,
@@ -298,7 +299,7 @@ export function configuredProvider(): ModelProvider | undefined {
               (context
                 ? `The user already has a confirmed Passport in ${context.city}. Interpret this as a refinement of that Passport, not onboarding. Do not replace confirmed tastes. A request for museums OR art galleries is one Culture request with alternative venue genres (tagOperator union), not an intersection. Negated restaurants must not select Eat. `
                 : "") +
-              "Extract cultural onboarding/refinement intent only. Do not generate discovery data. Destination may be any explicitly named city, optionally qualified by country. Preserve the requested locality; never substitute a city from a fixed list or claim verified coverage. Separate named seeds from cultural concepts and dislikes. Cultural means Culture. More adventurous selects familiarity explore. More familiar selects familiarity familiar. Mixed hide/refine requests hide only explicitly removed categories and refine the requested active categories. Extract query preferences as a partial update: keep omitted preferences unchanged. Places use businessRatingMin, not ratingMin (Qloo film/TV rating). Price levels 1-4, popularity 0-1, business ratings 0-5. Trending uses goal trending; hidden gems uses goal hidden-gems; safe choices goal safe-bets; surprise goal surprise. Geography is a named locality, not a guaranteed point geocode. Never invent IDs or resolved tags. Concepts needing inclusion or exclusion must be resolved first. Do not include personal identifying information.",
+              "Extract cultural onboarding/refinement intent only. Do not generate discovery data. Choose requested sections, not sections inferred merely from taste inputs. Movies means films to watch, Culture means physical venues such as cinemas/museums/nightlife, Books means reading recommendations, Lifestyle means bookstores/shops, Music means artist discovery (not concerts), Podcasts/Shows/Games/Brands/People/Destinations use their corresponding content categories. A movie then dinner outing means Culture and Eat, not Movies. A request for movies to watch means Movies. Preserve the specific dish: chicken biryani is not interchangeable with Indian cuisine. Destination may be any explicitly named city, optionally qualified by country. Preserve the requested locality; never substitute a city from a fixed list or claim verified coverage. Separate named seeds from cultural concepts and dislikes. More adventurous selects familiarity explore. More familiar selects familiarity familiar. Mixed hide/refine requests hide only explicitly removed categories and refine the requested active categories. Extract query preferences as a partial update: keep omitted preferences unchanged. Places use businessRatingMin, not ratingMin (Qloo film/TV rating). Price levels 1-4, popularity 0-1, business ratings 0-5. Trending uses goal trending; hidden gems uses goal hidden-gems; safe choices goal safe-bets; surprise goal surprise. Geography is a named locality, not a guaranteed point geocode. Never invent IDs or resolved tags. Concepts needing inclusion or exclusion must be resolved first. Do not include personal identifying information.",
           },
           { role: "user", content: text },
         ],
@@ -391,14 +392,14 @@ export function configuredProvider(): ModelProvider | undefined {
                     type: "array",
                     items: {
                       type: "string",
-                      enum: ["Eat", "Coffee", "Music", "Culture", "Lifestyle"],
+                      enum: Object.keys(sectionTypes),
                     },
                   },
                   hide: {
                     type: "array",
                     items: {
                       type: "string",
-                      enum: ["Eat", "Coffee", "Music", "Culture", "Lifestyle"],
+                      enum: Object.keys(sectionTypes),
                     },
                   },
                   strategy: {

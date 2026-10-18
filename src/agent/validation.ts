@@ -1,6 +1,6 @@
 import { isObject, parseEntities } from "../qloo/types.ts";
 import type { Entity } from "../qloo/types.ts";
-import { card, classify } from "../passport/model.ts";
+import { card, classify, sectionTypes, isPlaceSection } from "../passport/model.ts";
 import type { Candidate, Card, Section } from "../passport/model.ts";
 import type { Constraint, ToolResult } from "./types.ts";
 import { matchesDestination } from "../workspace/location.ts";
@@ -56,7 +56,7 @@ export function validatedSection(e: Entity): Section | undefined {
     !/tiffin|delivery kitchen|meal delivery|catering service/.test(
       description,
     ) &&
-    /\b(?:museum|art gallery|gallery|theater|theatre|concert hall|cinema|nightclub|night club)\b/.test(
+    /\b(?:museum|art gallery|gallery|theater|theatre|concert hall|cinema|nightclub|night club|live music venue|music venue)\b/.test(
       names,
     )
   )
@@ -104,8 +104,8 @@ export function validateDiscoveries(
   return entities
     .filter((e) => !excluded.includes(e.entity_id) && satisfies(e, constraints))
     .filter((e) => {
-      if (section === "Music")
-        return (e.subtype ?? e.type) === "urn:entity:artist";
+      if (!isPlaceSection(section))
+        return [e.subtype, e.type, ...(e.types ?? [])].includes(`urn:entity:${sectionTypes[section]}`);
       if (
         (e.subtype ?? e.type) !== "urn:entity:place" ||
         validatedSection(e) !== section

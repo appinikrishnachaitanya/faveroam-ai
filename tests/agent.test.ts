@@ -479,7 +479,7 @@ test("mixed concierge request hides coffee but refreshes food/books instead of d
   assert.ok(r.state.hiddenCategories?.includes("Coffee"));
   assert.ok(r.state.cards.some((c) => c.section === "Coffee"));
   assert.ok(r.state.cards.some((c) => c.section === "Eat"));
-  assert.ok(r.state.cards.some((c) => c.section === "Lifestyle"));
+  assert.ok(r.state.cards.some((c) => c.section === "Books"));
   assert.equal(
     r.state.cards.find((c) => c.section === "Music")?.name,
     "Protocol music",

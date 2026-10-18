@@ -47,16 +47,17 @@ export async function request(
     throw new QlooError("Unsupported Qloo API base URL");
   const url = new URL(path, base);
   url.search = new URLSearchParams(params).toString();
+  const requestSignal = signal ?? AbortSignal.timeout(30_000);
   return paced(
     `${key}:${url}`,
     async () => {
-      if (signal?.aborted) throw new QlooError("Qloo request cancelled");
+      if (requestSignal.aborted) throw new QlooError("Qloo request cancelled");
       debugEvent("qloo.request", { endpoint: endpointName(path) });
       let response: Response;
       try {
         response = await fetchWithRetry(url, {
           headers: { "X-Api-Key": key, Accept: "application/json" },
-          signal: signal ?? AbortSignal.timeout(30_000),
+          signal: requestSignal,
           redirect: "error",
         });
       } catch {
@@ -94,6 +95,7 @@ export async function request(
       : ["/search", "/v2/tags", "/v2/tags/types", "/entities"].includes(path)
         ? 3_600_000
         : 300_000,
+    requestSignal,
   );
 }
 export function endpointName(path: QlooEndpoint) {
@@ -109,9 +111,9 @@ export function endpointName(path: QlooEndpoint) {
     } as const
   )[path];
 }
-export async function search(query: string): Promise<Entity[]> {
+export async function search(query: string, signal?: AbortSignal): Promise<Entity[]> {
   const entities = parseEntities(
-    await request("/search", { query, take: "5" }),
+    await request("/search", { query, take: "5" }, signal),
     "search",
   );
   debugEvent("qloo.entities", { endpoint: "search", count: entities.length });
@@ -160,7 +162,7 @@ export function insightParams(
   type: string,
   local: boolean,
 ): Record<string, string> {
-  const supported = ["place", "artist", "book", "brand"];
+  const supported = ["place", "artist", "book", "brand", "movie", "podcast", "tv_show", "video_game", "person", "destination"];
   if (!supported.includes(type))
     throw new QlooError("Unsupported experiment output type");
   if (!ids.length) throw new QlooError("No resolved entities available");

@@ -16,6 +16,7 @@
     "verify:gemini": "node --use-env-proxy --env-file-if-exists=.env --env-file-if-exists=.env.local --conditions=react-server --import tsx scripts/verify-gemini-mcp.ts",
     "test:browser": "node scripts/verify-progressive-ui.mjs",
     "verify:qloo": "node --use-env-proxy --env-file-if-exists=.env --env-file-if-exists=.env.local --conditions=react-server --import tsx scripts/verify-qloo-intelligence.ts",
+    "verify:accuracy": "node --use-env-proxy --env-file-if-exists=.env --env-file-if-exists=.env.local --conditions=react-server --import tsx scripts/verify-accuracy.ts",
     "smoke:production": "node scripts/smoke-production.mjs"
   },
   "devDependencies": {

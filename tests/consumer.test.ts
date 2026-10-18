@@ -17,6 +17,7 @@ import {
 import type { Card } from "../src/passport/model.ts";
 import { dayOutOptions, dayOutText } from "../src/passport/day-out.ts";
 import DayOutPlan from "../app/components/day-out.tsx";
+import { normalizeEntity } from "../src/qloo/normalizer.ts";
 const signal = {
   id: "00000000-0000-0000-0000-000000000001",
   name: "Real-shaped protocol taste",
@@ -87,11 +88,12 @@ test("day-out export contains real selections and explicit availability limits",
   assert.match(text, /No booking has been made/);
   assert.doesNotMatch(text, /private-guest-token|private conversation/);
 });
-test("day-out renders honest empty categories and local selectors", () => {
+test("day-out starts with available local activities without forcing empty categories", () => {
   const session = state();
   const markup = renderToStaticMarkup(createElement(DayOutPlan, { passport: { city: session.city, selected: session.selected, cards: session.cards, notices: [], explanation: "" }, disabled: false }));
   assert.match(markup, /day-out-Eat/);
-  assert.match(markup, /No local suggestions here yet/);
+  assert.doesNotMatch(markup, /id="day-out-Coffee"/);
+  assert.match(markup, /What would you like to do/);
   assert.match(markup, /not a timed route or a reservation/);
   assert.match(markup, /Download partial plan/);
 });
@@ -198,8 +200,11 @@ test("consumer cover and connection reveal use real query relationships rather t
   );
   assert.match(html, /Real-shaped protocol taste/);
   assert.match(html, /Protocol discovery one/);
-  assert.match(html, /We cannot measure/);
+  assert.match(html, /Individual contribution evidence was not returned/);
   assert.doesNotMatch(html, /private-guest-token/);
+  passport.cards[0].intelligence=normalizeEntity({entity_id:passport.cards[0].id,name:'Fixture result',query:{explainability:{'signal.interests.entities':[{entity_id:signal.id,score:.6}]}}});
+  const grounded=renderToStaticMarkup(createElement(ConnectionExplorer,{passport}));
+  assert.match(grounded,/Real-shaped protocol taste helped shape this suggestion/);
 });
 
 test("account writes require the actual browser origin, including local Next Host routing", async () => {

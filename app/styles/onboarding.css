@@ -1,4 +1,12 @@
 /* Onboarding: shared TastePassport presentation. */
+.activity-picker { border: 0; padding: 0; margin: 24px 0; min-width: 0; }
+.activity-picker legend { font-size: 16px; font-weight: 700; }
+.activity-picker .helper { margin: 8px 0 14px; }
+.activity-options { display: flex; gap: 8px; flex-wrap: wrap; }
+.activity-options button { display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; min-height: 44px; border: 1px solid var(--ui-border); border-radius: 12px; background: var(--ui-surface); color: var(--ui-ink); font-size: 14px; }
+.activity-options button[aria-pressed="true"] { background: var(--ui-action); color: #fffdf3; border-color: var(--ui-action); }
+.more-activities { margin-top: 12px; }
+.more-activities summary { min-height: 44px; cursor: pointer; color: var(--ui-action); font-size: 14px; font-weight: 650; }
 
 .step-indicator {
   gap: 42px;
@@ -43,8 +51,8 @@
   background: var(--ui-surface);
   border: 1px solid var(--ui-border);
   border-radius: 28px;
-  box-shadow: 0 18px 48px #1733480d, 0 2px 6px #17334805;
-  background: linear-gradient(155deg, #ffffff 75%, #f1f8fa);
+  box-shadow: 0 18px 48px #193e310d, 0 2px 6px #193e3105;
+  background: linear-gradient(155deg, #ffffff 75%, #f4efd5);
 }
 
 .move-fields {
@@ -74,7 +82,7 @@
 }
 
 .move-form .primary-button {
-  box-shadow: 0 6px 16px #075f591c;
+  box-shadow: 0 6px 16px #1d513b1c;
 }
 
 .taste-entry h2 {

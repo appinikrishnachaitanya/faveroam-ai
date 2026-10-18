@@ -1,8 +1,9 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { randomUUID } from "node:crypto";
+import { sectionTypes } from "../passport/model.ts";
 
 const context = new AsyncLocalStorage<string>();
-const sections = ["Eat", "Coffee", "Music", "Culture", "Lifestyle"];
+const sections = Object.keys(sectionTypes);
 const routes = [
   "resolve",
   "agent.resolve",
@@ -15,6 +16,7 @@ const routes = [
   "account",
   "account.passports",
   "account.plans",
+  "account.preferences",
   "auth.callback",
   "agent.capabilities",
 ] as const;

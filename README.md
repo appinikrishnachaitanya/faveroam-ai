@@ -67,6 +67,8 @@ Open **Preferences & Together** for validated discovery styles, budget/business-
 
 ## User experience
 
+The [accuracy and Forest & Butter pass](docs/ACCURACY_AND_FOREST_PASS.md) adds explicit activity selection, content-versus-venue routing, stricter price/rating verification, Qloo-returned photos, tag-based taste analysis, geographic affinity exploration and optional aggregate demographic context. It preserves native Gemini/MCP and guided refinement. Run `npm run verify:accuracy` for bounded live activity/dish/budget/outing acceptance; it uses secure environment credentials and prints metadata only.
+
 Start with your move and 3–5 tastes, confirm the real matches, then create your Passport. Chat/manual refinement, bridge and judge comparison are optional. See [progressive UX and live browser checks](docs/PROGRESSIVE_UX.md).
 
 ## Toronto demo

@@ -1,4 +1,26 @@
 /* Progressive controls: one chapter, a discovery mood, and optional common ground. */
+.taste-analysis { padding-block: 28px; border-top: 1px solid var(--ui-border); margin-top: 28px; }
+.taste-analysis h2 { font-size: clamp(24px,3vw,32px); margin: 10px 0; }
+.taste-analysis > p, .analysis-result > p, .audience-context > p { font-size: 14px; line-height: 1.7; color: var(--ui-muted); margin: 12px 0; }
+.analysis-actions, .taste-theme-list { display: flex; flex-wrap: wrap; gap: 10px; margin-block: 20px; padding: 0; }
+.taste-analysis button { min-height: 44px; padding: 11px 16px; border: 1px solid var(--ui-border); border-radius: 12px; background: var(--ui-action); color: #fffdf3; font-size: 14px; }
+.analysis-result { padding: 22px; margin-block: 20px; border: 1px solid var(--ui-border); border-radius: 16px; background: var(--ui-surface); }
+.analysis-result h3 { font-size: 21px; }
+.taste-theme-list { list-style: none; }
+.taste-theme-list li { border: 1px solid #d5d9b8; border-radius: 24px; padding: 9px 14px; background: #f4efce; font-size: 14px; max-width: 100%; overflow-wrap: anywhere; }
+.affinity-plot { display: block; width: 100%; color: var(--ui-action); background: #f2f0d9; border-radius: 12px; }
+.affinity-plot text { font-size: 16px; fill: currentColor; }
+.area-choices { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,180px),1fr)); gap: 14px; margin-top: 20px; }
+.area-choices article { padding: 16px; border: 1px solid var(--ui-border); border-radius: 12px; }
+.area-choices h4 { font-size: 16px; }
+.area-choices p { font-size: 13px; margin: 8px 0; }
+.area-choices a { display: block; padding-block: 8px; color: var(--ui-action); text-decoration: underline; font-size: 14px; }
+.area-choices button { margin-top: 8px; width: 100%; }
+.audience-context { border-top: 1px solid var(--ui-border); padding-top: 20px; margin-top: 24px; }
+.audience-context summary { min-height: 44px; cursor: pointer; font-weight: 650; }
+.audience-values { display: grid; grid-template-columns: repeat(auto-fit,minmax(145px,1fr)); gap: 14px; margin-top: 16px; font-size: 13px; }
+.audience-values dd { margin: 3px 0 0; font-weight: 650; }
+.audience-values dt { overflow-wrap: anywhere; }
 .intelligence-content {
   padding: 28px 0;
 }

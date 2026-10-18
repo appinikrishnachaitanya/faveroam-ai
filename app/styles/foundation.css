@@ -14,7 +14,7 @@ html {
 }
 body {
   background:
-    radial-gradient(ellipse at 0 0, #d3e6f3 0, transparent 45rem), #edf3fa;
+    radial-gradient(ellipse at 0 0, #f1dda0 0, transparent 45rem), #faf5df;
   background-repeat: no-repeat;
   min-height: 100dvh;
   color: var(--ui-ink);

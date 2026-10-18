@@ -13,7 +13,7 @@ import {
 type Account = {
   configured: boolean;
   storage: boolean;
-  user: { email?: string } | null;
+  user: { email?: string; firstName?: string; lastName?: string } | null;
 };
 type Entry = { id: string; city: string; updated_at: string };
 export default function AccountControl({
@@ -40,6 +40,11 @@ export default function AccountControl({
   const [deletePassword, setDeletePassword] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [recoveringPassword, setRecoveringPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [entries, setEntries] = useState<Entry[]>([]);
@@ -140,7 +145,7 @@ export default function AccountControl({
         setMessage(
           "That confirmation link could not complete. Sign in or request a new recovery link.",
         );
-      if (notice === "recovery") setTab("password");
+      if (notice === "recovery") { setTab("password"); setRecoveringPassword(true); }
       window.history.replaceState(null, "", window.location.pathname);
     }
     return () => {
@@ -165,6 +170,8 @@ export default function AccountControl({
     if (!open) {
       el?.close();
       setPassword("");
+      setCurrentPassword("");
+      setConfirmPassword("");
       setDeletePassword("");
       setDeleteConfirmation("");
       opener.current?.focus();
@@ -200,16 +207,25 @@ export default function AccountControl({
   }
   async function submit(event: React.FormEvent) {
     event.preventDefault();
+    if (tab === "password" && password !== confirmPassword) {
+      setMessage("The new passwords don't match.");
+      return;
+    }
     setBusy(true);
     setMessage("");
+    const passwordChanged = tab === "password";
     try {
       const data = await request("/api/account", {
         action:
-          tab === "recover" ? "recover" : tab === "password" ? "password" : tab,
+          tab === "recover" ? "recover" : tab === "password" ? (account?.user && !recoveringPassword ? "change-password" : "password") : tab,
         email,
         password,
+        firstName, lastName,
+        ...(tab === "password" && account?.user && !recoveringPassword ? {currentPassword} : {}),
       });
       setPassword("");
+      setCurrentPassword("");
+      setConfirmPassword("");
       if (data.confirmationRequired) {
         setVerificationPending(true);
         setMessage(
@@ -224,7 +240,7 @@ export default function AccountControl({
         if (current?.user) {
           setVerificationPending(false);
           setOpen(false);
-          showNotice("Welcome back. Your saved Passports and plans are ready.");
+          showNotice(passwordChanged ? "Your password was updated." : "Welcome back. Your saved Passports and plans are ready.");
         } else {
           setOpen(true);
           setMessage(
@@ -402,7 +418,7 @@ export default function AccountControl({
               </button>
             </div>
             <h2 id="account-title">
-              {verificationPending
+              {tab === "password" ? "Update your password" : verificationPending
                 ? "Verify your email"
                 : account?.user
                   ? libraryTab === "plans"
@@ -470,7 +486,7 @@ export default function AccountControl({
             ) : account?.user && tab !== "password" ? (
               <>
                 <p className="account-email">
-                  Signed in as {account.user.email}
+                  {account.user.firstName ? `Hello, ${account.user.firstName}. ` : ""}Signed in as {account.user.email}
                 </p>
                 <div
                   className="account-library-tabs"
@@ -564,6 +580,13 @@ export default function AccountControl({
                 <button
                   className="text-button"
                   disabled={busy}
+                  onClick={() => { setRecoveringPassword(false); setTab("password"); setPassword(""); setCurrentPassword(""); setConfirmPassword(""); setMessage(""); }}
+                >
+                  Update password
+                </button>
+                <button
+                  className="text-button"
+                  disabled={busy}
                   onClick={() => void logout()}
                 >
                   Sign out and clear this screen
@@ -609,7 +632,12 @@ export default function AccountControl({
               </>
             ) : (
               <form onSubmit={submit}>
-                <div className="account-tabs">
+                {tab === "register" && <>
+                  <label>First name<input value={firstName} onChange={e=>setFirstName(e.target.value)} autoComplete="given-name" maxLength={80} required disabled={busy} /></label>
+                  <label>Last name<input value={lastName} onChange={e=>setLastName(e.target.value)} autoComplete="family-name" maxLength={80} required disabled={busy} /></label>
+                </>}
+                {tab === "password" && account?.user && !recoveringPassword && <label>Current password<input type="password" value={currentPassword} onChange={e=>setCurrentPassword(e.target.value)} autoComplete="current-password" maxLength={128} required disabled={busy} /></label>}
+                {tab !== "password" && <div className="account-tabs">
                   {(["login", "register"] as const).map((value) => (
                     <button
                       type="button"
@@ -625,7 +653,8 @@ export default function AccountControl({
                       {value === "login" ? "Sign in" : "Create account"}
                     </button>
                   ))}
-                </div>
+                </div>}
+                {tab === "password" && account?.user && <button type="button" className="text-button" onClick={()=>{setTab("login");setPassword("");setCurrentPassword("");setConfirmPassword("");setMessage("");}}>Back to my account</button>}
                 {tab !== "password" && (
                   <label>
                     Email
@@ -666,6 +695,7 @@ export default function AccountControl({
                     Use at least 12 characters and a unique password.
                   </p>
                 )}
+                {tab === "password" && <label>Confirm new password<input type="password" value={confirmPassword} onChange={e=>setConfirmPassword(e.target.value)} autoComplete="new-password" minLength={12} maxLength={128} required disabled={busy} /></label>}
                 <button
                   className="primary-button"
                   disabled={busy || account?.configured !== true}
