@@ -86,7 +86,7 @@ export function interpret(text: string, fallback = "New York City"): Intent {
   )
     concepts.push("independent coffee shops");
   const excludeConcepts =
-    /(?:instead of|without|not)\s+(?:starbucks|big\s+chains?|large\s+chains?|chains?)/i.test(
+    /(?:instead of|without|not|no|avoid|exclude)\s+(?:starbucks|big\s+chains?|large\s+chains?|chains?)/i.test(
       text,
     )
       ? ["Starbucks", "coffee chain"]
@@ -113,9 +113,9 @@ export function interpret(text: string, fallback = "New York City"): Intent {
   const activeSections = sections.filter((s) => !hidden.includes(s));
   const refine =
     !onboarding &&
-      /tonight|quieter|more|less|find|show|want|give|help|too |niche|refine|rank|reorder|trending|hidden gem|safe bet|surprise me|highly rated|make it/i.test(
+    (excludeConcepts.length > 0 || constraints.length > 0 || /tonight|quieter|more|less|find|show|want|give|help|too |niche|refine|rank|reorder|trending|hidden gem|safe bet|surprise me|highly rated|make it/i.test(
       text,
-    );
+    ));
   return {
     kind: onboarding
       ? "onboard"

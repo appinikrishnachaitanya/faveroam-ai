@@ -479,6 +479,15 @@ await wait(
   "document.querySelector('.plan-save-actions .primary-button').textContent.includes('Save to')",
 );
 await textClick("Plan a day");
+const initialStops = await evaluate("[...document.querySelectorAll('.day-out-stops select')].map(s=>[s.id,s.value])");
+await click('[aria-label="Move Culture earlier"]');
+assert.deepEqual(await evaluate("[...document.querySelectorAll('.day-out-stops select')].map(s=>s.id)"), ["day-out-Culture","day-out-Coffee","day-out-Eat"]);
+assert.deepEqual(await evaluate("[...document.querySelectorAll('.day-out-stops select')].map(s=>[s.id,s.value]).sort()"), [...initialStops].sort(), "Reordering preserves venue selections");
+await click('[aria-label="Move Culture later"]');
+await click('.outing-activities label:nth-of-type(4) input');
+assert.ok(await evaluate("Boolean(document.querySelector('#day-out-Cinema'))"), "Cinema can be added as its own activity");
+assert.deepEqual(await evaluate("[...document.querySelectorAll('.day-out-stops select')].filter(s=>s.id!=='day-out-Cinema').map(s=>[s.id,s.value])"), initialStops, "Adding an activity preserves other choices");
+await click('.outing-activities label:nth-of-type(4) input');
 await input("#plan-date", "2099-10-18");
 await click(".plan-save-actions .primary-button");
 await wait(

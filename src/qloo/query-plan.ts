@@ -378,7 +378,7 @@ export function preferencesFromText(text: string): QueryPreferences {
     p.tagOperator = "union";
   else if (/\b(?:Indian|Thai|Italian)\b.*\band\b.*\bvegetarian\b/i.test(text))
     p.tagOperator = "intersection";
-  if (/cheap|affordable|budget|under\s*\$\$/i.test(text)) p.priceMax = 2;
+  if (/\bcheap\b|affordable|budget|under\s*\$\$/i.test(text)) p.priceMax = 2;
   if (/mid.range/i.test(text)) {
     p.priceMin = 2;
     p.priceMax = 3;

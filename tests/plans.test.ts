@@ -38,6 +38,17 @@ test("plan save excludes hidden categories, wrong-city results and audience-cont
   const audience = state(); audience.cards[0].evidence!.locality = "audience-context";
   assert.throws(() => planFromSession(audience, input, now));
 });
+test("five-activity plans preserve requested order and allow distinct cinema and nightlife stops", () => {
+  const s=state();
+  const cinema=card("cinema","Culture");
+  cinema.evidence!.result.tags=[{id:"urn:tag:category:place:movie_theater",name:"Movie theater",type:"urn:tag:category:place"}];
+  const nightlife=card("nightlife","Culture");
+  nightlife.evidence!.result.tags=[{id:"urn:tag:category:place:night_club",name:"Night club",type:"urn:tag:category:place"}];
+  s.cards.push(cinema,nightlife);
+  const ids=["cinema","eat","nightlife","coffee","culture"];
+  const plan=planFromSession(s,{...input,ids},now);
+  assert.deepEqual(plan.stops.map(stop=>stop.id),ids);
+});
 test("plan dates are real future destination-local dates", () => {
   for (const date of ["2026-10-16", "2026-02-30", "tomorrow", "", "2026-10-18T12:00Z"]) assert.throws(() => planFromSession(state(), { ...input, date }, now));
   assert.equal(planFromSession(state(), { ...input, date: "2026-10-17" }, now).scheduled_date, "2026-10-17");

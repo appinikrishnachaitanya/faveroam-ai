@@ -9,6 +9,7 @@ import type { DiscoveryGoal } from "../../src/qloo/query-plan";
 import { CandidateChoices } from "./disambiguation";
 import { ResultMetrics, WhyEvidence } from "./intelligence-evidence";
 import { priceLabel } from "../../src/passport/pricing";
+import { suggestedMatches } from "../../src/passport/matching";
 const modes: { id: DiscoveryGoal; name: string; detail: string }[] = [
   {
     id: "discover",
@@ -75,6 +76,7 @@ export default function TasteIntelligence({
   const [debug, setDebug] = useState<unknown>();
   async function post(path: string, body: unknown) {
     const r = await fetch(path, {
+      signal: AbortSignal.timeout(75_000),
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
@@ -88,8 +90,9 @@ export default function TasteIntelligence({
     setError("");
     setTogether(undefined);
     try {
-      setResolution(await post("/api/agent/resolve", { seeds: partner }));
-      setIds({});
+      const matches = await post("/api/agent/resolve", { seeds: partner });
+      setResolution(matches);
+      setIds(suggestedMatches(matches.items));
     } catch {
       setError(
         "Could not find those interests. Use three different named films, artists, books or brands.",
@@ -370,8 +373,8 @@ export default function TasteIntelligence({
                     selected={ids[i]}
                     onSelect={(id) => setIds((v) => ({ ...v, [i]: id }))}
                   />
-                  {!item.candidates.length && (
-                    <p>No matches. Edit this interest and try again.</p>
+                  {!item.candidates.some(c => !c.id.startsWith("urn:tag:")) && (
+                    <p>No named entity match. Use a specific artist, film, book or brand; cuisine concepts cannot be used as the other person's entity profile.</p>
                   )}
                 </section>
               ))}
@@ -416,6 +419,7 @@ export default function TasteIntelligence({
                     <h4>{card.name}</h4>
                     <p>{card.address ?? card.section}</p>
                     <ResultMetrics card={card} />
+                    <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([card.name,card.address,passport.city].filter(Boolean).join(", "))}`} target="_blank" rel="noopener noreferrer">Check location and availability ↗</a>
                     <details>
                       <summary>Why this works together</summary>
                       <WhyEvidence card={card} />

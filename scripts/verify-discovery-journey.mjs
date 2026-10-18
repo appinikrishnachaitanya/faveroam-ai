@@ -83,7 +83,7 @@ await evaluate(
   `window.__livePassport=null; window.__liveReply=null; const original=window.fetch; window.fetch=async(...args)=>{const r=await original(...args);const url=String(args[0]);if(url==='/api/passport')r.clone().json().then(b=>window.__livePassport=b);if(url==='/api/agent/turn')r.clone().text().then(text=>{for(const line of text.trim().split('\\n')){try{const b=JSON.parse(line);if(b.type==='result')window.__liveReply=b.reply;}catch{}}});return r;}`,
 );
 await input("#origin", "Bengaluru");
-await input("#destination", "Toronto");
+await input("#destination", "Toronto", "HTMLSelectElement");
 const different = process.env.PASSPORT_PROFILE === "different";
 for (const taste of different
   ? ["Taylor Swift", "Inception", "Specialty coffee"]

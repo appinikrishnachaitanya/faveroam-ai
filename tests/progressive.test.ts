@@ -73,7 +73,7 @@ test("confirmation offers actual candidates inline, explicit selection, replacem
     onSubmit: noop,
   };
   const html = renderToStaticMarkup(createElement(TasteConfirmation, props));
-  assert.match(html, /Confirm your/);
+  assert.match(html, /Review your/);
   assert.match(html, /select/);
   assert.match(html, /ui-protocol-id/);
   assert.match(html, /Replace taste/);

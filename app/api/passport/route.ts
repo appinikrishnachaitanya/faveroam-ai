@@ -5,13 +5,14 @@ import { createSession } from "../../../src/agent/store.ts";
 import type { Constraint } from "../../../src/agent/types.ts";
 import { QlooError } from "../../../src/qloo/client.ts";
 import { validDestination } from "../../../src/workspace/location";
+import { supportedCity } from "../../../src/workspace/state";
 async function handlePOST(request: Request) {
   try {
     const raw = await request.text();
     if (raw.length > 30000) throw new QlooError("Input is too long.", 400);
     const b = JSON.parse(raw);
     if (
-      !validDestination(b.city) ||
+      !validDestination(b.city) || !supportedCity(b.city) ||
       typeof b.token !== "string" ||
       !Array.isArray(b.ids) ||
       b.ids.length < 3 ||
@@ -19,7 +20,7 @@ async function handlePOST(request: Request) {
       b.ids.some((id: unknown) => typeof id !== "string")
     )
       throw new QlooError(
-        "Enter a city and confirm three to five tastes.",
+        "Choose one of the ten supported destinations and confirm three to five tastes.",
         400,
       );
     const constraints: Constraint[] = Array.isArray(b.constraints)
@@ -33,7 +34,7 @@ async function handlePOST(request: Request) {
           ].includes(String(c)),
         )
       : [];
-    const result = await passport(b.city.trim(), b.token, b.ids, constraints);
+    const result = await passport(supportedCity(b.city)!, b.token, b.ids, constraints);
     const state = createSession(result, constraints);
     if (Array.isArray(b.history))
       state.history = b.history

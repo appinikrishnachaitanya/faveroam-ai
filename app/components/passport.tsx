@@ -1,6 +1,8 @@
 "use client";
 import { useState } from "react";
 import { ResultMetrics, WhyEvidence } from "./intelligence-evidence";
+import { evidenceFacts } from "../../src/qloo/explanation";
+import { threeChoices } from "../../src/passport/shortlist";
 import { bridgeRoutes, sparseSections } from "../../src/passport/evidence";
 import type { Candidate, Card, Section } from "../../src/passport/model";
 import {
@@ -417,11 +419,7 @@ export function DiscoveryCard({
         <summary>
           Why this suggestion? <Icon name="plus" size={12} />
         </summary>
-        <p>
-          {card.evidence?.strategyNote?.startsWith("Broader local")
-            ? "This is a broader local suggestion. Your venue requirements were kept, while taste similarity was broadened."
-            : "Your confirmed interests were considered together. This does not establish a separate relationship with every interest."}
-        </p>
+        {evidenceFacts(card).slice(0, 4).map((fact) => <p key={fact}>{fact}</p>)}
         <div className="why-signals">
           {(
             card.evidence?.inputs
@@ -561,10 +559,12 @@ export function PassportSections({
             </p>
           )}
           <div className="discovery-grid">
-            {result.cards
-              .filter((c) => c.section === s)
-              .slice(0, expanded[s] ? undefined : previewLimit)
-              .map((c) => (
+            {(expanded[s] || previewLimit !== 3
+              ? result.cards.filter(c => c.section === s).slice(0, expanded[s] ? undefined : previewLimit).map(card => ({card,label:"",reason:""}))
+              : threeChoices(result.cards.filter(c => c.section === s)))
+              .map(({card: c, label, reason}) => (
+                <div className="shortlist-choice" key={c.id}>
+                {label && <p className="shortlist-label" title={reason}>{label}<small>{reason}</small></p>}
                 <DiscoveryCard
                   session={result.agent}
                   key={c.id}
@@ -575,6 +575,7 @@ export function PassportSections({
                   live={Boolean(result.agent)}
                   disabled={updating.length > 0}
                 />
+                </div>
               ))}
           </div>
           {result.cards.filter((c) => c.section === s).length >

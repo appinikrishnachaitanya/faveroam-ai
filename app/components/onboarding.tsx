@@ -115,24 +115,21 @@ export function MoveForm({
             <Icon name="arrow" size={22} />
           </span>
           <label htmlFor="destination">
-            Moving to <span>City, country</span>
+            Moving to <span>10 supported destinations</span>
             <div className="field-with-icon">
               <Icon name="pin" />
-              <input
+              <select
                 id="destination"
-                list="destination-suggestions"
-                placeholder="e.g. Bengaluru, India"
-                maxLength={100}
                 value={city}
                 disabled={disabled}
                 required
                 onChange={(e) => onCity(e.target.value)}
-              />
-              <datalist id="destination-suggestions">
+              >
+                <option value="">Choose your destination</option>
                 {destinations.map((destination) => (
                   <option key={destination}>{destination}</option>
                 ))}
-              </datalist>
+              </select>
             </div>
           </label>
         </div>
@@ -260,11 +257,11 @@ export function TasteConfirmation({
       <div className="onboarding-heading">
         <span className="micro-label">MAKE SURE WE GOT IT RIGHT</span>
         <h1 id="confirmation-title">
-          Confirm your
+          Review your
           <br />
           <em>interests</em>
         </h1>
-        <p>Choose the match you meant. Your Passport starts with you.</p>
+        <p>Clear matches are suggested for you. Review or change them; choose a match where a name is ambiguous.</p>
       </div>
       <div className="confirmation-list">
         {items.map(({ item, index }) => {

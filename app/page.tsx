@@ -10,7 +10,7 @@ import type { Section } from "../src/passport/model";
 import type { Candidate } from "../src/passport/model";
 import {
   confirmed,
-  destinations,
+  supportedCity,
   extractDraft,
   typeLabel,
   onboardingTastes,
@@ -32,6 +32,7 @@ import {
   StepIndicator,
 } from "./components/onboarding";
 import ConciergeDrawer from "./components/concierge";
+import { suggestedMatches } from "../src/passport/matching";
 import AccountControl from "./components/account";
 import DayOutPlan from "./components/day-out";
 import TasteIntelligence from "./components/intelligence";
@@ -207,7 +208,7 @@ export default function Home() {
       });
       const combined = onboardingTastes(interpreted.intent);
       const parsed = {
-        city: interpreted.intent.destination ?? city,
+        city: supportedCity(interpreted.intent.destination ?? city) ?? "",
         tastes: combined.length ? combined : extractDraft(text, city).tastes,
       };
       setConceptSeeds(interpreted.intent.concepts);
@@ -218,7 +219,7 @@ export default function Home() {
         { role: "user", text },
         {
           role: "agent",
-          text: `I’ve prepared an editable taste draft for ${parsed.city}. Check the phrases below before I look for matching interests.`,
+          text: `I’ve prepared an editable taste draft for ${parsed.city || "your next city"}. Choose a supported destination and check the phrases below before I look for matching interests.`,
         },
       ]);
       setCity(parsed.city);
@@ -378,6 +379,7 @@ export default function Home() {
         concepts: conceptSeeds,
       });
       setResolution(r);
+      setChosen(suggestedMatches(r.items));
       setPhase("confirming");
       say(
         r.items.some((i) => !i.candidates.length)

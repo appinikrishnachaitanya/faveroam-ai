@@ -27,10 +27,11 @@ test("locality matching accepts aliases and accents but rejects wrong cities and
   assert.equal(matchesDestination("Bengaluru", { city: "London" }), false);
 });
 
-test("custom destinations can open the planner with an explicit UTC fallback", () => {
+test("configured destinations use their real time zones and other cities retain UTC fallback", () => {
   const now = new Date("2026-10-17T12:00:00Z");
   assert.equal(cityDate("Bengaluru, India", now), "2026-10-17");
-  assert.equal(cityTimeZone("Bengaluru, India"), "UTC");
+  assert.equal(cityTimeZone("Bengaluru, India"), "Asia/Kolkata");
   assert.equal(nextWeekend("Bengaluru, India", now), "2026-10-24");
   assert.equal(cityTimeZone("London, United Kingdom"), "Europe/London");
+  assert.equal(cityTimeZone("Cape Town"), "UTC");
 });

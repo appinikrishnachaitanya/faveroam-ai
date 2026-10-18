@@ -122,8 +122,8 @@ export async function discoverSection(
         t.id.includes(":cuisine:") ||
         t.id.includes(":ambience:"),
     );
-  if (type === "place" && tags.length)
-    params["signal.interests.tags"] = tags.map((t) => t.id).join(",");
+  if (type === "place" && sectionTags(state, section).length)
+    params["signal.interests.tags"] = sectionTags(state, section).filter(tag => !excludedTags.has(tag.id)).map((t) => t.id).join(",");
   if (section === "Eat") {
     const dishes = tags.filter((tag) => tag.id.startsWith("urn:tag:specialty_dish:place:"));
     const cuisine = dishes.length ? dishes : tags.filter(

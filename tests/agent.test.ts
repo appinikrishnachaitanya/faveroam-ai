@@ -92,6 +92,33 @@ test("onboarding separates destination, seeds and negative constraints", () => {
   assert.ok(i.constraints.includes("touristy"));
   assert.ok(!i.seeds.some((s) => s.includes("don't")));
 });
+test("cheaper is a category-scoped relative price refinement that retains exclusions", async () => {
+  const s=state();
+  s.queryPreferences={Eat:{priceMax:4,businessRatingMin:4,excludeTags:["urn:tag:business:place:chain"]}};
+  const reply=await runTurn(s,{message:"cheaper"},dependencies());
+  assert.deepEqual(reply.changed,["Eat"]);
+  assert.equal(reply.state.queryPreferences?.Eat?.priceMax,3);
+  assert.equal(reply.state.queryPreferences?.Eat?.businessRatingMin,4);
+  assert.deepEqual(reply.state.queryPreferences?.Eat?.excludeTags,["urn:tag:business:place:chain"]);
+  assert.deepEqual(reply.state.cards.filter(c=>c.section==="Music"),s.cards.filter(c=>c.section==="Music"));
+  const deps=dependencies();
+  deps.provider={interpret:async()=>interpret("hi"),choose:async()=>[]};
+  const modelReply=await runTurn(s,{message:"cheaper"},deps);
+  assert.deepEqual(modelReply.changed,["Eat"]);
+  assert.equal(modelReply.state.queryPreferences?.Eat?.priceMax,3);
+});
+test("no chains executes as a refinement and refuses unverified exclusions", async () => {
+  const s=state();const deps=dependencies();
+  deps.workflow=async(_mode,_name,args)=>({status:"ok",results:[{id:args.query==="Starbucks"?"urn:tag:nearby_attraction:qloo:starbucks":"urn:tag:business:place:chain",name:args.query==="Starbucks"?"Starbucks":"Chain"}]});
+  const reply=await runTurn(s,{message:"no chains"},deps);
+  assert.deepEqual(reply.changed,["Eat"]);
+  assert.ok(reply.state.queryPreferences?.Eat?.excludeTags?.includes("urn:tag:business:place:chain"));
+  deps.workflow=async()=>({status:"ok",results:[]});
+  const failed=await runTurn(s,{message:"no chains"},deps);
+  assert.deepEqual(failed.changed,[]);
+  assert.deepEqual(failed.state.cards,s.cards);
+  assert.match(failed.message,/couldn't verify/);
+});
 test("fallback recognizes dinner, cinema and nightlife without treating party as a concert", () => {
   const intent = interpret("bro, i want to go movie and then party and dinner bro, help me please");
   assert.equal(intent.kind, "refine");

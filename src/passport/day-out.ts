@@ -6,6 +6,21 @@ export const dayOutStops: { section: Section; label: string }[] = [
   { section: "Culture", label: "Find a new perspective" },
   { section: "Eat", label: "Make yourself at home" },
 ];
+export const outingActivities = [
+  { id: "Coffee", section: "Coffee", label: "Coffee" },
+  { id: "Culture", section: "Culture", label: "Culture" },
+  { id: "Eat", section: "Eat", label: "Dinner" },
+  { id: "Cinema", section: "Culture", label: "Cinema" },
+  { id: "Nightlife", section: "Culture", label: "Nightlife" },
+] as const;
+export function activityMatches(card: Card, activity: string) {
+  const item = outingActivities.find(a => a.id === activity);
+  if (!item || card.section !== item.section) return false;
+  const tags = (card.evidence?.result.tags ?? []).map(t => t.name).join(" ");
+  if (activity === "Cinema") return /cinema|movie theater|movie theatre/i.test(tags);
+  if (activity === "Nightlife") return /nightclub|night club/i.test(tags);
+  return true;
+}
 
 /** An editable sequence, not a route optimizer or a claim of live availability. */
 export function dayOutOptions(cards: Card[], city: string): Card[] {

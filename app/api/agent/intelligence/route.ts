@@ -2,17 +2,14 @@ import { getSession } from "../../../../src/agent/store";
 import { unseal } from "../../../../src/passport/service";
 import { compareProfiles } from "../../../../src/qloo/compare";
 import { entityDetails, tagTypes } from "../../../../src/qloo/lookups";
-import { buildQuery } from "../../../../src/qloo/query-plan";
-import { insights } from "../../../../src/qloo/client";
 import { normalizeEntity } from "../../../../src/qloo/normalizer";
-import { validateDiscoveries } from "../../../../src/agent/validation";
-import { withEvidence } from "../../../../src/passport/evidence";
 import { queryRecord } from "../../../../src/qloo/diagnostics";
 import { sectionOrder } from "../../../../src/workspace/state";
 import type { Section } from "../../../../src/passport/model";
 import { configuredProvider } from "../../../../src/agent/provider";
 import { evidenceFacts } from "../../../../src/qloo/explanation";
 import { debugRequest } from "../../../../src/agent/debug";
+import { discoverSection } from "../../../../src/agent/runtime";
 export const runtime = "nodejs";
 const running = new Set<string>();
 const json = (value: unknown, status = 200) =>
@@ -132,60 +129,21 @@ async function handlePOST(request: Request) {
         notice:
           "No shared cultural tags were returned. Your existing Passport is preserved.",
       });
-    const section = b.section as Section,
-      type = section === "Music" ? "artist" : "place";
-    const preferences = { ...state.queryPreferences?.[section] };
-    const plan = buildQuery({
-      outputType: type,
-      interests: {
-        entities: [...new Set([...a, ...partner.map((c) => c.id)])],
-        tags: comparison.shared.slice(0, 5).map((t) => t.id),
-      },
-      preferences: {
-        ...preferences,
-        ...(type === "place"
-          ? {
-              locationQuery: preferences.locationQuery ?? state.city,
-              radius: preferences.radius ?? 0,
-            }
-          : {}),
-      },
-      explainability: true,
-      take: 20,
-    });
-    const params = { ...plan.params };
+    const section = b.section as Section;
     const rejected = state.feedback.filter((f) => !f.accepted).map((f) => f.id);
-    if (rejected.length) params["filter.exclude.entities"] = rejected.join(",");
-    if (section === "Eat") {
-      params["filter.tags"] = "urn:tag:genre:place:restaurant";
-      params["operator.filter.tags"] = "intersection";
-    }
-    if (section === "Culture") {
-      params["filter.tags"] = "urn:tag:genre:place:museum";
-      params["operator.filter.tags"] = "intersection";
-    }
     try {
-      const result = await insights(params, signal);
-      const validated = validateDiscoveries(
-        result.body,
-        state.city,
-        section,
-        state.categoryConstraints[section] ?? [],
-        [...a, ...partner.map((c) => c.id), ...rejected],
-      );
       const tags = comparison.shared.map((t) => ({
         id: t.id,
         name: t.name,
         types: ["urn:tag"],
         detail: "Returned common ground",
       }));
-      const cards = withEvidence(
-        validated,
-        result.entities,
-        result.params,
-        [...state.selected, ...partner, ...tags],
-        state.city,
-      ).slice(0, 6);
+      const joint = structuredClone(state);
+      joint.selected = [...new Map([...state.selected, ...partner].map(c => [c.id,c])).values()];
+      joint.tags = [...new Map([...state.tags, ...tags].map(c => [c.id,c])).values()];
+      joint.categoryTags ??= {};
+      joint.categoryTags[section] = [...new Set([...(joint.categoryTags[section] ?? []), ...tags.map(t => t.id)])];
+      const cards = (await discoverSection(joint, section, state.categoryConstraints[section] ?? [], [...a, ...partner.map(c => c.id), ...rejected], false, signal)).slice(0,6);
       return json({
         comparison,
         partner: partner.map((p) => p.name),

@@ -125,9 +125,11 @@ test("independent coffee refinement applies once and preserves other chapters", 
         {
           id: args.query.includes("independent")
             ? "urn:tag:nearby_attraction:qloo:independent_coffee_shops"
+            : args.query === "Starbucks" ? "urn:tag:nearby_attraction:qloo:starbucks"
             : "urn:tag:business:place:chain",
           name: args.query.includes("independent")
             ? "Independent Coffee Shops"
+            : args.query === "Starbucks" ? "Starbucks"
             : "Chain",
           type: "urn:tag:nearby_attraction",
         },

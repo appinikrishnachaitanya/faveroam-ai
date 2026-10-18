@@ -37,7 +37,18 @@ export const destinations = [
   "London",
   "Paris",
   "Tokyo",
+  "Bengaluru",
+  "Mumbai",
+  "Singapore",
+  "Berlin",
+  "Sydney",
 ];
+export function supportedCity(value: unknown): string | undefined {
+  if (typeof value !== "string") return;
+  const name = value.split(",")[0].trim().toLowerCase();
+  const canonical = name === "bangalore" ? "bengaluru" : name === "nyc" || name === "new york" ? "new york city" : name;
+  return destinations.find(city => city.toLowerCase() === canonical);
+}
 export const sectionOrder: Section[] = [
   "Eat",
   "Coffee",

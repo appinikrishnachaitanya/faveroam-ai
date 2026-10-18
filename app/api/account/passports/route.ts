@@ -31,7 +31,7 @@ async function handleGET() {
       .select("id,city,updated_at")
       .eq("user_id", user.id)
       .order("updated_at", { ascending: false })
-      .limit(5);
+      .limit(50);
     if (error) throw Error();
     return privateJson({ passports: data });
   } catch {
@@ -106,7 +106,11 @@ async function handlePOST(request: Request) {
       },
       { onConflict: "user_id,city" },
     );
-    if (error) throw Error();
+    if (error) {
+      if (error.code === "23514")
+        return privateJson({ error: "Account storage needs a database update for this destination. Your Passport is preserved; contact the app owner." }, 503);
+      throw Error();
+    }
     return privateJson({ saved: true, city: state.city });
   } catch {
     return privateJson(

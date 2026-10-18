@@ -3,10 +3,12 @@ import { useState } from "react";
 import type { Passport } from "../../src/workspace/state";
 import {
   dayOutOptions,
-  dayOutStops,
   dayOutText,
   stopDistance,
+  outingActivities,
+  activityMatches,
 } from "../../src/passport/day-out";
+import { evidenceFacts } from "../../src/qloo/explanation";
 import { cityDate, cityTimeZone, nextWeekend } from "../../src/account/plans";
 import { accountRequest, showNotice } from "../../src/account/browser";
 
@@ -26,24 +28,35 @@ export default function DayOutPlan({
   const [status, setStatus] = useState("");
   const [date, setDate] = useState(() => cityDate(passport.city));
   const [saving, setSaving] = useState(false);
+  const [activities, setActivities] = useState<string[]>(["Coffee", "Culture", "Eat"]);
   const options = dayOutOptions(passport.cards, passport.city);
-  let anchor: import("../../src/passport/model").Card | undefined;
-  const stops = dayOutStops.map((stop) => {
-    const pool = options.filter((card) => card.section === stop.section);
+  const stops = activities.map(id => ({ ...outingActivities.find(a => a.id === id)!, id })).map((stop) => {
+    const pool = options.filter((card) => activityMatches(card, stop.id));
     // A choice removed by refinement requires explicit reselection.
-    const selected = choices[stop.section]
-      ? pool.find((card) => card.id === choices[stop.section])
-      : pool.find((card) => !anchor || (stopDistance(anchor, card) ?? 0) <= 15);
-    if (selected && !omitted[stop.section]) anchor = selected;
+    const selected = choices[stop.id]
+      ? pool.find((card) => card.id === choices[stop.id])
+      : pool[0];
     return {
       ...stop,
       pool,
-      selected: omitted[stop.section] ? undefined : selected,
+      selected: omitted[stop.id] ? undefined : selected,
     };
   });
   const selected = stops.flatMap((stop) =>
     stop.selected ? [stop.selected] : [],
   );
+  const duplicateStops = new Set(selected.map(card => card.id)).size !== selected.length;
+
+  function moveActivity(id: string, direction: -1 | 1) {
+    setActivities(current => {
+      const index = current.indexOf(id);
+      const destination = index + direction;
+      if (index < 0 || destination < 0 || destination >= current.length) return current;
+      const next = [...current];
+      [next[index], next[destination]] = [next[destination], next[index]];
+      return next;
+    });
+  }
 
   function download() {
     const blob = new Blob([dayOutText(passport.city, selected, date)], {
@@ -96,20 +109,16 @@ export default function DayOutPlan({
       <div className="day-out-plan">
         <span className="micro-label">MAKE THE CITY YOURS</span>
         <h2>
-          {selected.length === 3
-            ? "Coffee, culture, and a good meal."
-            : "Build your first outing."}
+          Build your first outing.
         </h2>
         <p role="status">
-          {selected.length} of 3 stops selected.
-          {selected.length < 3
+          {selected.length} of {activities.length} stops selected.
+          {selected.length < activities.length
             ? " This is a partial plan; leave a stop open or refine that category."
             : " Check locations and hours before going."}
         </p>
         <p>
-          Choose a coffee stop, something to see, and somewhere to eat from your
-          suggestions. Swap or skip any stop, then download your plan to keep
-          it.
+          Choose your activities and their order. Swap or skip any stop without changing the others.
         </p>
         <p className="helper">
           Check opening hours, travel times, prices and availability before
@@ -146,19 +155,32 @@ export default function DayOutPlan({
             and date updates that plan.
           </p>
         </div>
+        <fieldset className="outing-activities"><legend>What would you like to do?</legend>
+          {outingActivities.map(activity => <label key={activity.id}><input type="checkbox" checked={activities.includes(activity.id)} disabled={disabled || saving} onChange={e => setActivities(old => e.target.checked ? [...old, activity.id] : old.filter(id => id !== activity.id))} />{activity.label}</label>)}
+        </fieldset>
         <ol className="day-out-stops">
-          {stops.map((stop) => (
-            <li key={stop.section}>
+          {stops.map((stop, index) => (
+            <li key={stop.id}>
               <h3>{stop.label}</h3>
-              <label htmlFor={`day-out-${stop.section}`}>{stop.section}</label>
+              <div className="outing-order">
+                <button type="button" className="quiet-button"
+                  disabled={disabled || saving || index === 0}
+                  aria-label={`Move ${stop.label} earlier`}
+                  onClick={() => moveActivity(stop.id, -1)}>↑ Earlier</button>
+                <button type="button" className="quiet-button"
+                  disabled={disabled || saving || index === stops.length - 1}
+                  aria-label={`Move ${stop.label} later`}
+                  onClick={() => moveActivity(stop.id, 1)}>↓ Later</button>
+              </div>
+              <label htmlFor={`day-out-${stop.id}`}>{stop.label}</label>
               <select
-                id={`day-out-${stop.section}`}
+                id={`day-out-${stop.id}`}
                 disabled={disabled || saving || !stop.pool.length}
                 value={stop.selected?.id ?? ""}
                 onChange={(event) => {
                   const id = event.target.value;
-                  setChoices((old) => ({ ...old, [stop.section]: id }));
-                  setOmitted((old) => ({ ...old, [stop.section]: !id }));
+                  setChoices((old) => ({ ...old, [stop.id]: id }));
+                  setOmitted((old) => ({ ...old, [stop.id]: !id }));
                   setStatus(
                     `${stop.section} updated. Your other choices stay the same.`,
                   );
@@ -198,10 +220,7 @@ export default function DayOutPlan({
                   </a>
                   <details>
                     <summary>Why this stop?</summary>
-                    <p>
-                      This place came from your personalized suggestions. Change
-                      it using the menu above, or leave this stop open.
-                    </p>
+                    {evidenceFacts(stop.selected).slice(0,4).map(fact => <p key={fact}>{fact}</p>)}
                     <small>Suggested for your confirmed interests.</small>
                   </details>
                 </>
@@ -225,10 +244,11 @@ export default function DayOutPlan({
           </p>
         )}
         <div className="plan-save-actions">
+          {duplicateStops && <p role="alert">Choose different venues for each activity, or leave a repeated stop open.</p>}
           <button
             className="quiet-button download-plan"
             onClick={download}
-            disabled={disabled || !selected.length}
+            disabled={disabled || !selected.length || duplicateStops}
           >
             {selected.length === 3
               ? "Download my plan"
@@ -236,7 +256,7 @@ export default function DayOutPlan({
           </button>
           <button
             className="primary-button"
-            disabled={disabled || saving || !selected.length || !date}
+            disabled={disabled || saving || !selected.length || !date || duplicateStops}
             onClick={() => void savePlan()}
           >
             {saving

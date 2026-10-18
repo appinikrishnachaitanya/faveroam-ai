@@ -103,6 +103,7 @@ export function WhyEvidence({
   }
   const connected =
     m?.taste.contributingSignals
+      .filter(signal => signal.contribution > 0)
       .flatMap((signal) => {
         const input = inputs.find(
           (i) => i.id.toLowerCase() === signal.id.toLowerCase(),

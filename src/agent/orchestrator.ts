@@ -342,6 +342,13 @@ export async function runTurn(
   // Excluding a venue type is not permission to hide its whole chapter.
   if (input.message) {
     const explicit = interpret(input.message, state.city);
+    if (explicit.kind === "refine" && (explicit.constraints.length || explicit.excludeConcepts?.length)) {
+      intent.kind = "refine";
+      intent.constraints = [...new Set([...intent.constraints, ...explicit.constraints])];
+      if (!intent.sections.length) intent.sections = explicit.sections;
+    }
+    if (explicit.excludeConcepts?.length)
+      intent.excludeConcepts = [...new Set([...(intent.excludeConcepts ?? []), ...explicit.excludeConcepts])];
     if (explicit.activityGenres?.length) {
       intent.activityGenres = explicit.activityGenres;
       intent.concepts = explicit.concepts;
@@ -403,6 +410,15 @@ export async function runTurn(
   }
   state.intent = { ...intent, sections: targets };
   state.queryPreferences ??= {};
+  if (input.message && intent.constraints.includes("expensive") && intent.query?.priceMax === undefined) {
+    for (const section of targets) {
+      const current = state.queryPreferences[section] ?? {};
+      const priceMax = /cheaper|less expensive/i.test(input.message)
+        ? Math.max(1, (current.priceMax ?? 3) - 1)
+        : Math.min(2, current.priceMax ?? 2);
+      state.queryPreferences[section] = patchPreferences(current, { priceMax });
+    }
+  }
   if (intent.query)
     for (const section of targets) {
       // This is a patch: follow-ups keep the existing price, location and other unaffected preferences.
@@ -502,7 +518,7 @@ export async function runTurn(
       event("Guided refinement is available", "attention");
     }
   }
-  const concepts = [...intent.concepts, ...(intent.excludeConcepts ?? [])];
+  const concepts = [...new Set([...intent.concepts, ...(intent.excludeConcepts ?? [])])];
   if (
     intent.constraints.includes("crowded") &&
     !concepts.some((c) => /quiet/i.test(c))
@@ -545,7 +561,8 @@ export async function runTurn(
         ).filter((tag) =>
           /starbucks/i.test(concept)
             ? /starbucks/i.test(`${tag.name} ${tag.id}`)
-            : /chain/i.test(`${tag.name} ${tag.id}`),
+            : /chain/i.test(concept) ? /chain/i.test(`${tag.name} ${tag.id}`)
+            : conceptKey(tag.name) === conceptKey(concept),
         );
         if (resolved.length) {
           state.tags = [
@@ -572,10 +589,11 @@ export async function runTurn(
               },
             );
           }
-        }
+        } else return reply("I couldn't verify the requested exclusion in the returned taxonomy. Your current discoveries are preserved; try a more specific exclusion.");
       } catch {
         // The positive independent/local category still runs; no unverified
         // chain claim is presented when exclusion taxonomy is unavailable.
+        return reply("I couldn't apply the requested exclusion right now. Your discoveries are preserved; retry when you're ready.");
       }
       continue;
     }

@@ -96,7 +96,11 @@ async function handlePOST(request: Request) {
       )
       .select("id")
       .single();
-    if (error) throw Error();
+    if (error) {
+      if (error.code === "23514")
+        return privateJson({ error: "Account storage needs a database update for this destination or number of stops. Your selections are preserved; you can still download the plan." }, 503);
+      throw Error();
+    }
     return privateJson({ saved: true, id: data.id });
   } catch {
     return privateJson(
