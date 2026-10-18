@@ -58,3 +58,13 @@ The production browser scenario also passed across consecutive messages: vegetar
 Run `node --use-env-proxy --conditions=react-server --import tsx scripts/verify-conversation-context.ts` for real native Gemini/Qloo reference resolution. It sets a dining rating minimum, then asks “Raise that minimum to 4.6” and “Actually make it 4.7 instead,” verifying the intended rating field, preserved diet/cuisine/budget, protected Music/Movies and actual eligible returned dining results.
 
 Approved-context verification: 204 tests, production build and production smoke passed. Live native Gemini/Qloo returned five eligible dining results at rating minimum 4.6 and three at 4.7 through the two reference-only follow-ups; budget, vegetarian options, Indian cuisine, Music and Movies were retained. Counts reflect that run. Tests additionally cover credential/contact omission, eight-message bounds, user/model role grouping after guided actions, and absence of history in the compatibility adapter payload.
+
+## Decision explanations
+
+Refinement replies now render a decision receipt from actual before/after state: the changed maximum price category or minimum rating, returned count, and retained cuisine/diet requirements. When two distinct returned listings have known price categories and the latter is lower, the reply names a before/after listing example. This is an illustration of returned listings, not a claim that a user-selected itinerary stop was replaced or that monetary savings are known. Missing or equal price metadata does not produce an invented savings example. Price categories remain relative and menus need checking.
+
+Movie/show explanations identify positively contributing confirmed interests, label music/film inputs when available, and describe audience-taste association rather than inferred plot/genre similarity. When per-interest support is absent, the copy discloses collective retrieval. This clarifies evidence; it does not establish improved recommendation relevance or invent an explanation for a surprising film.
+
+Validation: 212 tests and production build passed. The native live probe on this pass encountered Gemini HTTP 504; deterministic fallback still returned Qloo dining results. Native model availability is separate from decision-receipt correctness and requires a fresh successful check before a live judging rehearsal.
+
+The separately labelled forced-guided live acceptance passed against real Qloo: 18 dining results at price cap 1, protected Music/Movies, a budget decision receipt and a verified distinct lower-price listing example. Production smoke also passed. This does not turn the failed native probe into a native pass.

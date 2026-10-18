@@ -1,5 +1,6 @@
 import { refinementScope } from "./scope.ts";
 import { conversationContext } from "./context.ts";
+import { decisionSummary } from "./decision-summary.ts";
 import { passportAnswer } from "./answers.ts";
 import { debugEvent } from "./debug.ts";
 import {
@@ -1059,7 +1060,7 @@ export async function runTurn(
     );
   return reply(
     changed.length
-      ? `Updated ${changed.join(", ")} suggestions. ${state.relaxed!.length ? "I couldn't find a strong match satisfying every preference, so these results prioritize your confirmed cultural tastes. Optional preferences relaxed: " + [...new Set(state.relaxed!.flatMap((r) => r.constraints))].map((c) => (c === "crowded" ? "quiet atmosphere" : c)).join(", ") + ". " : ""}${state.pending ? "You can also confirm the atmosphere concept to refine further. " : ""}Your other categories and confirmed interests are unchanged.`
+      ? `Updated ${changed.map(section => section === "Eat" ? "Dining" : section).join(", ")} suggestions. ${decisionSummary(original, state, changed)} ${state.relaxed!.length ? "I couldn't find a strong match satisfying every preference, so these results prioritize your confirmed cultural tastes. Optional preferences relaxed: " + [...new Set(state.relaxed!.flatMap((r) => r.constraints))].map((c) => (c === "crowded" ? "quiet atmosphere" : c)).join(", ") + ". " : ""}${state.pending ? "You can also confirm the atmosphere concept to refine further. " : ""}Your other categories and confirmed interests are unchanged.`
       : "No strong match yet. Your Passport is preserved. Keep your cuisine, relax quiet, allow popular places, or show closest matches below.",
   );
 }

@@ -10,6 +10,22 @@ export function displayTags<T extends {id:string;name:string}>(tags: readonly T[
     seen.add(key); return true;
   });
 }
+/** Contributions are audience associations, not inferred plot/genre similarity. */
+export function screenTasteConnection(card: Card): string | undefined {
+  if (card.section !== "Movies" && card.section !== "Shows") return;
+  const names = (card.intelligence?.taste.contributingSignals ?? [])
+    .filter(signal => signal.contribution > 0)
+    .sort((a,b) => b.contribution - a.contribution)
+    .flatMap(signal => {
+      const input = card.evidence?.inputs.find(input => input.id.toLowerCase() === signal.id.toLowerCase() && input.role === "entity-signal");
+      if (!input || input.name === input.id) return [];
+      const domain = input.types?.includes("urn:entity:artist") ? "music" : input.types?.includes("urn:entity:movie") ? "film" : undefined;
+      return [`${input.name}${domain ? ` (${domain})` : ""}`];
+    });
+  if (names.length) return `Audience-taste association with ${[...new Set(names)].slice(0,2).join(" and ")}; this does not establish a shared story or genre.`;
+  if (card.evidence?.inputs.some(input => input.role === "entity-signal"))
+    return "Returned for your combined tastes; no individual supporting interest was identified in the response.";
+}
 /** These are the only sentences the model may select. It never authors recommendation facts. */
 export function evidenceFacts(card: Card): string[] {
   const m = card.intelligence,
@@ -34,7 +50,9 @@ export function evidenceFacts(card: Card): string[] {
     facts.push(
       "Your interests were considered together; this does not establish an individual taste relationship.",
     );
-  for (const signal of m?.taste.contributingSignals ?? []) {
+  const screenConnection = screenTasteConnection(card);
+  if (screenConnection) facts.push(screenConnection);
+  for (const signal of screenConnection ? [] : m?.taste.contributingSignals ?? []) {
     if (signal.contribution <= 0) continue;
     const name = card.evidence?.inputs.find(
       (i) => i.id.toLowerCase() === signal.id.toLowerCase(),
@@ -72,6 +90,8 @@ export function recommendationSummary(card: Card): string | undefined {
 
   const tags=displayTags(card.evidence?.result.tags ?? []).filter(tag=>!/urn:tag:(?:genre|category):place/.test(tag.type ?? tag.id));
   const matches=tags.filter(tag=>inputs.some(input=>input.id===tag.id));
+  const screenConnection = screenTasteConnection(card);
+  if (screenConnection) return `${tags.slice(0,2).map(tag=>tag.name).join(" · ")}${tags.length ? ". " : ""}${screenConnection}`;
   if(matches.length) return `Matches ${matches.some(tag=>tag.id.includes(":dietary_option:")) ? "" : "your interest in "}${[...new Set(matches.map(tag=>tag.name))].slice(0,3).join(" · ")}${matches.some(tag=>tag.id.includes(":dietary_option:")) ? " options; confirm the menu with the venue" : ""}.`;
   if(connected.length && card.section !== "Eat" && card.section !== "Coffee") {
     const details=tags.slice(0,2).map(tag=>tag.name).join(" · ");

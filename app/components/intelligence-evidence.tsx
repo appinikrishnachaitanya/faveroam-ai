@@ -2,6 +2,7 @@
 import { useState } from "react";
 import type { Card } from "../../src/passport/model";
 import type { TasteResult } from "../../src/qloo/normalizer";
+import { screenTasteConnection } from "../../src/qloo/explanation";
 import { priceLabel } from "../../src/passport/pricing";
 export function ResultMetrics({ card }: { card: Card }) {
   const m = card.intelligence;
@@ -127,7 +128,7 @@ export function WhyEvidence({
           not establish an individual relationship.
         </p>
       </details>
-      {!!connected.length && (
+      {screenTasteConnection(card) ? <p>{screenTasteConnection(card)}</p> : !!connected.length && (
         <p>Connected to {connected.join(", ")} in your interests.</p>
       )}
       <dl className="evidence-metrics">
