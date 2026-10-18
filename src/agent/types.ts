@@ -119,9 +119,16 @@ export interface ToolChoice {
   name: string;
   arguments: Record<string, unknown>;
 }
+export interface ConversationContext {
+  city: string;
+  history?: {role: "user" | "agent"; text: string}[];
+  tastes?: string[];
+  lastSections?: Section[];
+  categories?: {section: Section; preferences: Record<string, string | number>; constraints: Constraint[]; concepts: string[]; requirements: string[]; exclusions: string[]; resultCount: number}[];
+}
 export interface ModelProvider {
   explain?(facts: string[]): Promise<number[]>;
-  interpret(text: string, context?: { city: string }): Promise<Intent>;
+  interpret(text: string, context?: ConversationContext): Promise<Intent>;
   baseline?(
     destination: string,
     tastes: string[],

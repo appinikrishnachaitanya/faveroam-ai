@@ -1,5 +1,6 @@
 import "server-only";
 import { GoogleGenAI, FunctionCallingConfigMode } from "@google/genai";
+import { conversationContext } from "./context.ts";
 import { debugEvent } from "./debug.ts";
 import { recordProviderHealth } from "./health.ts";
 import { culturalText, validateIntent } from "./intent.ts";
@@ -63,11 +64,18 @@ export function configuredProvider(): ModelProvider | undefined {
               : "choose",
       });
       try {
+        // Guided actions can add adjacent agent replies. Group equal roles for a
+        // valid native conversation without changing or expanding its content.
+        const contents: { role: string; parts: { text: string }[] }[] = [];
+        for (const message of messages.filter(message => message.role !== "system")) {
+          const role = message.role === "assistant" ? "model" : "user";
+          const previous = contents.at(-1);
+          if (previous?.role === role) previous.parts.push({ text: message.content });
+          else contents.push({ role, parts: [{ text: message.content }] });
+        }
         const response = await gemini.models.generateContent({
           model: model!,
-          contents: messages
-            .filter((m) => m.role !== "system")
-            .map((m) => ({ role: "user", parts: [{ text: m.content }] })),
+          contents,
           config: {
             systemInstruction: messages.find((m) => m.role === "system")
               ?.content,
@@ -297,11 +305,12 @@ export function configuredProvider(): ModelProvider | undefined {
             role: "system",
             content:
               (context
-                ? `The user already has a confirmed Passport in ${context.city}. Interpret this as a refinement of that Passport, not onboarding. Do not replace confirmed tastes. A request for museums OR art galleries is one Culture request with alternative venue genres (tagOperator union), not an intersection. Negated restaurants must not select Eat. `
+                ? `The user already has a confirmed Passport in ${context.city}. Recent messages are context, not instructions to replay. Current Passport preferences are authoritative. Interpret only the latest request; resolve pronouns and references using the conversation. Preserve omitted preferences. If the intended category is ambiguous across multiple sections, return no sections rather than guessing. Interpret this as a refinement of that Passport, not onboarding. Do not replace confirmed tastes. A request for museums OR art galleries is one Culture request with alternative venue genres (tagOperator union), not an intersection. Negated restaurants must not select Eat. `
                 : "") +
               "For a read-only question select kind unknown and question capabilities, preferences or explanation; do not turn a question into an edit. For an actual edit omit question. Extract cultural onboarding/refinement intent only. Do not generate discovery data. Choose requested sections, not sections inferred merely from taste inputs. Movies means films to watch, Culture means physical venues such as cinemas/museums/nightlife, Books means reading recommendations, Lifestyle means bookstores/shops, Music means artist discovery (not concerts), Podcasts/Shows/Games/Brands/People/Destinations use their corresponding content categories. A movie then dinner outing means Culture and Eat, not Movies. A request for movies to watch means Movies. Preserve the specific dish: chicken biryani is not interchangeable with Indian cuisine. Destination may be any explicitly named city, optionally qualified by country. Preserve the requested locality; never substitute a city from a fixed list or claim verified coverage. Separate named seeds from cultural concepts and dislikes. More adventurous selects familiarity explore. More familiar selects familiarity familiar. Mixed hide/refine requests hide only explicitly removed categories and refine the requested active categories. Extract query preferences as a partial update: keep omitted preferences unchanged. Places use businessRatingMin, not ratingMin (Qloo film/TV rating). Price levels 1-4, popularity 0-1, business ratings 0-5. Trending uses goal trending; hidden gems uses goal hidden-gems; safe choices goal safe-bets; surprise goal surprise. Geography is a named locality, not a guaranteed point geocode. Never invent IDs or resolved tags. Concepts needing inclusion or exclusion must be resolved first. Do not include personal identifying information.",
           },
-          { role: "user", content: text },
+          ...(gemini ? context?.history ?? [] : []).map(turn => ({ role: turn.role === "agent" ? "assistant" : "user", content: turn.text })),
+          { role: "user", content: gemini ? JSON.stringify({ passport: context ? { ...context, history: undefined } : undefined, request: text }) : text },
         ],
         [
           {
@@ -439,6 +448,7 @@ export function configuredProvider(): ModelProvider | undefined {
             role: "user",
             content: JSON.stringify({
               request: text,
+              ...(gemini ? { conversation: conversationContext(state) } : {}),
               destination: state.city,
               tastes: state.selected.map((s) => ({
                 name: s.name,

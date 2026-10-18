@@ -1,4 +1,5 @@
 import { refinementScope } from "./scope.ts";
+import { conversationContext } from "./context.ts";
 import { passportAnswer } from "./answers.ts";
 import { debugEvent } from "./debug.ts";
 import {
@@ -335,9 +336,7 @@ export async function runTurn(
     event("Interpreting your cultural request", "active");
     try {
       intent = validateIntent(
-        await deps.provider.interpret(input.message ?? "", {
-          city: state.city,
-        }),
+        await deps.provider.interpret(input.message ?? "", conversationContext(state)),
       );
       mode = "model-mcp";
       state.providerHealth = "healthy";

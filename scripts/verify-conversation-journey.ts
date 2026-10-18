@@ -1,4 +1,4 @@
-/** Live provider acceptance; no private history is sent and only status/counts are logged. */
+/** Live provider acceptance; approved cultural context is bounded and only status/counts are logged. */
 import assert from "node:assert/strict";
 import { resolveCulturalSeeds, agentDependencies } from "../src/agent/runtime.ts";
 import { passport, seal } from "../src/passport/service.ts";
@@ -25,5 +25,5 @@ try {
  assert.deepEqual(why.changed,[]);assert.deepEqual(why.state.cards,followup.state.cards);assert.doesNotMatch(why.message,/name a section to refine/i);
  const filters=await runTurn(why.state,{message:"What filters are saved?"},readonlyDeps);
  assert.match(filters.message,/maximum price category 1/);assert.deepEqual(filters.state.queryPreferences,followup.state.queryPreferences);
- console.log(JSON.stringify({check:"conversation-journey",firstNativeHealthy:true,followupProvider:followup.state.providerHealth,followupPriceMax:1,followupDining:followup.changed.includes("Eat")?followup.state.cards.filter(c=>c.section==="Eat").length:0,otherSectionsPreserved:true,readonlyAnswers:true,privateHistoryTransferred:false}));
+ console.log(JSON.stringify({check:"conversation-journey",firstNativeHealthy:true,followupProvider:followup.state.providerHealth,followupPriceMax:1,followupDining:followup.changed.includes("Eat")?followup.state.cards.filter(c=>c.section==="Eat").length:0,otherSectionsPreserved:true,readonlyAnswers:true,boundedConversationContext:true}));
 } catch {console.error("Conversation acceptance FAIL; provider payloads and secrets withheld.");process.exitCode=1;}
