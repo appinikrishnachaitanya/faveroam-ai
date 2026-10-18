@@ -297,6 +297,7 @@ export async function runTurn(
         section === "Eat" &&
         !state.queryPreferences?.[section]?.tagOperator &&
         !pending.optional &&
+        !/^vegetarian(?: cuisine)?$/i.test(tag.name) &&
         /cuisine|restaurant/i.test(`${tag.id} ${tag.name} ${tag.detail}`);
       const existing = (state.categoryTags![section] ?? []).filter(
         (id) =>
@@ -542,7 +543,7 @@ export async function runTurn(
     mode === "model-mcp" &&
     deps.provider &&
     !input.tagChoice &&
-    (intent.strategy === "rank" || neededConcepts.some(concept=>!/^quiet(?: atmosphere)?$/i.test(concept) && conceptUnknown(concept)))
+    (intent.strategy === "rank" || neededConcepts.some(concept=>!/^(?:quiet(?: atmosphere)?|vegetarian)$/i.test(concept) && conceptUnknown(concept)))
   ) {
     let choosingModelTool=false;
     try {
@@ -672,6 +673,17 @@ export async function runTurn(
           !/quiet/i.test(concept) ||
           (t.id.includes(":ambience:") && /quiet|calm|tranquil/i.test(t.name)),
       );
+      // A dietary option is a venue requirement, not a new cultural seed.
+      // Prefer the returned options taxonomy over audience/cuisine homonyms.
+      if (!excluding && /^vegetarian$/i.test(concept)) {
+        const dietary = choices.filter(tag => tag.id.startsWith("urn:tag:dietary_option:") && /^vegetarian$/i.test(tag.name));
+        if (dietary.length !== 1) return reply("I could not verify vegetarian options. Your Passport is unchanged; please retry. Confirm dietary needs with the venue before ordering.");
+        const tag = dietary[0];
+        state.tags = [...state.tags.filter(old => old.id !== tag.id), tag];
+        state.categoryTags!.Eat = [...new Set([...(state.categoryTags!.Eat ?? []), tag.id])];
+        event("Vegetarian options requirement verified", "complete");
+        continue;
+      }
       if (!excluding && /quiet/i.test(concept)) {
         const direct=choices.filter(tag=>conceptKey(tag.name)===conceptKey(concept));
         const exact=direct.length ? direct : choices.filter(tag=>conceptKey(tag.name)===conceptKey(args.query));

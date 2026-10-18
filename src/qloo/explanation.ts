@@ -1,11 +1,21 @@
 import type { Card } from "../passport/model.ts";
 import { priceLabel } from "../passport/pricing.ts";
+/** Only useful descriptive families belong in customer copy, never plot/actions or audience keywords. */
+export function displayTags<T extends {id:string;name:string}>(tags: readonly T[]): T[] {
+  const seen = new Set<string>();
+  return tags.filter(tag => {
+    if (!/^urn:tag:(?:genre|category|cuisine|specialty_dish|ambience|dietary_option|style|subgenre):/.test(tag.id)) return false;
+    const key = tag.name.trim().toLowerCase();
+    if (!key || seen.has(key)) return false;
+    seen.add(key); return true;
+  });
+}
 /** These are the only sentences the model may select. It never authors recommendation facts. */
 export function evidenceFacts(card: Card): string[] {
   const m = card.intelligence,
     params = card.evidence?.params ?? {},
     facts: string[] = [];
-  const returnedTags = card.evidence?.result.tags ?? [];
+  const returnedTags = displayTags(card.evidence?.result.tags ?? []);
   const matched = returnedTags.filter(tag => card.evidence?.inputs.some(input => input.id === tag.id));
   if (matched.length)
     facts.push(`Its returned tags include ${matched.slice(0,3).map(tag => tag.name).join(", ")}, matching requirements or interests used in this search.`);
@@ -60,12 +70,12 @@ export function recommendationSummary(card: Card): string | undefined {
     return input?[input.name]:[];
   });
 
-  const tags=(card.evidence?.result.tags ?? []).filter(tag=>!/urn:tag:(?:genre|category):place/.test(tag.type ?? tag.id));
+  const tags=displayTags(card.evidence?.result.tags ?? []).filter(tag=>!/urn:tag:(?:genre|category):place/.test(tag.type ?? tag.id));
   const matches=tags.filter(tag=>inputs.some(input=>input.id===tag.id));
-  if(connected.length) {
-    const details=[...new Set((matches.length ? matches : tags).map(tag=>tag.name))].slice(0,2).join(" · ");
-    return `${details ? details+". " : ""}Connected to ${[...new Set(connected)].slice(0,2).join(" and ")} in your interests.`;
+  if(matches.length) return `Matches ${matches.some(tag=>tag.id.includes(":dietary_option:")) ? "" : "your interest in "}${[...new Set(matches.map(tag=>tag.name))].slice(0,3).join(" · ")}${matches.some(tag=>tag.id.includes(":dietary_option:")) ? " options; confirm the menu with the venue" : ""}.`;
+  if(connected.length && card.section !== "Eat" && card.section !== "Coffee") {
+    const details=tags.slice(0,2).map(tag=>tag.name).join(" · ");
+    return `${details ? details+". " : ""}Returned taste signals include ${[...new Set(connected)].slice(0,2).join(" and ")}.`;
   }
-  if(matches.length) return `Matches your interest in ${[...new Set(matches.map(tag=>tag.name))].slice(0,2).join(" and ")}.`;
   return [...new Set(tags.map(tag=>tag.name))].slice(0,3).join(" · ") || undefined;
 }

@@ -126,7 +126,8 @@ export async function discoverSection(
         t.id.includes(":place:") ||
         t.id.includes(":restaurant:") ||
         t.id.includes(":cuisine:") ||
-        t.id.includes(":ambience:"),
+        t.id.includes(":ambience:") ||
+        t.id.startsWith("urn:tag:dietary_option:"),
     );
   if (type === "place" && sectionTags(state, section).length)
     params["signal.interests.tags"] = sectionTags(state, section).filter(tag => !excludedTags.has(tag.id)).map((t) => t.id).join(",");
@@ -146,6 +147,7 @@ export async function discoverSection(
       "urn:tag:genre:place:restaurant",
       ...cuisine.map((t) => t.id),
       ...atmosphere.map((t) => t.id),
+      ...tags.filter(t => t.id.startsWith("urn:tag:dietary_option:")).map(t => t.id),
     ].join(",");
     params["operator.filter.tags"] = "intersection";
   } else if (type === "place" && tags.length) {
@@ -271,6 +273,9 @@ export async function discoverSection(
       if (specific.length) params["filter.tags"] = specific.join(",");
     }
   }
+  // A diet requirement must never become an optional alternative to cuisine.
+  if (section === "Eat" && tags.some(tag => tag.id.startsWith("urn:tag:dietary_option:")))
+    params["operator.filter.tags"] = "intersection";
   if (excluded.length || preferences.excludeEntities?.length)
     params["filter.exclude.entities"] = [
       ...new Set([...excluded, ...(preferences.excludeEntities ?? [])]),

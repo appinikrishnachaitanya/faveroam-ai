@@ -1,5 +1,8 @@
 /** Real-browser/live-backend acceptance. Requires an isolated Chromium CDP profile. */
 import fs from "node:fs/promises";
+const vegetarian = process.env.PASSPORT_JUDGE_SCENARIO === "vegetarian";
+const city = vegetarian ? "Toronto" : "London";
+const request = vegetarian ? "Find cheaper vegetarian Indian food in Toronto and explain why it fits my tastes." : "Find quieter Indian restaurants in London, moderate budget, minimum rating 4.5. Keep my music and movies unchanged.";
 const appUrl = process.env.PASSPORT_TEST_URL ?? "http://127.0.0.1:3001";
 const cdpUrl = process.env.PASSPORT_CDP_URL ?? "http://127.0.0.1:9231";
 const artifactDir = process.env.PASSPORT_TEST_ARTIFACTS ?? "/tmp";
@@ -76,7 +79,7 @@ await call("Emulation.setDeviceMetricsOverride",{width:1440,height:1000,deviceSc
 await call("Page.navigate",{url:appUrl});
 await waitFor("Boolean(document.querySelector('#destination:not(:disabled)'))");
 await evaluate(`(()=>{const native=window.fetch;window.__judgeReplies=[];window.fetch=async(...args)=>{const response=await native(...args);const url=String(args[0]);if(url==='/api/passport')response.clone().json().then(value=>window.__judgeInitial=value);if(url==='/api/agent/turn')response.clone().text().then(text=>{for(const line of text.trim().split('\\n')){try{const message=JSON.parse(line);if(message.type==='result')window.__judgeReplies.push(message.reply);}catch{}}});return response;};})()`);
-await input('#destination','London','HTMLSelectElement');
+await input('#destination',city,'HTMLSelectElement');
 for(const seed of ['A.R. Rahman','Interstellar','Indian cuisine'])await clickText(seed);
 for(const activity of ['Dining','Music','Movies'])await evaluate(`[...document.querySelectorAll('.activity-options button')].find(button=>button.textContent.trim()===${JSON.stringify(activity)}).click()`);
 await clickText('Find my taste matches');
@@ -88,13 +91,16 @@ for(let index=0;index<3;index++) {
 await clickText('Create my TastePassport');
 await waitFor("Boolean(document.querySelector('.passport-cover')) && Boolean(window.__judgeInitial)");
 await evaluate("document.querySelector('.assistant-launch').click()");
-await input('#conversation-input',"Find quieter Indian restaurants in London, moderate budget, minimum rating 4.5. Keep my music and movies unchanged.",'HTMLTextAreaElement');
+await input('#conversation-input',request,'HTMLTextAreaElement');
 await evaluate("document.querySelector('[aria-label=\"Send message\"]').click()");
 await waitFor("window.__judgeReplies.length===1 && !document.querySelector('#conversation-input').disabled");
 assert.deepEqual(await evaluate("window.__judgeReplies[0].changed"),['Eat']);
 assert.equal(await evaluate("window.__judgeReplies[0].state.providerHealth"),'healthy','Native model must complete, not silently fall back');
 for(const section of ['Music','Movies'])assert.equal(await evaluate(`JSON.stringify(window.__judgeInitial.cards.filter(card=>card.section===${JSON.stringify(section)}))===JSON.stringify(window.__judgeReplies[0].state.cards.filter(card=>card.section===${JSON.stringify(section)}))`),true);
-assert.equal(await evaluate("window.__judgeReplies[0].state.cards.filter(card=>card.section==='Eat').every(card=>card.intelligence.commercial.priceLevel<=2&&card.intelligence.quality.businessRating>=4.5)"),true);
+assert.equal(await evaluate(vegetarian
+ ? "window.__judgeReplies[0].state.cards.filter(card=>card.section==='Eat').every(card=>card.intelligence.commercial.priceLevel<=2&&card.evidence.params['filter.tags'].includes(':dietary_option:'))"
+ : "window.__judgeReplies[0].state.cards.filter(card=>card.section==='Eat').every(card=>card.intelligence.commercial.priceLevel<=2&&card.intelligence.quality.businessRating>=4.5)"),true);
+assert.equal(await evaluate("Boolean(window.__judgeReplies[0].state.pending)"),false);
 await evaluate("document.querySelector('[aria-label=\"Close Taste Concierge\"]').click()");
 await clickText('Plan a day');
 const dinner=await evaluate("document.querySelector('#day-out-Eat').value");

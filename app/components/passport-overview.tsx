@@ -3,7 +3,7 @@ import { useState } from "react";
 import type { Passport } from "../../src/workspace/state";
 import type { Candidate, Card, Section } from "../../src/passport/model";
 import { bridgeRoutes } from "../../src/passport/evidence";
-import { evidenceFacts } from "../../src/qloo/explanation";
+import { evidenceFacts, displayTags } from "../../src/qloo/explanation";
 import { DiscoveryCard, Icon } from "./passport";
 import type { Feedback } from "./passport";
 export function PassportCover({

@@ -1,4 +1,5 @@
 "use client";
+import { displayTags } from "../../src/qloo/explanation";
 import { useRef, useState } from 'react';
 import type { Passport } from '../../src/workspace/state';
 import type { AgentInput } from '../../src/agent/types';
@@ -54,7 +55,7 @@ export default function TasteAnalysis({passport,busy,onRefine}:{passport:Passpor
     {error&&<p role="alert">{error}</p>}
     {loading&&<p role="status">Looking for patterns in your confirmed tastes…</p>}
     {taste&&<div className="analysis-result"><h3>Connected cultural themes</h3><p>Returned associations across your selected interests. These describe cultural connections, not your personality.</p>
-      {taste.tags.length?<ul className="taste-theme-list">{taste.tags.map(tag=><li key={tag.id}>{tag.name}</li>)}</ul>:<p>No taste themes were returned for this combination.</p>}
+      {displayTags(taste.tags).length?<ul className="taste-theme-list">{displayTags(taste.tags).map(tag=><li key={tag.id}>{tag.name}</li>)}</ul>:<p>No taste themes were returned for this combination.</p>}
     </div>}
     {heat&&<div className="analysis-result"><h3>Areas to explore</h3><p>Relative audience affinity across {passport.city}. This is a geographic affinity plot, not live crowds, venue availability, or a street map.</p>
       {heat.points.length?<><AffinityPlot points={heat.points}/><p className="helper">Darker dots indicate stronger affinity within this result. Nearby cells may represent the same area.</p>

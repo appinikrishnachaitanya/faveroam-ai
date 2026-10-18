@@ -43,3 +43,28 @@ PASSPORT_TEST_URL=http://127.0.0.1:3034 PASSPORT_CDP_URL=http://127.0.0.1:9233 n
 ```
 
 Live checks need securely configured provider credentials; the browser check needs an isolated Chromium CDP instance and a running production server. Do not point the browser script at a browser containing personal sessions.
+
+## Toronto vegetarian refinement (18 October)
+
+Exact acceptance request: “Find cheaper vegetarian Indian food in Toronto and explain why it fits my tastes.”
+
+- The live tag lookup returns several Vegetarian homonyms: dietary attribute, cuisine, dietary option, and target audience. A dining requirement now selects the unique exact **returned dietary-option** match. It does not ask the user to interpret taxonomy or pick the first homonym.
+- The dining query requires restaurant, existing Indian cuisine, and vegetarian options together, plus the lower price cap. A previous union preference cannot make the dietary requirement optional. Missing dietary-option evidence stops the refinement and preserves results.
+- Native Gemini and forced deterministic fallback completed with no pending confirmation and returned 18 and 16 eligible dining results respectively. Music and Movies were byte-for-byte preserved. Counts vary with live data.
+- User-facing summaries, card evidence, connection badges and taste themes use a shared descriptive-tag allowlist with case-insensitive label deduplication. Narrative keywords and audience labels are kept out of this copy. Matching returned cuisine/dietary tags take priority over repeating cultural seed names; no causal restaurant story is invented.
+- Vegetarian options do not certify an entirely vegetarian kitchen or allergen safety. Users are prompted to confirm the menu with the venue.
+- A one-stop planner explicitly explains how to add cinema or coffee. Actual venues are fetched through the existing flow while retaining dinner; hours, travel time and availability still require checking.
+
+Reproduce live backend acceptance:
+
+```sh
+node --use-env-proxy --conditions=react-server --import tsx scripts/verify-vegetarian-journey.ts
+```
+
+Reproduce browser acceptance with a running production server and isolated Chromium CDP profile:
+
+```sh
+PASSPORT_JUDGE_SCENARIO=vegetarian PASSPORT_TEST_URL=http://127.0.0.1:3036 PASSPORT_CDP_URL=http://127.0.0.1:9233 node scripts/verify-judge-ui.mjs
+```
+
+Credentials are inherited securely from the environment; acceptance output contains counts and statuses only. Local production acceptance is separate from verifying the Railway deployment after push.

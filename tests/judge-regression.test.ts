@@ -80,3 +80,30 @@ test("a known quietness lookup does not require another model planning call",asy
  const reply=await runTurn(original,{message:request},{provider:{interpret:async()=>interpret(request),choose:async()=>{planned++;throw Error("unnecessary planning");}},tools:async()=>[],workflow:async(_mode,_name,args)=>{assert.equal(args.query,"quiet atmosphere");return {status:"ok",results:[{id:"urn:tag:ambience:place:quiet",name:"Quiet",type:"urn:tag:ambience:place"}]};},discover:async(_s,section)=>[{id:"new",name:"Dining",section,types:["urn:entity:place"],detail:""}]});
  assert.equal(planned,0);assert.deepEqual(reply.changed,["Eat"]);assert.equal(reply.state.providerHealth,"healthy");
 });
+
+test("vegetarian options resolve without homonym confirmation and retain cuisine and other categories",async()=>{
+ for(const native of [false,true]) {
+  const original=state();original.city="Toronto";
+  const message="Find cheaper vegetarian Indian food in Toronto and explain why it fits my tastes.";
+  const diet="urn:tag:dietary_option:qloo:vegetarian";
+  let planned=0;
+  const deps:AgentDependencies={tools:async()=>[],workflow:async()=>({status:"ok",results:[
+   {id:"urn:tag:target_audience:qloo:vegetarian",name:"Vegetarian"},
+   {id:"urn:tag:cuisine:qloo:vegetarian",name:"Vegetarian"},
+   {id:diet,name:"Vegetarian"},
+  ]}),discover:async(s,section)=>{
+   assert.equal(section,"Eat");assert.ok(s.categoryTags!.Eat!.includes(cuisine.id));assert.ok(s.categoryTags!.Eat!.includes(diet));assert.equal(s.queryPreferences!.Eat!.priceMax,2);
+   return [{id:"eligible",name:"Dining",section,types:["urn:entity:place"],detail:""}];
+  }};
+  if(native)deps.provider={interpret:async()=>interpret(message),choose:async()=>{planned++;return [];}};
+  const reply=await runTurn(original,{message},deps);
+  assert.equal(planned,0);assert.equal(reply.state.pending,undefined);assert.deepEqual(reply.changed,["Eat"]);
+  assert.deepEqual(reply.state.cards.filter(c=>c.section!=="Eat"),original.cards);
+ }
+});
+
+test("missing dietary-option evidence preserves results instead of silently relaxing it",async()=>{
+ const original=state();
+ const reply=await runTurn(original,{message:"Find vegetarian Indian food"},{tools:async()=>[],workflow:async()=>({status:"ok",results:[{id:"urn:tag:target_audience:qloo:vegetarian",name:"Vegetarian"}]}),discover:async()=>{throw Error("must not discover without verified diet");}});
+ assert.deepEqual(reply.state.cards,original.cards);assert.deepEqual(reply.changed,[]);assert.match(reply.message,/could not verify vegetarian/i);
+});
