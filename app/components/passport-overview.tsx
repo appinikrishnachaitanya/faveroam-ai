@@ -39,16 +39,11 @@ export function PassportCover({
           ))}
         </div>
         <button className="cover-connection" onClick={onConnections}>
-          Why these suggestions? <Icon name="arrow" size={15} />
+          Explore taste insights <Icon name="arrow" size={15} />
         </button>
       </div>
       <div className="cover-art" aria-hidden="true">
-        <div className="passport-book">
-          <Icon name="globe" size={66} />
-          <span>TASTE IS YOUR</span>
-          <strong>PASSPORT</strong>
-          <small>{passport.city}</small>
-        </div>
+        <img className="cover-illustration" src="/illustrations/passport-journey.svg" width="520" height="350" alt="" />
         <div className="cover-stamp">
           <strong>{count}</strong>
           <span>
@@ -125,7 +120,7 @@ export function ConnectionExplorer({ passport, onExplore }: { passport: Passport
       aria-labelledby="connections-title"
     >
       <span className="micro-label">BASED ON WHAT YOU LOVE</span>
-      <h2 id="connections-title">Why these suggestions?</h2>
+      <h2 id="connections-title">Your cultural connections</h2>
       <p>
         Your confirmed interests helped shape these suggestions. Choose a category
         to see which interests were used and what you could try.

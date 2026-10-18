@@ -65,6 +65,7 @@ export default function TasteIntelligence({
     [source, setSource] = useState(prefs?.requiredExternalSources?.[0] ?? ""),
     [reviews, setReviews] = useState(prefs?.tripAdvisorReviewCountMin?.toString() ?? "");
   const [partner, setPartner] = useState(["", "", ""]);
+  const [expandedMatch, setExpandedMatch] = useState<number>();
   const [resolution, setResolution] = useState<Resolution>();
   const [ids, setIds] = useState<Record<number, string>>({});
   const [loading, setLoading] = useState(false);
@@ -93,6 +94,7 @@ export default function TasteIntelligence({
     try {
       const matches = await post("/api/agent/resolve", { seeds: partner });
       setResolution(matches);
+      setExpandedMatch(undefined);
       setIds(suggestedMatches(matches.items));
     } catch {
       setError(
@@ -327,7 +329,7 @@ export default function TasteIntelligence({
         </form>
         <details className="together-reveal">
           <summary>Together · find common ground</summary>
-          <h3>What could you both enjoy?</h3>
+          <div className="together-heading"><div><span className="micro-label">TWO TASTES. A SHARED DISCOVERY.</span><h3>What could you both enjoy?</h3></div><img src="/illustrations/together-passports.svg" width="440" height="260" alt="" aria-hidden="true" loading="lazy" /></div>
           <p>
             Add three of their interests, choose the intended matches, then
             explore shared tastes. Use cultural interests, without names or
@@ -361,23 +363,21 @@ export default function TasteIntelligence({
                 </label>
               ))}
             </div>
-            <button className="quiet-button" disabled={busy || loading}>
-              {loading ? "Finding common ground…" : "Find their interests"}
+            <button className={resolution ? "quiet-button" : "primary-button"} disabled={busy || loading}>
+              {loading ? "Finding common ground…" : resolution ? "Look up interests again" : "Find their interests"}
             </button>
           </form>
-          {resolution && (
+          {resolution && !together && (
             <div className="partner-matches">
+              <p className="helper">Confirm three distinct interests. Exact matches are suggested; change any match below.</p>
               {resolution.items.map((item, i) => (
                 <section key={i}>
                   <h4>{item.query}</h4>
-                  <CandidateChoices
-                    query={item.query}
-                    candidates={item.candidates.filter(
-                      (c) => !c.id.startsWith("urn:tag:"),
-                    )}
-                    selected={ids[i]}
-                    onSelect={(id) => setIds((v) => ({ ...v, [i]: id }))}
-                  />
+                  {ids[i] && expandedMatch!==i ? <div className="partner-selection">
+                    <div><strong>{item.candidates.find(c=>c.id===ids[i])?.name}</strong><small>{item.candidates.find(c=>c.id===ids[i])?.detail}</small></div>
+                    <button type="button" className="quiet-button" disabled={loading||busy} onClick={()=>setExpandedMatch(i)}>Change match</button>
+                  </div> : <CandidateChoices disabled={busy||loading} query={item.query} candidates={item.candidates.filter(c=>!c.id.startsWith("urn:tag:"))} selected={ids[i]}
+                    onSelect={id=>{setIds(v=>({...v,[i]:id}));setExpandedMatch(undefined);}} />}
                   {!item.candidates.some(c => !c.id.startsWith("urn:tag:")) && (
                     <p>No named entity match. Use a specific artist, film, book or brand; cuisine concepts cannot be used as the other person's entity profile.</p>
                   )}
@@ -398,7 +398,8 @@ export default function TasteIntelligence({
             </div>
           )}
           {together && (
-            <section aria-label="Your common ground">
+            <section className="together-results" aria-label="Your common ground">
+              <button type="button" className="text-button" onClick={()=>setTogether(undefined)}>Edit confirmed interests</button>
               <h3>Your common ground</h3>
               <div className="common-tags">
                 {together.comparison.shared.slice(0, 8).map((t) => (
@@ -408,18 +409,18 @@ export default function TasteIntelligence({
               <p role="status">{together.notice}</p>
               <div className="together-differences">
                 <p>
-                  Your distinct returned interests:{" "}
+                  More your taste:{" "}
                   {together.comparison.aOnly.map((t) => t.name).join(", ") ||
-                    "No separate tags returned"}
+                    "No separate themes available"}
                 </p>
                 <p>
-                  Their distinct returned interests:{" "}
+                  More their taste:{" "}
                   {together.comparison.bOnly.map((t) => t.name).join(", ") ||
-                    "No separate tags returned"}
+                    "No separate themes available"}
                 </p>
               </div>
               <div className="together-cards">
-                {together.cards.map((card) => (
+                {together.cards.slice(0,6).map((card) => (
                   <article key={card.id}>
                     <h4>{card.name}</h4>
                     <p>{card.address ?? card.section}</p>
@@ -434,6 +435,7 @@ export default function TasteIntelligence({
               </div>
             </section>
           )}
+          {loading && <p className="together-loading" role="status">Finding connections between both sets of interests…</p>}
           <p className="helper">
             Shared taste analysis considers both profiles. It does not measure
             relationship compatibility. This comparison is temporary and is not

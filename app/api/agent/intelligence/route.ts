@@ -1,3 +1,4 @@
+import { trending } from "../../../../src/qloo/trending";
 import { getSession } from "../../../../src/agent/store";
 import { unseal } from "../../../../src/passport/service";
 import { compareProfiles } from "../../../../src/qloo/compare";
@@ -71,6 +72,13 @@ async function handlePOST(request: Request) {
         tags: state.selected.filter(s=>s.id.startsWith("urn:tag:")).map(s=>s.id),
       }, state.city, signal);
       return json({analysis});
+    }
+    if (b.action === "trends") {
+      if (!selectedCard) return json({error:"Choose a current discovery."},400);
+      const type=selectedCard.section === "Music" ? "urn:entity:artist" : ["Eat","Coffee","Culture","Lifestyle"].includes(selectedCard.section) ? "urn:entity:place" : undefined;
+      if (!type) return json({error:"History is available only for artists and places."},400);
+      try { return json({trend:await trending(selectedCard.id,type,signal)}); }
+      catch { return json({error:"Historical trends are unavailable for this discovery. Your recommendations are unchanged."},503); }
     }
     if (b.action === "explain") {
       if (!selectedCard)

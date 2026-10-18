@@ -13,7 +13,7 @@ export function FamiliarityControl({
   disabled: boolean;
   onChange: (input: AgentInput) => void;
 }) {
-  const [section, setSection] = useState<Section>("Eat");
+  const [section, setSection] = useState<Section>(()=>sectionOrder.find(s=>session.cards.some(c=>c.section===s)) ?? "Eat");
   const applied = session.categoryModes[section] ?? session.discoveryMode;
   return (
     <section className="familiarity-panel" aria-labelledby="familiarity-title">
@@ -72,11 +72,11 @@ export function FamiliarityControl({
       </div>
       <p className="mode-caption">
         {applied === "familiar"
-          ? "Keep your favorite cultural threads close."
+          ? "Prioritize closer matches to your tastes."
           : applied === "balanced"
-            ? "Enjoy familiar favorites alongside fresh discoveries."
+            ? "Mix closer matches with broader cultural discoveries."
             : "Explore further while keeping a connection to your tastes."}{" "}
-        Changes update {section} only.
+        Changes refresh {section} in Discover. My Vibe keeps the specific discoveries you saved; results can overlap when coverage is limited.
       </p>
     </section>
   );

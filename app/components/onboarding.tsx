@@ -106,7 +106,7 @@ export function MoveForm({
         </h1>
         <p>Tell us where you’re moving and a few things you already love.</p>
         <div className="onboarding-story">
-          <div className="journey-emblem" aria-hidden="true"><Icon name="globe" size={76} /><span>TASTE TRAVELS WITH YOU</span></div>
+          <img className="journey-illustration" src="/illustrations/passport-journey.svg" width="520" height="350" alt="" aria-hidden="true" />
           <ul>
             <li><Icon name="check" size={16} /> Your tastes, explicitly confirmed</li>
             <li><Icon name="check" size={16} /> Real discoveries. Visible connections.</li>

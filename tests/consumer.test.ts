@@ -193,7 +193,8 @@ test("consumer cover and connection reveal use real query relationships rather t
     }),
   );
   assert.match(cover, /Your Toronto/);
-  assert.match(cover, /Why these suggestions\?/);
+  assert.match(cover, /Explore taste insights/);
+  assert.doesNotMatch(cover, /Why these suggestions\?/);
   assert.doesNotMatch(cover, /Bengaluru|confidence/);
   const html = renderToStaticMarkup(
     createElement(ConnectionExplorer, { passport }),

@@ -2,6 +2,7 @@
 import { useRef, useState } from 'react';
 import type { Passport } from '../../src/workspace/state';
 import type { AgentInput } from '../../src/agent/types';
+import type { TrendResult } from "../../src/qloo/trending";
 import type { AnalysisKind, AnalysisResult, HeatPoint } from '../../src/qloo/analysis';
 
 export default function TasteAnalysis({passport,busy,onRefine}:{passport:Passport;busy:boolean;onRefine:(input:AgentInput)=>void}) {
@@ -9,6 +10,22 @@ export default function TasteAnalysis({passport,busy,onRefine}:{passport:Passpor
   const [loading,setLoading]=useState<AnalysisKind>();
   const [error,setError]=useState('');
   const active=useRef(false);
+  const trendChoices=passport.cards.filter(card=>["Music","Eat","Coffee","Culture","Lifestyle"].includes(card.section)).slice(0,30);
+  const [trendId,setTrendId]=useState("");
+  const [trend,setTrend]=useState<TrendResult>();
+  const [trendBusy,setTrendBusy]=useState(false);
+  async function loadTrend() {
+    if (!passport.agent || active.current || busy) return;
+    active.current=true;setTrendBusy(true);setTrend(undefined);setError("");
+    try {
+      const response=await fetch("/api/agent/intelligence",{method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({...passport.agent,action:"trends",entityId:trendId || trendChoices[0]?.id}),signal:AbortSignal.timeout(65000)});
+      const data=await response.json();
+      if(!response.ok)throw Error(data.error || "Historical trends are unavailable.");
+      setTrend(data.trend);
+    } catch(error){setError(error instanceof Error?error.message:"Historical trends are unavailable.");}
+    finally{active.current=false;setTrendBusy(false);}
+  }
   async function load(kind:AnalysisKind) {
     if(!passport.agent || active.current || busy)return;
     active.current=true;setLoading(kind);setError('');
@@ -28,11 +45,11 @@ export default function TasteAnalysis({passport,busy,onRefine}:{passport:Passpor
     onRefine({discovery:{section:'Eat',preferences:{locationPoint:`POINT(${point.longitude} ${point.latitude})`,radius:1500}}});
   }
   return <section className="taste-analysis" aria-labelledby="analysis-title">
-    <div className="section-heading"><div><span className="micro-label">A DIFFERENT WAY TO EXPLORE</span><h2 id="analysis-title">Your tastes, across the city.</h2></div></div>
+    <div className="section-heading"><div><span className="micro-label">A DIFFERENT WAY TO EXPLORE</span><h2 id="analysis-title">Taste themes, heatmap & audience insights.</h2></div></div>
     <p>Explore cultural associations and areas with stronger audience affinity for your confirmed interests.</p>
     <div className="analysis-actions">
-      <button disabled={busy||Boolean(loading)} onClick={()=>void load('taste')}>{loading==='taste'?'Finding taste connections…':'Explore my taste connections'}</button>
-      <button disabled={busy||Boolean(loading)} onClick={()=>void load('heatmap')}>{loading==='heatmap'?'Mapping your interests…':`Find areas to explore in ${passport.city}`}</button>
+      <button disabled={busy||Boolean(loading)||trendBusy} onClick={()=>void load('taste')}>{loading==='taste'?'Finding taste connections…':'Explore my taste connections'}</button>
+      <button disabled={busy||Boolean(loading)||trendBusy} onClick={()=>void load('heatmap')}>{loading==='heatmap'?'Mapping your interests…':`Heatmap · areas to explore in ${passport.city}`}</button>
     </div>
     {error&&<p role="alert">{error}</p>}
     {loading&&<p role="status">Looking for patterns in your confirmed tastes…</p>}
@@ -44,15 +61,21 @@ export default function TasteAnalysis({passport,busy,onRefine}:{passport:Passpor
       <div className="area-choices">{distinctAreas(heat.points).map((point,index)=><article key={`${point.latitude}:${point.longitude}`}><h4>Explore area {index+1}</h4>
         <p>{point.latitude.toFixed(3)}, {point.longitude.toFixed(3)}</p>
         <a href={`https://www.google.com/maps/search/?api=1&query=${point.latitude},${point.longitude}`} target="_blank" rel="noreferrer">View area on map ↗</a>
-        <button disabled={busy||Boolean(loading)} onClick={()=>nearby(point)}>Find dining nearby</button>
+        <button disabled={busy||Boolean(loading)||trendBusy} onClick={()=>nearby(point)}>Find dining nearby</button>
       </article>)}</div><p className="helper">Nearby dining searches within 1.5 km of the selected point while keeping your current dining preferences. Results depend on local coverage.</p></>:<p>No geographic affinity data was returned.</p>}
     </div>}
-    <details className="audience-context"><summary>Optional audience context</summary><p>Aggregate age and gender affinity associated with each interest. These values are not audience percentages and do not identify or predict your demographics.</p>
-      <button disabled={busy||Boolean(loading)} onClick={()=>void load('demographics')}>{loading==='demographics'?'Reading audience context…':'Show audience context'}</button>
+    <details className="audience-context"><summary>Demographics · optional audience context</summary><p>Aggregate age and gender affinity associated with each interest. These values are not audience percentages and do not identify or predict your demographics.</p>
+      <button disabled={busy||Boolean(loading)||trendBusy} onClick={()=>void load('demographics')}>{loading==='demographics'?'Reading audience context…':'Show audience context'}</button>
       {demo&&(!demo.records.length?<p>No audience context was returned.</p>:demo.records.map(record=><div className="analysis-result" key={record.id}><h4>{passport.selected.find(s=>s.id.toLowerCase()===record.id.toLowerCase())?.name ?? 'Returned interest'}</h4>
         <dl className="audience-values">{Object.entries({...record.age,...record.gender}).map(([label,value])=><div key={label}><dt>{label.replaceAll('_',' ')}</dt><dd>{value>0?'+':''}{value.toFixed(2)} affinity</dd></div>)}</dl>
       </div>))}
     </details>
+    <section className="trend-analysis" aria-label="Historical trends"><h3>Trend analysis</h3>
+      <p>Check returned popularity history for an artist or place. History may be empty or unavailable; Trending for you in Preferences uses trend ranking separately.</p>
+      {trendChoices.length ? <><label>Discovery to analyse<select value={trendId || trendChoices[0]?.id} disabled={busy||Boolean(loading)||trendBusy} onChange={e=>{setTrendId(e.target.value);setTrend(undefined);}}>{trendChoices.map(card=><option key={card.id} value={card.id}>{card.name}</option>)}</select></label>
+      <button disabled={busy||Boolean(loading)||trendBusy} onClick={()=>void loadTrend()}>{trendBusy?"Reading popularity history…":"Load trend history"}</button></>:<p>Generate artist or place discoveries to check their history.</p>}
+      {trend&&<div className="analysis-result">{trend.points.length?<><p>{trend.startDate} to {trend.endDate}</p><div className="trend-table"><table><thead><tr><th>Date</th><th>Population percentile</th><th>Rank</th></tr></thead><tbody>{trend.points.slice(-30).map((point,index)=><tr key={index}><td>{point.date}</td><td>{point.populationPercentile ?? "Unavailable"}</td><td>{point.rank ?? "Unavailable"}</td></tr>)}</tbody></table></div></>:<p>No historical points were returned for this discovery.</p>}</div>}
+    </section>
   </section>;
 }
 

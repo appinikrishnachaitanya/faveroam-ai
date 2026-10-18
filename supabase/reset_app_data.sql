@@ -45,9 +45,12 @@ create policy saved_plans_read_own on public.saved_plans for select to authentic
 create policy saved_plans_delete_own on public.saved_plans for delete to authenticated using ((select auth.uid()) = user_id);
 
 create table public.taste_profiles (
-  user_id uuid primary key references auth.users(id) on delete cascade,
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  name text not null default 'My tastes',
   profile jsonb not null check (jsonb_typeof(profile) = 'object' and profile->>'version' = '1' and octet_length(profile::text) <= 50000),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  unique(user_id, name)
 );
 alter table public.taste_profiles enable row level security;
 revoke all on public.taste_profiles from anon, authenticated;

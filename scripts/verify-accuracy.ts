@@ -2,6 +2,7 @@
 import assert from 'node:assert/strict';
 import { search, QlooError } from '../src/qloo/client.ts';
 import { findTags } from '../src/qloo/lookups.ts';
+import { threeChoices } from '../src/passport/shortlist.ts';
 import { candidates } from '../src/passport/model.ts';
 import { passport, seal } from '../src/passport/service.ts';
 import { createSession } from '../src/agent/store.ts';
@@ -57,11 +58,14 @@ else try {
   const reportedSelected=reportedItems.map((item,index)=>item.candidates.find(c=>index===0?c.types.includes('urn:entity:artist'):c.name.toLowerCase()===item.query.toLowerCase()));
   assert.ok(reportedSelected.every(Boolean),'Reported tastes require exact returned concepts/entities');
   assert.ok(reportedSelected[2]!.id.startsWith('urn:tag:'),'Indian Savouries must not resolve to an unrelated named place');
+  const modeChoices:Record<string,string[]>={};
   for(const mode of ['familiar','balanced','explore'] as const) {
     const profile=await passport('London',seal(reportedItems),reportedSelected.map(c=>c!.id),[],[],mode);
     const counts=Object.fromEntries(['Music','Coffee','Eat'].map(section=>[section,profile.cards.filter(c=>c.section===section).length]));
     assert.ok(Object.values(counts).every(count=>count>0),`Reported London profile needs each inferred category in ${mode}`);
     assert.ok(profile.cards.every(c=>c.evidence?.mode===mode),'Initial results must use the requested style');
+    modeChoices[mode]=threeChoices(profile.cards.filter(c=>c.section==='Eat')).map(choice=>choice.card.id);
     console.log(JSON.stringify({check:'reported-profile-initial-style',mode,counts}));
   }
+  console.log(JSON.stringify({check:'mode-preview-overlap',familiarChoices:modeChoices.familiar.length,balancedChoices:modeChoices.balanced.length,sharedDiningChoices:modeChoices.familiar.filter(id=>modeChoices.balanced.includes(id)).length}));
 }catch(error){console.error(`Accuracy acceptance FAIL${error instanceof QlooError&&error.status?` HTTP ${error.status}`:''}; request details and credentials withheld.`);process.exitCode=1;}

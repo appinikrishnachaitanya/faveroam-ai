@@ -30,7 +30,11 @@ export function discoveryQueries(
     if (artistIds.length)
       direct["signal.interests.entities"] = artistIds.join(",");
   }
+  // Explicitly selected content-based weighting wins. Otherwise each mode uses
+  // a distinct documented soft ranking setting without relaxing requirements.
+  if (!direct["bias.content_based"]) direct["bias.content_based"] = "0.8";
   const adjacent = { ...base };
+  if (!adjacent["bias.content_based"]) adjacent["bias.content_based"] = "0.3";
   if (section !== "Music" && !state.intent?.concepts.length) {
     const ids = (adjacent["filter.tags"] ?? "").split(",").filter(Boolean);
     const soft = ids.filter((id) =>

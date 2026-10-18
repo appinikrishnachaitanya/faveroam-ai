@@ -50,3 +50,18 @@ export function evidenceFacts(card: Card): string[] {
     );
   return facts.slice(0, 12);
 }
+
+/** Short customer-facing copy uses specific returned evidence, never generic search membership. */
+export function recommendationSummary(card: Card): string | undefined {
+  const inputs=card.evidence?.inputs ?? [];
+  const contributors=card.intelligence?.taste.contributingSignals ?? [];
+  const connected=contributors.filter(signal=>signal.contribution>0).flatMap(signal=>{
+    const input=inputs.find(input=>input.id.toLowerCase()===signal.id.toLowerCase());
+    return input?[input.name]:[];
+  });
+  if(connected.length) return `Connected to ${[...new Set(connected)].slice(0,2).join(" and ")} in your interests.`;
+  const tags=(card.evidence?.result.tags ?? []).filter(tag=>!/urn:tag:(?:genre|category):place/.test(tag.type ?? tag.id));
+  const matches=tags.filter(tag=>inputs.some(input=>input.id===tag.id));
+  if(matches.length) return `Matches your interest in ${[...new Set(matches.map(tag=>tag.name))].slice(0,2).join(" and ")}.`;
+  return [...new Set(tags.map(tag=>tag.name))].slice(0,3).join(" · ") || undefined;
+}

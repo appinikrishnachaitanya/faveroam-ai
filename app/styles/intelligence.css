@@ -210,3 +210,34 @@
     padding-block: 20px;
   }
 }
+.together-reveal { padding:clamp(16px,3vw,28px); background:var(--ui-tint); border-radius:18px; }
+.together-reveal > h3 { margin:24px 0 12px; }
+.partner-matches { display:grid; gap:16px; margin:24px 0; }
+.partner-matches > section { min-width:0; padding:18px; border:1px solid var(--ui-border); border-radius:14px; background:var(--ui-surface); }
+.partner-matches h4 { font-size:16px; margin-bottom:12px; overflow-wrap:anywhere; }
+.partner-selection { display:flex; align-items:center; justify-content:space-between; gap:16px; }
+.partner-selection > div { min-width:0; }
+.partner-selection strong,.partner-selection small { display:block; overflow-wrap:anywhere; }
+.partner-selection small { margin-top:6px; color:var(--ui-muted); font-size:13px; line-height:1.6; }
+.partner-selection button { flex-shrink:0; }
+.partner-matches .candidate-options { max-height:310px; overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin; }
+.together-results { margin-top:24px; }
+.together-cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr)); gap:18px; }
+.together-cards article { min-width:0; padding:20px; border:1px solid var(--ui-border); border-radius:16px; background:var(--ui-surface); }
+.together-cards h4 { font-size:20px; line-height:1.4; }
+.together-cards p,.together-cards a { font-size:14px; line-height:1.65; overflow-wrap:anywhere; }
+.together-loading { padding:16px; border-radius:12px; background:var(--ui-surface); }
+@media(max-width:480px) { .partner-selection { align-items:flex-start; flex-direction:column; } }
+.trend-analysis { margin-top:24px; padding-top:24px; border-top:1px solid var(--ui-border); }
+.trend-analysis h3 { font-size:22px; margin-bottom:12px; }
+.trend-analysis label { display:grid; gap:8px; margin:16px 0; }
+.trend-analysis select { width:100%; min-width:0; padding:12px 38px 12px 12px; border:1px solid var(--ui-border); border-radius:10px; background-color:var(--ui-surface); color:var(--ui-ink); }
+.trend-table { overflow-x:auto; }
+.trend-table table { width:100%; border-collapse:collapse; font-size:14px; }
+.trend-table th,.trend-table td { padding:12px; text-align:left; border-bottom:1px solid var(--ui-border); }
+@media(min-width:850px) {
+  .partner-matches { grid-template-columns:repeat(3,minmax(0,1fr)); }
+  .partner-matches > p,.partner-matches > button { grid-column:1 / -1; }
+  .partner-selection { flex-direction:column; align-items:flex-start; }
+  .partner-selection small { display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
+}

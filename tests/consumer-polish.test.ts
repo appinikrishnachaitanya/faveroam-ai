@@ -33,7 +33,8 @@ test("consumer prices have readable labels and never imply a currency amount", (
   const html =
     renderToStaticMarkup(createElement(ResultMetrics, { card })) +
     renderToStaticMarkup(createElement(WhyEvidence, { card }));
-  assert.match(html, /Moderate/);
+  assert.match(html, /Price category 2 \/ 4/);
+  assert.doesNotMatch(html, /Budget-friendly|Luxury|Premium/);
   assert.match(html, /4\.5/);
   assert.doesNotMatch(
     html,

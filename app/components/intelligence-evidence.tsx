@@ -24,7 +24,7 @@ export function ResultMetrics({ card }: { card: Card }) {
         </span>
       )}
       {priceLabel(m?.commercial.priceLevel) && (
-        <span>{priceLabel(m?.commercial.priceLevel)}</span>
+        <span>Price category {m?.commercial.priceLevel} / 4</span>
       )}
       {card.trend?.status && (
         <span>
@@ -133,8 +133,8 @@ export function WhyEvidence({
       <dl className="evidence-metrics">
         {priceLabel(m?.commercial.priceLevel) && (
           <>
-            <dt>Typical budget</dt>
-            <dd>{priceLabel(m?.commercial.priceLevel)}</dd>
+            <dt>Relative price category</dt>
+            <dd>{m?.commercial.priceLevel} of 4</dd>
           </>
         )}
         {m?.quality.businessRating !== undefined && (

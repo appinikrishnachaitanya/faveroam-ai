@@ -2,28 +2,32 @@
 import { useEffect, useId, useRef, useState } from "react";
 import type { Candidate } from "../../src/passport/model";
 import { typeLabel } from "../../src/workspace/state";
+import { rankCandidates } from "../../src/passport/matching";
 import { Icon } from "./passport";
 export function CandidateChoices({
   query,
   candidates,
   selected,
   onSelect,
+  disabled = false,
 }: {
   query: string;
   candidates: Candidate[];
   selected?: string;
   onSelect: (id: string) => void;
+  disabled?: boolean;
 }) {
   const group = useId();
   return (
     <fieldset className="candidate-options">
       <legend className="sr-only">Matches for {query}</legend>
-      {candidates.map((c) => (
+      {rankCandidates(query,candidates).map((c) => (
         <label
           key={c.id}
           className={`candidate-option ${selected === c.id ? "chosen" : ""}`}
         >
           <input
+            disabled={disabled}
             type="radio"
             name={group}
             value={c.id}
@@ -81,7 +85,7 @@ export default function Disambiguation({
       </div>
       <h2 id="match-title">Which one feels like you?</h2>
       <p id="match-description">
-        Qloo matches for <strong>{item.query}</strong>. Pick the entity you
+        Matches for <strong>{item.query}</strong>. Pick the interest you
         meant.
       </p>
       <CandidateChoices

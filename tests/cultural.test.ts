@@ -361,6 +361,7 @@ test("identical mode queries degrade honestly rather than claiming an adjacent p
     "signal.interests.entities": artist.id,
     "signal.location.query": "Toronto",
     take: "20",
+    "bias.content_based": "0.5",
   };
   const queries = discoveryQueries(params, s, "Music", "balanced");
   assert.equal(queries.length, 1);

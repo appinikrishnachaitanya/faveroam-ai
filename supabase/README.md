@@ -23,3 +23,7 @@ If you want to discard the existing saved data, run **`reset_app_data.sql`** in 
 After success, refresh the app, sign in again if needed, and generate a new Passport. Old refinement sessions in an already running app may remain until expiry; restarting the app clears them. Manage cities in Table Editor → destinations.
 
 The fresh script creates the current schema directly. It does not temporarily create the old fixed-city constraints or replay historical migrations. The ten inserted cities are editable starter data, not an allowed-values constraint.
+
+## Named profiles
+
+For an existing database, run `migrations/202610180004_named_taste_profiles.sql` after the other migrations. It preserves existing tastes under “My tastes” and allows multiple profiles per account. If starting fresh, the updated `reset_app_data.sql` already contains this schema; do not reset merely to add profile names.

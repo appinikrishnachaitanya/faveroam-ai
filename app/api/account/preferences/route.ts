@@ -1,9 +1,10 @@
+import { profileName, validProfileId } from "../../../../src/account/profile-record";
+import { suggestedSections } from "../../../../src/passport/routing";
 import { catalogCity } from "../../../../src/workspace/destinations";
 import { accountClient, storageConfigured, storageWriter, privateJson, sameOrigin } from "../../../../src/account/server";
 import { portableTasteProfile, readTasteProfile } from "../../../../src/account/taste-profile";
 import { createSession, getSession } from "../../../../src/agent/store";
 import { normalizeSession } from "../../../../src/agent/session";
-import { passport, seal } from "../../../../src/passport/service";
 import { discoverSection } from "../../../../src/agent/runtime";
 import { passportView, sectionOrder } from "../../../../src/workspace/state";
 import { debugRequest } from "../../../../src/agent/debug";
@@ -16,38 +17,44 @@ async function handle(request: Request) {
     const client = await accountClient();
     const {data:{user},error:authError} = await client.auth.getUser();
     if (authError || !user) return privateJson({error:"Sign in to use saved tastes."},401);
+    let body: Record<string,unknown> = {};
+    if (request.method !== "GET") {
+      const raw = await request.text();
+      if (raw.length > 1400) return privateJson({error:"Invalid taste profile request."},400);
+      body = raw ? JSON.parse(raw) : {};
+    }
+    if (body.profileId !== undefined && !validProfileId(body.profileId)) return privateJson({error:"Choose a valid profile."},400);
     if (request.method === "DELETE") {
-      const {error} = await client.from("taste_profiles").delete().eq("user_id",user.id);
+      if (!validProfileId(body.profileId)) return privateJson({error:"Choose the profile to remove."},400);
+      const {error} = await client.from("taste_profiles").delete().eq("user_id",user.id).eq("id",body.profileId);
       if (error) throw Error();
       return privateJson({deleted:true});
-    }
-    let body: Record<string,unknown> = {};
-    if (request.method === "POST") {
-      const raw = await request.text();
-      if (raw.length > 1000) return privateJson({error:"Invalid taste profile request."},400);
-      body = JSON.parse(raw);
     }
     if (body.action === "save") {
       if (typeof body.sessionId !== "string" || !Number.isInteger(body.revision)) return privateJson({error:"Build a Passport first."},400);
       const state = getSession(body.sessionId);
       if (state.revision !== body.revision) return privateJson({error:"Your Passport changed. Save its latest tastes."},409);
+      let name: string;
+      try { name = profileName(body.name); } catch { return privateJson({error:"Use a profile name of 1–80 characters."},400); }
       const profile = portableTasteProfile(state);
-      const {error} = await storageWriter().from("taste_profiles").upsert({user_id:user.id,profile,updated_at:new Date().toISOString()},{onConflict:"user_id"});
+      const {data:saved,error} = await storageWriter().from("taste_profiles").upsert({user_id:user.id,name,profile,updated_at:new Date().toISOString()},{onConflict:"user_id,name"}).select("id,name,updated_at,profile").single();
       if (error) throw Error();
-      return privateJson({saved:true,profile});
+      return privateJson({saved:true,profile,entry:saved});
     }
-    const {data,error} = await client.from("taste_profiles").select("profile").eq("user_id",user.id).maybeSingle();
+    const {data:rows,error} = await client.from("taste_profiles").select("id,name,updated_at,profile").eq("user_id",user.id).order("updated_at",{ascending:false});
     if (error) throw Error();
-    if (request.method === "GET") return privateJson({profile:data ? readTasteProfile(data.profile) : null});
+    const profiles = (rows ?? []).map(row=>({...row,profile:readTasteProfile(row.profile)}));
+    if (request.method === "GET") return privateJson({profiles,profile:profiles[0]?.profile ?? null});
+    const data = body.profileId ? profiles.find(row=>row.id===body.profileId) : profiles[0];
     const city = body.action === "apply" ? await catalogCity(body.city) : undefined;
     if (body.action !== "apply" || !city) return privateJson({error:"Choose a supported destination."},400);
     if (!data) return privateJson({error:"Save your tastes from a Passport first."},404);
     const profile = readTasteProfile(data.profile);
-    const items = profile.selected.map(c=>({query:c.name,candidates:[c]}));
-    const initial = await passport(city,seal(items),profile.selected.map(c=>c.id),profile.constraints,profile.activeCategories.filter(s=>!profile.hiddenCategories.includes(s)).slice(0,5));
+    const initial = {city,selected:profile.selected,cards:[],notices:[] as string[],explanation:"Fresh discoveries using your saved tastes."};
     const working = normalizeSession({...profile,id:"profile-discovery",revision:0,expires:0,city,cards:[],previous:[],feedback:[],notices:[...initial.notices]});
+    const desired = profile.activeCategories.length ? profile.activeCategories : suggestedSections(profile.selected);
     const sections = sectionOrder.filter(section=>!profile.hiddenCategories.includes(section) &&
-      (profile.activeCategories.includes(section) || initial.cards.some(c=>c.section===section) || Boolean(profile.categoryTags[section]?.length) || Boolean(profile.queryPreferences[section])));
+      (desired.includes(section) || Boolean(profile.categoryTags[section]?.length) || Boolean(profile.queryPreferences[section])));
     const signal = AbortSignal.any([request.signal,AbortSignal.timeout(75000)]);
     const results = await Promise.all(sections.map(async section=>{
       try {

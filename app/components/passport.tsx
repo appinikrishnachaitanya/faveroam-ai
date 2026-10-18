@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { ResultMetrics, WhyEvidence } from "./intelligence-evidence";
-import { evidenceFacts } from "../../src/qloo/explanation";
+import { evidenceFacts, recommendationSummary } from "../../src/qloo/explanation";
 import { threeChoices } from "../../src/passport/shortlist";
 import { bridgeRoutes, sparseSections } from "../../src/passport/evidence";
 import type { Candidate, Card, Section } from "../../src/passport/model";
@@ -400,10 +400,7 @@ export function DiscoveryCard({
         </span>
         <h4>{card.name}</h4>
       </div>
-      {card.evidence && <p className="card-query-inputs">{(() => {
-        const facts=evidenceFacts(card);
-        return facts.find(f=>/helped shape/.test(f)) ?? facts.find(f=>/returned tags include/.test(f)) ?? facts.find(f=>/Listed as/.test(f)) ?? facts[0];
-      })()}</p>}
+      {recommendationSummary(card) && <p className="card-query-inputs">{recommendationSummary(card)}</p>}
       {card.address && (
         <p className="card-address">
           <Icon name="pin" size={13} />

@@ -67,6 +67,7 @@ async function post<T>(path: string, body: unknown): Promise<T> {
   return data;
 }
 export default function Home() {
+  const [tasteDraftVersion,setTasteDraftVersion]=useState(0);
   const [showSaved, setShowSaved] = useState(false);
   const [adaptation, setAdaptation] = useState("");
   const [city, setCity] = useState("");
@@ -501,6 +502,7 @@ export default function Home() {
     requestAnimationFrame(() => feedbackOpener.current?.focus());
   }
   function fresh() {
+    setTasteDraftVersion(value=>value+1);
     activeTurn.current?.abort();
     activeTurn.current = null;
     setRetryInput(undefined);
@@ -603,7 +605,8 @@ export default function Home() {
         </nav>
       </header>
       <div className="progressive-content" id="passport-content" tabIndex={-1}>
-        {!result && <ReusableTastes signedIn={accountSignedIn} city={city} disabled={busy}
+        {<ReusableTastes signedIn={accountSignedIn} passport={result} city={city} disabled={busy} draftVersion={tasteDraftVersion}
+          onSelect={profile=>{resetMatches("review");setDraft(profile.selected.map(s=>s.name));setConceptSeeds(profile.selected.filter(s=>s.id.startsWith("urn:tag:")).map(s=>s.name));setInitialMode(profile.discoveryMode);setConstraints(profile.constraints);setRequestedActivities(profile.activeCategories.filter(s=>!profile.hiddenCategories.includes(s)).slice(0,5));setEditing(true);}}
           onBusy={value=>setPhase(value?"exploring":"idle")}
           onApply={passport=>{setResult(passport);setCity(passport.city);setDraft(passport.selected.map(s=>s.name));setPhase("ready");setAdaptation("Fresh discoveries using your saved tastes.");}}
         />}
@@ -726,7 +729,7 @@ export default function Home() {
                   aria-pressed={workspaceView === "connections"}
                   onClick={() => selectWorkspaceView("connections")}
                 >
-                  Your connections
+                  Taste insights
                 </button>
               </div>
               <button
@@ -761,7 +764,7 @@ export default function Home() {
                 <FamiliarityControl
                   session={result.session}
                   disabled={busy}
-                  onChange={(input) => void refine(input)}
+                  onChange={(input) => {setShowSaved(false);setWorkspaceView("discover");void refine(input);}}
                 />
               )}
             </div>
@@ -848,10 +851,7 @@ export default function Home() {
                 busy={busy}
                 onRefine={(input) => void refine(input)}
               />
-              <ReusableTastes signedIn={accountSignedIn} passport={result} city={city} disabled={busy}
-                onBusy={value=>setPhase(value?"exploring":"ready")}
-                onApply={passport=>{setResult(passport);setCity(passport.city);setPhase("ready");}}
-              />
+
             </div>
             <div
               className="workspace-panel"
@@ -863,7 +863,7 @@ export default function Home() {
                 open={workspaceView === "connections"}
               >
                 <summary>
-                  Why these suggestions? <Icon name="arrow" size={16} />
+                  Explore your taste patterns <Icon name="arrow" size={16} />
                 </summary>
                 <ConnectionExplorer
                   passport={result}

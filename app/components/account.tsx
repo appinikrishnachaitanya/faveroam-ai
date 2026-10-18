@@ -8,6 +8,7 @@ import type { SavedPlan } from "../../src/account/plans";
 import {
   accountRequest as request,
   accountChanged,
+  AccountRequestError,
   showNotice,
 } from "../../src/account/browser";
 type Account = {
@@ -250,6 +251,7 @@ export default function AccountControl({
         }
       }
     } catch (e) {
+      if (e instanceof AccountRequestError && e.signInRequired) { setTab("login"); setPassword(""); }
       setMessage(e instanceof Error ? e.message : "Account request failed.");
     } finally {
       setBusy(false);

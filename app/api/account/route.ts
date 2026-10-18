@@ -1,3 +1,4 @@
+import { existingRegistration } from "../../../src/account/registration";
 import { debugRequest } from "../../../src/agent/debug";
 import {
   accountClient,
@@ -137,6 +138,8 @@ async function handlePOST(request: Request) {
             email: b.email.trim(),
             password: b.password,
           });
+    if (b.action === "register" && existingRegistration(result))
+      return privateJson({error:"An account already exists for this email. Sign in or use Forgot password.",signInRequired:true},409);
     if (result.error)
       return privateJson(
         {

@@ -121,6 +121,8 @@ const passport = {
 };
 let signedIn = false;
 let reusableProfile = null;
+let reusableName = "My tastes";
+const profileRecord=()=>({id:uuid,name:reusableName,updated_at:"2026-10-18T00:00:00Z",profile:reusableProfile});
 let libraryReads = 0,
   budgetUpdates = 0;
 let plans = [];
@@ -139,6 +141,7 @@ ws.addEventListener("message", async (event) => {
     const path = new URL(request.url).pathname;
     const body = request.postData ? JSON.parse(request.postData) : {};
     let value;
+    let responseStatus=200;
     if (path === "/api/destinations") {
       value = { destinations: ["London", "New York City", "Toronto", "Lisbon"] };
     } else if (path === "/api/agent/turn") {
@@ -208,7 +211,9 @@ ws.addEventListener("message", async (event) => {
       else if (body.action === "register") {
         assert.equal(body.firstName,"Protocol");
         assert.equal(body.lastName,"Tester");
-        value = { signedIn: false, confirmationRequired: true };
+        if(body.email==="existing@example.test") {
+          responseStatus=409;value={error:"An account already exists for this email. Sign in or use Forgot password.",signInRequired:true};
+        } else value = { signedIn: false, confirmationRequired: true };
       }
       else if (body.action === "logout") {
         signedIn = false;
@@ -221,12 +226,15 @@ ws.addEventListener("message", async (event) => {
         signedIn = true;
         value = { signedIn: true, confirmationRequired: false };
       }
+    } else if (path === "/api/account/preferences/export") {
+      value={schema:"tastepassport.profile-export",version:1,profiles:reusableProfile?[{name:reusableName,preferences:reusableProfile}]:[]};
     } else if (path === "/api/account/preferences") {
-      if (request.method === "GET") value={profile:reusableProfile};
+      if (request.method === "GET") value={profiles:reusableProfile?[profileRecord()]:[],profile:reusableProfile};
       else if (body.action === "save") {
         assert.equal(body.sessionId,uuid);
-        reusableProfile={version:1,selected:session.selected,tags:[],constraints:[],categoryConstraints:{},categoryTags:{},queryPreferences:{Eat:{priceMax:2}},discoveryMode:"familiar",categoryModes:{},hiddenCategories:[]};
-        value={saved:true,profile:reusableProfile};
+        reusableProfile={version:1,selected:session.selected,tags:[],constraints:[],categoryConstraints:{},categoryTags:{},queryPreferences:{Eat:{priceMax:2}},discoveryMode:"familiar",categoryModes:{},hiddenCategories:[],activeCategories:["Eat","Coffee","Music","Culture"]};
+        reusableName=body.name;
+        value={saved:true,profile:reusableProfile,entry:profileRecord()};
       } else if (body.action === "apply") {
         assert.equal(body.city,"London");
         assert.ok(reusableProfile);
@@ -290,7 +298,9 @@ ws.addEventListener("message", async (event) => {
         })),
       };
     } else if (path === "/api/agent/intelligence") {
-      if (body.action === "analysis") {
+      if (body.action === "trends") {
+        value={trend:{entityId:body.entityId,startDate:"2026-09-01",endDate:"2026-10-01",recordedAt:"2026-10-18",points:[{date:"2026-10-01",populationPercentile:82,rank:4}]}};
+      } else if (body.action === "analysis") {
         value={analysis:body.kind === "taste" ? {kind:"taste",tags:[{id:"urn:tag:genre:media:fixture",name:"Fixture cultural theme"}],recordedAt:new Date().toISOString()}
           : body.kind === "heatmap" ? {kind:"heatmap",points:[{latitude:43.65,longitude:-79.38,affinity:.9},{latitude:43.69,longitude:-79.42,affinity:.5},{latitude:43.61,longitude:-79.35,affinity:.7}],recordedAt:new Date().toISOString()}
           : {kind:"demographics",records:[{id:session.selected[0].id,age:{'25_to_29':.2},gender:{female:-.1}}],recordedAt:new Date().toISOString()}};
@@ -314,7 +324,7 @@ ws.addEventListener("message", async (event) => {
     } else value = { deleted: true };
     await call("Fetch.fulfillRequest", {
       requestId,
-      responseCode: 200,
+      responseCode: responseStatus,
       responseHeaders: [
         { name: "Content-Type", value: "application/json" },
         { name: "Cache-Control", value: "no-store" },
@@ -349,6 +359,10 @@ await wait(
 await new Promise((r) => setTimeout(r, 600));
 await wait("Array.from(document.querySelectorAll('#destination option')).some(option=>option.value==='Lisbon')");
 assert.equal(await evaluate("Array.from(document.querySelectorAll('#destination option')).some(option=>option.value==='Tokyo')"), false, "Dropdown uses returned catalogue, not hardcoded cities");
+await wait("document.querySelector('.journey-illustration')?.complete && document.querySelector('.journey-illustration').naturalWidth>0");
+await evaluate("window.scrollTo({top:0,behavior:'instant'})");
+const artworkShot=await call("Page.captureScreenshot",{format:"png"});
+await fs.writeFile("/tmp/tastepassport-original-illustrations.png",Buffer.from(artworkShot.result.data,"base64"));
 await click(".account-launch");
 await wait(
   "Boolean(document.querySelector('.account-dialog[open] input[type=email]'))",
@@ -370,6 +384,14 @@ assert.equal(await evaluate("document.querySelector('.account-tabs button[aria-p
 await textClick("Register");
 await input('.account-dialog input[autocomplete="given-name"]', "Protocol");
 await input('.account-dialog input[autocomplete="family-name"]', "Tester");
+await input(".account-dialog input[type=email]", "protocol@example.test");
+await input(".account-dialog input[type=password]", "Protocol-only-1234");
+await input(".account-dialog input[type=email]", "existing@example.test");
+await evaluate("document.querySelector('.account-dialog form').requestSubmit()");
+await wait("document.querySelector('.account-message')?.textContent.includes('already exists')");
+assert.equal(await evaluate("document.querySelector('.account-tabs button[aria-pressed=true]').textContent.trim()"),"Sign in");
+assert.equal(await evaluate("Boolean(document.querySelector('.verification-screen'))"),false);
+await textClick("Register");
 await input(".account-dialog input[type=email]", "protocol@example.test");
 await input(".account-dialog input[type=password]", "Protocol-only-1234");
 await evaluate(
@@ -492,11 +514,14 @@ await evaluate(
 );
 assert.equal(
   await evaluate(
-    "document.querySelectorAll('.partner-matches input:checked').length",
+    "document.querySelectorAll('.partner-selection').length",
   ),
   3,
-  "Partner matches have independent radio groups",
+  "Confirmed partner interests become compact selections",
 );
+await evaluate("document.querySelector('.partner-matches').scrollIntoView({block:'center',behavior:'instant'})");
+let togetherShot=await call("Page.captureScreenshot",{format:"png"});
+await fs.writeFile("/tmp/tastepassport-together-matches.png",Buffer.from(togetherShot.result.data,"base64"));
 await textClick("Find something for both of us");
 await wait("Boolean(document.querySelector('.common-tags'))");
 assert.ok(
@@ -504,11 +529,17 @@ assert.ok(
     "document.querySelector('.common-tags').textContent.includes('Protocol common ground')",
   ),
 );
-await textClick("Why these suggestions");
+await evaluate("document.querySelector('.together-results').scrollIntoView({block:'start',behavior:'instant'})");
+togetherShot=await call("Page.captureScreenshot",{format:"png"});
+await fs.writeFile("/tmp/tastepassport-together-results.png",Buffer.from(togetherShot.result.data,"base64"));
+await textClick("Taste insights");
 await textClick("Explore my taste connections");
 await wait("Boolean(document.querySelector('.taste-theme-list'))");
 assert.ok(await evaluate("document.querySelector('.taste-theme-list').textContent.includes('Fixture cultural theme')"));
-await textClick("Find areas to explore in Toronto");
+await textClick("Load trend history");
+await wait("Boolean(document.querySelector('.trend-table tbody tr'))");
+assert.ok(await evaluate("document.querySelector('.trend-table').textContent.includes('82')"));
+await textClick("Heatmap · areas to explore in Toronto");
 await wait("Boolean(document.querySelector('.affinity-plot'))");
 assert.equal(await evaluate("document.querySelectorAll('.affinity-plot circle').length"),3);
 await evaluate("document.querySelector('.audience-context').open=true");
@@ -647,11 +678,17 @@ await wait(
 );
 await click('[aria-label="Close Taste Concierge"]');
 await textClick("Preferences & Together");
+await input('.profile-fields input',"Weekend culture");
 await textClick("Save my tastes");
 await wait("[...document.querySelectorAll('button')].some(b=>b.textContent.includes('Update saved tastes'))");
 await click('[aria-label="Start a new Passport"]');
-await wait("Boolean(document.querySelector('#destination'))");
+await wait("document.querySelector('#destination')?.disabled===false && Array.from(document.querySelector('#destination').options).some(option=>option.value==='London')");
 await input("#destination","London","HTMLSelectElement");
+assert.equal(await evaluate("document.querySelector('.profile-fields select').value"),'','New Passport clears the active profile selection');
+await input('.profile-fields select',uuid,'HTMLSelectElement');
+await wait("document.querySelectorAll('.taste-chip').length===3");
+assert.ok(await evaluate("document.querySelector('.profile-status').textContent.includes('Loaded interests')"),"Selecting a named profile populates tastes");
+assert.ok(await evaluate("document.querySelector('.reusable-tastes a[download]').href.includes('/api/account/preferences/export?id=')"));
 await textClick("Use my tastes in London");
 await wait("Boolean(document.querySelector('.passport-cover')) && document.querySelector('.passport-cover').textContent.includes('London')");
 assert.ok(await evaluate("document.querySelector('#passport-content').textContent.includes('Fresh discoveries using your saved tastes')"),"Saved tastes apply to a different city without retyping preferences");
@@ -681,5 +718,5 @@ await call("Fetch.disable");
 ws.close();
 if (failure) throw failure;
 console.log(
-  "UI contract PASS (mocked APIs): registration names, password change, reusable tastes across cities, no sign-in library flash, budget updates, planner reordering, Together, saved plans/calendar, provider failure/cancellation/retry and responsive containment. Live providers remain separate acceptance.",
+  "UI contract PASS (mocked APIs): duplicate registration recovery, registration names, password change, named profiles/auto-filled tastes/export link, reusable tastes across cities, no sign-in library flash, budget updates, planner reordering, compact Together, trend history, saved plans/calendar, provider failure/cancellation/retry and responsive containment. Live providers remain separate acceptance.",
 );
