@@ -18,6 +18,8 @@ Registration names are stored in Supabase Auth user metadata, not a separate tab
 
 ## Start fresh (deletes app data)
 
-If you want to discard the existing saved data, run **`reset_app_data.sql`** in SQL Editor instead of running the migrations individually. It drops and recreates only TastePassport's four public app tables, including current constraints and RLS policies, and seeds the ten initial destinations. Existing Supabase Auth accounts remain. It is atomic and does not use CASCADE. Do not add this file to automatic deployment steps.
+If you want to discard the existing saved data, run **`reset_app_data.sql`** in SQL Editor instead of running the migrations individually. It drops and recreates only TastePassport's four public app tables, with no city CHECK constraints or city foreign keys, while restoring snapshot integrity checks and RLS policies, and seeds the ten initial destinations. Existing Supabase Auth accounts remain. It is atomic and does not use CASCADE. Do not add this file to automatic deployment steps.
 
 After success, refresh the app, sign in again if needed, and generate a new Passport. Old refinement sessions in an already running app may remain until expiry; restarting the app clears them. Manage cities in Table Editor → destinations.
+
+The fresh script creates the current schema directly. It does not temporarily create the old fixed-city constraints or replay historical migrations. The ten inserted cities are editable starter data, not an allowed-values constraint.
