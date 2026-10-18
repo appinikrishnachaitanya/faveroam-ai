@@ -396,6 +396,9 @@ export function preferencesFromText(text: string): QueryPreferences {
   else if (/\b(?:Indian|Thai|Italian)\b.*\band\b.*\bvegetarian\b/i.test(text))
     p.tagOperator = "intersection";
   if (/\bcheap\b|affordable|budget|under\s*\$\$/i.test(text)) p.priceMax = 2;
+  if (/\bmoderate(?:\s+budget)?\b/i.test(text)) p.priceMax = 2;
+  const explicitRating=text.match(/(?:minimum\s+(?:business\s+)?rating(?:\s+(?:of|is))?|rated\s+(?:at least|above)|rating\s+(?:at least|above|>=))\s*([0-5](?:\.\d+)?)/i);
+  if(explicitRating) p.businessRatingMin=Number(explicitRating[1]);
   if (/mid.range/i.test(text)) {
     p.priceMin = 2;
     p.priceMax = 3;

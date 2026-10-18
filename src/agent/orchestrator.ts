@@ -1,3 +1,4 @@
+import { refinementScope } from "./scope.ts";
 import { debugEvent } from "./debug.ts";
 import {
   normalizeSession,
@@ -266,6 +267,12 @@ export async function runTurn(
       strategy: "discover",
     };
   } else if (input.tagChoice) {
+    if(state.pending?.request) {
+      const protectedSections=refinementScope(state.pending.request).preserved;
+      state.pending.sections=state.pending.sections.filter(section=>!protectedSections.includes(section));
+      if(state.pending.conceptSections)state.pending.conceptSections=state.pending.conceptSections.filter(section=>!protectedSections.includes(section));
+      if(!state.pending.sections.length){delete state.pending;return reply("Your protected categories are unchanged. Name the category you want to update.");}
+    }
     const pending = state.pending;
     comparedRequest = pending?.request;
     const tag = pending?.candidates.find((t) => t.id === input.tagChoice);
@@ -350,10 +357,22 @@ export async function runTurn(
       intent.kind = "refine";
       intent.constraints = [...new Set([...intent.constraints, ...explicit.constraints])];
       if (!intent.sections.length) intent.sections = explicit.sections;
-      if (explicit.concepts.length) intent.concepts = [...new Set([...explicit.concepts,...intent.concepts])];
+      if (explicit.concepts.length) intent.concepts = [...new Set([...explicit.concepts,...intent.concepts.filter(concept=>
+        !(explicit.constraints.includes("crowded") && /quiet|calm|tranquil/i.test(concept)) &&
+        !explicit.concepts.some(known=>known.toLowerCase().split(/\s+/).filter(word=>!["cuisine","food"].includes(word)).every(word=>concept.toLowerCase().includes(word)))
+      )])];
     }
     if (explicit.excludeConcepts?.length)
       intent.excludeConcepts = [...new Set([...(intent.excludeConcepts ?? []), ...explicit.excludeConcepts])];
+    if (intent.query) {
+      // Model-produced IDs must go through resolution, not bypass it as filters.
+      delete intent.query.includeTags; delete intent.query.excludeTags; delete intent.query.excludeEntities;
+      if (!explicit.query?.tagOperator) delete intent.query.tagOperator;
+    }
+    if (explicit.query) intent.query={...intent.query,...explicit.query};
+    const preserved=refinementScope(input.message).preserved;
+    intent.sections=intent.sections.filter(section=>!preserved.includes(section));
+    intent.hide=intent.hide?.filter(section=>!preserved.includes(section));
     if (explicit.activityGenres?.length) {
       intent.activityGenres = explicit.activityGenres;
       intent.concepts = explicit.concepts;
@@ -392,7 +411,8 @@ export async function runTurn(
     currentScope ??
     state.activeCategories.find((s) => !state.hiddenCategories.includes(s)) ??
     "Eat";
-  const targets: Section[] = intent.sections.length
+  const preserved=input.message ? refinementScope(input.message).preserved : [];
+  const targets: Section[] = (intent.sections.length
     ? intent.sections
     : [
         refersToLike && acceptedScope
@@ -400,7 +420,8 @@ export async function runTurn(
           : intent.familiarity
             ? modeScope
             : (currentScope ?? "Eat"),
-      ];
+      ]).filter(section=>!preserved.includes(section));
+  if (!targets.length) return reply("Your protected categories are unchanged. Name the category you want to update.");
   if (intent.familiarity)
     for (const section of targets)
       state.categoryModes[section] = intent.familiarity;
@@ -413,6 +434,7 @@ export async function runTurn(
       if (intent.concepts.some(concept=>conceptSections(concept, targets).includes(section)))
         state.categoryConcepts[section] = intent.concepts.filter(concept=>conceptSections(concept, targets).includes(section));
   }
+  if (!targets.includes("Culture")) delete intent.activityGenres;
   state.intent = { ...intent, sections: targets };
   if (intent.activityGenres?.length) {
     state.activityGenres ??= {};
@@ -423,12 +445,14 @@ export async function runTurn(
     if(state.queryPreferences?.Culture?.includeTags)
       state.queryPreferences.Culture.includeTags=state.queryPreferences.Culture.includeTags.filter(id=>!venueGenre(id));
     if(input.message) {
-      state.outingActivities = [
-        {id:"Coffee",index:input.message.search(/coffee|caf[eé]/i)},
-        {id:"Cinema",index:input.message.search(/cinema|movies?/i)},
-        {id:"Eat",index:input.message.search(/dinner|lunch|breakfast|\beat\b|biryani|restaurant/i)},
-        {id:"Nightlife",index:input.message.search(/party|nightclub|nightlife/i)},
+      const activityText=refinementScope(input.message).positive;
+      const outingActivities = [
+        {id:"Coffee",index:activityText.search(/coffee|caf[eé]/i)},
+        {id:"Cinema",index:activityText.search(/cinema|movies?/i)},
+        {id:"Eat",index:activityText.search(/dinner|lunch|breakfast|\beat\b|biryani|restaurant/i)},
+        {id:"Nightlife",index:activityText.search(/party|nightclub|nightlife/i)},
       ].filter(a=>a.index>=0).sort((a,b)=>a.index-b.index).map(a=>a.id);
+      if (outingActivities.length > 1) state.outingActivities = outingActivities;
     }
   } else if(input.message && targets.includes("Culture") && intent.concepts.some(concept=>conceptSections(concept,targets).includes("Culture"))) {
     if(state.activityGenres)delete state.activityGenres.Culture;
@@ -518,12 +542,14 @@ export async function runTurn(
     mode === "model-mcp" &&
     deps.provider &&
     !input.tagChoice &&
-    (intent.strategy === "rank" || neededConcepts.some(conceptUnknown))
+    (intent.strategy === "rank" || neededConcepts.some(concept=>!/^quiet(?: atmosphere)?$/i.test(concept) && conceptUnknown(concept)))
   ) {
+    let choosingModelTool=false;
     try {
       tools = (await deps.tools()).filter((t) =>
         t.name === "qloo_find_tags" || (t.name === "qloo_rank" && intent.strategy === "rank" && state.cards.some(card=>targets.includes(card.section))),
       );
+      choosingModelTool=true;
       modelChoices = await deps.provider.choose(
         input.message ?? "",
         state,
@@ -534,11 +560,14 @@ export async function runTurn(
         throw Error("Unadvertised tool");
     } catch {
       mode = "deterministic";
-      state.providerHealth = "unavailable";
-      recordProviderHealth("unavailable");
+      if(choosingModelTool) {
+        state.providerHealth = "unavailable";
+        recordProviderHealth("unavailable");
+        fallback = "Taste Concierge is temporarily unavailable. You can still refine your Passport. ";
+      } else {
+        fallback = "The tool connection is unavailable. Using validated Qloo discovery. ";
+      }
       debugEvent("agent.fallback", { mode: "deterministic" });
-      fallback =
-        "Taste Concierge is temporarily unavailable. You can still refine your Passport. ";
       event("Guided refinement is available", "attention");
     }
   }
@@ -623,7 +652,7 @@ export async function runTurn(
         modelChoices.some((c) => c.name === "qloo_find_tags")
           ? "mcp"
           : "exec";
-      const args = { query: concept, limit: 5 };
+      const args = { query: /quiet/i.test(concept) ? "quiet atmosphere" : concept, limit: 5 };
       let result: ToolResult;
       try {
         result = await guard.run("qloo_find_tags", args, () =>
@@ -643,6 +672,16 @@ export async function runTurn(
           !/quiet/i.test(concept) ||
           (t.id.includes(":ambience:") && /quiet|calm|tranquil/i.test(t.name)),
       );
+      if (!excluding && /quiet/i.test(concept)) {
+        const direct=choices.filter(tag=>conceptKey(tag.name)===conceptKey(concept));
+        const exact=direct.length ? direct : choices.filter(tag=>conceptKey(tag.name)===conceptKey(args.query));
+        const known=exact.length===1 ? exact[0] : choices.length===1 ? choices[0] : undefined;
+        if(known) {
+          state.tags=[...state.tags.filter(tag=>tag.id!==known.id),known];
+          for(const section of scopedTargets) state.categoryTags![section]=[...new Set([...(state.categoryTags![section] ?? []),known.id])];
+          continue;
+        }
+      }
       // An explicitly named dish with one exact specialty-dish match needs no
       // additional personal-taste disambiguation. Broader/partial matches do.
       const exactDishes = choices.filter((tag) =>
@@ -723,7 +762,7 @@ export async function runTurn(
               ? "rank"
               : "discover",
           rankMcp: modelChoices.some((c) => c.name === "qloo_rank"),
-          optional: /quiet/i.test(concept),
+          optional: false,
           request: comparedRequest,
           exclude: excluding,
           remainingConcepts: excluding
@@ -736,26 +775,20 @@ export async function runTurn(
               ),
         };
         event("Concept matches returned · your choice needed", "complete");
-        if (!/quiet/i.test(concept))
-          return reply(
-            excluding
-              ? "Choose the concept to exclude before I update that section. Your current Passport is unchanged."
-              : "Choose the concept you mean before I update that section. Your current passport is unchanged.",
-          );
-        event(
-          "You can confirm a quiet atmosphere match; dining discovery will continue with your confirmed tastes",
-          "attention",
+        return reply(
+          excluding
+            ? "Choose the concept to exclude before I update that section. Your current Passport is unchanged."
+            : "Choose the concept you mean before I update that section. Your current passport is unchanged.",
         );
-        continue;
       }
       event("No matching concept returned", "attention");
-      if (/quiet/i.test(concept)) continue;
+      if (/quiet/i.test(concept)) return reply("I could not verify the requested quiet-atmosphere requirement. Your discoveries are unchanged; retry or explicitly relax quietness.");
       return reply(
         "No matching interest was found. Your existing Passport is unchanged; try a more specific term.",
       );
     } catch {
       event("Concept workflow unavailable", "attention");
-      if (/quiet/i.test(concept)) continue;
+      if (/quiet/i.test(concept)) return reply("I could not verify the requested quiet-atmosphere requirement. Your discoveries are unchanged; retry or explicitly relax quietness.");
       return reply(
         "Concept refinement is temporarily unavailable. Your existing passport is still available.",
       );

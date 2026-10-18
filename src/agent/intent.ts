@@ -1,3 +1,4 @@
+import { refinementScope } from "./scope.ts";
 import {
   extractDraft,
   sectionOrder,
@@ -64,7 +65,8 @@ export function interpret(text: string, fallback = "New York City"): Intent {
   const clean = text.replace(/\bI (?:don't|do not|dislike|hate)[\s\S]*$/i, "");
   const draft = extractDraft(clean, fallback);
   const sections: Section[] = [];
-  const positive = text.replace(
+  const scoped = refinementScope(text);
+  const positive = scoped.positive.replace(
     /\b(?:not|no|without)\s+(?:ordinary\s+)?restaurants?\b/gi,
     "",
   ).replace(/\b(?:connected to|based on|inspired by|matching|using)\s+my\b[^.!?]*(?:tastes|interests|favorites)\b/gi, "");
@@ -120,7 +122,7 @@ export function interpret(text: string, fallback = "New York City"): Intent {
   if (/music/i.test(hidePart)) hidden.push("Music");
   if (/book|lifestyle/i.test(hidePart)) hidden.push("Lifestyle");
   if (/cultur(?:e|al)/i.test(hidePart)) hidden.push("Culture");
-  const activeSections = sections.filter((s) => !hidden.includes(s));
+  const activeSections = sections.filter((s) => !hidden.includes(s) && !scoped.preserved.includes(s));
   const refine =
     !onboarding &&
     (excludeConcepts.length > 0 || constraints.length > 0 || /tonight|quieter|more|less|find|show|want|give|help|too |niche|refine|rank|reorder|trending|hidden gem|safe bet|surprise me|highly rated|make it/i.test(
@@ -140,8 +142,8 @@ export function interpret(text: string, fallback = "New York City"): Intent {
     seeds: onboarding ? draft.tastes.map((s) => s.replace(/[.\s]+$/, "")) : [],
     concepts,
     activityGenres: [
-      ...(!screenContent && /\bmovies?\b|cinema/i.test(text) ? ["cinema" as const] : []),
-      ...(/\bparty\b|nightclub|nightlife/i.test(text) ? ["nightclub" as const] : []),
+      ...(!screenContent && /\bmovies?\b|cinema/i.test(positive) ? ["cinema" as const] : []),
+      ...(/\bparty\b|nightclub|nightlife/i.test(positive) ? ["nightclub" as const] : []),
     ],
     excludeConcepts: /\bno seafood\b/i.test(text)
       ? ["seafood", ...excludeConcepts]

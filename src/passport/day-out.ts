@@ -80,3 +80,11 @@ export function stopDistance(a: Card, b: Card): number | undefined {
       Math.sin(rad(y.longitude - x.longitude) / 2) ** 2;
   return 6371 * 2 * Math.asin(Math.sqrt(Math.min(1, d)));
 }
+
+/** Prefer closer returned venues only when coordinates support a comparison. */
+export function nearbyOutingOptions(cards:Card[],anchor?:Card) {
+  if(!anchor)return cards;
+  return cards.map((card,index)=>({card,index,distance:stopDistance(anchor,card)}))
+    .sort((a,b)=>(a.distance ?? Infinity)-(b.distance ?? Infinity) || a.index-b.index)
+    .map(row=>row.card);
+}

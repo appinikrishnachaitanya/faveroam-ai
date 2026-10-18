@@ -214,6 +214,7 @@ test("sparse refinement preserves explicit constraints, cuisine, location and re
   ];
   const attempts: Constraint[][] = [];
   const d = deps();
+  d.workflow=async()=>({status:"ok",results:[{id:"urn:tag:ambience:place:quiet",name:"Quiet",type:"urn:tag:ambience:place"}]});
   d.discover = async (state, section, constraints, excluded) => {
     assert.equal(state.city, "New York City");
     assert.equal(section, "Eat");
@@ -316,7 +317,7 @@ test("empty results expose real recovery actions that change state and rerun dis
   assert.deepEqual(recovered.changed, ["Eat"]);
   assert.deepEqual(recovered.state.categoryConstraints.Eat, []);
 });
-test("exact failure case attempts Qloo-backed dining despite provider and quiet lookup failure; reset then clears it", async () => {
+test("quiet lookup failure preserves discoveries instead of silently weakening an explicit requirement", async () => {
   const d = deps();
   d.provider = {
     interpret: async () => {
@@ -353,8 +354,9 @@ test("exact failure case attempts Qloo-backed dining despite provider and quiet 
   assert.ok(!r.state.hiddenCategories?.includes("Eat"));
   assert.equal(r.state.providerHealth, "unavailable");
   assert.match(r.message, /Taste Concierge is temporarily unavailable/);
-  assert.equal(attempts, 1);
-  assert.deepEqual(r.changed, ["Eat"]);
+  assert.equal(attempts, 0);
+  assert.deepEqual(r.changed, []);
+  assert.match(r.message,/could not verify.*quiet-atmosphere/);
   assert.deepEqual(
     r.state.cards.filter((c) => c.section === "Music"),
     s.cards.filter((c) => c.section === "Music"),
@@ -394,6 +396,7 @@ test("every empty-result recovery action applies its advertised constraint chang
     const s = fresh();
     s.categoryConstraints.Eat = ["crowded", "touristy", "mainstream"];
     const d = deps();
+    d.workflow=async()=>({status:"ok",results:[{id:"urn:tag:ambience:place:quiet",name:"Quiet",type:"urn:tag:ambience:place"}]});
     let applied: Constraint[] = [];
     d.discover = async (_s, section, constraints) => {
       applied = constraints;

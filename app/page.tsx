@@ -834,6 +834,7 @@ export default function Home() {
               <DayOutPlan
                 key={`day-out:${result.session?.id ?? result.city}`}
                 expanded={workspaceView === "plan"}
+                onFindActivity={id=>{const target=id==="Cinema"?"cinemas":id==="Nightlife"?"nightclubs":id==="Coffee"?"coffee shops":id==="Eat"?"restaurants":"museums";const kept=id==="Coffee"?"dining, music and movies":id==="Eat"?"coffee, music and movies":"dining, coffee, music and movies";void refine({message:`Find local ${target} for this outing. Keep my ${kept} unchanged.`});}}
                 passport={result}
                 disabled={busy}
                 signedIn={accountSignedIn}

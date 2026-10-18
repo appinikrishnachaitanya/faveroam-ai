@@ -59,9 +59,13 @@ export function recommendationSummary(card: Card): string | undefined {
     const input=inputs.find(input=>input.id.toLowerCase()===signal.id.toLowerCase());
     return input?[input.name]:[];
   });
-  if(connected.length) return `Connected to ${[...new Set(connected)].slice(0,2).join(" and ")} in your interests.`;
+
   const tags=(card.evidence?.result.tags ?? []).filter(tag=>!/urn:tag:(?:genre|category):place/.test(tag.type ?? tag.id));
   const matches=tags.filter(tag=>inputs.some(input=>input.id===tag.id));
+  if(connected.length) {
+    const details=[...new Set((matches.length ? matches : tags).map(tag=>tag.name))].slice(0,2).join(" · ");
+    return `${details ? details+". " : ""}Connected to ${[...new Set(connected)].slice(0,2).join(" and ")} in your interests.`;
+  }
   if(matches.length) return `Matches your interest in ${[...new Set(matches.map(tag=>tag.name))].slice(0,2).join(" and ")}.`;
   return [...new Set(tags.map(tag=>tag.name))].slice(0,3).join(" · ") || undefined;
 }

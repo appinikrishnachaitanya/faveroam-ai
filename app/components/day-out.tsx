@@ -1,10 +1,12 @@
 "use client";
 import { useState, useEffect } from "react";
+import type { Card } from "../../src/passport/model";
 import type { Passport } from "../../src/workspace/state";
 import {
   dayOutOptions,
   dayOutText,
   stopDistance,
+  nearbyOutingOptions,
   outingActivities,
   activityMatches,
 } from "../../src/passport/day-out";
@@ -17,11 +19,13 @@ export default function DayOutPlan({
   disabled,
   signedIn = false,
   expanded,
+  onFindActivity,
 }: {
   passport: Passport;
   disabled: boolean;
   signedIn?: boolean;
   expanded?: boolean;
+  onFindActivity?: (id:string)=>void;
 }) {
   const [choices, setChoices] = useState<Record<string, string>>({});
   const [omitted, setOmitted] = useState<Record<string, boolean>>({});
@@ -33,17 +37,17 @@ export default function DayOutPlan({
   const orderKey=requestOrder?.join(',') ?? '';
   useEffect(()=>{if(orderKey)setActivities(orderKey.split(','));},[orderKey]);
   const options = dayOutOptions(passport.cards, passport.city);
+  let previousStop:Card | undefined;
   const stops = activities.map(id => ({ ...outingActivities.find(a => a.id === id)!, id })).map((stop) => {
-    const pool = options.filter((card) => activityMatches(card, stop.id));
+    const pool = nearbyOutingOptions(options.filter((card) => activityMatches(card, stop.id)),previousStop);
     // A choice removed by refinement requires explicit reselection.
     const selected = choices[stop.id]
       ? pool.find((card) => card.id === choices[stop.id])
       : pool[0];
-    return {
-      ...stop,
-      pool,
-      selected: omitted[stop.id] ? undefined : selected,
-    };
+    const chosen=omitted[stop.id] ? undefined : selected;
+    const distance=previousStop && chosen ? stopDistance(previousStop,chosen) : undefined;
+    if(chosen)previousStop=chosen;
+    return {...stop,pool,selected:chosen,distance};
   });
   const selected = stops.flatMap((stop) =>
     stop.selected ? [stop.selected] : [],
@@ -159,7 +163,7 @@ export default function DayOutPlan({
           </p>
         </div>
         <fieldset className="outing-activities"><legend>What would you like to do?</legend>
-          {outingActivities.map(activity => <label key={activity.id}><input type="checkbox" checked={activities.includes(activity.id)} disabled={disabled || saving} onChange={e => setActivities(old => e.target.checked ? [...old, activity.id] : old.filter(id => id !== activity.id))} />{activity.label}</label>)}
+          {outingActivities.map(activity => <label key={activity.id}><input type="checkbox" checked={activities.includes(activity.id)} disabled={disabled || saving} onChange={e => {setActivities(old => e.target.checked ? [...old, activity.id] : old.filter(id => id !== activity.id)); if(e.target.checked && !options.some(card=>activityMatches(card,activity.id))) onFindActivity?.(activity.id);}} />{activity.label}</label>)}
         </fieldset>
         <ol className="day-out-stops">
           {stops.map((stop, index) => (
@@ -202,8 +206,10 @@ export default function DayOutPlan({
                 <p className="helper">
                   No local suggestions here yet. Try adjusting this category, or
                   leave the stop open.
+                  {onFindActivity && <button type="button" className="quiet-button" disabled={disabled||saving} onClick={()=>onFindActivity(stop.id)}>Find {stop.label.toLowerCase()} options</button>}
                 </p>
               )}
+              {stop.distance !== undefined && <p className="helper">{stop.distance.toFixed(1)} km straight-line from the previous stop. Check transport and travel time.</p>}
               {stop.selected && (
                 <>
                   <p>
