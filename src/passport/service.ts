@@ -66,7 +66,10 @@ export async function passport(
   ids: string[],
   constraints: Constraint[] = [],
   activities: import("./model.ts").Section[] = [],
+  mode: import("./evidence.ts").Familiarity = "familiar",
 ) {
+  if (!["familiar", "balanced", "explore"].includes(mode))
+    throw new QlooError("Choose a supported discovery style.", 400);
   const items = unseal(token);
   const selected = items.map(item => item.candidates.find(c => ids.includes(c.id)))
     .filter((c): c is Candidate => Boolean(c));
@@ -84,7 +87,7 @@ export async function passport(
     id:"initial",revision:0,expires:Date.now()+90_000,city,selected,
     tags:selected.filter(s=>s.id.startsWith("urn:tag:")),constraints,
     categoryConstraints:{},cards:[],previous:[],feedback:[],notices:[],
-    activeCategories:sections,
+    activeCategories:sections, discoveryMode:mode,
   });
   const deadline=AbortSignal.timeout(65_000);
   const pools=await Promise.all(sections.map(async section=>{
@@ -92,10 +95,11 @@ export async function passport(
     local.intent={kind:"refine",seeds:[],concepts:[],constraints,sections:[section],strategy:"discover"};
     try {
       const cards=await discoverSection(local,section,constraints,ids.filter(id=>!id.startsWith("urn:tag:")),false,deadline);
+      if (cards.length > 0 && cards.length < 3) local.notices.push(`Only ${cards.length} eligible ${section} ${cards.length === 1 ? "match was" : "matches were"} returned for these tastes and requirements. Try Balanced or Explore to broaden taste similarity; explicit filters stay in place.`);
       if (!cards.length) local.notices.push(`No eligible ${section} matches were returned. Try a different activity or refinement.`);
       return {cards,notices:local.notices};
-    } catch {
-      debugEvent("discovery.failed",{section});
+    } catch (error) {
+      debugEvent("discovery.failed",{section,...(error instanceof QlooError ? {status:error.status} : {})});
       return {cards:[] as Card[],notices:[`${section} is temporarily unavailable. Retry that activity; your confirmed tastes are preserved.`]};
     }
   }));

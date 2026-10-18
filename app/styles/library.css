@@ -64,3 +64,7 @@
 @media (max-width: 380px) {
   .header-controls .account-control:has(.signout-button) button { padding-inline: 5px; font-size: 12px; }
 }
+/* Account mode is a single switch above the fields, separate from submission. */
+.account-dialog .account-tabs { display: flex; gap: 4px; padding: 4px; margin: 0 0 22px; border: 1px solid var(--ui-border); border-radius: 12px; background: var(--ui-tint); }
+.account-dialog .account-tabs button { flex: 1; min-height: 44px; border-radius: 8px; text-decoration: none; }
+.account-dialog .account-tabs button[aria-pressed="true"] { background: var(--ui-action); color: #fff; }

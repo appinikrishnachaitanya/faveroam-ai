@@ -193,6 +193,7 @@ export async function discoverSection(
   ) {
     const options = await findTags(
       section === "Coffee" ? "coffee shop" : section === "Lifestyle" ? "bookstore" : "museum",
+      signal,
     );
     const category = options.find(
       (t) =>

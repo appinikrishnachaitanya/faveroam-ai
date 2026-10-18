@@ -5,7 +5,7 @@ import { findTags } from '../src/qloo/lookups.ts';
 import { candidates } from '../src/passport/model.ts';
 import { passport, seal } from '../src/passport/service.ts';
 import { createSession } from '../src/agent/store.ts';
-import { agentDependencies } from '../src/agent/runtime.ts';
+import { agentDependencies, resolveCulturalSeeds } from '../src/agent/runtime.ts';
 import { runTurn } from '../src/agent/orchestrator.ts';
 if(!process.env.QLOO_API_KEY){console.log('Accuracy acceptance UNRUN: configure QLOO_API_KEY securely.');process.exitCode=2;}
 else try {
@@ -53,4 +53,15 @@ else try {
   console.log(JSON.stringify({check:'live-coffee-refinement',changed:coffee.changed,pending:Boolean(coffee.state.pending),count:cafes.length,starbucksReturned:cafes.some(c=>/\bstarbucks\b/i.test(c.name))}));
   assert.ok(coffee.changed.includes('Coffee') && !coffee.state.pending,'Independent coffee refinement should complete after at most one exact confirmation');
   assert.ok(!cafes.some(c=>/\bstarbucks\b/i.test(c.name)),'Explicitly excluded Starbucks must not be retained');
+  const reportedItems=await resolveCulturalSeeds(['A.R. Rahman','Specialty Coffee','Indian Savouries']);
+  const reportedSelected=reportedItems.map((item,index)=>item.candidates.find(c=>index===0?c.types.includes('urn:entity:artist'):c.name.toLowerCase()===item.query.toLowerCase()));
+  assert.ok(reportedSelected.every(Boolean),'Reported tastes require exact returned concepts/entities');
+  assert.ok(reportedSelected[2]!.id.startsWith('urn:tag:'),'Indian Savouries must not resolve to an unrelated named place');
+  for(const mode of ['familiar','balanced','explore'] as const) {
+    const profile=await passport('London',seal(reportedItems),reportedSelected.map(c=>c!.id),[],[],mode);
+    const counts=Object.fromEntries(['Music','Coffee','Eat'].map(section=>[section,profile.cards.filter(c=>c.section===section).length]));
+    assert.ok(Object.values(counts).every(count=>count>0),`Reported London profile needs each inferred category in ${mode}`);
+    assert.ok(profile.cards.every(c=>c.evidence?.mode===mode),'Initial results must use the requested style');
+    console.log(JSON.stringify({check:'reported-profile-initial-style',mode,counts}));
+  }
 }catch(error){console.error(`Accuracy acceptance FAIL${error instanceof QlooError&&error.status?` HTTP ${error.status}`:''}; request details and credentials withheld.`);process.exitCode=1;}

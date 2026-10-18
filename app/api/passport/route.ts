@@ -5,15 +5,16 @@ import { createSession } from "../../../src/agent/store.ts";
 import type { Constraint } from "../../../src/agent/types.ts";
 import { QlooError } from "../../../src/qloo/client.ts";
 import { validDestination } from "../../../src/workspace/location";
-import { supportedCity } from "../../../src/workspace/state";
+import { catalogCity } from "../../../src/workspace/destinations";
 import { sectionTypes, type Section } from "../../../src/passport/model";
 async function handlePOST(request: Request) {
   try {
     const raw = await request.text();
     if (raw.length > 30000) throw new QlooError("Input is too long.", 400);
     const b = JSON.parse(raw);
+    const city = await catalogCity(b.city);
     if (
-      !validDestination(b.city) || !supportedCity(b.city) ||
+      !validDestination(b.city) || !city ||
       typeof b.token !== "string" ||
       !Array.isArray(b.ids) ||
       b.ids.length < 3 ||
@@ -21,7 +22,7 @@ async function handlePOST(request: Request) {
       b.ids.some((id: unknown) => typeof id !== "string")
     )
       throw new QlooError(
-        "Choose one of the ten supported destinations and confirm three to five tastes.",
+        "Choose an available destination and confirm three to five tastes.",
         400,
       );
     const constraints: Constraint[] = Array.isArray(b.constraints)
@@ -37,9 +38,12 @@ async function handlePOST(request: Request) {
       : [];
     if (b.activities !== undefined && (!Array.isArray(b.activities) || b.activities.length > 5 || b.activities.some((s: unknown)=>typeof s !== "string" || !Object.hasOwn(sectionTypes,s))))
       throw new QlooError("Choose up to five supported activities.",400);
-    const result = await passport(supportedCity(b.city)!, b.token, b.ids, constraints, b.activities as Section[] | undefined);
+    if (b.mode !== undefined && !["familiar", "balanced", "explore"].includes(b.mode))
+      throw new QlooError("Choose a supported discovery style.", 400);
+    const result = await passport(city!, b.token, b.ids, constraints, b.activities as Section[] | undefined, b.mode);
     const state = createSession(result, constraints);
     state.activeCategories = result.requestedActivities;
+    state.discoveryMode = b.mode ?? "familiar";
     if (Array.isArray(b.history))
       state.history = b.history
         .filter(

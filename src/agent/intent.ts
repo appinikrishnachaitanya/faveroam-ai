@@ -50,7 +50,7 @@ export function constraintsFrom(text: string): Constraint[] {
   return values;
 }
 export function isConcept(text: string) {
-  return /^(?:(?:chicken|mutton|vegetable|hyderabadi)\s+biryani|biryani|\w+(?:\s+\w+)?\s+cuisine|indian(?: cuisine| food)?|specialty coffee|coffee|quiet (?:caf[eé]s?|bookstores?)|independent bookstores?|independent culture|cuisine|food|bookstores?)$/i.test(
+  return /^(?:(?:chicken|mutton|vegetable|hyderabadi)\s+biryani|biryani|\w+(?:\s+\w+)?\s+cuisine|indian(?: cuisine| food)?|(?:\w+\s+)?(?:savouries|savories|savory snacks)|specialty coffee|coffee|quiet (?:caf[eé]s?|bookstores?)|independent bookstores?|independent culture|cuisine|food|bookstores?)$/i.test(
     text.trim(),
   );
 }

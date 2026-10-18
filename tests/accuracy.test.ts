@@ -16,6 +16,12 @@ import type { Card, Candidate } from '../src/passport/model.ts';
 const id='00000000-0000-4000-8000-000000000001';
 const candidate=(type:string):Candidate=>({id,name:'Fixture interest',types:[`urn:entity:${type}`],detail:''});
 
+test('food descriptions resolve as concepts rather than unrelated named entities',()=>{
+  assert.equal(isConcept('Indian Savouries'),true);
+  assert.equal(isConcept('Indian savories'),true);
+  assert.equal(isConcept('Indian Museum'),false);
+  assert.equal(isConcept('Indian Coffee House'),false);
+});
 test('default sections follow confirmed tastes without forced coffee or unrelated culture',()=>{
   assert.deepEqual(suggestedSections([candidate('artist')]),['Music']);
   assert.deepEqual(suggestedSections([candidate('movie')]),['Movies']);
@@ -124,12 +130,16 @@ test('initial activity discovery keeps cuisine tags out of entity exclusions',()
     process.env.QLOO_API_KEY='synthetic-protocol-only';
     const selected=[{id:'00000000-0000-4000-8000-000000000001',name:'Fixture artist',types:['urn:entity:artist'],detail:''},{id:'00000000-0000-4000-8000-000000000002',name:'Fixture film',types:['urn:entity:movie'],detail:''},{id:'urn:tag:cuisine:place:fixture',name:'Fixture cuisine',types:['urn:tag'],detail:''}];
     const types=[];
+    let broadened=false;
     globalThis.fetch=async input=>{
       const url=new URL(input);const type=url.searchParams.get('filter.type');types.push(type);
       assert.ok(!(url.searchParams.get('filter.exclude.entities')??'').includes('urn:tag:'));
+      if(type==='urn:entity:place' && !(url.searchParams.get('filter.tags')??'').includes('urn:tag:cuisine:place:fixture'))broadened=true;
       return Response.json({results:{entities:[{entity_id:type==='urn:entity:place'?'00000000-0000-4000-8000-000000000004':'00000000-0000-4000-8000-000000000005',name:'Fixture result',subtype:type,tags:[{id:'urn:tag:genre:place:restaurant',type:'urn:tag:genre:place',name:'Restaurant'}],properties:{geocode:{city:'London'}}}]}});
     };
-    const result=await passport('London',seal(selected.map(c=>({query:c.name,candidates:[c]}))),selected.map(c=>c.id),[],['Eat','Movies']);
+    const result=await passport('London',seal(selected.map(c=>({query:c.name,candidates:[c]}))),selected.map(c=>c.id),[],['Eat','Movies'],'balanced');
+    assert.equal(broadened,true,'Balanced must run both profile and broader pools during initial discovery');
+    assert.ok(result.cards.every(card=>card.evidence.mode==='balanced'));
     assert.deepEqual(new Set(types),new Set(['urn:entity:place','urn:entity:movie']));
     assert.deepEqual(new Set(result.cards.map(c=>c.section)),new Set(['Eat','Movies']));
     console.log('Activity contract PASS');

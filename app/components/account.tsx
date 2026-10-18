@@ -131,6 +131,7 @@ export default function AccountControl({
       setPendingSave(false);
       setVerificationPending(false);
       setTab("login");
+      setMessage("");
       setOpen(true);
     };
     const plansUpdated = () => void refreshPlans();
@@ -340,6 +341,9 @@ export default function AccountControl({
           disabled={disabled}
           onClick={() => {
             setPendingSave(true);
+            setVerificationPending(false);
+            setTab("login");
+            setMessage("");
             setOpen(true);
           }}
         >
@@ -354,6 +358,8 @@ export default function AccountControl({
           setPendingSave(false);
           setVerificationPending(false);
           setLibraryTab("passports");
+          setTab("login");
+          setMessage("");
           setOpen(true);
           if (account?.user) void refresh(true);
         }}
@@ -632,17 +638,13 @@ export default function AccountControl({
               </>
             ) : (
               <form onSubmit={submit}>
-                {tab === "register" && <>
-                  <label>First name<input value={firstName} onChange={e=>setFirstName(e.target.value)} autoComplete="given-name" maxLength={80} required disabled={busy} /></label>
-                  <label>Last name<input value={lastName} onChange={e=>setLastName(e.target.value)} autoComplete="family-name" maxLength={80} required disabled={busy} /></label>
-                </>}
-                {tab === "password" && account?.user && !recoveringPassword && <label>Current password<input type="password" value={currentPassword} onChange={e=>setCurrentPassword(e.target.value)} autoComplete="current-password" maxLength={128} required disabled={busy} /></label>}
-                {tab !== "password" && <div className="account-tabs">
+                {tab !== "password" && <div className="account-tabs" role="group" aria-label="Account access">
                   {(["login", "register"] as const).map((value) => (
                     <button
                       type="button"
                       className="quiet-button"
                       key={value}
+                      disabled={busy}
                       aria-pressed={tab === value}
                       onClick={() => {
                         setTab(value);
@@ -650,10 +652,15 @@ export default function AccountControl({
                         setMessage("");
                       }}
                     >
-                      {value === "login" ? "Sign in" : "Create account"}
+                      {value === "login" ? "Sign in" : "Register"}
                     </button>
                   ))}
                 </div>}
+                {tab === "register" && <>
+                  <label>First name<input value={firstName} onChange={e=>setFirstName(e.target.value)} autoComplete="given-name" maxLength={80} required disabled={busy} /></label>
+                  <label>Last name<input value={lastName} onChange={e=>setLastName(e.target.value)} autoComplete="family-name" maxLength={80} required disabled={busy} /></label>
+                </>}
+                {tab === "password" && account?.user && !recoveringPassword && <label>Current password<input type="password" value={currentPassword} onChange={e=>setCurrentPassword(e.target.value)} autoComplete="current-password" maxLength={128} required disabled={busy} /></label>}
                 {tab === "password" && account?.user && <button type="button" className="text-button" onClick={()=>{setTab("login");setPassword("");setCurrentPassword("");setConfirmPassword("");setMessage("");}}>Back to my account</button>}
                 {tab !== "password" && (
                   <label>

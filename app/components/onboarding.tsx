@@ -1,9 +1,9 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Candidate, Section } from "../../src/passport/model";
 import type { Familiarity } from "../../src/passport/evidence";
 import type { Resolution } from "../../src/workspace/state";
-import { destinations, typeLabel } from "../../src/workspace/state";
+import { typeLabel } from "../../src/workspace/state";
 import { Icon } from "./passport";
 
 export function StepIndicator({ step }: { step: number }) {
@@ -60,6 +60,27 @@ export function MoveForm({
   onActivities?: (values: Section[]) => void;
 }) {
   const [input, setInput] = useState("");
+  const [destinations, setDestinations] = useState<string[]>([]);
+  const [cityError, setCityError] = useState("");
+  const [loadingCities, setLoadingCities] = useState(true);
+  async function loadDestinations(signal?: AbortSignal) {
+    setLoadingCities(true);
+    setCityError("");
+    try {
+      const response = await fetch("/api/destinations", { signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(10000)]) : AbortSignal.timeout(10000), cache: "no-store" });
+      const data = await response.json();
+      if (!response.ok || !Array.isArray(data.destinations)) throw Error();
+      setDestinations(data.destinations);
+      if (!data.destinations.length) setCityError("No destinations are available yet.");
+    } catch {
+      if (!signal?.aborted) setCityError("Couldn't load destinations. Please retry.");
+    } finally { if (!signal?.aborted) setLoadingCities(false); }
+  }
+  useEffect(() => {
+    const controller = new AbortController();
+    void loadDestinations(controller.signal);
+    return () => controller.abort();
+  }, []);
   const add = (text: string) => {
     const value = text.trim();
     if (
@@ -97,7 +118,7 @@ export function MoveForm({
         className="move-form"
         onSubmit={(event) => {
           event.preventDefault();
-          onSubmit();
+          if (destinations.includes(city)) onSubmit();
         }}
       >
         <div className="move-fields">
@@ -119,13 +140,13 @@ export function MoveForm({
             <Icon name="arrow" size={22} />
           </span>
           <label htmlFor="destination">
-            Moving to <span>10 supported destinations</span>
+            Moving to <span>{loadingCities ? "Loading destinations…" : "Choose your destination"}</span>
             <div className="field-with-icon">
               <Icon name="pin" />
               <select
                 id="destination"
-                value={city}
-                disabled={disabled}
+                value={destinations.includes(city) ? city : ""}
+                disabled={disabled || loadingCities || !destinations.length}
                 required
                 onChange={(e) => onCity(e.target.value)}
               >
@@ -137,6 +158,7 @@ export function MoveForm({
             </div>
           </label>
         </div>
+        {cityError && <p role="status">{cityError} <button type="button" className="text-button" disabled={loadingCities} onClick={() => void loadDestinations()}>Retry</button></p>}
         <div className="taste-entry">
           <h2>What already feels like you?</h2>
           <p>Music, films, food, cafés, books… add 3–5 things you love.</p>

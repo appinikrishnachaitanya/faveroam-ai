@@ -1,10 +1,11 @@
+import { catalogCity } from "../../../../src/workspace/destinations";
 import { accountClient, storageConfigured, storageWriter, privateJson, sameOrigin } from "../../../../src/account/server";
 import { portableTasteProfile, readTasteProfile } from "../../../../src/account/taste-profile";
 import { createSession, getSession } from "../../../../src/agent/store";
 import { normalizeSession } from "../../../../src/agent/session";
 import { passport, seal } from "../../../../src/passport/service";
 import { discoverSection } from "../../../../src/agent/runtime";
-import { passportView, sectionOrder, supportedCity } from "../../../../src/workspace/state";
+import { passportView, sectionOrder } from "../../../../src/workspace/state";
 import { debugRequest } from "../../../../src/agent/debug";
 export const runtime = "nodejs";
 
@@ -38,10 +39,10 @@ async function handle(request: Request) {
     const {data,error} = await client.from("taste_profiles").select("profile").eq("user_id",user.id).maybeSingle();
     if (error) throw Error();
     if (request.method === "GET") return privateJson({profile:data ? readTasteProfile(data.profile) : null});
-    if (body.action !== "apply" || !supportedCity(body.city)) return privateJson({error:"Choose a supported destination."},400);
+    const city = body.action === "apply" ? await catalogCity(body.city) : undefined;
+    if (body.action !== "apply" || !city) return privateJson({error:"Choose a supported destination."},400);
     if (!data) return privateJson({error:"Save your tastes from a Passport first."},404);
     const profile = readTasteProfile(data.profile);
-    const city = supportedCity(body.city)!;
     const items = profile.selected.map(c=>({query:c.name,candidates:[c]}));
     const initial = await passport(city,seal(items),profile.selected.map(c=>c.id),profile.constraints,profile.activeCategories.filter(s=>!profile.hiddenCategories.includes(s)).slice(0,5));
     const working = normalizeSession({...profile,id:"profile-discovery",revision:0,expires:0,city,cards:[],previous:[],feedback:[],notices:[...initial.notices]});

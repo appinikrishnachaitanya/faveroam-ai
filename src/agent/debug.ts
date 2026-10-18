@@ -17,6 +17,7 @@ const routes = [
   "account.passports",
   "account.plans",
   "account.preferences",
+  "destinations",
   "auth.callback",
   "agent.capabilities",
 ] as const;

@@ -139,7 +139,9 @@ ws.addEventListener("message", async (event) => {
     const path = new URL(request.url).pathname;
     const body = request.postData ? JSON.parse(request.postData) : {};
     let value;
-    if (path === "/api/agent/turn") {
+    if (path === "/api/destinations") {
+      value = { destinations: ["London", "New York City", "Toronto", "Lisbon"] };
+    } else if (path === "/api/agent/turn") {
       if (body.input.message) {
         if (turnScenario === "stall") return; // Cancelled by browser AbortSignal, never reaches the backend.
         const payload =
@@ -327,6 +329,7 @@ ws.addEventListener("message", async (event) => {
 await call("Fetch.enable", {
   patterns: [
     { urlPattern: "*://*/api/account*" },
+    { urlPattern: "*://*/api/destinations" },
     { urlPattern: "*://*/api/agent/session" },
     { urlPattern: "*://*/api/agent/resolve" },
     { urlPattern: "*://*/api/agent/intelligence" },
@@ -344,6 +347,8 @@ await wait(
   "location.search.includes('ui-contract=1') && document.readyState==='complete' && Boolean(document.querySelector('.account-launch'))",
 );
 await new Promise((r) => setTimeout(r, 600));
+await wait("Array.from(document.querySelectorAll('#destination option')).some(option=>option.value==='Lisbon')");
+assert.equal(await evaluate("Array.from(document.querySelectorAll('#destination option')).some(option=>option.value==='Tokyo')"), false, "Dropdown uses returned catalogue, not hardcoded cities");
 await click(".account-launch");
 await wait(
   "Boolean(document.querySelector('.account-dialog[open] input[type=email]'))",
@@ -355,7 +360,14 @@ assert.equal(
   true,
   "Account modal locks background scroll",
 );
-await textClick("Create account");
+assert.equal(await evaluate("document.querySelector('.account-tabs button[aria-pressed=true]').textContent.trim()"), "Sign in");
+await textClick("Register");
+assert.equal(await evaluate("document.querySelector('.account-tabs').compareDocumentPosition(document.querySelector('[autocomplete=given-name]')) & Node.DOCUMENT_POSITION_FOLLOWING"), 4, "Mode switch precedes all registration fields");
+assert.equal(await evaluate("document.querySelectorAll('.account-dialog form .primary-button').length"), 1, "Registration has one submit action");
+await click('[aria-label="Close account"]');
+await click('.account-launch');
+assert.equal(await evaluate("document.querySelector('.account-tabs button[aria-pressed=true]').textContent.trim()"), "Sign in", "Reopening Sign in resets registration mode");
+await textClick("Register");
 await input('.account-dialog input[autocomplete="given-name"]', "Protocol");
 await input('.account-dialog input[autocomplete="family-name"]', "Tester");
 await input(".account-dialog input[type=email]", "protocol@example.test");

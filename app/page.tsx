@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { validDestination } from "../src/workspace/location";
 import { sendAgentTurn } from "../src/agent/browser";
 import type { Intent } from "../src/agent/types";
 import type { AgentInput, AgentEvent, Constraint } from "../src/agent/types";
@@ -10,7 +11,6 @@ import type { Section } from "../src/passport/model";
 import type { Candidate } from "../src/passport/model";
 import {
   confirmed,
-  supportedCity,
   extractDraft,
   typeLabel,
   onboardingTastes,
@@ -212,7 +212,7 @@ export default function Home() {
       });
       const combined = onboardingTastes(interpreted.intent);
       const parsed = {
-        city: supportedCity(interpreted.intent.destination ?? city) ?? "",
+        city: validDestination(interpreted.intent.destination ?? city) ? (interpreted.intent.destination ?? city) : "",
         tastes: combined.length ? combined : extractDraft(text, city).tastes,
       };
       setConceptSeeds(interpreted.intent.concepts);
@@ -447,9 +447,6 @@ export default function Home() {
       `Removed ${name ?? "that taste"} from the current selection. Keep at least three confirmed tastes to continue.`,
     );
   }
-  function setLatestActivity(event: AgentEvent) {
-    setAgentEvents((events) => [...events, event]);
-  }
   async function generate() {
     if (!resolution || !complete || busy || !city) return;
     setError("");
@@ -467,30 +464,11 @@ export default function Home() {
         ids: signals.map((s) => s.id),
         constraints,
         activities: requestedActivities,
+        mode: initialMode,
         // Onboarding progress is not assistant chat history.
         history: [],
       });
-      let passport = r;
-      if (initialMode !== "familiar" && r.agent) {
-        for (const section of [...new Set(r.cards.map((c) => c.section))]) {
-          try {
-            const reply = await sendAgentTurn(
-              passport.agent!,
-              { familiarity: { mode: initialMode, section } },
-              setLatestActivity,
-            );
-            passport = passportView(reply.state, r.explanation);
-          } catch {
-            passport = {
-              ...passport,
-              notices: [
-                ...passport.notices,
-                "Some discoveries could not be refreshed in your chosen style. You can try again from your Passport.",
-              ],
-            };
-          }
-        }
-      }
+      const passport = r;
       setResult(passport);
       setPhase("ready");
       say(
