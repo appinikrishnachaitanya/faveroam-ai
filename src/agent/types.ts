@@ -17,6 +17,7 @@ export const reasons = [
 export type Reason = (typeof reasons)[number];
 export interface Intent {
   kind: "onboard" | "refine" | "hide" | "unknown";
+  question?: "capabilities" | "preferences" | "explanation";
   destination?: string;
   seeds: string[];
   concepts: string[];

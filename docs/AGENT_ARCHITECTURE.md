@@ -1,5 +1,7 @@
 # TastePassport Agent — Phase 3
 
+Current conversation review and execution boundaries: [CONVERSATION_ARCHITECTURE_REVIEW.md](CONVERSATION_ARCHITECTURE_REVIEW.md).
+
 Current product evidence and familiarity strategies: [CULTURAL_ONBOARDING.md](CULTURAL_ONBOARDING.md).
 
 The subsequent shared-state/guided refinement upgrade is documented in [SESSION_RELIABILITY.md](SESSION_RELIABILITY.md). That document supersedes the earlier provider messaging, hidden-section handling and one-shot empty-result behavior described below.

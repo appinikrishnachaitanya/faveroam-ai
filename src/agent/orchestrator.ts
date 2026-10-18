@@ -1,4 +1,5 @@
 import { refinementScope } from "./scope.ts";
+import { passportAnswer } from "./answers.ts";
 import { debugEvent } from "./debug.ts";
 import {
   normalizeSession,
@@ -19,7 +20,7 @@ import {
 import { tagCandidates } from "./validation.ts";
 import { sectionOrder } from "../workspace/state.ts";
 import { conceptSections } from "../passport/routing.ts";
-import { sectionTypes } from "../passport/model.ts";
+import { sectionTypes, isPlaceSection } from "../passport/model.ts";
 import { isObject } from "../qloo/types.ts";
 import type { Card, Section } from "../passport/model.ts";
 import type {
@@ -175,7 +176,11 @@ export async function runTurn(
   }
   if (input.message && /^(?:hi|hello|hey|hi bro|hello bro)[!,.\s]*$/i.test(input.message.trim()))
     return reply(`Hi! What would you like to do in ${state.city}? Try “find chicken biryani” or “find a cinema and dinner”.`);
-  let intent = interpret(input.message ?? "", "New York City");
+  let intent = interpret(input.message ?? "", state.city);
+  if (input.message && intent.question) {
+    state.pending = original.pending;
+    return reply(passportAnswer(state, intent));
+  }
   if (input.familiarity) {
     state.categoryModes[input.familiarity.section] = input.familiarity.mode;
     intent = guidedIntent(
@@ -352,8 +357,19 @@ export async function runTurn(
   // Excluding a venue type is not permission to hide its whole chapter.
   if (input.message) {
     const explicit = interpret(input.message, state.city);
+    if (explicit.question) intent = { ...explicit, sections: explicit.sections };
     if(explicit.kind === "refine" && explicit.sections.length)
       intent.sections = explicit.sections;
+    if (explicit.kind === "refine" && !explicit.sections.length && original.intent?.kind === "refine" &&
+        /\b(?:it|those|them|these|same|rest)\b|^(?:cheaper|quieter|more familiar|more adventurous)\b/i.test(input.message.trim())) {
+      const previous = original.intent.sections.filter(section => !state.hiddenCategories.includes(section));
+      intent.sections = previous.length === 1 ? previous : [];
+      // A relative modifier does not introduce a new cuisine or taxonomy concept.
+      if (!explicit.concepts.length && explicit.constraints.length) {
+        intent.concepts = [];
+        intent.excludeConcepts = explicit.excludeConcepts ?? [];
+      }
+    }
     if (explicit.kind === "refine" && (explicit.constraints.length || explicit.excludeConcepts?.length || explicit.concepts.length)) {
       intent.kind = "refine";
       intent.constraints = [...new Set([...intent.constraints, ...explicit.constraints])];
@@ -371,6 +387,9 @@ export async function runTurn(
       if (!explicit.query?.tagOperator) delete intent.query.tagOperator;
     }
     if (explicit.query) intent.query={...intent.query,...explicit.query};
+    if (explicit.familiarity) intent.familiarity = explicit.familiarity;
+    else if (!/familiar|adventur|explor|balanced|comfort zone|home|surprise/i.test(input.message))
+      delete intent.familiarity;
     const preserved=refinementScope(input.message).preserved;
     intent.sections=intent.sections.filter(section=>!preserved.includes(section));
     intent.hide=intent.hide?.filter(section=>!preserved.includes(section));
@@ -388,6 +407,10 @@ export async function runTurn(
     sections: intent.sections,
     mode,
   });
+  if (intent.kind === "unknown" && intent.question) {
+    state.pending = original.pending;
+    return reply(passportAnswer(state, intent));
+  }
   if (intent.kind === "unknown" || intent.kind === "onboard")
     return reply(
       "For this passport, name a section to refine, ask for cuisine or quietness, or select Not my vibe on a card. Start a new taste draft to change the destination or seeds.",
@@ -402,14 +425,21 @@ export async function runTurn(
     return reply(
       "Save My vibe on a card first, or name a category, so I can use a real cultural anchor.",
     );
-  const currentScope =
-    original.intent?.kind === "refine"
-      ? original.intent.sections.find(
-          (s) => !state.hiddenCategories.includes(s),
-        )
-      : undefined;
+  const previousSections = original.intent?.kind === "refine"
+    ? original.intent.sections.filter(section => !state.hiddenCategories.includes(section)) : [];
+  // An unresolved pronoun is not permission to update the first of several sections.
+  if (input.message && !intent.sections.length && previousSections.length > 1)
+    return reply(`Which section should I change: ${previousSections.join(", ")}? Your Passport is unchanged.`);
+  const currentScope = previousSections.length === 1 ? previousSections[0] : undefined;
+  const visibleSections = state.activeCategories.filter(section => !state.hiddenCategories.includes(section));
+  const venueOnly = intent.query?.priceMax !== undefined || intent.query?.priceMin !== undefined ||
+    intent.constraints.includes("expensive") || intent.constraints.includes("crowded") || Boolean(intent.excludeConcepts?.length);
+  const implicitSections = venueOnly ? visibleSections.filter(isPlaceSection) : visibleSections;
+  const implicitScope = currentScope ?? (implicitSections.length === 1 ? implicitSections[0] : undefined);
+  if (input.message && !intent.sections.length && !implicitScope && visibleSections.length && !(refersToLike && acceptedScope))
+    return reply(`Which section should I change: ${visibleSections.join(", ")}? Your Passport is unchanged.`);
   const modeScope =
-    currentScope ??
+    implicitScope ??
     state.activeCategories.find((s) => !state.hiddenCategories.includes(s)) ??
     "Eat";
   const preserved=input.message ? refinementScope(input.message).preserved : [];
@@ -420,7 +450,7 @@ export async function runTurn(
           ? acceptedScope
           : intent.familiarity
             ? modeScope
-            : (currentScope ?? "Eat"),
+            : (implicitScope ?? "Eat"),
       ]).filter(section=>!preserved.includes(section));
   if (!targets.length) return reply("Your protected categories are unchanged. Name the category you want to update.");
   if (intent.familiarity)
@@ -459,6 +489,10 @@ export async function runTurn(
     if(state.activityGenres)delete state.activityGenres.Culture;
   }
   state.queryPreferences ??= {};
+  // Relative changes are calculated against server state, never a model's guessed absolute cap.
+  if (input.message && /\bcheaper\b|less expensive/i.test(input.message) &&
+      interpret(input.message, state.city).query?.priceMax === undefined && intent.query)
+    delete intent.query.priceMax;
   if (input.message && intent.constraints.includes("expensive") && intent.query?.priceMax === undefined) {
     for (const section of targets) {
       const current = state.queryPreferences[section] ?? {};

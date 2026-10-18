@@ -127,7 +127,7 @@ test("exact mixed cultural request hides Eat and selects Culture for actual repl
 });
 test("adventurous conversation updates the same familiarity state as guided mode", async () => {
   const message =
-    "Give me something more adventurous but still connected to my tastes.";
+    "Give me more adventurous dining but still connected to my tastes.";
   assert.equal(interpret(message).familiarity, "explore");
   const a = await runTurn(state(), { message }, dependencies());
   const b = await runTurn(

@@ -1,6 +1,7 @@
 /** Real-browser/live-backend acceptance. Requires an isolated Chromium CDP profile. */
 import fs from "node:fs/promises";
-const vegetarian = process.env.PASSPORT_JUDGE_SCENARIO === "vegetarian";
+const conversation = process.env.PASSPORT_JUDGE_SCENARIO === "conversation";
+const vegetarian = conversation || process.env.PASSPORT_JUDGE_SCENARIO === "vegetarian";
 const city = vegetarian ? "Toronto" : "London";
 const request = vegetarian ? "Find cheaper vegetarian Indian food in Toronto and explain why it fits my tastes." : "Find quieter Indian restaurants in London, moderate budget, minimum rating 4.5. Keep my music and movies unchanged.";
 const appUrl = process.env.PASSPORT_TEST_URL ?? "http://127.0.0.1:3001";
@@ -101,11 +102,29 @@ assert.equal(await evaluate(vegetarian
  ? "window.__judgeReplies[0].state.cards.filter(card=>card.section==='Eat').every(card=>card.intelligence.commercial.priceLevel<=2&&card.evidence.params['filter.tags'].includes(':dietary_option:'))"
  : "window.__judgeReplies[0].state.cards.filter(card=>card.section==='Eat').every(card=>card.intelligence.commercial.priceLevel<=2&&card.intelligence.quality.businessRating>=4.5)"),true);
 assert.equal(await evaluate("Boolean(window.__judgeReplies[0].state.pending)"),false);
+let repliesBeforeCinema = 1;
+if (conversation) {
+ for (const question of ['Why these suggestions?', 'What filters are saved?']) {
+  await input('#conversation-input',question,'HTMLTextAreaElement');
+  await evaluate("document.querySelector('[aria-label=\"Send message\"]').click()");
+  repliesBeforeCinema++;
+  await waitFor(`window.__judgeReplies.length===${repliesBeforeCinema} && !document.querySelector('#conversation-input').disabled`);
+  assert.deepEqual(await evaluate(`window.__judgeReplies[${repliesBeforeCinema-1}].changed`),[]);
+  assert.equal(await evaluate(`JSON.stringify(window.__judgeReplies[0].state.cards)===JSON.stringify(window.__judgeReplies[${repliesBeforeCinema-1}].state.cards)`),true);
+ }
+ await input('#conversation-input','Make those cheaper. Keep music and movies unchanged.','HTMLTextAreaElement');
+ await evaluate("document.querySelector('[aria-label=\"Send message\"]').click()");
+ repliesBeforeCinema++;
+ await waitFor(`window.__judgeReplies.length===${repliesBeforeCinema} && !document.querySelector('#conversation-input').disabled`);
+ assert.equal(await evaluate(`window.__judgeReplies[${repliesBeforeCinema-1}].state.queryPreferences.Eat.priceMax`),1);
+ assert.equal(await evaluate(`Boolean(window.__judgeReplies[${repliesBeforeCinema-1}].state.pending)`),false);
+ for(const section of ['Music','Movies'])assert.equal(await evaluate(`JSON.stringify(window.__judgeInitial.cards.filter(card=>card.section===${JSON.stringify(section)}))===JSON.stringify(window.__judgeReplies[${repliesBeforeCinema-1}].state.cards.filter(card=>card.section===${JSON.stringify(section)}))`),true);
+}
 await evaluate("document.querySelector('[aria-label=\"Close Taste Concierge\"]').click()");
 await clickText('Plan a day');
 const dinner=await evaluate("document.querySelector('#day-out-Eat').value");
 await evaluate("[...document.querySelectorAll('.outing-activities label')].find(label=>label.textContent.trim()==='Cinema').querySelector('input').click()");
-await waitFor("window.__judgeReplies.length===2 && Boolean(document.querySelector('#day-out-Cinema:not(:disabled)'))");
+await waitFor(`window.__judgeReplies.length===${repliesBeforeCinema+1} && Boolean(document.querySelector('#day-out-Cinema:not(:disabled)'))`);
 assert.equal(await evaluate("document.querySelector('#day-out-Eat').value"),dinner,'Finding cinemas must keep the chosen dinner');
 assert.equal(await evaluate("document.querySelectorAll('.day-out-stops select:not(:disabled)').length"),2);
 assert.ok(await evaluate("document.querySelector('#day-out-Cinema').value"));
@@ -114,5 +133,5 @@ await shot('/tmp/tastepassport-judge-plan.png');
 await call('Emulation.setDeviceMetricsOverride',{width:390,height:900,deviceScaleFactor:1,mobile:true});
 assert.equal(await evaluate('document.documentElement.scrollWidth>innerWidth'),false);
 await shot('/tmp/tastepassport-judge-plan-mobile.png');
-console.log('Judge browser/live-backend PASS: exact constrained native chat updated Eat only; Music/Movies preserved; planner fetched actual cinema choices and kept dinner; desktop/mobile containment.');
+console.log(`Judge browser/live-backend PASS: ${conversation ? 'consecutive refinement, read-only explanations/filters and relative-budget follow-up; ' : ''}exact constrained native chat updated Eat only; Music/Movies preserved; planner fetched actual cinema choices and kept dinner; desktop/mobile containment.`);
 } finally {ws.close();}

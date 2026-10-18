@@ -123,12 +123,17 @@ export function interpret(text: string, fallback = "New York City"): Intent {
   if (/book|lifestyle/i.test(hidePart)) hidden.push("Lifestyle");
   if (/cultur(?:e|al)/i.test(hidePart)) hidden.push("Culture");
   const activeSections = sections.filter((s) => !hidden.includes(s) && !scoped.preserved.includes(s));
+  const question: Intent["question"] = /\b(?:find|replace|change|update|make|remove|hide|refine|recommend|suggest)\b/i.test(text) ? undefined
+    : /what can you|how can you help|what do you do/i.test(text) ? "capabilities"
+    : /(?:what|which|show).*(?:preferences|requirements|filters)|what.*(?:remember|saved.*tastes)/i.test(text) ? "preferences"
+    : /\bwhy\b|explain.*(?:matches|choices|suggestions|recommendations)/i.test(text) ? "explanation" : undefined;
   const refine =
-    !onboarding &&
+    !question && !onboarding &&
     (excludeConcepts.length > 0 || constraints.length > 0 || /tonight|quieter|more|less|find|show|want|give|help|too |niche|refine|rank|reorder|trending|hidden gem|safe bet|surprise me|highly rated|make it/i.test(
       text,
     ));
   return {
+    ...(question ? { question } : {}),
     kind: onboarding
       ? "onboard"
       : hide
@@ -210,6 +215,8 @@ export function validateIntent(raw: unknown): Intent {
     culturalText(value, 100);
   return {
     kind: x.kind as Intent["kind"],
+    ...(["capabilities", "preferences", "explanation"].includes(String(x.question))
+      ? { question: x.question as Intent["question"] } : {}),
     strategy: x.strategy as Intent["strategy"],
     seeds: x.seeds as string[],
     concepts: x.concepts as string[],
