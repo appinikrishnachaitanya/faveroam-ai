@@ -32,6 +32,11 @@ export interface QlooEvidence {
     geocode?: Record<string, string>;
     affinity?: { field: "query.affinity"; value: number };
   };
+  fusion?: {
+    method: "weighted-rrf";
+    score: number;
+    sources: { queryId: string; pool: QlooEvidence["pool"]; rank: number; weight: number }[];
+  };
   strategyNote?: string;
   diagnostics?: QueryDiagnostics;
   ranking?: {

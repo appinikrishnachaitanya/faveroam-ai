@@ -22,8 +22,19 @@ export interface Card extends Candidate {
   inputSignals?: string[];
   evidence?: import("./evidence.ts").QlooEvidence;
   intelligence?: import("../qloo/normalizer.ts").TasteResult;
-  trend?: import("../qloo/trending.ts").TrendResult;
-  trendUnavailable?: boolean;
+}
+const normalizedBrandName = (name: string) => name.toLowerCase()
+  .replace(/\b(?:restaurant|café|cafe|coffee shop)\b/g, " ")
+  .replace(/[^\p{L}\p{N}]+/gu, " ").trim().replace(/\s+/g, " ");
+export function brandNameCounts(cards: Card[]) {
+  const counts = new Map<string, number>();
+  for (const card of cards) {
+    const name = normalizedBrandName(card.name);
+    const token = card.name.toLowerCase().match(/[a-z][a-z0-9&'-]{3,}/)?.[0];
+    for (const key of new Set([`name:${name}`, ...(token ? [`token:${token}`] : [])]))
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return counts;
 }
 export function resultBrand(card: Card, repeatedNames?: Map<string, number>) {
   const tags = card.evidence?.result.tags ?? [];
@@ -33,19 +44,19 @@ export function resultBrand(card: Card, repeatedNames?: Map<string, number>) {
     ),
   );
   if (named) return named.name.toLowerCase().trim();
+  const name = normalizedBrandName(card.name);
+  if (name && (repeatedNames?.get(`name:${name}`) ?? 0) > 1) return name;
+  // Preserve the established cafe branch heuristic. A restaurant sharing a
+  // first word such as "Indian" is not enough evidence of a common business.
   const token = card.name.toLowerCase().match(/[a-z][a-z0-9&'-]{3,}/)?.[0];
-  if (token && (repeatedNames?.get(token) ?? 0) > 1) return token;
+  if (card.section === "Coffee" && token && (repeatedNames?.get(`token:${token}`) ?? 0) > 1) return token;
   return undefined;
 }
 
-/** Keep repeated branches from consuming a coffee chapter. */
+/** Keep repeated branches from consuming a physical-place chapter. */
 export function diversifyCards(cards: Card[], section: Section) {
-  if (section !== "Coffee" || cards.length < 3) return cards;
-  const nameCounts = new Map<string, number>();
-  for (const card of cards) {
-    const token = card.name.toLowerCase().match(/[a-z][a-z0-9&'-]{3,}/)?.[0];
-    if (token) nameCounts.set(token, (nameCounts.get(token) ?? 0) + 1);
-  }
+  if (!isPlaceSection(section) || cards.length < 3) return cards;
+  const nameCounts = brandNameCounts(cards);
   const counts = new Map<string, number>();
   return cards.filter((card) => {
     const brand = resultBrand(card, nameCounts);

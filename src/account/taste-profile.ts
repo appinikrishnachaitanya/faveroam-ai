@@ -13,8 +13,8 @@ const candidateValid = (value: Candidate) => value && typeof value.name === "str
 /** Only cultural preferences travel. No city, venue results, chat, tokens or identity. */
 export function portableTasteProfile(original: AgentState) {
   const state = normalizeSession(structuredClone(original));
-  if (state.selected.length < 3 || state.selected.length > 5 || !state.selected.every(candidateValid))
-    throw Error("Confirm three to five tastes before saving your profile.");
+  if (state.selected.length < 1 || state.selected.length > 5 || !state.selected.every(candidateValid))
+    throw Error("Confirm one to five tastes before saving your profile.");
   const queryPreferences: Partial<Record<Section, QueryPreferences>> = {};
   for (const section of sectionOrder) {
     const value = state.queryPreferences?.[section];

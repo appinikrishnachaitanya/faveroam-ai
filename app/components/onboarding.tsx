@@ -35,6 +35,13 @@ const suggestions = [
   "Indian cuisine",
   "Specialty coffee",
   "Independent bookstores",
+  "Taylor Swift",
+  "Spirited Away",
+  "Italian cuisine",
+  "Miles Davis",
+  "Hayao Miyazaki",
+  "The Lord of the Rings",
+  "Japanese cuisine",
 ];
 export function MoveForm({
   city,
@@ -123,11 +130,12 @@ export function MoveForm({
       >
         <div className="move-fields">
           <label htmlFor="origin">
-            From <span>Optional</span>
+            Your home city <span>Optional</span>
             <div className="field-with-icon">
               <Icon name="globe" />
               <input
                 id="origin"
+                aria-describedby="origin-help"
                 value={origin}
                 placeholder="Bengaluru"
                 maxLength={80}
@@ -158,10 +166,11 @@ export function MoveForm({
             </div>
           </label>
         </div>
+        <p className="helper" id="origin-help">Your home city adds the starting point to your Passport. Your chosen tastes guide the discoveries.</p>
         {cityError && <p role="status">{cityError} <button type="button" className="text-button" disabled={loadingCities} onClick={() => void loadDestinations()}>Retry</button></p>}
         <div className="taste-entry">
           <h2>What already feels like you?</h2>
-          <p>Music, films, food, cafés, books… add 3–5 things you love.</p>
+          <p>Music, films, food, cafés, books… one taste is enough to start. Add up to five for a fuller picture.</p>
           <div className="taste-input-shell">
             <div className="taste-chips">
               {draft.map((taste, index) => (
@@ -231,8 +240,8 @@ export function MoveForm({
           </div>
           <p className="taste-count" aria-live="polite">
             {draft.length}/5 tastes
-            {draft.length < 3
-              ? ` · Add ${3 - draft.length} more to start`
+            {draft.length < 1
+              ? " · Add one taste to start"
               : " · Ready to discover"}
           </p>
         </div>
@@ -254,7 +263,7 @@ export function MoveForm({
         <button
           className="primary-button build-map"
           type="submit"
-          disabled={disabled || !city || draft.length < 3 || draft.length > 5}
+          disabled={disabled || !city || draft.length < 1 || draft.length > 5}
         >
           Find my taste matches <Icon name="arrow" />
         </button>
@@ -420,7 +429,7 @@ export function TasteConfirmation({
       </div>
       {!complete && (
         <p className="helper confirmation-help">
-          Confirm at least three different tastes to continue.
+          Confirm at least one different tastes to continue.
         </p>
       )}
     </section>

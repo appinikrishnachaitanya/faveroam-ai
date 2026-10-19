@@ -20,7 +20,7 @@ test("unique exact entity is suggested; editions, partial names and tags remain 
 test("three choices are unique and label only returned relative evidence",()=>{
   const result=threeChoices([card("taste",.9,4),card("budget",.6,1),card("explore",.7,3,"adjacent"),card("other",.5,2)]);
   assert.deepEqual(result.map(c=>c.card.id),["taste","budget","explore"]);
-  assert.deepEqual(result.map(c=>c.label),["Strong taste match","Lower-price option","Explore a little"]);
+  assert.deepEqual(result.map(c=>c.label),["Start here","Lower-price option","Explore a little"]);
   assert.equal(new Set(result.map(c=>c.card.id)).size,3);
 });
 test("missing price and broader-pool evidence do not produce budget or adventure claims",()=>{

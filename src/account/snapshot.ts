@@ -8,7 +8,7 @@ export function passportSnapshot(original: AgentState) {
   const s = normalizeSession(structuredClone(original));
   if (
     !validDestination(s.city) ||
-    s.selected.length < 3 ||
+    s.selected.length < 1 ||
     s.selected.length > 5
   )
     throw Error("Invalid Passport");
@@ -47,7 +47,7 @@ export function restoreSnapshot(value: unknown) {
     v.version !== SNAPSHOT_VERSION ||
     !validDestination(v.city) ||
     !Array.isArray(v.selected) ||
-    v.selected.length < 3 ||
+    v.selected.length < 1 ||
     v.selected.length > 5 ||
     !Array.isArray(v.cards) ||
     v.cards.length > 300 ||

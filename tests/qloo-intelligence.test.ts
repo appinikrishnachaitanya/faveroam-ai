@@ -16,8 +16,6 @@ import { insights } from "../src/qloo/client.ts";
 import { runTurn } from "../src/agent/orchestrator.ts";
 import { normalizeSession, resetConversation } from "../src/agent/session.ts";
 import { evidenceFacts } from "../src/qloo/explanation.ts";
-import { enrichTrends } from "../src/qloo/enrichment.ts";
-import type { Card } from "../src/passport/model.ts";
 import { verifyResult } from "../src/qloo/verify-result.ts";
 const a = "00000000-0000-4000-8000-000000000011",
   b = "00000000-0000-4000-8000-000000000012";
@@ -261,30 +259,6 @@ test("trends preserve raw observations and avoid interpreting undocumented veloc
       .status,
     undefined,
   );
-});
-test("optional enrichment preserves successful recommendations when trends fail or are empty", async () => {
-  const cards: Card[] = [a, b].map((id) => ({
-    id,
-    name: "Protocol",
-    types: ["urn:entity:place"],
-    detail: "",
-    section: "Eat",
-  }));
-  let calls = 0;
-  const enriched = await enrichTrends(cards, undefined, async (id) => {
-    if (++calls === 1) throw Error("Protocol rate limit");
-    return {
-      entityId: id,
-      startDate: "2026-10-01",
-      endDate: "2026-10-03",
-      points: [],
-      recordedAt: "2026-10-03",
-    };
-  });
-  assert.equal(enriched.length, 2);
-  assert.equal(enriched[0].id, a);
-  assert.ok(enriched.every((c) => c.trendUnavailable));
-  assert.ok(enriched.every((c) => !c.trend?.status));
 });
 test("Compare uses returned shared tags and does not invent overlap or relationship percentages", () => {
   const c = normalizeCompare({

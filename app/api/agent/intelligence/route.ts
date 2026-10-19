@@ -134,6 +134,7 @@ async function handlePOST(request: Request) {
     const a = state.selected
       .filter((c) => !c.id.startsWith("urn:tag:"))
       .map((c) => c.id);
+    if (!a.length) return json({ error: "Add a named artist, film, book or brand to your Passport before comparing. Cuisine concepts alone cannot form an entity profile." }, 400);
     const comparison = await compareProfiles(
       a,
       partner.map((c) => c.id),

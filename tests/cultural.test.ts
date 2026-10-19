@@ -259,7 +259,8 @@ test("Balanced blends distinct pools with deduplication and preserves source rec
     mixed.map((c) => c.id),
     [direct.id, adjacent.id],
   );
-  assert.equal(mixed[0].evidence, direct.evidence);
+  assert.equal(mixed[0].evidence?.queryId, direct.evidence?.queryId);
+  assert.deepEqual(mixed[0].evidence?.inputs, direct.evidence?.inputs);
 });
 test("no grounded taste signal means no generic city query is issued", () => {
   const s = state();
@@ -313,7 +314,7 @@ test("sparse categories show only valid returned matches and offer wider explora
       onFeedback: () => {},
     }),
   );
-  assert.match(html, /Not enough strong matches/);
+  assert.match(html, /A smaller selection/);
   assert.match(html, /Balanced or Explore/);
   assert.equal((html.match(/class="discovery-card /g) ?? []).length, 1);
 });

@@ -24,13 +24,18 @@ export function screenTasteConnection(card: Card): string | undefined {
     });
   if (names.length) return `Audience-taste association with ${[...new Set(names)].slice(0,2).join(" and ")}; this does not establish a shared story or genre.`;
   if (card.evidence?.inputs.some(input => input.role === "entity-signal"))
-    return "Returned for your combined tastes; no individual supporting interest was identified in the response.";
+    return "No individual supporting interest was identified in the response; this search association does not establish a shared story or genre.";
 }
 /** These are the only sentences the model may select. It never authors recommendation facts. */
 export function evidenceFacts(card: Card): string[] {
   const m = card.intelligence,
     params = card.evidence?.params ?? {},
     facts: string[] = [];
+  const signals = card.evidence?.inputs.filter(input => input.role === "entity-signal") ?? [];
+  if (card.evidence?.pool === "direct" && signals.length)
+    facts.push(`This familiar search used ${signals.map(input => input.name).join(", ")}. Search inputs are not proof of an individual connection.`);
+  else if (card.evidence?.pool === "adjacent")
+    facts.push("This is a broader discovery from your cultural profile, rather than a promise of similarity to one interest.");
   const returnedTags = displayTags(card.evidence?.result.tags ?? []);
   const matched = returnedTags.filter(tag => card.evidence?.inputs.some(input => input.id === tag.id));
   if (matched.length)
@@ -68,10 +73,6 @@ export function evidenceFacts(card: Card): string[] {
   if (card.address) facts.push(`Located at ${card.address}. Check opening hours before going.`);
   else if (params["filter.location.query"])
     facts.push(`We searched in ${params["filter.location.query"]}.`);
-  if (card.trend?.status === "rising")
-    facts.push(
-      `The latest returned population change was positive over the ${card.trend.startDate}–${card.trend.endDate} trend period.`,
-    );
   if (!facts.length)
     facts.push(
       "Your confirmed interests were considered together to find this suggestion.",

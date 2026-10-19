@@ -8,11 +8,12 @@
 }
 .journey-illustration { display:block; width:100%; max-width:440px; height:auto; margin:0 auto 12px; pointer-events:none; user-select:none; }
 .onboarding-story ul { position:relative; }
-.passport-cover { background:linear-gradient(115deg,#fffdf5 55%,#f3edcf); border-color:var(--ui-border); color:var(--ui-ink); }
-.passport-cover h1,.passport-cover h1 em { color:var(--ui-ink); }
-.passport-cover .micro-label,.passport-cover .cover-journey,.passport-cover .cover-copy > p { color:var(--ui-muted); }
-.passport-cover .passport-taste-preview span { background:#fffdf5; color:var(--ui-ink); border-color:var(--ui-border); }
-.passport-cover .cover-connection { color:var(--ui-action); border-color:#6f8d6570; }
+.passport-cover { background:radial-gradient(ellipse at 90% 15%,#8ca66433,transparent 60%),linear-gradient(115deg,#193e31,#31563d); border-color:#486b49; color:#fff8df; }
+.passport-cover h1 { color:#fffdf5; }
+.passport-cover h1 em { color:#f5dc92; }
+.passport-cover .micro-label,.passport-cover .cover-journey,.passport-cover .cover-copy > p { color:#e7eedb; }
+.passport-cover .passport-taste-preview span { background:#ffffff12; color:#fff8df; border-color:#aabb8e70; }
+.passport-cover .cover-connection { color:#fff8df; border-color:#bac99a; background:#ffffff08; }
 .passport-cover .cover-art { transform:none; min-height:210px; }
 .cover-illustration { width:100%; height:auto; pointer-events:none; user-select:none; }
 .passport-cover .cover-stamp { left:auto; right:0; bottom:0; background:#fffdf5ed; color:var(--ui-ink); border-color:#8b9c75; }

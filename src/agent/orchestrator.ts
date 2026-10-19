@@ -453,6 +453,23 @@ export async function runTurn(
             : (implicitScope ?? "Eat"),
       ]).filter(section=>!preserved.includes(section));
   if (!targets.length) return reply("Your protected categories are unchanged. Name the category you want to update.");
+  if (input.message && mode === "model-mcp") {
+    const positive = refinementScope(input.message).positive;
+    const asksBudget = /cheap|afford|budget|price|cost|expensive|economical|inexpensive|moderate|premium|luxury|spend|[$£€₹]/i.test(positive);
+    const asksRating = /rating|rated|stars?|reviewed/i.test(positive);
+    // Context helps resolve references; it must not invent a dining budget for
+    // a newly requested cinema (or introduce an unrelated minimum rating).
+    if (intent.query) {
+      for (const key of ["priceMin", "priceMax"] as const)
+        if (!asksBudget && targets.every(section => original.queryPreferences?.[section]?.[key] === undefined))
+          delete intent.query[key];
+      for (const key of ["businessRatingMin", "businessRatingMax"] as const)
+        if (!asksRating && targets.every(section => original.queryPreferences?.[section]?.[key] === undefined))
+          delete intent.query[key];
+    }
+    if (!asksBudget && !original.constraints.includes("expensive") && targets.every(section => !original.categoryConstraints[section]?.includes("expensive")))
+      intent.constraints = intent.constraints.filter(constraint => constraint !== "expensive");
+  }
   if (intent.familiarity)
     for (const section of targets)
       state.categoryModes[section] = intent.familiarity;

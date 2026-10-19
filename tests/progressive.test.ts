@@ -28,11 +28,11 @@ test("first load has one clear onboarding action without agent panels or advance
   assert.equal((html.match(/class="primary-button/g) ?? []).length, 1);
   assert.doesNotMatch(html, /Reset conversation|New Passport/);
 });
-test("onboarding requires city and three tastes, uses a single taste input and accessible removable chips", () => {
+test("onboarding requires city and one taste, uses a single taste input and accessible removable chips", () => {
   const props = {
     city: "Toronto",
     origin: "",
-    draft: ["Artist", "Film", "Cuisine"],
+    draft: ["Artist"],
     disabled: false,
     onCity: noop,
     onOrigin: noop,
@@ -49,7 +49,7 @@ test("onboarding requires city and three tastes, uses a single taste input and a
   assert.doesNotMatch(cta, /disabled/);
   for (const invalid of [
     { ...props, city: "" },
-    { ...props, draft: ["Artist", "Film"] },
+    { ...props, draft: [] },
   ])
     assert.match(
       renderToStaticMarkup(createElement(MoveForm, invalid)),

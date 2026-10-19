@@ -315,6 +315,7 @@ export function DiscoveryCard({
           <Icon name={card.section} size={14} />
           {card.section}
         </span>
+        {card.evidence && <span className="helper">{card.evidence.pool === "adjacent" ? "Broader discovery" : card.evidence.pool === "direct" ? "Familiar starting point" : "Your taste profile"}</span>}
       </div>
       <div className="discovery-title">
         <span className="card-cultural-mark" aria-hidden="true">
@@ -442,7 +443,7 @@ export function PassportSections({
       )}
       {sparseSections(result.cards, sections).length > 0 && (
         <p className="sparse-coverage" role="status">
-          Not enough strong matches in{" "}
+          A smaller selection in{" "}
           {sparseSections(result.cards, sections).join(", ")}. Your valid
           discoveries are shown; try Balanced or Explore to widen the cultural
           bridge.
@@ -451,6 +452,7 @@ export function PassportSections({
       {sections.map((s) => (
         <section
           className="result-section"
+          data-category={s.toLowerCase()}
           key={`${s}:${updates[s] ?? 0}`}
           aria-busy={updating.includes(s)}
           aria-labelledby={`section-${s}`}

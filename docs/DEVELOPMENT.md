@@ -30,6 +30,7 @@ Live probes consume provider quota and can return empty results, partial accepta
 |---|---|
 | `npm run verify:gemini` | Native model → selected MCP tool → returned result, plus real baseline |
 | `npm run verify:qloo` | Endpoint/normalization acceptance; exit 2 distinguishes historical enrichment limitations |
+| `npm run verify:relevance` | Controlled film/artist/cuisine profiles, contribution audit and actual Together route |
 | `npm run verify:accuracy` | Discovery modes, scoped filters and refinement acceptance |
 | `scripts/verify-style-preservation.ts` | Real Qloo requirements across Familiar/Balanced/Explore |
 | `scripts/verify-conversation-context.ts` | Native reference resolution across turns |

@@ -1,7 +1,7 @@
 /* Focused consumer workspace, floating concierge and editorial About page. */
 .shortlist-choice { min-width: 0; display: flex; flex-direction: column; gap: 10px; }
 .shortlist-choice > .discovery-card { flex: 1; }
-.shortlist-label { padding: 12px 16px; border-radius: 12px; background: #e8f4ef; color: #1d513b; font-size: 14px; font-weight: 700; }
+.shortlist-label { min-height: 88px; padding: 12px 16px; border-radius: 12px; background: #e8f4ef; color: #1d513b; font-size: 14px; font-weight: 700; }
 .shortlist-label small { display: block; font-size: 12px; font-weight: 500; line-height: 1.5; margin-top: 4px; color: var(--ui-muted); }
 .outing-activities { display: flex; flex-wrap: wrap; gap: 10px; border: 1px solid var(--ui-border); border-radius: 14px; padding: 16px; margin: 20px 0; }
 .outing-activities legend { font-weight: 650; padding-inline: 6px; }
@@ -377,3 +377,5 @@
   color: #fff;
   background: var(--ui-action);
 }
+
+@media (max-width: 640px) { .shortlist-label { min-height: 0; } }

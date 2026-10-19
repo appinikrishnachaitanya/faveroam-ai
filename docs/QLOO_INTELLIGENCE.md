@@ -18,7 +18,7 @@ Normal entity Insights supports these output URNs: `artist`, `book`, `brand`, `d
 | `/v2/insights/` | Entity discovery with confirmed signals and applicable constraints | Validate output type, city/category and observable filters |
 | `/entities` | Additional information for a returned entity | Missing metadata remains missing |
 | `/v2/analysis/compare` | Two confirmed entity profiles and shared cultural tags | Shared tags inform discovery; they do not guarantee compatibility |
-| `/v2/trending` | Optional historical observations | Empty/failed history is not a trend or momentum score |
+| `/v2/trending` | Backend diagnostic only; removed from the consumer interface and discovery enrichment | Empty/failed history is not a trend or momentum score |
 | `qloo_find_tags` / `qloo_rank` | Supported model-selected harness/MCP operations | Tool selection and execution must actually succeed before claiming a live MCP demonstration |
 
 Special Insights requests for `urn:tag`, `urn:heatmap` and `urn:demographics` use dedicated analysis parsers, not the normal entity-card parser. They return cultural associations, geographic audience affinity or aggregate audience context; none establishes a user's demographics.
@@ -33,9 +33,9 @@ Dietary options are resolved through the actual dietary-option taxonomy. Cuisine
 
 ## Familiar, Balanced and Explore
 
-The current planner **forwards and allowlists `bias.content_based`**. Direct and adjacent retrieval default to weights 0.8 and 0.3 respectively; an explicit supported preference can override the defaults. Earlier reports claiming the parameter is always dropped are historical and are archived.
+The current planner **forwards and allowlists `bias.content_based`**. Direct and adjacent retrieval retain compatibility values 0.8 and 0.3 respectively; an explicit supported preference can override the defaults. The current parameter reference does not document this setting, so a successful response does not establish that the provider honored it. Mode behavior is grounded in category-specific seed routing and rank fusion. Earlier reports claiming the parameter is always dropped are historical and are archived.
 
-Explore may broaden eligible soft tags from the confirmed profile while retaining grounded taste signals. Explicitly refined cuisine/diet concepts, atmosphere, numeric requirements and exclusions remain constrained. Balanced blends distinct pools and deduplicates returned entities. Changing a query does not prove a causal ranking improvement; outputs can overlap and relevance still requires evaluation.
+Explore may broaden eligible soft tags from the confirmed profile while retaining grounded taste signals. Explicitly refined cuisine/diet concepts, atmosphere, numeric requirements and exclusions remain constrained. Balanced uses weighted reciprocal-rank fusion (0.75 direct / 0.25 adjacent, rank constant 60) and reserves up to four of twenty slots for adjacent-only discoveries when a direct pool exists. It deduplicates returned entities and retains fusion provenance. These constants are product policy. Familiar content uses matching-domain seeds, and unrequested food/ambience tags do not dominate content queries with entity signals. See [the recommendation policy](RECOMMENDATION_POLICY.md). Changing a query does not prove a causal ranking improvement; outputs can overlap and relevance still requires evaluation.
 
 ## Explainability
 
@@ -49,7 +49,7 @@ Agent decision receipts use actual before/after state. A lower-price example req
 
 The HTTP layer paces requests per process, uses a bounded private cache and respects supported 429 retry behavior. Model/tool failures retain guided fallback and existing discoveries. These controls do not eliminate provider outages or cross-process quotas.
 
-Historical trending remains partially accepted: earlier live place-history requests returned HTTP 400 and tested artist/movie histories were empty. Trend-biased recommendation retrieval is separate from successful historical observations. Do not claim verified acceleration, breakout trends or reliable history for every entity.
+Historical views and automatic history enrichment have been removed from the app. The retained diagnostic endpoint remains partially accepted: earlier live place-history requests returned HTTP 400 and tested artist/movie histories were empty. Trend-biased recommendation retrieval is separate from successful historical observations. Do not claim verified acceleration, breakout trends or reliable history for every entity.
 
 Qloo image URLs can be unavailable or blocked by the viewer's network. The UI uses a visible fallback rather than an unrelated image. Use real app captures for submission media and label the environment accurately.
 

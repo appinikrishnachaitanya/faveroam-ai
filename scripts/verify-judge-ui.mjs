@@ -102,6 +102,8 @@ assert.equal(await evaluate(vegetarian
  ? "window.__judgeReplies[0].state.cards.filter(card=>card.section==='Eat').every(card=>card.intelligence.commercial.priceLevel<=2&&card.evidence.params['filter.tags'].includes(':dietary_option:'))"
  : "window.__judgeReplies[0].state.cards.filter(card=>card.section==='Eat').every(card=>card.intelligence.commercial.priceLevel<=2&&card.intelligence.quality.businessRating>=4.5)"),true);
 assert.equal(await evaluate("Boolean(window.__judgeReplies[0].state.pending)"),false);
+assert.equal(await evaluate(`document.querySelector('[aria-label="Maximum price"]').value`),'2','Budget control must reflect the cap applied by conversation');
+assert.equal(await evaluate("document.querySelector('.together-reveal').textContent.includes('cannot be used as Together comparison inputs')"),true);
 let repliesBeforeCinema = 1;
 if (conversation) {
  for (const question of ['Why these suggestions?', 'What filters are saved?']) {
@@ -121,6 +123,7 @@ if (conversation) {
  for(const section of ['Music','Movies'])assert.equal(await evaluate(`JSON.stringify(window.__judgeInitial.cards.filter(card=>card.section===${JSON.stringify(section)}))===JSON.stringify(window.__judgeReplies[${repliesBeforeCinema-1}].state.cards.filter(card=>card.section===${JSON.stringify(section)}))`),true);
 }
 await evaluate("document.querySelector('[aria-label=\"Close Taste Concierge\"]').click()");
+if(conversation) assert.equal(await evaluate(`document.querySelector('[aria-label="Maximum price"]').value`),'1','Budget control must refresh after a contextual cheaper follow-up');
 await clickText('Plan a day');
 const dinner=await evaluate("document.querySelector('#day-out-Eat').value");
 await evaluate("[...document.querySelectorAll('.outing-activities label')].find(label=>label.textContent.trim()==='Cinema').querySelector('input').click()");
@@ -133,5 +136,15 @@ await shot('/tmp/tastepassport-judge-plan.png');
 await call('Emulation.setDeviceMetricsOverride',{width:390,height:900,deviceScaleFactor:1,mobile:true});
 assert.equal(await evaluate('document.documentElement.scrollWidth>innerWidth'),false);
 await shot('/tmp/tastepassport-judge-plan-mobile.png');
-console.log(`Judge browser/live-backend PASS: ${conversation ? 'consecutive refinement, read-only explanations/filters and relative-budget follow-up; ' : ''}exact constrained native chat updated Eat only; Music/Movies preserved; planner fetched actual cinema choices and kept dinner; desktop/mobile containment.`);
+if(conversation) {
+ await clickText('Preferences & Together');
+ const previous=await evaluate('window.__judgeReplies.length');
+ await input('[aria-label="Maximum price"]','4','HTMLSelectElement');
+ await waitFor(`window.__judgeReplies.length===${previous+1} && !document.querySelector('[aria-label="Maximum price"]').disabled`);
+ assert.deepEqual(await evaluate(`window.__judgeReplies[${previous}].changed`),['Eat']);
+ assert.equal(await evaluate(`window.__judgeReplies[${previous}].state.queryPreferences.Eat.priceMax`),4);
+ assert.equal(await evaluate(`window.__judgeReplies[${previous}].state.cards.filter(card=>card.section==='Eat').every(card=>!card.evidence.params['filter.price_level.max'])`),true,'Any budget must remove the actual query cap');
+ assert.equal(await evaluate(`document.querySelector('[aria-label="Maximum price"]').value`),'4');
+}
+console.log(`Judge browser/live-backend PASS: ${conversation ? 'consecutive refinement, read-only explanations/filters, relative-budget follow-up and real Any-budget cap clearing; ' : ''}exact constrained native chat updated Eat only; Music/Movies preserved; planner fetched actual cinema choices and kept dinner; desktop/mobile containment.`);
 } finally {ws.close();}

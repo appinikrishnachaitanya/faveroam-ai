@@ -1,11 +1,11 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Passport, Resolution } from "../../src/workspace/state";
 import { sectionOrder } from "../../src/workspace/state";
 import type { AgentInput } from "../../src/agent/types";
 import type { Card, Section } from "../../src/passport/model";
 import type { TasteComparison } from "../../src/qloo/compare";
-import type { DiscoveryGoal } from "../../src/qloo/query-plan";
+import type { DiscoveryGoal, QueryPreferences } from "../../src/qloo/query-plan";
 import { CandidateChoices } from "./disambiguation";
 import { ResultMetrics, WhyEvidence } from "./intelligence-evidence";
 import { priceLabel } from "../../src/passport/pricing";
@@ -21,7 +21,7 @@ const modes: { id: DiscoveryGoal; name: string; detail: string }[] = [
     id: "trending",
     name: "Trending for you",
     detail:
-      "Taste-led suggestions with trend ranking. Historical data is shown when available.",
+      "Taste-led suggestions with trend ranking; this does not show popularity history.",
   },
   {
     id: "hidden-gems",
@@ -64,6 +64,17 @@ export default function TasteIntelligence({
     [avoidArea, setAvoidArea] = useState(prefs?.excludeLocation ?? ""),
     [source, setSource] = useState(prefs?.requiredExternalSources?.[0] ?? ""),
     [reviews, setReviews] = useState(prefs?.tripAdvisorReviewCountMin?.toString() ?? "");
+  const preferenceSnapshot = JSON.stringify(prefs ?? {});
+  useEffect(() => {
+    const current: QueryPreferences = JSON.parse(preferenceSnapshot);
+    setGoal(current.goal ?? "discover");
+    setPrice(current.priceMax?.toString() ?? "4");
+    setRating(current.businessRatingMin?.toString() ?? "");
+    setArea(current.locationQuery ?? "");
+    setAvoidArea(current.excludeLocation ?? "");
+    setSource(current.requiredExternalSources?.[0] ?? "");
+    setReviews(current.tripAdvisorReviewCountMin?.toString() ?? "");
+  }, [section, preferenceSnapshot]);
   const [partner, setPartner] = useState(["", "", ""]);
   const [expandedMatch, setExpandedMatch] = useState<number>();
   const [resolution, setResolution] = useState<Resolution>();
@@ -76,6 +87,7 @@ export default function TasteIntelligence({
     notice: string;
   }>();
   const [debug, setDebug] = useState<unknown>();
+  const hasEntityProfile = passport.selected.some(candidate => !candidate.id.startsWith("urn:tag:"));
   async function post(path: string, body: unknown) {
     const r = await fetch(path, {
       signal: AbortSignal.timeout(75_000),
@@ -95,7 +107,7 @@ export default function TasteIntelligence({
       const matches = await post("/api/agent/resolve", { seeds: partner });
       setResolution(matches);
       setExpandedMatch(undefined);
-      setIds(suggestedMatches(matches.items));
+      setIds(suggestedMatches(matches.items.map((item: Resolution["items"][number]) => ({ ...item, candidates: item.candidates.filter(candidate => !candidate.id.startsWith("urn:tag:")) }))));
     } catch {
       setError(
         "Could not find those interests. Use three different named films, artists, books or brands.",
@@ -210,7 +222,7 @@ export default function TasteIntelligence({
           {isPlaceSection(section) && (
             <div className="intelligence-filters">
               <label>
-                Budget
+                Maximum budget
                 <select
                   value={price}
                   aria-label="Maximum price"
@@ -312,7 +324,8 @@ export default function TasteIntelligence({
           {prefs && (
             <p className="helper">
               Active settings: {prefs.goal ?? "For you"}
-              {prefs.priceMax ? ` · ${priceLabel(prefs.priceMax)} budget` : ""}
+              {prefs.priceMax && prefs.priceMax < 4 ? ` · ${priceLabel(prefs.priceMax)} or less` : " · No maximum budget"}
+              {prefs.priceMin ? ` · minimum ${priceLabel(prefs.priceMin)}` : ""}
               {prefs.businessRatingMin
                 ? ` · business rating ≥ ${prefs.businessRatingMin}`
                 : ""}
@@ -331,10 +344,12 @@ export default function TasteIntelligence({
           <summary>Together · find common ground</summary>
           <div className="together-heading"><div><span className="micro-label">TWO TASTES. A SHARED DISCOVERY.</span><h3>What could you both enjoy?</h3></div><img src="/illustrations/together-passports.svg" width="440" height="260" alt="" aria-hidden="true" loading="lazy" /></div>
           <p>
-            Add three of their interests, choose the intended matches, then
-            explore shared tastes. Use cultural interests, without names or
-            personal details.
+            Add three named artists, films, books or brands they enjoy, then
+            confirm the matches. Cuisine and dietary concepts are supported in
+            your Passport preferences, but cannot be used as Together comparison inputs.
+            Your profile needs at least one named entity too. Avoid personal details.
           </p>
+          {!hasEntityProfile && <p role="status">Add a named artist, film, book or brand to your Passport to use Together.</p>}
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -363,7 +378,7 @@ export default function TasteIntelligence({
                 </label>
               ))}
             </div>
-            <button className={resolution ? "quiet-button" : "primary-button"} disabled={busy || loading}>
+            <button className={resolution ? "quiet-button" : "primary-button"} disabled={busy || loading || !hasEntityProfile}>
               {loading ? "Finding common ground…" : resolution ? "Look up interests again" : "Find their interests"}
             </button>
           </form>
@@ -425,7 +440,7 @@ export default function TasteIntelligence({
                     <h4>{card.name}</h4>
                     <p>{card.address ?? card.section}</p>
                     <ResultMetrics card={card} />
-                    <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([card.name,card.address,passport.city].filter(Boolean).join(", "))}`} target="_blank" rel="noopener noreferrer">Check location and availability ↗</a>
+                    <a href={isPlaceSection(card.section) ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([card.name,card.address,passport.city].filter(Boolean).join(", "))}` : `https://www.google.com/search?q=${encodeURIComponent(card.name + " " + card.section)}`} target="_blank" rel="noopener noreferrer">{isPlaceSection(card.section) ? "Check location and availability ↗" : "Learn about this discovery ↗"}</a>
                     <details>
                       <summary>Why this works together</summary>
                       <WhyEvidence card={card} />

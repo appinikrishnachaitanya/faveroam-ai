@@ -1,5 +1,5 @@
 import type { AgentState } from "./types.ts";
-import type { Section } from "../passport/model.ts";
+import { sectionTypes, type Card, type Section } from "../passport/model.ts";
 import type { Familiarity, QlooEvidence } from "../passport/evidence.ts";
 export interface DiscoveryQuery {
   params: Record<string, string>;
@@ -15,27 +15,44 @@ export function discoveryQueries(
   mode: Familiarity,
 ): DiscoveryQuery[] {
   const direct = { ...base };
-  if (section === "Music") {
-    const artistIds = [
-      ...new Set([
-        ...state.selected
-          .filter((s) => s.types.includes("urn:entity:artist"))
-          .map((s) => s.id),
-        ...state.feedback
-          .filter((f) => f.accepted && f.section === "Music")
-          .slice(-2)
-          .map((f) => f.id),
-      ]),
-    ];
-    if (artistIds.length)
-      direct["signal.interests.entities"] = artistIds.join(",");
+  const adjacent = { ...base };
+  const explicitTags = new Set(state.categoryTags?.[section] ?? []);
+  const placeOnlyTag = (id: string) => /^urn:tag:(?:cuisine|specialty_dish|dietary_option|dietary_attribute|ambience):/.test(id) || /^urn:tag:(?:genre|category):place:/.test(id);
+  if (sectionTypes[section] !== "place" && base["signal.interests.entities"]) {
+    // A cuisine tag can swamp film/artist signals. Keep intentionally refined
+    // concepts, but do not automatically translate food/ambience into content.
+    const tags = (adjacent["signal.interests.tags"] ?? "").split(",").filter(id => id && (explicitTags.has(id) || !placeOnlyTag(id)));
+    if (tags.length) adjacent["signal.interests.tags"] = tags.join(",");
+    else delete adjacent["signal.interests.tags"];
+  }
+  // Same-domain seeds anchor familiar content. Cross-domain signals stay in the
+  // adjacent query, rather than overwhelming a film with an unrelated artist.
+  const outputType = `urn:entity:${sectionTypes[section]}`;
+  const relevantIds = [...new Set([
+    ...state.selected.filter(seed => seed.types.includes(outputType)).map(seed => seed.id),
+    ...state.feedback.filter(feedback => feedback.accepted && feedback.section === section)
+      .slice(-2).map(feedback => feedback.id),
+  ])];
+  if (relevantIds.length) {
+    direct["signal.interests.entities"] = relevantIds.join(",");
+    if (sectionTypes[section] !== "place") {
+      // Explicit category refinements remain signals; unrelated profile cuisine
+      // must not steer the familiar movie/music/book retrieval.
+      const domain = sectionTypes[section];
+      const families = [domain, ...(domain === "movie" ? ["media", "film"] : domain === "artist" ? ["music"] : [])];
+      const tags = (direct["signal.interests.tags"] ?? "").split(",").filter(id =>
+        explicitTags.has(id) || (!placeOnlyTag(id) && families.some(family => id.includes(`:${family}:`))));
+      if (tags.length) direct["signal.interests.tags"] = tags.join(",");
+      else delete direct["signal.interests.tags"];
+    }
   }
   // Explicitly selected content-based weighting wins. Otherwise each mode uses
   // a distinct documented soft ranking setting without relaxing requirements.
   if (!direct["bias.content_based"]) direct["bias.content_based"] = "0.8";
-  const adjacent = { ...base };
   if (!adjacent["bias.content_based"]) adjacent["bias.content_based"] = "0.3";
-  if (section !== "Music" && !state.intent?.concepts.length) {
+  const explicitConcepts = state.categoryConcepts?.[section]?.length ||
+    (state.intent?.sections.includes(section) && state.intent.concepts.length);
+  if (section !== "Music" && !explicitConcepts) {
     const ids = (adjacent["filter.tags"] ?? "").split(",").filter(Boolean);
     const soft = ids.filter((id) =>
       state.selected.some(selected => selected.id === id) &&
@@ -83,17 +100,42 @@ export function discoveryQueries(
     { params: adjacent, pool: "adjacent" },
   ];
 }
-export function mixPools(pools: import("../passport/model.ts").Card[][]) {
-  if (pools.length < 2) return pools[0] ?? [];
-  const result: import("../passport/model.ts").Card[] = [];
-  const seen = new Set<string>();
-  for (let i = 0; i < 20; i++)
-    for (const pool of pools) {
-      const card = pool[i];
-      if (card && !seen.has(card.id) && result.length < 20) {
-        seen.add(card.id);
-        result.push(card);
-      }
-    }
-  return result;
+/** Weighted reciprocal-rank fusion: ranks, not incomparable per-query affinity.
+ * Balanced reserves up to four slots for adjacent-only discoveries. The weights
+ * and quota are product policy, not learned probabilities or measured accuracy. */
+export function mixPools(pools: Card[][]): Card[] {
+  const available = pools.filter(pool => pool.length);
+  if (available.length < 2) return available[0] ?? [];
+  type FusedResult = {
+    card: Card;
+    score: number;
+    direct: boolean;
+    sources: NonNullable<QlooEvidence["fusion"]>["sources"];
+  };
+  const ranked = new Map<string, FusedResult>();
+  for (const pool of available) {
+    const direct = pool[0]?.evidence?.pool !== "adjacent";
+    const weight = direct ? 0.75 : 0.25;
+    const seen = new Set<string>();
+    pool.forEach((card, index) => {
+      if (seen.has(card.id)) return;
+      seen.add(card.id);
+      const entry = ranked.get(card.id) ?? { card, score: 0, direct: false, sources: [] };
+      entry.score += weight / (60 + index + 1);
+      if (direct && !entry.direct) entry.card = card;
+      entry.direct ||= direct;
+      if (card.evidence) entry.sources.push({ queryId: card.evidence.queryId, pool: card.evidence.pool, rank: index + 1, weight });
+      ranked.set(card.id, entry);
+    });
+  }
+  const sorted = [...ranked.values()].sort((a,b) => b.score - a.score || a.card.id.localeCompare(b.card.id));
+  const adjacent = sorted.some(entry => entry.direct)
+    ? sorted.filter(entry => !entry.direct).slice(0,4)
+    : [];
+  const reserved = new Set(adjacent.map(entry => entry.card.id));
+  const selected = [...sorted.filter(entry => !reserved.has(entry.card.id)).slice(0,20-adjacent.length), ...adjacent];
+  return selected.map(entry => entry.card.evidence ? {
+    ...entry.card,
+    evidence: { ...entry.card.evidence, fusion: { method: "weighted-rrf", score: entry.score, sources: entry.sources } },
+  } : entry.card);
 }

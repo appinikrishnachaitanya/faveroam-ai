@@ -80,3 +80,11 @@
 
 .profile-fields select { padding-right:38px; }
 .profile-fields input,.profile-fields select { font-size:16px; }
+
+.taste-profile-dialog { width: min(560px, calc(100vw - 32px)); color: var(--ui-ink); background: var(--ui-surface); }
+.taste-profile-dialog > p { font-size: 15px; line-height: 1.75; margin-block: 16px; color: #475a49; }
+.profile-save-name { display: grid; gap: 10px; margin-block: 24px; font-size: 15px; font-weight: 650; }
+.profile-save-name input { min-height: 50px; width: 100%; padding: 12px 14px; border: 1px solid var(--ui-border); border-radius: 12px; color: var(--ui-ink); background: #fffdf5; font-size: 16px; }
+.profile-save-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 24px; }
+.profile-save-actions button { min-height: 48px; }
+@media (max-width: 480px) { .profile-save-actions { flex-direction: column; } .profile-save-actions button { width: 100%; } }

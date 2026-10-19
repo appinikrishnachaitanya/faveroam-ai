@@ -1,7 +1,7 @@
 /* Discoveries: shared TastePassport presentation. */
 .discovery-photo { width: calc(100% + 48px); margin: -24px -24px 20px; aspect-ratio: 16 / 10; border-radius: var(--ui-radius) var(--ui-radius) 0 0; overflow: hidden; background: #eee8c8; }
 .discovery-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.photo-placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: var(--ui-action); background: radial-gradient(circle at 60% 35%, #f9dda0, transparent 65%), #eef0d9; }
+.photo-placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; color: #fff5d5; background: radial-gradient(circle at 75% 20%, #fff1a726, transparent 55%), linear-gradient(135deg, var(--discovery-accent, #31583d), #182d23); }
 .photo-placeholder span { font-size: 13px; font-weight: 600; }
 
 .mode-category {
@@ -166,13 +166,23 @@
 }
 
 .progressive-app .discovery-card {
+  --discovery-accent: #31583d;
   padding: 24px;
   border-radius: var(--ui-radius);
-  box-shadow: 0 4px 18px #193e3208;
+  box-shadow: 0 6px 24px #193e3210;
   border-color: var(--ui-border);
   background: var(--ui-surface);
 }
 
+.progressive-app .card-eat { --discovery-accent: #84472c; }
+.progressive-app .card-coffee { --discovery-accent: #61422e; }
+.progressive-app .card-music { --discovery-accent: #694259; }
+.progressive-app .card-movies, .progressive-app .card-shows { --discovery-accent: #484662; }
+.card-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.card-header .helper { font-size: 11px; line-height: 1.5; }
+.progressive-app .discovery-card .category-token { color: var(--discovery-accent); background: #f4f1e5; border-color: #d5dbc9; padding: 6px 10px; font-size: 12px; }
+.result-section { padding-top: 24px; border-top: 2px solid #c9d6bc; margin-top: 32px; }
+.result-heading h3 > span { font-size: 14px; background: #e7eddd; border: 1px solid #bfcdb2; border-radius: 99px; padding: 5px 10px; color: #294b35; }
 .progressive-app .discovery-card h4 {
   font-size: clamp(21px, 1.8vw, 25px);
   line-height: 1.2;
@@ -306,6 +316,13 @@
   border-radius: 12px;
 }
 
+.connection-routes button[aria-pressed="true"] small { color: #f0f2d7; }
+.connection-path { border: 1px solid #bdcdb0; color: #254430; background: #e7eedc; }
+.connection-path > strong { color: #254430; }
+.connection-path small { color: #445b42; }
+.connected-results li { background: #fffdf5; color: var(--ui-ink); border-color: #c3cfb8; }
+.connection-interest-picker button { color: #254430; background: #f1f3e6; border: 1px solid #bfcdb2; border-radius: 99px; padding: 10px 15px; min-height: 44px; }
+.connection-interest-picker button[aria-pressed="true"] { background: #254c39; color: #fff8df; border-color: #254c39; }
 .connection-routes small, .connected-results li > span {
   font-size: 13px;
   color: var(--ui-muted);

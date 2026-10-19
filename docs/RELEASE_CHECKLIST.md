@@ -17,6 +17,19 @@ Preserve the existing guest, conversation, Qloo, Together, profile/account and o
 - Consolidated current product, design, architecture, implementation and operations documentation. Preserved the demo script and Devpost submission draft.
 - Current commit-eligible files passed a value-based check for configured provider/service secrets; this is not a claim about all Git history.
 
+## Recommendation relevance pass
+
+- Familiar content now prioritizes matching-domain seeds. Unrequested cuisine/ambience tags do not steer content requests with entity signals.
+- Balanced uses weighted reciprocal-rank fusion and a limited adjacent-only reservation. The three-choice preview preserves the resulting ranking; repeated place businesses are limited.
+- Filter controls refresh from active server preferences. An explicit budget supersedes the legacy cheaper flag, including clearing the actual query cap with Any budget.
+- Together explains its named-entity inputs before searching; tag-only profiles receive actionable guidance.
+- Discovery and saved profiles accept one to five confirmed tastes. New Passport offers required-name saving, skipping or cancelling; signed-in start screens list reusable profiles.
+- Cards show available ratings instead of numeric price-category badges. Discover and Insights use stronger Forest & Butter contrast and clearer purpose/action copy. The home city is explicitly cover context.
+- Model-supplied dining budget/rating defaults cannot be introduced into a newly requested cinema category without a corresponding request.
+- Fixed-profile live Qloo checks completed across contrasting films, artists and cuisines. The old mixed query reproduced Qismat 2/Freddy/Kabir Singh; familiar Interstellar retrieval began Dune: Part Two/Clara/Zack Snyder's Justice League. Changing the movie changed the top ten; changing the artist alone preserved familiar movie results.
+- A real Together route returned six dining suggestions, each with positive contribution evidence from both profiles, while retaining Indian cuisine, price cap 2, minimum business rating 4 and the original Passport.
+- [Policy, research and evaluation](RECOMMENDATION_POLICY.md) records the design and its limits. These checks do not establish a relevance percentage.
+
 ## Required local checks
 
 | Check | Outcome |
@@ -25,12 +38,19 @@ Preserve the existing guest, conversation, Qloo, Together, profile/account and o
 | `npm run typecheck` | PASS |
 | `npm run build` | PASS |
 | `npm run smoke:production` | PASS |
-| Real production browser | PASS: native dining refinement, contextual budget follow-up, read-only answers, cinema recovery, preserved dinner, desktop/mobile containment |
-| Import reachability / documentation links | PASS: 136 code files reached; 26 Markdown files checked |
+| Real production browser | PASS: native dining refinement, contextual budget follow-up, synchronized controls, actual Any-budget clearing, read-only answers, cinema recovery, preserved dinner; one-interest discovery and origin-cover behavior |
+| Account UI contract (mocked HTTP) | PASS: New Passport naming/cancel/save/reuse, login/library behavior, Together, Insights and responsive containment |
+| Visual contrast | PASS: checked Insights text ratios 7.30–7.85:1; no overflow at 320/390px |
+| Import reachability / documentation links | PASS: Previous audit reached 136 code files; current local links checked in 27 Markdown files |
 
-The runner completed **214 tests: 214 passed, 0 failed, 0 skipped**. The prior suite had 212 tests; this pass removed two tests for retired UI and added four requirement-preservation regressions. The import audit covers Next.js, test and CLI entry points; it is not a claim that every CSS selector or export has been formally proven necessary.
+The latest runner completed **229 tests: 229 passed, 0 failed, 0 skipped**. The earlier stabilization pass completed 214 tests; recommendation work adds routing, fusion, preservation, diversity and budget-clearing regressions. The import audit covers Next.js, test and CLI entry points; it is not a claim that every CSS selector or export has been formally proven necessary.
 
 ## Live evidence and remaining limits
+
+Single-interest live Qloo checks returned 20 movie, 20 artist and 18 dining results in the recorded run. A real production browser completed one-interest New York discovery, displayed Bengaluru as cover context, and confirmed that the origin was not forwarded as a recommendation input.
+
+The account browser contract verified that Save tastes appears on New Passport, requires an entered name, preserves the Passport on cancel and offers saved-profile reuse on the start screen. Account HTTP responses were explicitly mocked; this is not live Supabase persistence evidence.
+
 
 The current real-Qloo style regression passed: Familiar returned 16 dining results, Balanced 20 and Explore 13. Every accepted result retained Indian cuisine and vegetarian-option intersection filters, a maximum price category of 2, minimum business rating 4.0 and unchanged Music/Movies. These counts describe the recorded run, not a guaranteed result inventory.
 
@@ -39,7 +59,7 @@ A fresh native Gemini/MCP probe also passed in this pass: Gemini selected `qloo_
 
 Prior live native Gemini/Qloo context acceptance completed rating-minimum follow-ups at 4.6 and 4.7, retaining price, cuisine, diet and Music/Movies. The later decision-receipt probe encountered Gemini HTTP 504. A separately labelled guided/Qloo run returned 18 price-cap-1 dining results with a verified listing example. Those observations describe their runs, not current availability.
 
-Historical trending remains partially accepted. Real Supabase/email/ownership acceptance has not been established by mocked UI tests. Public Railway access was blocked by the execution environment's HTTP 403 proxy response during media preparation. Real venue photos from `images.qloo.com` were also unavailable from that capture environment. Do not label local screenshots as captures of the Railway site.
+Historical-data UI and automatic history enrichment have been removed; the retained backend diagnostic remains only partially accepted. Real Supabase/email/ownership acceptance has not been established by mocked UI tests. Public Railway access was blocked by the execution environment's HTTP 403 proxy response during media preparation. Real venue photos from `images.qloo.com` were also unavailable from that capture environment. Do not label local screenshots as captures of the Railway site.
 
 ## Final deployment and submission gates
 

@@ -51,7 +51,7 @@ interface Message {
 }
 const welcome: Message = {
   role: "agent",
-  text: "Move anywhere. Keep your vibe. Tell me your new city and three to five cultural tastes you love. We’ll build a bridge between your world and your next chapter.",
+  text: "Move anywhere. Keep your vibe. Tell me your new city and one to five cultural tastes you love. We’ll build a bridge between your world and your next chapter.",
 };
 async function post<T>(path: string, body: unknown): Promise<T> {
   const response = await fetch(path, {
@@ -67,6 +67,7 @@ async function post<T>(path: string, body: unknown): Promise<T> {
 }
 export default function Home() {
   const [tasteDraftVersion,setTasteDraftVersion]=useState(0);
+  const [saveTastePrompt,setSaveTastePrompt]=useState(false);
   const [showSaved, setShowSaved] = useState(false);
   const [adaptation, setAdaptation] = useState("");
   const [city, setCity] = useState("");
@@ -147,7 +148,7 @@ export default function Home() {
       .map((item, index) => ({ item, index }))
       .filter(({ index }) => !removed.includes(index)) ?? [];
   const complete =
-    activeItems.length >= 3 &&
+    activeItems.length >= 1 &&
     activeItems.every(({ index }) => chosen[index]) &&
     new Set(signals.map((s) => s.id)).size === signals.length;
   useEffect(() => {
@@ -348,11 +349,11 @@ export default function Home() {
   async function resolve() {
     const queries = draft.map((s) => s.trim()).filter(Boolean);
     if (
-      queries.length < 3 ||
+      queries.length < 1 ||
       queries.length > 5 ||
       new Set(queries.map((s) => s.toLowerCase())).size !== queries.length
     ) {
-      setError("Keep three to five different tastes in your draft.");
+      setError("Keep one to five different tastes in your draft.");
       return;
     }
     resetMatches("resolving");
@@ -370,7 +371,7 @@ export default function Home() {
       setPhase("confirming");
       say(
         r.items.some((i) => !i.candidates.length)
-          ? "Some tastes didn’t return matches. Edit them or remove them, keeping at least three. The available matches are ready to confirm."
+          ? "Some tastes didn’t return matches. Edit them or remove them, keeping at least one. The available matches are ready to confirm."
           : "Your matches are ready. Confirm each intended entity to bring your taste DNA into focus.",
       );
     } catch (e) {
@@ -412,7 +413,7 @@ export default function Home() {
       setEditing(true);
       setPhase("review");
       say(
-        "Taste draft updated. Confirm at least three tastes to rebuild your Passport.",
+        "Taste draft updated. Confirm at least one tastes to rebuild your Passport.",
       );
       return;
     }
@@ -427,7 +428,7 @@ export default function Home() {
     setResult(undefined);
     setPhase("confirming");
     say(
-      `Removed ${name ?? "that taste"} from the current selection. Keep at least three confirmed tastes to continue.`,
+      `Removed ${name ?? "that taste"} from the current selection. Keep at least one confirmed tastes to continue.`,
     );
   }
   async function generate() {
@@ -482,7 +483,12 @@ export default function Home() {
     setRejectionId(undefined);
     requestAnimationFrame(() => feedbackOpener.current?.focus());
   }
+  function requestNewPassport() {
+    if(result?.agent)setSaveTastePrompt(true);
+    else fresh();
+  }
   function fresh() {
+    setSaveTastePrompt(false);
     setTasteDraftVersion(value=>value+1);
     activeTurn.current?.abort();
     activeTurn.current = null;
@@ -532,7 +538,7 @@ export default function Home() {
         Skip to main content
       </a>
       <header className="workspace-topbar">
-        <a className="brand" href="/" aria-label="TastePassport home">
+        <a className="brand" href="/" aria-label="TastePassport home" onClick={event=>{if(result){event.preventDefault();requestNewPassport();}}}>
           <span className="brand-symbol">
             <Icon name="star" size={22} />
           </span>
@@ -572,7 +578,7 @@ export default function Home() {
               <button
                 className="quiet-button"
                 aria-label="Start a new Passport"
-                onClick={fresh}
+                onClick={requestNewPassport}
                 disabled={busy}
               >
                 <Icon name="plus" size={14} />
@@ -587,8 +593,9 @@ export default function Home() {
       </header>
       <div className="progressive-content" id="passport-content" tabIndex={-1}>
         {<ReusableTastes signedIn={accountSignedIn} passport={result} city={city} disabled={busy} draftVersion={tasteDraftVersion}
+          saveRequested={saveTastePrompt} onContinue={fresh} onCancel={()=>setSaveTastePrompt(false)}
           onSelect={profile=>{resetMatches("review");setDraft(profile.selected.map(s=>s.name));setConceptSeeds(profile.selected.filter(s=>s.id.startsWith("urn:tag:")).map(s=>s.name));setInitialMode(profile.discoveryMode);setConstraints(profile.constraints);setRequestedActivities(profile.activeCategories.filter(s=>!profile.hiddenCategories.includes(s)).slice(0,5));setEditing(true);}}
-          onBusy={value=>setPhase(value?"exploring":"idle")}
+          onBusy={value=>{if(value)setPhase("exploring");else setPhase(current=>current==="exploring"?"idle":current);}}
           onApply={passport=>{setResult(passport);setCity(passport.city);setDraft(passport.selected.map(s=>s.name));setPhase("ready");setAdaptation("Fresh discoveries using your saved tastes.");}}
         />}
         {!result && <StepIndicator step={step} />}
@@ -604,6 +611,7 @@ export default function Home() {
             }}
             onOrigin={setOrigin}
             onDraft={(values) => {
+              setTasteDraftVersion(value=>value+1);
               setDraft(values);
               setConceptSeeds(
                 values.filter((v) =>

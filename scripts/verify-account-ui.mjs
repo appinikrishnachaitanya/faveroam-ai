@@ -4,7 +4,7 @@ import fs from "node:fs/promises";
 import { normalizeSession } from "../src/agent/session.ts";
 import { nextWeekend } from "../src/account/plans.ts";
 const base = process.env.PASSPORT_TEST_URL || "http://127.0.0.1:3001";
-const tabs = await (await fetch("http://127.0.0.1:9231/json")).json();
+const tabs = await (await fetch((process.env.PASSPORT_CDP_URL || "http://127.0.0.1:9231")+"/json")).json();
 const ws = new WebSocket(
   tabs.find((t) => t.type === "page").webSocketDebuggerUrl,
 );
@@ -298,9 +298,7 @@ ws.addEventListener("message", async (event) => {
         })),
       };
     } else if (path === "/api/agent/intelligence") {
-      if (body.action === "trends") {
-        value={trend:{entityId:body.entityId,startDate:"2026-09-01",endDate:"2026-10-01",recordedAt:"2026-10-18",points:[{date:"2026-10-01",populationPercentile:82,rank:4}]}};
-      } else if (body.action === "analysis") {
+      if (body.action === "analysis") {
         value={analysis:body.kind === "taste" ? {kind:"taste",tags:[{id:"urn:tag:genre:media:fixture",name:"Fixture cultural theme"}],recordedAt:new Date().toISOString()}
           : body.kind === "heatmap" ? {kind:"heatmap",points:[{latitude:43.65,longitude:-79.38,affinity:.9},{latitude:43.69,longitude:-79.42,affinity:.5},{latitude:43.61,longitude:-79.35,affinity:.7}],recordedAt:new Date().toISOString()}
           : {kind:"demographics",records:[{id:session.selected[0].id,age:{'25_to_29':.2},gender:{female:-.1}}],recordedAt:new Date().toISOString()}};
@@ -498,8 +496,9 @@ assert.ok(
 await textClick("Preferences & Together");
 await input('[aria-label=\"Maximum price\"]', "2", "HTMLSelectElement");
 await wait(
-  "document.querySelector('.intelligence-content').textContent.includes('Moderate budget')",
+  "document.querySelector('.intelligence-content').textContent.includes('Moderate or less')",
 );
+for (let attempt=0; budgetUpdates===0 && attempt<100; attempt++) await new Promise(resolve=>setTimeout(resolve,50));
 assert.equal(budgetUpdates, 1, "Budget dropdown applies immediately");
 await evaluate("document.querySelector('.together-reveal').open=true");
 for (let i = 0; i < 3; i++)
@@ -533,13 +532,12 @@ await evaluate("document.querySelector('.together-results').scrollIntoView({bloc
 togetherShot=await call("Page.captureScreenshot",{format:"png"});
 await fs.writeFile("/tmp/tastepassport-together-results.png",Buffer.from(togetherShot.result.data,"base64"));
 await textClick("Taste insights");
-await textClick("Explore my taste connections");
+assert.equal(await evaluate("Boolean(document.querySelector('.trend-analysis'))"),false,"Retired historical-data controls must stay absent");
+await textClick("Find my taste themes");
 await wait("Boolean(document.querySelector('.taste-theme-list'))");
 assert.ok(await evaluate("document.querySelector('.taste-theme-list').textContent.includes('Fixture cultural theme')"));
-await textClick("Load trend history");
-await wait("Boolean(document.querySelector('.trend-table tbody tr'))");
-assert.ok(await evaluate("document.querySelector('.trend-table').textContent.includes('82')"));
-await textClick("Heatmap · areas to explore in Toronto");
+
+await textClick("Find an area in Toronto");
 await wait("Boolean(document.querySelector('.affinity-plot'))");
 assert.equal(await evaluate("document.querySelectorAll('.affinity-plot circle').length"),3);
 await evaluate("document.querySelector('.audience-context').open=true");
@@ -678,18 +676,26 @@ await wait(
 );
 await click('[aria-label="Close Taste Concierge"]');
 await textClick("Preferences & Together");
-await input('.profile-fields input',"Weekend culture");
-await textClick("Save my tastes");
-await wait("[...document.querySelectorAll('button')].some(b=>b.textContent.includes('Update saved tastes'))");
+assert.equal(await evaluate("Boolean(document.querySelector('.reusable-tastes'))"),false,'Saving tastes is offered only when starting another Passport');
 await click('[aria-label="Start a new Passport"]');
+await wait("Boolean(document.querySelector('.taste-profile-dialog[open]'))");
+assert.equal(await evaluate("document.querySelector('#taste-profile-name').value"),'','Profile name must be deliberately entered');
+assert.equal(await evaluate("document.querySelector('.taste-profile-dialog button[type=submit]').disabled"),true);
+await click('[aria-label="Keep exploring this Passport"]');
+await wait("!document.querySelector('.taste-profile-dialog')");
+assert.ok(await evaluate("Boolean(document.querySelector('.passport-cover'))"),'Cancelling preserves the current Passport');
+await click('[aria-label="Start a new Passport"]');
+await wait("Boolean(document.querySelector('.taste-profile-dialog[open]'))");
+await input('#taste-profile-name',"Weekend culture");
+await textClick("Save profile & continue");
 await wait("document.querySelector('#destination')?.disabled===false && Array.from(document.querySelector('#destination').options).some(option=>option.value==='London')");
 await input("#destination","London","HTMLSelectElement");
 assert.equal(await evaluate("document.querySelector('.profile-fields select').value"),'','New Passport clears the active profile selection');
 await input('.profile-fields select',uuid,'HTMLSelectElement');
 await wait("document.querySelectorAll('.taste-chip').length===3");
-assert.ok(await evaluate("document.querySelector('.profile-status').textContent.includes('Loaded interests')"),"Selecting a named profile populates tastes");
+assert.ok(await evaluate("document.querySelector('.profile-status').textContent.includes('Loaded')"),"Selecting a named profile populates tastes");
 assert.ok(await evaluate("document.querySelector('.reusable-tastes a[download]').href.includes('/api/account/preferences/export?id=')"));
-await textClick("Use my tastes in London");
+await textClick("Use this profile in London");
 await wait("Boolean(document.querySelector('.passport-cover')) && document.querySelector('.passport-cover').textContent.includes('London')");
 assert.ok(await evaluate("document.querySelector('#passport-content').textContent.includes('Fresh discoveries using your saved tastes')"),"Saved tastes apply to a different city without retyping preferences");
 await click(".signout-button");
@@ -718,5 +724,5 @@ await call("Fetch.disable");
 ws.close();
 if (failure) throw failure;
 console.log(
-  "UI contract PASS (mocked APIs): duplicate registration recovery, registration names, password change, named profiles/auto-filled tastes/export link, reusable tastes across cities, no sign-in library flash, budget updates, planner reordering, compact Together, trend history, saved plans/calendar, provider failure/cancellation/retry and responsive containment. Live providers remain separate acceptance.",
+  "UI contract PASS (mocked APIs): duplicate registration recovery, registration names, password change, named profiles/auto-filled tastes/export link, reusable tastes across cities, no sign-in library flash, budget updates, planner reordering, compact Together, saved plans/calendar, provider failure/cancellation/retry and responsive containment. Live providers remain separate acceptance.",
 );

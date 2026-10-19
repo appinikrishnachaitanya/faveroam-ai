@@ -16,7 +16,6 @@ import { diversifyCards, sectionTypes } from "../passport/model.ts";
 import type { Card, Section } from "../passport/model.ts";
 import { buildQuery } from "../qloo/query-plan.ts";
 import { findTags } from "../qloo/lookups.ts";
-import { enrichTrends } from "../qloo/enrichment.ts";
 
 export function agentDependencies(): AgentDependencies {
   let provider;
@@ -99,6 +98,12 @@ export async function discoverSection(
     excludedCount: excluded.length,
   });
   const type = sectionTypes[section];
+  const preferences = state.queryPreferences?.[section] ?? {};
+  // A numeric budget choice supersedes the older qualitative "cheaper" flag.
+  // In particular, Any budget (4) must clear both its query cap and local veto.
+  const appliedConstraints = preferences.priceMax !== undefined || (preferences.priceMin ?? 0) > 2
+    ? constraints.filter(constraint => constraint !== "expensive")
+    : constraints;
   const activityGenres = section === "Culture" ? state.intent?.activityGenres ?? state.activityGenres?.Culture : undefined;
   const activityFilters: string[] = [];
   const entityIds = state.selected
@@ -230,7 +235,7 @@ export async function discoverSection(
     params["filter.tags"] = [...activityFilters,...(constraints.includes("crowded")?tags.filter(t=>t.id.includes(":ambience:")).map(t=>t.id):[])].join(",");
     params["operator.filter.tags"] = "union";
   }
-  if (constraints.includes("expensive") && type === "place")
+  if (appliedConstraints.includes("expensive") && type === "place")
     params["filter.price_level.max"] = "2";
   if (constraints.includes("mainstream"))
     params["filter.popularity.max"] = "0.9";
@@ -244,7 +249,6 @@ export async function discoverSection(
   }
   const mode =
     state.categoryModes?.[section] ?? state.discoveryMode ?? "familiar";
-  const preferences = state.queryPreferences?.[section] ?? {};
   const planned = buildQuery({
     outputType: type,
     interests: { entities: ids, tags: [] },
@@ -316,7 +320,7 @@ export async function discoverSection(
         result.body,
         state.city,
         section,
-        constraints,
+        appliedConstraints,
         excluded,
       );
       const grounded = withEvidence(
@@ -378,7 +382,7 @@ export async function discoverSection(
         result.body,
         state.city,
         section,
-        constraints,
+        appliedConstraints,
         excluded,
       );
       const local = withEvidence(
@@ -398,13 +402,6 @@ export async function discoverSection(
     }
   }
   const cards = diversifyCards(mixPools(pools), section);
-  if (preferences.goal === "trending") {
-    await enrichTrends(cards, signal);
-    debugEvent("qloo.enrichment", {
-      endpoint: "trending",
-      count: cards.filter((c) => c.trend?.points.length).length,
-    });
-  }
   debugEvent("discovery.completed", { section, mode, count: cards.length });
   return cards;
 }

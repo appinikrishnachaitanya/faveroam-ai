@@ -10,7 +10,7 @@ async function handlePOST(request: Request) {
     const b = JSON.parse(raw);
     if (
       !Array.isArray(b.seeds) ||
-      b.seeds.length < 3 ||
+      b.seeds.length < 1 ||
       b.seeds.length > 5 ||
       b.seeds.some(
         (s: unknown) => typeof s !== "string" || !s.trim() || s.length > 100,
@@ -18,7 +18,7 @@ async function handlePOST(request: Request) {
       new Set(b.seeds.map((s: string) => s.trim().toLowerCase())).size !==
         b.seeds.length
     )
-      throw Error("Enter three to five different cultural tastes.");
+      throw Error("Enter one to five different cultural tastes.");
     const items = await resolveCulturalSeeds(
       b.seeds.map((s: string) => s.trim()),
       Array.isArray(b.concepts)
@@ -35,7 +35,7 @@ async function handlePOST(request: Request) {
     return NextResponse.json(
       {
         error:
-          "Could not resolve the cultural inputs. Use three to five named tastes or cuisine concepts, without personal identifying information, and retry when Qloo is available.",
+          "Could not resolve the cultural inputs. Use one to five named tastes or cuisine concepts, without personal identifying information, and retry when Qloo is available.",
       },
       { status: 502 },
     );

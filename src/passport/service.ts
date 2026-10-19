@@ -73,8 +73,8 @@ export async function passport(
   const items = unseal(token);
   const selected = items.map(item => item.candidates.find(c => ids.includes(c.id)))
     .filter((c): c is Candidate => Boolean(c));
-  if (selected.length < 3 || selected.length !== ids.length || new Set(ids).size !== ids.length)
-    throw new QlooError("Confirm three to five distinct taste matches.", 400);
+  if (selected.length < 1 || selected.length > 5 || selected.length !== ids.length || new Set(ids).size !== ids.length)
+    throw new QlooError("Confirm one to five distinct taste matches.", 400);
   const { suggestedSections } = await import("./routing.ts");
   const { sectionTypes } = await import("./model.ts");
   const { discoverSection } = await import("../agent/runtime.ts");

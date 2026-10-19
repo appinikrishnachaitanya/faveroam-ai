@@ -9,10 +9,18 @@ Accounts are optional. The application remains usable as a guest and never subst
 - Every private data route verifies the user with Supabase `auth.getUser()`; a client-supplied user ID or unverified cookie is never an authorization decision.
 - Explicit saving of the latest Passport per supported city (up to five cities), plus list/open/delete actions.
 - Signed-in navigation exposes My Saved Passports, Upcoming plans and Sign out. Registration requiring confirmation opens a dedicated Verify your email screen, with no password field remaining on screen.
-- Personal day-out plans save one to three current place suggestions for a chosen date. Next weekend selects the next Saturday; dates use the destination's calendar. The Upcoming plans library lists future/today outings, supports calendar export and deletion, and does not claim bookings or live event availability. Saving the same city/date replaces that day's plan; other dates remain separate.
+- Personal day-out plans save one to five current place suggestions for a chosen date. Next weekend selects the next Saturday; dates use the destination's calendar. The Upcoming plans library lists future/today outings, supports calendar export and deletion, and does not claim bookings or live event availability. Saving the same city/date replaces that day's plan; other dates remain separate.
 - My Vibe retains explicitly liked Qloo cards after category replanning. Conversation reset preserves likes; New Passport clears the active session. Saved account copies remain until explicitly overwritten or deleted.
 - Restoring creates a fresh expiring guest-session token; the old bearer token, chat history, pending tool state and model-only comparison are not stored. Saved evidence is dated and marked as restored; refine a category for fresh results.
 - Sign out clears the active screen. Account deletion requires re-authentication with the password and typed DELETE, then removes the managed user and cascades saved-row deletion.
+
+## Reusable taste-profile lifecycle
+
+Saved taste profiles hold one to five confirmed interests and portable preferences, without a city or discovery results. A user exploring a Passport sees the naming/save offer when choosing **New Passport**. A name of 1–80 characters is mandatory; the UI warns before updating an existing name. Save uses the current server session and revision, then starts a new Passport. Cancel preserves the current Passport; skipping starts fresh without saving tastes.
+
+On the signed-in start screen, saved profiles are listed by name. Selecting one fills the interests. Choosing a destination and using the profile creates fresh Qloo discoveries with its saved preferences. The profile library does not automatically open saved-Passport or plan modals after login. Existing legacy profiles named “My tastes” remain readable; new saves cannot omit a name.
+
+The existing JSON storage schema accepts single-interest profiles and snapshots. This change needs no additional migration when the named-profile migration is already applied. Real Supabase persistence and cross-user isolation still require live account acceptance; the browser contract uses explicitly mocked account responses.
 
 ## Configure your project
 

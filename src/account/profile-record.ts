@@ -1,6 +1,5 @@
 import { readTasteProfile, type TasteProfile } from "./taste-profile.ts";
 export function profileName(value: unknown) {
-  if (value === undefined) return "My tastes";
   if (typeof value !== "string" || !value.trim() || value.trim().length > 80 || /[\p{Cc}<>]/u.test(value))
     throw Error("Use a profile name of 1–80 characters.");
   return value.trim();

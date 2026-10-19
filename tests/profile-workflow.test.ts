@@ -13,7 +13,7 @@ const selected=[1,2,3].map(n=>({id:`00000000-0000-4000-8000-00000000000${n}`,nam
 function state() {return normalizeSession({id:"secret-session",revision:0,expires:0,city:"London",selected,tags:[],constraints:[],categoryConstraints:{},cards:[],previous:[],feedback:[],notices:[]} as AgentState);}
 test("named profiles validate names and identifiers",()=>{
   assert.equal(profileName("  Weekend favourites  "),"Weekend favourites");
-  assert.equal(profileName(undefined),"My tastes");
+  assert.throws(()=>profileName(undefined));
   for (const value of ["", "<script>","x".repeat(81),"bad\nname",42]) assert.throws(()=>profileName(value));
   assert.equal(validProfileId(selected[0].id),true);
   assert.equal(validProfileId("somebody-else"),false);

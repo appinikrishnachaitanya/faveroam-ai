@@ -17,12 +17,12 @@ async function handlePOST(request: Request) {
       !validDestination(b.city) || !city ||
       typeof b.token !== "string" ||
       !Array.isArray(b.ids) ||
-      b.ids.length < 3 ||
+      b.ids.length < 1 ||
       b.ids.length > 5 ||
       b.ids.some((id: unknown) => typeof id !== "string")
     )
       throw new QlooError(
-        "Choose an available destination and confirm three to five tastes.",
+        "Choose an available destination and confirm one to five tastes.",
         400,
       );
     const constraints: Constraint[] = Array.isArray(b.constraints)

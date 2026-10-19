@@ -16,7 +16,7 @@ The differentiator is **cultural continuity plus adaptive action**: the system c
 
 | Capability | Customer outcome | Boundary |
 |---|---|---|
-| Confirmed interests | Use the intended artist, film, book or concept | Ambiguous identity still needs confirmation |
+| Confirmed interests (one to five) | Use the intended artist, film, book or concept | Ambiguous identity still needs confirmation |
 | Selected discovery categories | Explore relevant places or cultural content | A film recommendation is not a cinema, showtime or local event |
 | Conversational refinement | Change a category without restarting | Ambiguous category scope triggers clarification |
 | Multi-turn context | Follow up on a rating or budget | Up to eight recent cultural messages; not unlimited memory |
@@ -27,7 +27,6 @@ The differentiator is **cultural continuity plus adaptive action**: the system c
 | Outing planner | Select, order and swap venue stops; retrieve missing cinema options | No reservation, showtime guarantee or timed route optimization |
 | Saved profiles and Passports | Reuse interests across cities and restore saved work | Persistence requires configured Supabase and applied schema |
 | Taste insights | Inspect returned themes, geographic affinity and optional audience context | Demographics describe aggregate associations, not the user's identity |
-| Historical trends | Inspect returned history when available | Nonempty history and direction claims require actual returned observations |
 
 ## A judge's first journey
 
@@ -40,17 +39,29 @@ The differentiator is **cultural continuity plus adaptive action**: the system c
 
 The complete [demo script](DEMO_SCRIPT.md) includes actions, narration and alternate outcomes. Actual counts and venue names depend on the run.
 
+## Starting and moving to the next city
+
+One confirmed taste is enough. Three tastes was an onboarding policy, not Qloo's API minimum. One taste gives a focused starting point; users can add up to five for a richer cross-domain profile. Resolution, generation, saved snapshots and reusable profiles all accept one to five; empty profiles remain invalid.
+
+The optional home city only labels the journey on the Passport cover. It is not a Qloo input, does not import origin-city venues and does not infer preferences from birthplace or location. The destination and confirmed tastes determine discovery.
+
+While exploring a city, choosing **New Passport** offers a modal to save tastes for reuse. Saving requires an explicitly entered profile name. Users can cancel and keep their current Passport, or continue without saving. A duplicate name is explicitly labelled as an update. Guest users can sign in to save. The saved-profile picker appears on the signed-in start screen, fills the interests, and can generate fresh discoveries in another destination. Editing the draft clears the selected saved-profile shortcut. The current Passport does not carry a separate persistent Save tastes button.
+
+Cards prioritize returned business/Tripadvisor ratings and show unavailable place ratings honestly. They no longer display numeric price-category badges; price metadata remains available to the budget filter and validated decision summaries. Original category-colored fallbacks and stronger Forest & Butter surfaces keep discovery usable when provider photos fail.
+
+Taste Insights helps users understand cultural themes and choose an area for nearby dining. The area action keeps current dining preferences. Optional aggregate audience views are supplementary context, not a personal demographic profile or a guarantee of popularity data.
+
 ## Matching and recommendation approach
 
 1. **Retrieve real candidates.** Qloo search/tag lookup supplies IDs; the application does not invent catalogue entities.
 2. **Resolve identity conservatively.** Name normalization, token overlap and an optional release year order returned candidates. A unique exact named-entity match can be suggested. Lexical ordering is not a cultural-affinity score; ambiguous entities and taxonomy choices are handled explicitly.
 3. **Request the correct output domain.** `filter.type` identifies the desired Qloo output. Dining, coffee and cinema are place activities, while Music and Movies are content/entity categories.
 4. **Apply explicit requirements.** City, venue kind, dietary options, price/rating bounds and exclusions constrain applicable requests. Missing numeric metadata cannot be represented as verified compliance.
-5. **Choose retrieval style.** Familiar uses the direct profile query; Explore uses a broader profile strategy; Balanced blends distinct query pools. Explicitly refined concepts and dietary requirements remain hard constraints across style changes. Only eligible soft profile tags can be broadened.
-6. **Curate returned choices.** Preserve returned evidence, deduplicate entities, limit repeated chains and highlight a taste option, a genuinely lower-price option or a broader option only when supported by the data.
+5. **Choose retrieval style.** Familiar content prioritizes matching-domain seeds; Explore retains broader entity associations; Balanced uses weighted reciprocal-rank fusion with a limited adjacent-only reservation. Automatic cuisine tags do not overwhelm content requests. Explicitly refined concepts and dietary requirements remain hard constraints across style changes. Only eligible soft profile tags can be broadened.
+6. **Curate returned choices.** Preserve returned evidence and the validated/fused ranking, deduplicate entities, limit repeated place businesses and highlight a starting choice, a genuinely lower-price option or a broader option only when supported by the data.
 7. **Adapt from feedback.** Refresh affected sections and retain unrelated cards and preferences. If no eligible result is found, retain previous discoveries and expose recovery rather than manufacture a match.
 
-This approach separates identity confidence, retrieval constraints and cultural ranking. It does not claim a universal “accuracy percentage.” Useful relevance needs evaluation with real users and controlled profile comparisons.
+This approach separates identity confidence, retrieval constraints and cultural ranking. It does not claim a universal “accuracy percentage.” Useful relevance needs evaluation with real users and controlled profile comparisons. [Recommendation policy](RECOMMENDATION_POLICY.md) records the algorithm, research and live evidence.
 
 ## Consumer design
 

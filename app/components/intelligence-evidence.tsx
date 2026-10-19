@@ -3,39 +3,24 @@ import { useState } from "react";
 import type { Card } from "../../src/passport/model";
 import type { TasteResult } from "../../src/qloo/normalizer";
 import { screenTasteConnection } from "../../src/qloo/explanation";
-import { priceLabel } from "../../src/passport/pricing";
+import { isPlaceSection } from "../../src/passport/model";
 export function ResultMetrics({ card }: { card: Card }) {
   const m = card.intelligence;
-  if (
-    m?.quality.businessRating === undefined &&
-    !priceLabel(m?.commercial.priceLevel) &&
-    !card.trend?.status
-  )
-    return null;
   return (
     <div
       className="result-metrics"
       aria-label="Returned recommendation details"
     >
-      {m?.quality.businessRating !== undefined && (
+      {m?.quality.businessRating !== undefined ? (
         <span
           aria-label={`Rated ${m.quality.businessRating.toFixed(1)} out of 5`}
         >
           ★ {m.quality.businessRating.toFixed(1)} / 5
         </span>
-      )}
-      {priceLabel(m?.commercial.priceLevel) && (
-        <span>Price category {m?.commercial.priceLevel} / 4</span>
-      )}
-      {card.trend?.status && (
-        <span>
-          {card.trend.status === "rising"
-            ? "Rising ↑"
-            : card.trend.status === "cooling"
-              ? "Cooling ↓"
-              : "Established"}
-        </span>
-      )}
+      ) : m?.externalProof.tripadvisorRating !== undefined ? (
+        <span aria-label={`Tripadvisor rating ${m.externalProof.tripadvisorRating.toFixed(1)} out of 5`}>★ {m.externalProof.tripadvisorRating.toFixed(1)} / 5 <small>Tripadvisor</small></span>
+      ) : isPlaceSection(card.section) ? <span className="metric-unavailable">Rating unavailable</span> : null}
+
     </div>
   );
 }
@@ -132,12 +117,6 @@ export function WhyEvidence({
         <p>Connected to {connected.join(", ")} in your interests.</p>
       )}
       <dl className="evidence-metrics">
-        {priceLabel(m?.commercial.priceLevel) && (
-          <>
-            <dt>Relative price category</dt>
-            <dd>{m?.commercial.priceLevel} of 4</dd>
-          </>
-        )}
         {m?.quality.businessRating !== undefined && (
           <>
             <dt>Rating</dt>
@@ -156,12 +135,6 @@ export function WhyEvidence({
           </>
         )}
       </dl>
-      {card.trend?.points.length ? (
-        <p className="helper">
-          Popularity history from {card.trend.startDate} to {card.trend.endDate}
-          .
-        </p>
-      ) : null}
       {!!card.evidence?.diagnostics?.dropped.length && (
         <p className="helper">
           Some requested preferences are unavailable for this kind of
@@ -169,12 +142,6 @@ export function WhyEvidence({
         </p>
       )}
       {!!card.evidence?.diagnostics?.unverified?.length && <p className="helper">Some preferences cannot be independently checked from this listing. Verify important requirements with the venue.</p>}
-      {m?.commercial.priceLevel !== undefined && (
-        <p className="helper">
-          Budget categories are relative. Check current menus and prices before
-          going.
-        </p>
-      )}
       {session && (
         <div className="why-actions">
           <button

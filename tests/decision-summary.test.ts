@@ -35,5 +35,5 @@ test("movie explanations distinguish contributing artist taste from unsupported 
 });
 test("screen results without individual contributions disclose collective evidence",()=>{
  const card={section:"Movies",evidence:{inputs:[{id:"film",name:"Interstellar",role:"entity-signal"}],result:{tags:[]}}} as unknown as Card;
- assert.match(screenTasteConnection(card)!,/no individual supporting interest/);
+ assert.match(screenTasteConnection(card)!,/no individual supporting interest/i);
 });

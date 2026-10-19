@@ -44,6 +44,14 @@ test("model absolute budget guesses cannot increase the cap in a cheaper follow-
  const reply=await runTurn(original,{message:"make those cheaper"},{...readonly,provider:{interpret:async()=>({...interpret("make dining cheaper"),query:{priceMax:4}}),choose:async()=>[]},discover:async(s,section)=>{assert.equal(s.queryPreferences!.Eat!.priceMax,1);return [{id:"new",name:"Eligible",section,types:["urn:entity:place"],detail:""}];}});
  assert.deepEqual(reply.changed,["Eat"]);assert.equal(reply.state.queryPreferences!.Eat!.priceMax,1);
 });
+test("a new cinema request cannot inherit a model-guessed dining budget or rating",async()=>{
+ const original=fixture();original.intent!.sections=["Eat"];
+ const reply=await runTurn(original,{message:"Find local cinemas. Keep my dining, coffee, music and movies unchanged."},{...readonly,
+  provider:{interpret:async()=>({kind:"refine",seeds:[],concepts:[],sections:["Culture"],constraints:["expensive"],activityGenres:["cinema"],strategy:"discover",query:{priceMax:2,businessRatingMin:4.5}}),choose:async()=>[]},
+  discover:async(state,section,constraints)=>{assert.equal(section,"Culture");assert.equal(state.queryPreferences!.Culture?.priceMax,undefined);assert.equal(state.queryPreferences!.Culture?.businessRatingMin,undefined);assert.ok(!constraints.includes("expensive"));return [{id:"cinema",name:"Actual cinema",section,types:["urn:entity:place"],detail:""}];}
+ });
+ assert.deepEqual(reply.changed,["Culture"]);assert.deepEqual(reply.state.queryPreferences!.Eat,original.queryPreferences!.Eat);
+});
 test("server conversation scope overrides a model's unsupported Dining guess for a Coffee follow-up",async()=>{
  const original=fixture();original.intent!.sections=["Coffee"];original.activeCategories!.push("Coffee");original.queryPreferences!.Coffee={priceMax:3};
  const reply=await runTurn(original,{message:"make those cheaper"},{...readonly,provider:{interpret:async()=>({...interpret("make dining cheaper"),sections:["Eat"],concepts:["budget friendly restaurants"]}),choose:async()=>[]},discover:async(s,section)=>{assert.equal(section,"Coffee");assert.equal(s.queryPreferences!.Coffee!.priceMax,2);return [{id:"coffee",name:"Coffee",section,types:["urn:entity:place"],detail:""}];}});

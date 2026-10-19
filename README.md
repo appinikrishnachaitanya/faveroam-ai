@@ -4,7 +4,7 @@
 
 **A cultural belonging agent that helps newcomers turn familiar tastes into a life in a new city.**
 
-Bring an artist, a film and a cuisine you love. TastePassport uses Qloo’s cultural intelligence to find real discoveries, Gemini to understand your requests, and a stateful agent to refine your choices without losing the preferences you already gave it. Find your own places, discover common ground with someone else, and turn recommendations into an outing.
+Start with one artist, film, cuisine or other cultural interest you love; add up to five for a fuller profile. TastePassport uses Qloo’s cultural intelligence to find real discoveries, Gemini to understand your requests, and a stateful agent to refine your choices without losing the preferences you already gave it. Find your own places, discover common ground with someone else, and turn recommendations into an outing.
 
 **[Open the app](https://tastepassport-ai-production.up.railway.app/)** · [Watch/record the demo](docs/DEMO_SCRIPT.md) · [Submission story](docs/DEVPOST_SUBMISSION.md) · [Technical architecture](docs/AGENT_ARCHITECTURE.md)
 
@@ -21,12 +21,12 @@ TastePassport connects **cultural continuity with practical next steps**. The go
 Imagine moving from Bengaluru to Toronto with **A.R. Rahman, Interstellar and Indian cuisine** in your taste profile.
 
 1. **Bring your tastes.** Confirm the matching artist, film and cuisine so similarly named entities do not silently become the wrong signals.
-2. **Discover your new city.** Choose the categories you want. Qloo returns real places and cultural entities; available addresses, ratings, prices and images help you assess them.
+2. **Discover your new city.** Choose the categories you want. Qloo returns real places and cultural entities; available addresses, ratings and images help you assess them.
 3. **Refine through conversation.** Ask: “Find cheaper vegetarian Indian food in Toronto. Keep my music and movies unchanged.” The agent resolves the relevant concepts, applies supported constraints and updates the requested section.
 4. **Continue without starting over.** Say “Make those cheaper.” The agent uses the conversation and current preferences, preserves unrelated sections, and reports the actual change.
 5. **Do something with the result.** Build and reorder an outing, swap one stop, or find a real cinema while keeping dinner. Use Together to discover shared cultural ground with another confirmed taste profile.
 
-**Discovery works without an account.** Optional accounts let you reuse named taste profiles across cities, save Passports and keep dated plans.
+**Discovery works without an account and needs only one confirmed taste.** When you choose **New Passport**, you can save your current tastes under a required profile name or continue without saving. Signed-in users find their saved taste profiles on the start screen, select one to fill their interests, and reuse it in another city. Saved Passports and dated plans remain separate.
 
 ## Why this needs Qloo
 
@@ -43,7 +43,7 @@ An LLM can describe a city and write an appealing itinerary. TastePassport uses 
 
 `filter.type` specifies the **requested output entity type**; input taste signals can come from other domains. Local dining and cinema discovery use places. Artists and movies are cultural discoveries, not claims about local concerts or screenings.
 
-Historical/trend views are optional and depend on usable provider responses. The project does not claim full support for every Qloo capability. [Exact endpoints, mappings and evidence boundaries →](docs/QLOO_INTELLIGENCE.md)
+Historical-data views and background history lookups have been removed. Trend-biased discovery remains separate. The project does not claim full support for every Qloo capability. [Exact endpoints, mappings and evidence boundaries →](docs/QLOO_INTELLIGENCE.md)
 
 ## How the agent works
 
@@ -74,6 +74,8 @@ Safe backend logs record request/trace identifiers, stages, tool names, status a
 
 [State, memory, concurrency, tool boundaries and implementation modules →](docs/AGENT_ARCHITECTURE.md)
 
+The optional home-city field adds the starting point to the Passport cover. It does not fetch origin-city recommendations or infer a cultural profile; confirmed tastes and destination guide discovery.
+
 ## Features that turn discovery into a decision
 
 | Feature | What the user gets |
@@ -85,16 +87,16 @@ Safe backend logs record request/trace identifiers, stages, tool names, status a
 | **My Vibe** | Keep explicit likes and rejection feedback; exclude rejected entities from relevant refreshes |
 | **Together** | Compare two confirmed profiles and use returned common ground to discover shared options |
 | **Flexible outing planner** | Choose activities and order, swap individual stops and retrieve actual cinema venues |
-| **Taste insights** | Inspect returned themes, geographic affinity and supported aggregate audience context |
-| **Optional accounts** | Save Passports, named profiles and dated plans; export owned profiles as JSON |
+| **Taste insights** | Find cultural themes for inspiration and areas to explore, with nearby-dining actions; aggregate audience context is optional |
+| **Optional accounts** | Save named tastes when starting a New Passport; reuse them from the start screen. Save Passports and dated plans separately; export owned profiles as JSON |
 
 ### Matching: relevance before volume
 
-The pipeline resolves real entities, retrieves candidates with the appropriate Qloo output type, applies explicit constraints, then normalizes and diversifies the shortlist. Deduplication and chain limits reduce repeated branches. Direct and adjacent discovery pools support different discovery styles.
+The pipeline resolves real entities, retrieves candidates with the appropriate Qloo output type, applies explicit constraints, then normalizes and diversifies the shortlist. Familiar content prioritizes seeds from its own domain; Balanced uses weighted reciprocal-rank fusion with a limited space for broader discoveries. Automatic cuisine tags do not overwhelm movie or artist signals. Deduplication and chain limits reduce repeated branches. Direct and adjacent discovery pools support different discovery styles.
 
 Name matching helps identify an entity; **it is not a cultural affinity score**. Qloo associations can establish a connection without proving a shared plot, genre or guaranteed enjoyment. When individual evidence is unavailable, explanations acknowledge that the tastes were considered together instead of fabricating a reason.
 
-[Matching strategy and product decisions →](docs/PRODUCT.md)
+[Matching policy, algorithm research and controlled live comparisons →](docs/RECOMMENDATION_POLICY.md)
 
 ## How the project addresses the judging criteria
 
@@ -113,10 +115,11 @@ Built with **Next.js, React, TypeScript, Google’s native `@google/genai` SDK, 
 
 Verification recorded **19 October 2026**:
 
-- **214 tests passed**, covering domain rules, orchestration, provider protocols and UI regressions.
+- **229 tests passed**, covering domain rules, orchestration, provider protocols and UI regressions.
 - Strict TypeScript checks, production build and isolated production smoke checks passed.
 - Live Gemini acceptance selected `qloo_find_tags`, invoked MCP and received five real matches; the workflow correctly awaited confirmation.
 - Live Qloo checks preserved Indian cuisine, vegetarian-option, maximum-price and minimum-rating constraints across all three discovery styles, without changing Music or Movies.
+- Contrasting live profiles verified film/artist seed isolation, cuisine-sensitive dining and a completed Together comparison.
 - A production-browser conversation check exercised scoped dining refinement, a cheaper follow-up, read-only questions and cinema retrieval while preserving dinner.
 
 These checks establish specific behavior, not a recommendation-quality score. Current Railway deployment, real account/email flows and submission access still require final live acceptance. [Full evidence and release checklist →](docs/RELEASE_CHECKLIST.md)
