@@ -142,7 +142,7 @@ GEMINI_API_KEY=<server-only secret>
 GEMINI_MODEL=gemini-3.1-flash-lite
 ```
 
-The model is configurable. The example names the model exercised in this environment; the SDK’s code fallback is `gemini-2.5-flash`. Provider availability and quotas apply. **Gemini needs no `AGENT_MODEL_BASE_URL`.** The optional compatibility adapter remains available for other provider configurations.
+Native Gemini uses Vertex AI Express Mode through `@google/genai` (`vertexai: true`, API version `v1`). Supply a Vertex Express Mode key in `GEMINI_API_KEY`; `GOOGLE_API_KEY` is also supported and takes precedence. `GEMINI_MODEL` selects the model; if unset, the fallback is `gemini-3.1-flash-lite`. Express Mode does not require a project or location. Provider availability and quotas apply. **Gemini needs no `AGENT_MODEL_BASE_URL`.** The optional compatibility adapter remains available for other provider configurations.
 
 ```sh
 npm run dev -- --port 3000

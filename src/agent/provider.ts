@@ -12,25 +12,28 @@ import type {
   ToolChoice,
   ToolDefinition,
 } from "./types.ts";
-/** Native Gemini takes precedence; compatible providers remain explicitly configurable. */
+/** Vertex Express Mode uses a server-only API key; compatible providers remain optional. */
 export function configuredProvider(): ModelProvider | undefined {
-  const native = Boolean(process.env.GEMINI_API_KEY?.trim());
+  const vertexKey = process.env.GOOGLE_API_KEY?.trim() || process.env.GEMINI_API_KEY?.trim();
+  const native = Boolean(vertexKey);
   const key = native
-      ? process.env.GEMINI_API_KEY
+      ? vertexKey
       : process.env.AGENT_MODEL_API_KEY,
     base = process.env.AGENT_MODEL_BASE_URL,
     model = native
-      ? process.env.GEMINI_MODEL?.trim() || "gemini-2.5-flash"
+      ? process.env.GEMINI_MODEL?.trim() || "gemini-3.1-flash-lite"
       : process.env.AGENT_MODEL_NAME;
   if (!key || !model || (!native && !base)) return;
   const gemini = native
     ? new GoogleGenAI({
+        vertexai: true,
         apiKey: key,
-        httpOptions: { timeout: 20_000, retryOptions: { attempts: 1 } },
+        // Express Mode intentionally omits project/location and uses the global endpoint.
+        httpOptions: { apiVersion: "v1", timeout: 20_000, retryOptions: { attempts: 1 } },
       })
     : undefined;
   const url = new URL(
-    native ? "https://generativelanguage.googleapis.com" : base!,
+    native ? "https://aiplatform.googleapis.com" : base!,
   );
   if (
     url.protocol !== "https:" ||
