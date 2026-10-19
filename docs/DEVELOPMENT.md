@@ -6,7 +6,7 @@ Use Node.js 24+ and npm in the existing checkout. Run `npm ci` from the lockfile
 
 The development server reads Next.js environment files. Direct TypeScript probes below explicitly load ignored `.env` / `.env.local` when needed. Do not place credentials in commands, logs or `NEXT_PUBLIC_` variables. The app's start/dev scripts enable Node environment-proxy support.
 
-Guest discovery requires Qloo; native conversation additionally requires Gemini. Supabase is optional for guest use and required for account persistence. See [schema setup](../supabase/README.md).
+Guest discovery requires Qloo; native conversation uses Gemini through Vertex AI Express Mode. Set a Vertex Express Mode key securely in `GEMINI_API_KEY` (or `GOOGLE_API_KEY`, which takes precedence) and choose the model with `GEMINI_MODEL`. No project, location or `AGENT_MODEL_BASE_URL` is needed. Allow `aiplatform.googleapis.com` both in network access and in the key’s secret-forwarding destinations when using a managed proxy. Supabase is optional for guest use and required for account persistence. See [schema setup](../supabase/README.md).
 
 ## Required checks
 

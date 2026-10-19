@@ -10,7 +10,7 @@ process.env.AGENT_DEBUG ??= "1";
 const provider = configuredProvider();
 if (!provider) {
   console.error(
-    "Live model/MCP acceptance UNRUN: configure GEMINI_API_KEY securely and GEMINI_MODEL=gemini-2.5-flash.",
+    "Live model/MCP acceptance UNRUN: configure a Vertex Express Mode key as GEMINI_API_KEY or GOOGLE_API_KEY, and set GEMINI_MODEL.",
   );
   process.exit(2);
 }

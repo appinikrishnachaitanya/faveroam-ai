@@ -7,10 +7,11 @@ test("native Gemini SDK uses function declarations, validates selections, provid
 import assert from 'node:assert/strict';
 import { configuredProvider } from './src/agent/provider.ts';
 import { debugEvent } from './src/agent/debug.ts';
-process.env.GEMINI_API_KEY='native-test-secret';process.env.GEMINI_MODEL='gemini-2.5-flash';process.env.AGENT_MODEL_BASE_URL='invalid-unused-base';process.env.QLOO_API_KEY='qloo-test-secret';process.env.AGENT_DEBUG='1';
+delete process.env.GOOGLE_API_KEY;process.env.GEMINI_API_KEY='native-test-secret';process.env.GEMINI_MODEL='gemini-2.5-flash';process.env.AGENT_MODEL_BASE_URL='invalid-unused-base';process.env.QLOO_API_KEY='qloo-test-secret';process.env.AGENT_DEBUG='1';
 const logs=[];console.info=console.error=(line)=>logs.push(JSON.parse(line));const requests=[];let bad=false,fail=false;
 globalThis.fetch=async (url,options)=>{
- assert.ok(String(url).includes('generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent'));
+ assert.equal(String(url),'https://aiplatform.googleapis.com/v1/publishers/google/models/'+(process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite')+':generateContent');
+ assert.equal(new Headers(options.headers).get('x-goog-api-key'),process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY);
  const body=JSON.parse(options.body);requests.push(body);
  assert.ok(!JSON.stringify(body).includes('native-test-secret'));
  if(fail)return new Response('{}',{status:429,headers:{'content-type':'application/json'}});
@@ -27,7 +28,8 @@ bad=true;await assert.rejects(provider.interpret('Find art'),/Model provider una
 debugEvent('qloo.result',{tool:'native-test-secret',count:-1,trace:'qloo-test-secret'});
 assert.ok(logs.some(l=>l.event==='gemini.request'));assert.ok(logs.some(l=>l.event==='gemini.tool_selected'&&l.tool==='qloo_find_tags'));
 assert.ok(!JSON.stringify(logs).includes('native-test-secret'));assert.ok(!JSON.stringify(logs).includes('qloo-test-secret'));assert.ok(!JSON.stringify(logs).includes('Find art'));assert.ok(!JSON.stringify(logs).includes('invented_tool'));
-delete process.env.GEMINI_MODEL;fail=false;assert.equal((await configuredProvider().baseline('Toronto',[],request)).model,'gemini-2.5-flash');
+delete process.env.GEMINI_MODEL;fail=false;assert.equal((await configuredProvider().baseline('Toronto',[],request)).model,'gemini-3.1-flash-lite');
+process.env.GOOGLE_API_KEY='vertex-google-test-secret';assert.ok(await configuredProvider().baseline('Toronto',[],request));assert.ok(!JSON.stringify(logs).includes('vertex-google-test-secret'));delete process.env.GOOGLE_API_KEY;
 delete process.env.GEMINI_API_KEY;process.env.AGENT_MODEL_API_KEY='compat-test-secret';process.env.AGENT_MODEL_BASE_URL='https://compatible.example/v1';process.env.AGENT_MODEL_NAME='compat-model';let compatBody;
 globalThis.fetch=async(_url,options)=>{compatBody=JSON.parse(options.body);return Response.json({choices:[{message:{tool_calls:[{function:{name:'interpret_cultural_intent',arguments:JSON.stringify({kind:'refine',seeds:[],concepts:[],constraints:[],sections:['Eat'],strategy:'discover'})}}]}}]});};
 await configuredProvider().interpret('Find dining',{city:'Toronto',history:[{role:'user',text:'prior cultural memory'}],tastes:['prior taste']});assert.equal(compatBody.messages.length,2);assert.equal(compatBody.messages[1].content,'Find dining');assert.ok(!JSON.stringify(compatBody).includes('prior cultural memory'));assert.ok(!JSON.stringify(compatBody).includes('prior taste'));
