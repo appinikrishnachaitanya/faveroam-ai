@@ -125,6 +125,7 @@ let reusableName = "My tastes";
 const profileRecord=()=>({id:uuid,name:reusableName,updated_at:"2026-10-18T00:00:00Z",profile:reusableProfile});
 let libraryReads = 0,
   budgetUpdates = 0;
+let themeUpdates = 0;
 let plans = [];
 let failure;
 let turnScenario = "budget";
@@ -186,16 +187,23 @@ ws.addEventListener("message", async (event) => {
         });
         return;
       }
-      assert.equal(body.input.discovery.section, "Eat");
-      assert.equal(body.input.discovery.preferences.priceMax, 2);
-      budgetUpdates++;
-      session.queryPreferences.Eat = { priceMax: 2 };
+      if (body.input.discovery.preferences.includeTags) {
+        assert.equal(body.input.discovery.section, "Movies");
+        assert.deepEqual(body.input.discovery.preferences.includeTags,["urn:tag:genre:media:fixture"]);
+        assert.equal(session.queryPreferences.Eat.priceMax,2,"Theme request keeps dining budget");
+        themeUpdates++;
+      } else {
+        assert.equal(body.input.discovery.section, "Eat");
+        assert.equal(body.input.discovery.preferences.priceMax, 2);
+        budgetUpdates++;
+        session.queryPreferences.Eat = { priceMax: 2 };
+      }
       session.revision++;
       value = {
         type: "result",
         reply: {
           state: session,
-          changed: ["Eat"],
+          changed: [body.input.discovery.section],
           events: [],
           message: "Budget updated.",
           mode: "deterministic",
@@ -462,6 +470,13 @@ await wait(
 await wait(
   "document.querySelector('.plan-save-actions .primary-button').textContent.includes('Save to')",
 );
+await evaluate("document.querySelector('.discovery-concierge').scrollIntoView({block:'start',behavior:'instant'})");
+const discoveryShot=await call("Page.captureScreenshot",{format:"png"});
+await fs.writeFile("/tmp/tastepassport-discover-layout.png",Buffer.from(discoveryShot.result.data,"base64"));
+await click('.discovery-prompts button');
+await wait("Boolean(document.querySelector('#taste-concierge[open]'))");
+assert.equal(await evaluate("document.querySelector('#conversation-input').value"),"Find cheaper dining. Keep my music and movies unchanged.","Conversation starter prepares a request without automatically changing results");
+await click('[aria-label="Close Taste Concierge"]');
 for (const width of [320, 390, 640, 768, 1024, 1440]) {
   await call("Emulation.setDeviceMetricsOverride", {
     width,
@@ -493,14 +508,15 @@ assert.ok(
     "[...document.querySelectorAll('.day-out-plan [role=status]')].some(e => e.textContent.includes('Your plan is set'))",
   ),
 );
-await textClick("Preferences & Together");
+await textClick("Preferences");
 await input('[aria-label=\"Maximum price\"]', "2", "HTMLSelectElement");
 await wait(
   "document.querySelector('.intelligence-content').textContent.includes('Moderate or less')",
 );
 for (let attempt=0; budgetUpdates===0 && attempt<100; attempt++) await new Promise(resolve=>setTimeout(resolve,50));
 assert.equal(budgetUpdates, 1, "Budget dropdown applies immediately");
-await evaluate("document.querySelector('.together-reveal').open=true");
+await textClick("Together");
+assert.equal(await evaluate("document.querySelector('.intelligence-preferences').hidden"),true,"Together must not expose personal preference controls");
 for (let i = 0; i < 3; i++)
   await input(
     `.partner-interests label:nth-child(${i + 1}) input`,
@@ -537,6 +553,12 @@ await textClick("Find my taste themes");
 await wait("Boolean(document.querySelector('.taste-theme-list'))");
 assert.ok(await evaluate("document.querySelector('.taste-theme-list').textContent.includes('Fixture cultural theme')"));
 
+assert.equal(await evaluate("document.querySelector('.theme-next-step button').disabled"),true);
+await click('.taste-theme-list button');
+await textClick("Find movies with this theme");
+for (let attempt=0; themeUpdates===0 && attempt<100; attempt++) await new Promise(resolve=>setTimeout(resolve,50));
+assert.equal(themeUpdates,1,"Returned theme produces a structured scoped refinement");
+await textClick("Taste insights");
 await textClick("Find an area in Toronto");
 await wait("Boolean(document.querySelector('.affinity-plot'))");
 assert.equal(await evaluate("document.querySelectorAll('.affinity-plot circle').length"),3);
@@ -547,7 +569,7 @@ for(const width of [320,390,1440]) {
   await call("Emulation.setDeviceMetricsOverride",{width,height:900,deviceScaleFactor:1,mobile:width<768});
   assert.equal(await evaluate("document.documentElement.scrollWidth>innerWidth"),false,`Analysis UI overflow at ${width}`);
 }
-await textClick("Preferences & Together");
+await textClick("Preferences");
 await evaluate("document.querySelector('.advanced-taste-filters').open=true");
 await input('.advanced-taste-filters input','Fixture unsaved area');
 await input('.intelligence-section select','Coffee','HTMLSelectElement');
@@ -675,7 +697,7 @@ await wait(
   "!document.querySelector('#conversation-input').disabled && ![...document.querySelectorAll('#taste-concierge button')].some(b=>b.textContent.includes('Retry last refinement'))",
 );
 await click('[aria-label="Close Taste Concierge"]');
-await textClick("Preferences & Together");
+await textClick("Preferences");
 assert.equal(await evaluate("Boolean(document.querySelector('.reusable-tastes'))"),false,'Saving tastes is offered only when starting another Passport');
 await click('[aria-label="Start a new Passport"]');
 await wait("Boolean(document.querySelector('.taste-profile-dialog[open]'))");

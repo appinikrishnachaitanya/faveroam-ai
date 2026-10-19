@@ -78,3 +78,11 @@ These are implementation choices, not a claim of formal accessibility certificat
 ## Evaluation priorities
 
 Rehearse the guest journey, contextual refinement, hard-constraint preservation, Together and outing retrieval on the submitted deployment. Assess relevance, diversity, user effort and the honesty of explanations. The optional model-only comparison is illustrative; any controlled comparison must provide the same tastes and effective constraints, including carried-over preferences.
+
+### Discover-first workspace
+
+Discover offers a visible conversation entry point and editable starter requests, alongside direct routes to preferences, areas and Together. Requests are prepared for review rather than submitted automatically. The floating concierge and manual refinement remain available.
+
+Preferences and Together are separate views of one retained stateful workspace. Switching views retains confirmed partner interests and shared results. Preferences changes return to Discover so the outcome is visible. Advanced location and listing filters remain available on demand.
+
+Taste themes are actionable: choose a returned theme and a supported category to search. The structured request merges the theme with existing tag filters, preserves other category preferences, and leaves unrelated categories unchanged. No results are invented when coverage is sparse. Area affinity still leads to nearby dining; aggregate demographics remain optional context. Historical-data UI remains removed.

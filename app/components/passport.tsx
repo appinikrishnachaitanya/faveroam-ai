@@ -19,6 +19,7 @@ export function Icon({ name, size = 18 }: { name: string; size?: number }) {
     Games: <><path d="M7 7h10c4 0 7 12 3 13-2 0-3-4-5-4H9c-2 0-3 4-5 4C0 19 3 7 7 7ZM6 10v5M4 12h4M16 11h.01M19 14h.01"/></>,
     People: <><circle cx="12" cy="7" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/></>,
     Destinations: <><path d="m3 5 6-2 6 2 6-2v16l-6 2-6-2-6 2ZM9 3v16M15 5v16"/></>,
+    sliders: <><path d="M3 6h7M14 6h7M3 12h3M10 12h11M3 18h11M18 18h3"/><circle cx="12" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="16" cy="18" r="2"/></>,
     star: (
       <>
         <path d="m12 2 2.3 6.5L21 11l-6.7 2.5L12 21l-2.3-7.5L3 11l6.7-2.5L12 2Z" />

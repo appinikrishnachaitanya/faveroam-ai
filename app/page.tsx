@@ -31,6 +31,7 @@ import {
   StepIndicator,
 } from "./components/onboarding";
 import ConciergeDrawer from "./components/concierge";
+import DiscoveryConcierge from "./components/discovery-concierge";
 import { suggestedMatches } from "../src/passport/matching";
 import AccountControl from "./components/account";
 import ReusableTastes from "./components/taste-profile";
@@ -85,7 +86,7 @@ export default function Home() {
   const [removed, setRemoved] = useState<number[]>([]);
   const [result, setResult] = useState<Passport>();
   const [workspaceView, setWorkspaceView] = useState<
-    "discover" | "plan" | "preferences" | "connections"
+    "discover" | "plan" | "preferences" | "together" | "connections"
   >("discover");
   const [accountSignedIn, setAccountSignedIn] = useState(false);
 
@@ -338,7 +339,7 @@ export default function Home() {
   function selectWorkspaceView(next: typeof workspaceView) {
     setWorkspaceView(next);
     requestAnimationFrame(() =>
-      document.getElementById(`view-${next}`)?.scrollIntoView({
+      document.getElementById(`view-${next === "together" ? "preferences" : next}`)?.scrollIntoView({
         behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
           ? "instant"
           : "smooth",
@@ -712,8 +713,9 @@ export default function Home() {
                   aria-pressed={workspaceView === "preferences"}
                   onClick={() => selectWorkspaceView("preferences")}
                 >
-                  Preferences &amp; Together
+                  Preferences
                 </button>
+                <button aria-pressed={workspaceView === "together"} onClick={() => selectWorkspaceView("together")}>Together</button>
                 <button
                   aria-pressed={workspaceView === "connections"}
                   onClick={() => selectWorkspaceView("connections")}
@@ -749,6 +751,7 @@ export default function Home() {
               className="workspace-view-anchor"
               hidden={workspaceView !== "discover"}
             >
+              {!showSaved && <DiscoveryConcierge busy={busy} onAsk={request=>{if(request)setComposer(request);setAssistantTab("ask");setAssistantOpen(true);}} onNavigate={selectWorkspaceView} />}
               {result.session && (
                 <FamiliarityControl
                   session={result.session}
@@ -832,14 +835,15 @@ export default function Home() {
             <div
               className="workspace-panel"
               id="view-preferences"
-              hidden={workspaceView !== "preferences"}
+              hidden={workspaceView !== "preferences" && workspaceView !== "together"}
             >
               <TasteIntelligence
                 key={`intelligence:${result.session?.id ?? result.city}`}
-                expanded={workspaceView === "preferences"}
+                view={workspaceView === "together" ? "together" : "preferences"}
+                onPreferences={()=>selectWorkspaceView("preferences")}
                 passport={result}
                 busy={busy}
-                onRefine={(input) => void refine(input)}
+                onRefine={(input) => {setWorkspaceView("discover");setShowSaved(false);void refine(input);}}
               />
 
             </div>
@@ -971,7 +975,7 @@ export default function Home() {
             {assistantTab === "ask" ? (
               <div id="ask-panel" role="tabpanel" aria-labelledby="ask-tab">
                 <p className="concierge-intro">
-                  Tell us what you’d like to change.
+                  Ask a follow-up, refine one category, or get help choosing your next stop.
                 </p>
                 {!conciergeAvailable && (
                   <p className="helper">

@@ -137,7 +137,7 @@ await call('Emulation.setDeviceMetricsOverride',{width:390,height:900,deviceScal
 assert.equal(await evaluate('document.documentElement.scrollWidth>innerWidth'),false);
 await shot('/tmp/tastepassport-judge-plan-mobile.png');
 if(conversation) {
- await clickText('Preferences & Together');
+ await clickText('Preferences');
  const previous=await evaluate('window.__judgeReplies.length');
  await input('[aria-label="Maximum price"]','4','HTMLSelectElement');
  await waitFor(`window.__judgeReplies.length===${previous+1} && !document.querySelector('[aria-label="Maximum price"]').disabled`);

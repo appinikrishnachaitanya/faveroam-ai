@@ -62,3 +62,25 @@ test("an ordinary budget update cannot change the discovery mode just because a 
  const reply=await runTurn(original,{message:"make those cheaper"},{...readonly,provider:{interpret:async()=>({...interpret("make dining cheaper"),familiarity:"explore"}),choose:async()=>[]},discover:async(_s,section)=>[{id:"new",name:"Eligible",section,types:["urn:entity:place"],detail:""}]});
  assert.deepEqual(reply.changed,["Eat"]);assert.equal(reply.state.categoryModes!.Eat,"familiar");
 });
+
+test("a returned-theme action preserves other categories and existing category preferences without a model", async () => {
+  const original = fixture();
+  original.queryPreferences!.Eat!.includeTags = ["urn:tag:cuisine:restaurant:indian"];
+  const calls: string[] = [];
+  const reply = await runTurn(original, {
+    discovery: { section: "Eat", preferences: { includeTags: ["urn:tag:cuisine:restaurant:indian", "urn:tag:genre:place:casual_dining"] } },
+  }, {
+    ...readonly,
+    discover: async (state, section) => {
+      calls.push(section);
+      assert.equal(state.queryPreferences!.Eat!.priceMax, 2);
+      assert.equal(state.queryPreferences!.Eat!.businessRatingMin, 4.5);
+      assert.deepEqual(state.queryPreferences!.Eat!.includeTags, ["urn:tag:cuisine:restaurant:indian", "urn:tag:genre:place:casual_dining"]);
+      return state.cards.filter(card => card.section === section);
+    },
+  });
+  assert.deepEqual(calls, ["Eat"]);
+  assert.deepEqual(reply.changed, ["Eat"]);
+  assert.deepEqual(reply.state.cards.filter(card => card.section === "Music"), original.cards.filter(card => card.section === "Music"));
+  assert.deepEqual(original.queryPreferences!.Eat!.includeTags, ["urn:tag:cuisine:restaurant:indian"]);
+});

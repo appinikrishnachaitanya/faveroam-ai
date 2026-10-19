@@ -44,12 +44,14 @@ export default function TasteIntelligence({
   passport,
   busy,
   onRefine,
-  expanded,
+  view = "preferences",
+  onPreferences,
 }: {
   passport: Passport;
   busy: boolean;
   onRefine: (input: AgentInput) => void;
-  expanded?: boolean;
+  view?: "preferences" | "together";
+  onPreferences?: () => void;
 }) {
   const [section, setSection] = useState<Section>(()=>sectionOrder.find(s=>passport.cards.some(c=>c.section===s)) ?? "Eat");
   const prefs = passport.session?.queryPreferences?.[section];
@@ -141,14 +143,9 @@ export default function TasteIntelligence({
     }
   }
   return (
-    <details className="secondary-reveal taste-intelligence" open={expanded}>
-      <summary>Make it more you · discover together</summary>
+    <section className="taste-intelligence" aria-label={view === "together" ? "Together" : "Your discovery preferences"}>
       <div className="intelligence-content">
-        <h2>Find your next favorite.</h2>
-        <p>
-          Find what fits your budget, explore a different mood, or meet someone
-          else halfway.
-        </p>
+        <div className="intelligence-intro"><span className="micro-label">{view === "together" ? "TWO TASTES. ONE SHARED PLAN." : "YOUR DISCOVERIES. YOUR CHOICE."}</span><h2>{view === "together" ? "Find something you can both enjoy." : "Make these discoveries fit your day."}</h2><p>{view === "together" ? "Bring their interests. Find common ground without changing your individual Passport." : "Choose a category, adjust what matters, and keep your other categories unchanged."}</p></div>
         <label className="intelligence-section">
           Category
           <select
@@ -176,6 +173,7 @@ export default function TasteIntelligence({
           </select>
         </label>
         <form
+          hidden={view !== "preferences"}
           className="intelligence-preferences"
           onSubmit={(e) => {
             e.preventDefault();
@@ -340,9 +338,9 @@ export default function TasteIntelligence({
             {busy ? "Finding your next fit…" : "Update suggestions"}
           </button>
         </form>
-        <details className="together-reveal">
-          <summary>Together · find common ground</summary>
-          <div className="together-heading"><div><span className="micro-label">TWO TASTES. A SHARED DISCOVERY.</span><h3>What could you both enjoy?</h3></div><img src="/illustrations/together-passports.svg" width="440" height="260" alt="" aria-hidden="true" loading="lazy" /></div>
+        <section className="together-reveal" hidden={view !== "together"} aria-label="Find common ground">
+          <div className="together-preference-summary"><div><strong>{section} in {passport.city}</strong><p className="helper">Your current preferences for this category carry into the shared search{prefs?.priceMax && prefs.priceMax < 4 ? ` · ${priceLabel(prefs.priceMax)} or less` : ""}{prefs?.businessRatingMin ? ` · rating ${prefs.businessRatingMin}+` : ""}.</p></div><button type="button" className="quiet-button" onClick={onPreferences}>Review preferences</button></div>
+          <div className="together-heading"><div><span className="micro-label">TWO TASTES. A SHARED DISCOVERY.</span><h3>1. Add what they love</h3></div><img src="/illustrations/together-passports.svg" width="440" height="260" alt="" aria-hidden="true" loading="lazy" /></div>
           <p>
             Add three named artists, films, books or brands they enjoy, then
             confirm the matches. Cuisine and dietary concepts are supported in
@@ -384,7 +382,7 @@ export default function TasteIntelligence({
           </form>
           {resolution && !together && (
             <div className="partner-matches">
-              <p className="helper">Confirm three distinct interests. Exact matches are suggested; change any match below.</p>
+              <h3>2. Confirm their interests</h3><p className="helper">Confirm three distinct interests. Exact matches are suggested; change any match below.</p>
               {resolution.items.map((item, i) => (
                 <section key={i}>
                   <h4>{item.query}</h4>
@@ -456,7 +454,7 @@ export default function TasteIntelligence({
             relationship compatibility. This comparison is temporary and is not
             saved with your account.
           </p>
-        </details>
+        </section>
         {error && <p role="alert">{error}</p>}
         {process.env.NODE_ENV === "development" && (
           <details className="query-debug">
@@ -483,6 +481,6 @@ export default function TasteIntelligence({
           </details>
         )}
       </div>
-    </details>
+    </section>
   );
 }

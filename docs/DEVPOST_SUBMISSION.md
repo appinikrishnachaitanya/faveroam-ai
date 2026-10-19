@@ -99,7 +99,7 @@ We also learned that trust comes from precise explanations: what changed, which 
 - Two-person discovery informed by Qloo’s returned common-ground tags.
 - Real MCP tool integration alongside validated direct operations.
 - Scoped replanning, grounded decision summaries and an editable outing planner.
-- **229 automated tests**, a passing production build and production smoke checks in the latest development validation.
+- **230 automated tests**, a passing production build and production smoke checks in the latest development validation.
 
 Automated and local live checks do not replace a fresh rehearsal of the deployed application. Venue hours, menu details, travel times and availability still require checking; the planner does not make reservations.
 

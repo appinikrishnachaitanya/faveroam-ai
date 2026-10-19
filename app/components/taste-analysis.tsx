@@ -3,6 +3,8 @@ import { Icon } from "./passport";
 import { displayTags } from "../../src/qloo/explanation";
 import { useRef, useState } from 'react';
 import type { Passport } from '../../src/workspace/state';
+import { sectionOrder } from '../../src/workspace/state';
+import type { Section } from '../../src/passport/model';
 import type { AgentInput } from '../../src/agent/types';
 import type { AnalysisKind, AnalysisResult, HeatPoint } from '../../src/qloo/analysis';
 
@@ -10,6 +12,9 @@ export default function TasteAnalysis({passport,busy,onRefine}:{passport:Passpor
   const [results,setResults]=useState<Partial<Record<AnalysisKind,AnalysisResult>>>({});
   const [loading,setLoading]=useState<AnalysisKind>();
   const [error,setError]=useState('');
+  const [themeId,setThemeId]=useState('');
+  const categories=sectionOrder.filter(section=>!passport.session?.hiddenCategories.includes(section));
+  const [themeSection,setThemeSection]=useState<Section>(()=>categories.find(section=>section==='Movies') ?? categories[0] ?? 'Eat');
   const active=useRef(false);
   async function load(kind:AnalysisKind) {
     if(!passport.agent || active.current || busy)return;
@@ -20,12 +25,18 @@ export default function TasteAnalysis({passport,busy,onRefine}:{passport:Passpor
       const data=await response.json();
       if(!response.ok)throw Error();
       setResults(current=>({...current,[kind]:data.analysis}));
+      if(kind==='taste')setThemeId('');
     }catch {setError('This analysis could not finish. Your Passport is unchanged; please retry.');}
     finally {active.current=false;setLoading(undefined);}
   }
   const taste=results.taste?.kind==='taste'?results.taste:undefined;
   const heat=results.heatmap?.kind==='heatmap'?results.heatmap:undefined;
   const demo=results.demographics?.kind==='demographics'?results.demographics:undefined;
+  function exploreTheme() {
+    if (!themeId || busy) return;
+    const existing = passport.session?.queryPreferences?.[themeSection]?.includeTags ?? [];
+    onRefine({discovery:{section:themeSection,preferences:{includeTags:[...new Set([...existing,themeId])]}}});
+  }
   function nearby(point:HeatPoint) {
     onRefine({discovery:{section:'Eat',preferences:{locationPoint:`POINT(${point.longitude} ${point.latitude})`,radius:1500}}});
   }
@@ -38,7 +49,26 @@ export default function TasteAnalysis({passport,busy,onRefine}:{passport:Passpor
     {error&&<p role="alert">{error}</p>}
     {loading&&<p role="status">Looking for patterns in your confirmed tastes…</p>}
     {taste&&<div className="analysis-result"><span className="micro-label">THE THREADS BETWEEN YOUR FAVORITES</span><h3>Your taste themes</h3><p>Use these connections as inspiration for what to try next. They describe associations between your interests, rather than your personality.</p>
-      {displayTags(taste.tags).length?<ul className="taste-theme-list">{displayTags(taste.tags).map(tag=><li key={tag.id}>{tag.name}</li>)}</ul>:<p>No taste themes were returned for this combination.</p>}
+      {displayTags(taste.tags).length ? <>
+        <div className="taste-theme-list" role="group" aria-label="Choose a taste theme">
+          {displayTags(taste.tags).map(tag => <button key={tag.id} type="button"
+            aria-pressed={themeId === tag.id} disabled={busy} onClick={() => setThemeId(tag.id)}>
+            {tag.name}
+          </button>)}
+        </div>
+        <div className="theme-next-step">
+          <label>Explore this theme in
+            <select value={themeSection} disabled={busy} onChange={event => setThemeSection(event.target.value as Section)}>
+              {categories.map(section => <option key={section}>{section}</option>)}
+            </select>
+          </label>
+          <button disabled={busy || !themeId || Boolean(loading)} onClick={exploreTheme}>
+            Find {themeSection.toLowerCase()} with this theme <Icon name="arrow" size={16}/>
+          </button>
+        </div>
+        <p className="helper">Choose a returned theme and a category. We’ll search using that theme while keeping this category’s current preferences. A theme may have no local matches.</p>
+      </> : <p>No taste themes were returned for this combination. You can still browse your discoveries or explore an area.</p>}
+
     </div>}
     {heat&&<div className="analysis-result"><span className="micro-label">PICK YOUR NEXT STARTING POINT</span><h3>Areas to explore in {passport.city}</h3><p>These areas have stronger audience affinity for your interests. Open one on the map, then find nearby dining with your current preferences.</p>
       {heat.points.length?<><AffinityPlot points={heat.points}/><p className="helper">Darker dots show stronger cultural audience affinity in this result. This is an affinity plot, not a street map or a view of live crowds.</p>

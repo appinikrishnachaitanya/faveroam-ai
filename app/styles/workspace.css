@@ -379,3 +379,22 @@
 }
 
 @media (max-width: 640px) { .shortlist-label { min-height: 0; } }
+
+/* Discover first: conversation and direct controls share a clear starting point. */
+.discovery-concierge { display:grid; grid-template-columns:minmax(0,1.3fr) minmax(0,1fr); gap:28px; padding:clamp(22px,3vw,36px); margin:24px 0; border:1px solid #b8c7ae; border-radius:24px; background:linear-gradient(120deg,#fffdf2,#edf1e1); box-shadow:0 8px 28px #1d44300a; }
+.discovery-concierge-copy, .discovery-next-steps { min-width:0; }
+.discovery-concierge h2 { margin:12px 0; font-size:clamp(23px,2.6vw,32px); line-height:1.25; }
+.discovery-concierge p { font-size:15px; line-height:1.7; color:#48614d; max-width:52ch; margin-bottom:18px; }
+.discovery-concierge .primary-button { display:inline-flex; align-items:center; gap:14px; min-height:48px; }
+.discovery-prompts { display:flex; flex-wrap:wrap; gap:8px; margin-top:18px; }
+.discovery-prompts button { display:flex; align-items:center; gap:10px; border:1px solid #c5d0b9; border-radius:12px; background:#fffef6; color:#294b34; text-align:left; font:inherit; font-size:13px; line-height:1.6; padding:10px 12px; min-height:44px; }
+.discovery-prompts svg, .discovery-next-steps svg { flex-shrink:0; }
+.discovery-next-steps { display:flex; flex-direction:column; gap:10px; }
+.discovery-next-steps > .micro-label { margin-bottom:2px; }
+.discovery-next-steps button { display:flex; align-items:center; gap:14px; width:100%; text-align:left; padding:16px; min-height:76px; border:1px solid #ccd5c1; border-radius:14px; background:#fffef6; color:#294b34; }
+.discovery-next-steps button > span { flex:1; min-width:0; }
+.discovery-next-steps strong { display:block; font-size:14px; line-height:1.5; }
+.discovery-next-steps small { display:block; margin-top:4px; font-size:12px; line-height:1.6; color:#526850; }
+.discovery-prompts button:hover:not(:disabled), .discovery-next-steps button:hover:not(:disabled) { border-color:#6e8a60; background:#eaf0de; }
+.discovery-concierge button:focus-visible { outline:3px solid #8b6a26; outline-offset:3px; }
+@media(max-width:760px) { .discovery-concierge { grid-template-columns:minmax(0,1fr); gap:24px; } }
