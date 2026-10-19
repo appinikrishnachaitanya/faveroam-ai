@@ -59,6 +59,8 @@ async function input(selector, value, type = "HTMLInputElement") {
   await new Promise((r) => setTimeout(r, 100));
 }
 async function clickText(text) {
+  await evaluate(`(()=>{const nav=document.querySelector('.passport-navigation');if(nav && !nav.getClientRects().length && [...nav.querySelectorAll('button')].some(button=>button.textContent.includes(${JSON.stringify(text)})))document.querySelector('.passport-menu-toggle').click();})()`);
+
   await evaluate(
     `[...document.querySelectorAll('button')].find(b=>b.textContent.includes(${JSON.stringify(text)})).click()`,
   );

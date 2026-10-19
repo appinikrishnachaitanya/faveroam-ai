@@ -42,6 +42,8 @@ async function click(selector) {
   await evaluate(`document.querySelector(${JSON.stringify(selector)}).click()`);
 }
 async function textClick(text) {
+  await evaluate(`(()=>{const nav=document.querySelector('.passport-navigation');if(nav && !nav.getClientRects().length && [...nav.querySelectorAll('button')].some(button=>button.textContent.includes(${JSON.stringify(text)})))document.querySelector('.passport-menu-toggle').click();})()`);
+
   await wait(
     `[...document.querySelectorAll('button')].some(b=>!b.disabled && b.textContent.includes(${JSON.stringify(text)}))`,
   );
@@ -470,7 +472,7 @@ await wait(
 await wait(
   "document.querySelector('.plan-save-actions .primary-button').textContent.includes('Save to')",
 );
-await evaluate("document.querySelector('.discovery-concierge').scrollIntoView({block:'start',behavior:'instant'})");
+await evaluate("document.querySelector('.passport-workspace').scrollIntoView({block:'start',behavior:'instant'})");
 const discoveryShot=await call("Page.captureScreenshot",{format:"png"});
 await fs.writeFile("/tmp/tastepassport-discover-layout.png",Buffer.from(discoveryShot.result.data,"base64"));
 await click('.discovery-prompts button');
@@ -489,6 +491,30 @@ for (const width of [320, 390, 640, 768, 1024, 1440]) {
     false,
     `Signed-in layout overflow at ${width}`,
   );
+  assert.equal(await evaluate("getComputedStyle(document.querySelector('.passport-sidebar')).position"),"static","Passport navigation must not stick to the viewport");
+  if(width<1100) {
+    assert.equal(await evaluate("document.querySelector('.passport-menu-toggle').getAttribute('aria-expanded')"),"false");
+    await click('.passport-menu-toggle');
+    assert.equal(await evaluate("document.querySelector('.passport-navigation').getClientRects().length>0"),true);
+    assert.equal(await evaluate("document.documentElement.scrollWidth>innerWidth"),false,`Expanded menu overflow at ${width}`);
+    if(width===390) {
+      await evaluate("document.querySelector('.passport-sidebar').scrollIntoView({block:'start',behavior:'instant'})");
+      const menuShot=await call("Page.captureScreenshot",{format:"png"});
+      await fs.writeFile("/tmp/tastepassport-mobile-navigation.png",Buffer.from(menuShot.result.data,"base64"));
+      await evaluate("document.querySelector('.passport-navigation button').focus()");
+      await call("Input.dispatchKeyEvent",{type:"keyDown",key:"Escape",code:"Escape"});
+      await wait("document.querySelector('.passport-menu-toggle').getAttribute('aria-expanded')==='false'");
+      assert.equal(await evaluate("document.activeElement===document.querySelector('.passport-menu-toggle')"),true,"Escape restores menu-toggle focus");
+      await click('.passport-menu-toggle');
+
+    }
+    await click('.passport-navigation button');
+    await wait("document.querySelector('.passport-menu-toggle').getAttribute('aria-expanded')==='false'");
+    assert.equal(await evaluate("document.querySelector('.passport-navigation button[aria-current=page]').textContent.trim()"),"Discover");
+  } else {
+    assert.equal(await evaluate("document.querySelector('.passport-navigation').getClientRects().length>0"),true,"Desktop sections stay visible");
+  }
+
   assert.ok(
     await evaluate(
       "(()=>{const h=document.querySelector('.workspace-topbar').getBoundingClientRect(), n=document.querySelector('.header-controls').getBoundingClientRect(), b=document.querySelector('.brand').getBoundingClientRect();return n.right<=h.right+1 && (b.right<=n.left+1 || b.bottom<=n.top+1)})()",

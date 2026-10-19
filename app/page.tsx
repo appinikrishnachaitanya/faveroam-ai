@@ -32,6 +32,7 @@ import {
 } from "./components/onboarding";
 import ConciergeDrawer from "./components/concierge";
 import DiscoveryConcierge from "./components/discovery-concierge";
+import PassportNavigation from "./components/passport-navigation";
 import { suggestedMatches } from "../src/passport/matching";
 import AccountControl from "./components/account";
 import ReusableTastes from "./components/taste-profile";
@@ -679,50 +680,15 @@ export default function Home() {
                 selectWorkspaceView("connections");
               }}
             />
-            <div className="passport-toolbar">
-              <div
-                className="discovery-view-tabs"
-                role="group"
-                aria-label="Passport view"
-              >
-                <button
-                  aria-pressed={workspaceView === "discover" && !showSaved}
-                  onClick={() => {
-                    selectWorkspaceView("discover");
-                    setShowSaved(false);
-                  }}
-                >
-                  Discover
-                </button>
-                <button
-                  aria-pressed={workspaceView === "discover" && showSaved}
-                  onClick={() => {
-                    selectWorkspaceView("discover");
-                    setShowSaved(true);
-                  }}
-                >
-                  My Vibe <span>{result.session?.savedCards.length ?? 0}</span>
-                </button>
-                <button
-                  aria-pressed={workspaceView === "plan"}
-                  onClick={() => selectWorkspaceView("plan")}
-                >
-                  Plan a day
-                </button>
-                <button
-                  aria-pressed={workspaceView === "preferences"}
-                  onClick={() => selectWorkspaceView("preferences")}
-                >
-                  Preferences
-                </button>
-                <button aria-pressed={workspaceView === "together"} onClick={() => selectWorkspaceView("together")}>Together</button>
-                <button
-                  aria-pressed={workspaceView === "connections"}
-                  onClick={() => selectWorkspaceView("connections")}
-                >
-                  Taste insights
-                </button>
-              </div>
+            <div className="passport-workspace">
+              <PassportNavigation active={workspaceView === "discover" && showSaved ? "saved" : workspaceView}
+                savedCount={result.session?.savedCards.length ?? 0}
+                onNavigate={destination=>{
+                  setShowSaved(destination === "saved");
+                  selectWorkspaceView(destination === "saved" ? "discover" : destination);
+                  requestAnimationFrame(()=>document.getElementById("passport-workspace-content")?.focus({preventScroll:true}));
+                }}/>
+              <div id="passport-workspace-content" className="passport-workspace-content" tabIndex={-1}>
               <button
                 className="assistant-launch"
                 onClick={() => setAssistantOpen(true)}
@@ -732,7 +698,6 @@ export default function Home() {
                 <Icon name="star" size={18} />
                 Ask TastePassport
               </button>
-            </div>
             {adaptation && (
               <div className="adaptation-notice" role="status">
                 <Icon name="check" size={16} />
@@ -905,6 +870,8 @@ export default function Home() {
                   />
                 </details>
               )}
+              </div>
+            </div>
           </section>
         )}
       </div>

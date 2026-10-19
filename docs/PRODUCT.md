@@ -86,3 +86,5 @@ Discover offers a visible conversation entry point and editable starter requests
 Preferences and Together are separate views of one retained stateful workspace. Switching views retains confirmed partner interests and shared results. Preferences changes return to Discover so the outcome is visible. Advanced location and listing filters remain available on demand.
 
 Taste themes are actionable: choose a returned theme and a supported category to search. The structured request merges the theme with existing tag filters, preserves other category preferences, and leaves unrelated categories unchanged. No results are invented when coverage is sparse. Area affinity still leads to nearby dining; aggregate demographics remain optional context. Historical-data UI remains removed.
+
+Passport sections use a visible, non-sticky desktop sidebar and a labelled collapsible menu below 1100 px. All six destinations and the saved-discovery count remain available. Mobile selection closes the menu, identifies the current section, and moves focus to the workspace; Escape closes the expanded menu and restores its toggle focus.

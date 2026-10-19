@@ -398,3 +398,28 @@
 .discovery-prompts button:hover:not(:disabled), .discovery-next-steps button:hover:not(:disabled) { border-color:#6e8a60; background:#eaf0de; }
 .discovery-concierge button:focus-visible { outline:3px solid #8b6a26; outline-offset:3px; }
 @media(max-width:760px) { .discovery-concierge { grid-template-columns:minmax(0,1fr); gap:24px; } }
+
+/* Visible desktop navigation; a labelled disclosure preserves space on mobile. */
+.passport-workspace { display:grid; grid-template-columns:190px minmax(0,1fr); align-items:start; gap:24px; margin-top:28px; }
+.passport-workspace-content { min-width:0; }
+.passport-workspace-content:focus { outline:none; }
+.passport-sidebar { position:static; min-width:0; padding:20px 12px; border:1px solid #c6d0b8; border-radius:20px; background:#f5f3e3; }
+.passport-sidebar-title { display:block; margin:0 12px 16px; color:#52634e; }
+.passport-navigation { display:flex; flex-direction:column; gap:6px; }
+.passport-navigation button { display:flex; align-items:center; gap:12px; min-height:48px; width:100%; padding:12px; border:1px solid transparent; border-radius:12px; background:transparent; color:#304c36; font:inherit; font-size:14px; font-weight:600; text-align:left; }
+.passport-navigation button > span:first-of-type { flex:1; min-width:0; }
+.passport-navigation button:hover { background:#e5ebd8; border-color:#bbc9ab; }
+.passport-navigation button[aria-current="page"] { background:#254e39; color:#fff9df; border-color:#254e39; }
+.passport-saved-count { display:inline-grid; place-items:center; min-width:24px; padding:2px 6px; border-radius:8px; background:#dfe8d2; color:#294631; font-size:12px; }
+.passport-navigation button[aria-current="page"] .passport-saved-count { background:#fff9df; }
+.passport-mobile-heading { display:none; }
+@media(max-width:1099px) {
+  .passport-workspace { display:block; margin-top:20px; }
+  .passport-sidebar { padding:12px; margin-bottom:24px; }
+  .passport-sidebar-title { display:none; }
+  .passport-mobile-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  .passport-menu-toggle { display:inline-flex; align-items:center; gap:10px; min-height:48px; border:0; border-radius:10px; padding:10px 12px; background:#254e39; color:#fff9df; font:inherit; font-weight:600; font-size:14px; }
+  .passport-current-view { font-size:13px; color:#425b43; padding-right:8px; }
+  .passport-navigation { display:none; margin-top:12px; border-top:1px solid #c6d0b8; padding-top:12px; }
+  .passport-sidebar[data-menu-open="true"] .passport-navigation { display:flex; }
+}

@@ -234,7 +234,7 @@ for (const width of [320, 390, 640, 768, 1024, 1440]) {
   await verifyHeaderLayout();
   await verifyAccountCentering();
   assert.ok(await evaluate(`(()=>{
-    const toolbar=document.querySelector('.passport-toolbar').getBoundingClientRect();
+
     const button=document.querySelector('.assistant-launch').getBoundingClientRect();
     return getComputedStyle(document.querySelector('.assistant-launch')).position==='fixed' && button.left>=0 && button.right<=innerWidth && button.top>=0 && button.bottom<=innerHeight && button.height>=44;
   })()`), "Ask action must stay inside the viewport");
@@ -288,7 +288,7 @@ await evaluate(
 );
 await settled();
 await evaluate(
-  "document.querySelector('.discovery-view-tabs button:nth-child(2)').click()",
+  "document.querySelector('.passport-navigation button:nth-child(2)').click()",
 );
 assert.equal(
   await evaluate(
@@ -297,7 +297,7 @@ assert.equal(
   1,
 );
 await evaluate(
-  "document.querySelector('.discovery-view-tabs button:first-child').click()",
+  "document.querySelector('.passport-navigation button:first-child').click()",
 );
 await clickText("Sign in");
 await waitFor("Boolean(document.querySelector('.account-dialog[open]'))");
@@ -446,7 +446,7 @@ if (comparisonAvailable) {
   );
 }
 await evaluate(
-  "document.querySelector('.discovery-view-tabs button:nth-child(2)').click()",
+  "document.querySelector('.passport-navigation button:nth-child(2)').click()",
 );
 assert.equal(
   await evaluate(
@@ -455,7 +455,7 @@ assert.equal(
   1,
 );
 await evaluate(
-  "document.querySelector('.discovery-view-tabs button:first-child').click()",
+  "document.querySelector('.passport-navigation button:first-child').click()",
 );
 await clickText("Ask TastePassport");
 const beforeReset = await evaluate(
