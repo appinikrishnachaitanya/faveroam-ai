@@ -356,7 +356,7 @@ test("Not My Vibe preserves explicitly requested cuisine even when the category 
   s.categoryModes.Eat = "explore";
   s.categoryConcepts.Eat = ["Indian cuisine"];
   const d = dependencies();
-  d.discover = async (current, section, _constraints, excluded) => {
+  d.discover = async (current, _section, _constraints, excluded) => {
     assert.deepEqual(current.intent?.concepts, ["Indian cuisine"]);
     assert.ok(excluded.includes("dining"));
     return [evidenceCard()];

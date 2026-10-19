@@ -1,3 +1,5 @@
+> Historical development record. This snapshot may describe superseded behavior. Use the [current documentation index](../README.md) for the submission release.
+
 # Qloo API inspection and experiment design
 
 Inspected official [qloo/docs-public](https://github.com/qloo/docs-public) at commit `d4a0eb978518f7fb404993d1509d11b21239ada6` on 2026-10-13 before implementing calls.

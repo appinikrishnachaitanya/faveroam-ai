@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { validDestination } from "../src/workspace/location";
 import { sendAgentTurn } from "../src/agent/browser";
 import type { Intent } from "../src/agent/types";
-import type { AgentInput, AgentEvent, Constraint } from "../src/agent/types";
+import type { AgentInput, Constraint } from "../src/agent/types";
 import { FamiliarityControl, ModelComparison } from "./components/cultural";
 import GuidedRefinement, { RefinementRecovery } from "./components/guided";
 import FeedbackDialog from "./components/feedback";
@@ -18,7 +18,6 @@ import {
 } from "../src/workspace/state";
 import type { Passport, Phase, Resolution } from "../src/workspace/state";
 import {
-  ActivityFeed,
   Icon,
   PassportSections,
   TasteDNA,
@@ -95,7 +94,6 @@ export default function Home() {
   const [constraints, setConstraints] = useState<Constraint[]>([]);
   const [conceptSeeds, setConceptSeeds] = useState<string[]>([]);
   const [providerHealth, setProviderHealth] = useState("unconfigured");
-  const [agentEvents, setAgentEvents] = useState<AgentEvent[]>([]);
   const [updating, setUpdating] = useState<Section[]>([]);
   const [updates, setUpdates] = useState<Partial<Record<Section, number>>>({});
   const [rejectionId, setRejectionId] = useState<string>();
@@ -144,14 +142,6 @@ export default function Home() {
     : committedMessages;
   const conciergeAvailable =
     providerHealth === "healthy" || providerHealth === "configured";
-  const operationLabel =
-    phase === "interpreting"
-      ? "Understanding your request…"
-      : phase === "resolving"
-        ? "Matching the artists, films, food and interests you chose…"
-        : phase === "exploring"
-          ? `Exploring ${city}…`
-          : (agentEvents.at(-1)?.label ?? "Planning your refinement…");
   const activeItems =
     resolution?.items
       .map((item, index) => ({ item, index }))
@@ -182,7 +172,6 @@ export default function Home() {
     setResult(undefined);
     setPhase(nextPhase);
     setError("");
-    setAgentEvents([]);
     setUpdating([]);
   }
   async function submitConversation(event: React.FormEvent) {
@@ -245,7 +234,6 @@ export default function Home() {
     setRetryInput(input);
     setError("");
     setPhase("refining");
-    setAgentEvents([]);
     setUpdating(
       input.feedback
         ? [
@@ -260,7 +248,6 @@ export default function Home() {
         result.agent,
         input,
         (event) => {
-          setAgentEvents((events) => [...events, event]);
           const match = event.label.match(
             /(?:Updating|Ranking) your (Eat|Coffee|Music|Culture|Lifestyle) passport/,
           );
@@ -314,7 +301,6 @@ export default function Home() {
         setConceptSeeds([]);
         setConceptDialog(false);
         setRejectionId(undefined);
-        setAgentEvents([]);
         setUpdates({});
       }
       setPhase("ready");
@@ -358,10 +344,6 @@ export default function Home() {
         block: "start",
       }),
     );
-  }
-  function updateDraft(index: number, value: string) {
-    setDraft((d) => d.map((s, i) => (i === index ? value : s)));
-    resetMatches();
   }
   async function resolve() {
     const queries = draft.map((s) => s.trim()).filter(Boolean);
@@ -452,7 +434,6 @@ export default function Home() {
     if (!resolution || !complete || busy || !city) return;
     setError("");
     setResult(undefined);
-    setAgentEvents([]);
     setUpdating([]);
     setPhase("exploring");
     say(

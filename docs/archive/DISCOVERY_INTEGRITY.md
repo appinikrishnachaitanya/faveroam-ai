@@ -1,3 +1,5 @@
+> Historical development record. This snapshot may describe superseded behavior. Use the [current documentation index](../README.md) for the submission release.
+
 # Discovery integrity — 17 October 2026
 
 TastePassport helps newcomers find their first places of belonging. This pass preserves the current onboarding and visual identity, and corrects venue eligibility, sparse chapters and conversational refinement.

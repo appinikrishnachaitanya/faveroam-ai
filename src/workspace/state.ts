@@ -93,58 +93,6 @@ export function confirmed(
     item.candidates.filter((c) => c.id === chosen[i]),
   );
 }
-export interface Activity {
-  label: string;
-  state: "complete" | "active" | "waiting" | "attention";
-}
-export function activities(
-  phase: Phase,
-  city: string,
-  resolution?: Resolution,
-  signals: Candidate[] = [],
-  result?: Passport,
-): Activity[] {
-  const rows: Activity[] = [];
-  if (phase === "interpreting")
-    return [
-      { label: "Understanding your request", state: "active" },
-      { label: "Resolve cultural signals", state: "waiting" },
-    ];
-  if (phase === "idle")
-    return [{ label: "Waiting for your world", state: "waiting" }];
-  rows.push({ label: "Taste draft prepared", state: "complete" });
-  rows.push({
-    label: "Resolve cultural signals",
-    state:
-      phase === "resolving"
-        ? "active"
-        : resolution
-          ? "complete"
-          : phase === "error"
-            ? "attention"
-            : "waiting",
-  });
-  for (const signal of signals)
-    rows.push({ label: `Confirmed ${signal.name}`, state: "complete" });
-  rows.push({
-    label: `Explore ${city} using your tastes and activities`,
-    state:
-      phase === "exploring"
-        ? "active"
-        : result
-          ? result.notices.length
-            ? "attention"
-            : "complete"
-          : "waiting",
-  });
-  rows.push({
-    label: result?.notices.length
-      ? "Passport ready · some queries need attention"
-      : "Build cultural passport",
-    state: result ? "complete" : "waiting",
-  });
-  return rows;
-}
 export function typeLabel(candidate: Candidate) {
   return candidate.types
     .map((t) =>

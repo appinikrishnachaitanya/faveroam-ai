@@ -2,106 +2,98 @@
 
 **Move anywhere. Keep your vibe.**
 
-TastePassport translates confirmed food, music, film and cultural interests into Qloo-backed discoveries in an unfamiliar city. Guided controls and the conversational Taste Concierge share one structured session. The Bengaluru → Toronto persona is editable demo content; only explicitly confirmed Qloo matches become taste signals.
+A cultural discovery agent for people settling into a new city. Bring the artists, films and food you already love; discover real Qloo recommendations, refine them through conversation, find common ground with another person and build an outing.
 
-The six core capabilities are:
+[Try TastePassport](https://tastepassport-ai-production.up.railway.app/) · [Demo script](docs/DEMO_SCRIPT.md) · [Devpost story](docs/DEVPOST_SUBMISSION.md) · [Architecture](docs/AGENT_ARCHITECTURE.md) · [Release checks](docs/RELEASE_CHECKLIST.md)
 
-- **Confirmed interests:** inspect and remove confirmed entities and tags, without invented personality scores.
-- **Why these suggestions?** trace actual query/result relationships from your tastes to destination discoveries.
-- **Feels Like Home ↔ Help Me Explore:** Familiar, Balanced and Explore execute different retrieval strategies.
-- **Recommendation source details:** inspect returned metadata and the query receipt behind each discovery.
-- **Not My Vibe:** reject an entity and replan its category while preserving the remaining Passport.
-- **Taste Concierge:** refine preferences, switch categories and update the same state as guided controls.
+## The problem
 
-## Reproducible setup
+A new address does not automatically create a sense of belonging. Generic city guides start with popular places. Newcomers need a useful connection between what they already love and what an unfamiliar city offers—and a way to refine those choices without repeatedly explaining themselves.
 
-For the selected hackathon host, see [Railway deployment and GitHub CI](docs/RAILWAY_DEPLOYMENT.md). The repository includes `railway.toml`, one-service startup/health configuration and a quota-free production smoke check; hosting has not been provisioned automatically. [Render Free](docs/HACKATHON_DEPLOYMENT.md) remains an alternative.
+## The solution
 
-Requires Node.js 24+ and npm. Validated with Node 24.19.0 / npm 11.9.0.
+TastePassport combines **Gemini conversation**, **Qloo cultural intelligence** and **stateful application orchestration**:
+
+- Confirm actual cultural entities and concepts before using them as taste signals.
+- Discover places and content across selected supported categories.
+- Refine cuisine, budget, rating or atmosphere while preserving other preferences.
+- Follow up naturally: “Raise that minimum” or “Make those cheaper.”
+- Inspect returned evidence and a concrete summary of the agent’s changes.
+- Use **Together** to compare two confirmed profiles and discover shared cultural ground.
+- Build a flexible outing with actual venue choices; keep dinner while finding a cinema.
+- Reuse named taste profiles across cities; optional accounts save Passports and dated plans.
+
+Discovery works as a guest. Account functionality requires Supabase configuration.
+
+## Why Qloo matters
+
+Gemini interprets requests and selects supported functions/tools. **Qloo supplies the returned cultural entities, associations and recommendations.** The application validates them, retains context and applies changes to the requested sections.
+
+Entity/tag lookup, cross-domain Insights and two-profile Compare are central to the product. The official Qloo harness/MCP supports dynamic tag lookup and shortlist ranking; known operations can use validated direct API or exec paths. This is a **single agent with bounded orchestration**, not a claimed swarm or unrestricted autonomous loop.
+
+An audience-taste association is not proof of shared film genre, guaranteed enjoyment or a clinically safe diet. [Capabilities and limits](docs/QLOO_INTELLIGENCE.md) explain the distinction.
+
+## Run locally
+
+Requires **Node.js 24+** and npm. Use this checkout; no additional worktree is required.
 
 ```sh
 npm ci
+```
+
+Copy `.env.example` to ignored `.env.local` for local development and enter credentials securely:
+
+```text
+QLOO_API_KEY=<server-only secret>
+QLOO_API_BASE_URL=https://hackathon.api.qloo.com
+GEMINI_API_KEY=<server-only secret>
+GEMINI_MODEL=gemini-3.1-flash-lite
+```
+
+`GEMINI_MODEL` is configurable. The native SDK code fallback is `gemini-2.5-flash`; `.env.example` recommends the model previously exercised here. Availability and quotas depend on the configured provider. Gemini does not require a base URL. Guided discovery remains available when it is absent or unavailable.
+
+```sh
 npm run dev -- --port 3000
 ```
 
-Configure server-only `QLOO_API_KEY` securely in the runtime environment and `QLOO_API_BASE_URL=https://hackathon.api.qloo.com`. Local development may use an ignored `.env.local` copied from `.env.example`. Never put credentials in `NEXT_PUBLIC_` variables, browser code, source control or chat. Cloud secret bindings must permit the Qloo hostname. Start scripts enable Node environment-proxy support.
+Optional accounts use `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY` and the schema in [supabase/README.md](supabase/README.md). Set `APP_ORIGIN` to the deployed HTTPS origin. Keep all credentials server-side and out of source control, browser code, screenshots and logs.
+
+## Verify and run production
 
 ```sh
-npm run typecheck
+npm run check:docs
 npm test
+npm run typecheck
 npm run build
+npm run smoke:production
 npm start -- --port 3000
 ```
 
-Deploy to a host supporting a persistent Node process and child processes for the official Qloo harness. This task does not deploy the application. Active guest sessions and caches are bounded, in-memory and lost on restart; multiple replicas need shared state or session affinity. Optional managed accounts can save and restore per-city Passport snapshots after Supabase setup. Music suggestions reflect audience taste, not local concert availability. Place coverage and metadata depend on Qloo.
+The test suite uses isolated fixtures; it does not certify provider availability, deployed behavior or real email delivery. Live acceptance is opt-in and uses configured provider credentials. [Development and verification](docs/DEVELOPMENT.md) lists prerequisites, scripts and what each check establishes.
 
-## Optional Gemini conversation layer
+Railway runs this application as one Node service. Deploy the intended `work` commit, enable the health check and verify GitHub CI plus the live guest journey. In-memory guest sessions require one replica or shared session infrastructure. See [Railway deployment](docs/RAILWAY_DEPLOYMENT.md).
 
-Guided discovery, feedback and deterministic conversation refinements work without an LLM. The native `@google/genai` SDK handles Gemini intent extraction, function selection and model-only comparison. Securely configure:
+## Repository map
 
-```text
-GEMINI_API_KEY=<secure runtime secret>
-GEMINI_MODEL=gemini-3.1-flash-lite
-AGENT_DEBUG=1
-```
+| Path | Responsibility |
+|---|---|
+| `app/` | Next.js pages, route handlers and consumer UI |
+| `app/styles/` | Theme tokens and styles grouped by UI responsibility |
+| `src/agent/` | Conversation context, intent, tool orchestration, state and decision summaries |
+| `src/qloo/` | Qloo transport, query planning, normalization, validation and evidence |
+| `src/passport/` | Matching, discovery strategies, shortlist and outing domain logic |
+| `src/account/` | Supabase integration, ownership checks, profiles and plans |
+| `src/workspace/` | Shared UI projections and destination catalogue |
+| `scripts/` | Production smoke, browser contracts and opt-in live acceptance |
+| `tests/` | Unit, orchestration, provider protocol and rendering regressions |
+| `supabase/` | Schema migrations, ownership policies and manual reset script |
+| `docs/` | Current product, architecture, operations and submission material |
 
-No Gemini base URL is needed. Native Gemini takes precedence when `GEMINI_API_KEY` is set; other OpenAI-compatible providers can still use the optional `AGENT_MODEL_*` settings. A native request failure preserves the existing guided fallback and does not silently switch credentials/providers. Allow `generativelanguage.googleapis.com` in cloud secret bindings. The model interprets requests and can select real discovered Qloo MCP tools; deterministic operations retain the validated native API path. The model is never the source of Qloo entities, addresses or scores.
+## Read next
 
-```sh
-npm run verify:gemini
-```
+- [Product: problem, features, design and matching](docs/PRODUCT.md)
+- [Agent architecture and implementation](docs/AGENT_ARCHITECTURE.md)
+- [Qloo integration and evidence boundaries](docs/QLOO_INTELLIGENCE.md)
+- [Documentation index](docs/README.md)
 
-The verification command also loads ignored `.env` / `.env.local` files and works across Windows/macOS/Linux on Node 24+. It enables metadata-only logs unless explicitly disabled. Normal app logs require `AGENT_DEBUG=1`; set `0` to disable. No prompts, arguments, model text, headers or credentials are logged. See [native Gemini runtime](docs/GEMINI_RUNTIME.md).
-
-This acceptance probe requires a configured provider, verifies a genuine live model-selected Qloo MCP operation, and generates a live baseline without Qloo tools for the same request. Missing configuration exits with status 2 before making calls. Live native Gemini acceptance **passed with `gemini-3.1-flash-lite`**: intent extraction, dynamic `qloo_find_tags` MCP selection/execution and the same-request model-only baseline. Use that verified model in this environment; the earlier `gemini-2.5-flash` default remains configurable. See the latest acceptance record in the native runtime guide.
-
-The optional judge comparison pairs the exact refinement request with a frozen snapshot of its actual Qloo results. It is hidden without a configured provider or eligible request; it never uses a fabricated baseline.
-
-## Accounts and consumer experience
-
-Guest discovery works without login. Optional managed registration, email confirmation, login/recovery and saved city Passports are implemented; live accounts require your Supabase project and schema. See [account setup and security boundaries](docs/ACCOUNTS_AND_STORAGE.md) and [consumer product readiness](docs/CONSUMER_READINESS.md). My Vibe keeps liked discoveries through replanning; the connection reveal shows actual grouped Qloo query relationships.
-
-Signed-in navigation includes My Saved Passports, Upcoming plans and Sign out. Choose a date in Plan a day out, save your stops and export them to your calendar. Apply the [dated plans migration](supabase/migrations/202610170001_saved_plans.sql) in addition to the existing Passport migration before using plan storage. These are personal outings, not reservations or verified events. The connection explorer filters actual query groups by interest and exposes returned tags; loading phases and save confirmations provide accessible status feedback.
-
-Open **Preferences & Together** for validated discovery styles, budget/business-rating/location preferences and a two-person Qloo comparison feeding common-ground recommendations. Cards show readable budget, rating and interest connections under Why this suggestion. See [Qloo intelligence coverage and live limitations](docs/QLOO_INTELLIGENCE.md), including unavailable place histories and unsupported filter diagnostics. `npm run verify:qloo` runs optional live endpoint acceptance without printing response data or keys. See [consumer workspace and backend logs](docs/CONSUMER_EXPERIENCE.md) for the focused views, floating assistant, About page and safe default info/error logging.
-
-## User experience
-
-The [accuracy and Forest & Butter pass](docs/ACCURACY_AND_FOREST_PASS.md) adds explicit activity selection, content-versus-venue routing, stricter price/rating verification, Qloo-returned photos, tag-based taste analysis, geographic affinity exploration and optional aggregate demographic context. It preserves native Gemini/MCP and guided refinement. Run `npm run verify:accuracy` for bounded live activity/dish/budget/outing acceptance; it uses secure environment credentials and prints metadata only.
-
-Start with your move and 3–5 tastes, confirm the real matches, then create your Passport. Chat/manual refinement, bridge and judge comparison are optional. See [progressive UX and live browser checks](docs/PROGRESSIVE_UX.md).
-
-## Toronto demo
-
-See [the full code flow and backend log guide](docs/FLOW_AND_DEBUGGING.md). The sample fills editable inputs only; discoveries are real Qloo responses. Set `AGENT_DEBUG=1` to follow resolution, HTTP/cache/retry activity, model/MCP choices, category validation, feedback and resets in server logs.
-
-
-Start a New Passport, choose Toronto, add and confirm A.R. Rahman, Interstellar (2014) and Indian cuisine. Build the Passport, inspect DNA and bridge receipts, and change Eat from Familiar to Explore. Then try:
-
-1. “Tonight I want Indian food, quiet atmosphere, and nothing too touristy.”
-2. Not My Vibe → Too mainstream on an Eat card.
-3. “Forget food. Show me something cultural.”
-4. “Give me something more adventurous but still connected to my tastes.”
-
-Save a recommendation with My Vibe before asking “I liked this. Find me something with a similar vibe.” Reset conversation preserves the Passport; New Passport clears the session. Quiet/crowded/price metadata is incomplete and is not a guarantee about current conditions.
-
-See [final readiness and acceptance results](docs/FINAL_READINESS.md), [cultural strategies](docs/CULTURAL_ONBOARDING.md), [agent architecture](docs/AGENT_ARCHITECTURE.md) and [session reliability](docs/SESSION_RELIABILITY.md). Earlier phase documents describe their historical validation; the final readiness report records this pass.
-
-## Preserved feasibility spike
-
-```sh
-npm run spike
-```
-
-The spike uses Node's ignored `.env` file when present or securely configured environment variables. It resolves cultural seeds and tests native Qloo discovery and locality. It prints public catalog/result evidence, never credentials, and saves ignored evidence under `.spike-output/`. Check evidence timestamps; unit tests do not prove live Qloo behavior. See [feasibility verdict](docs/FEASIBILITY.md) and [validated API choices](docs/QLOO_API.md).
-
-## Open-source release
-
-Licensed under [MIT](LICENSE). Setup and validation are reproducible from the repository. Public repository visibility still needs verification before hackathon submission; an authenticated Git read does not establish public access. No deployment or repository visibility change was performed in this task.
-# Latest development pass
-
-The guest experience includes an editable **Plan a day out** plan with locally grounded Qloo discoveries, independent stop selection, location lookups and a downloadable text copy. It does not claim live opening hours, route optimization or bookings. Plan edits stay in the open view; download them to retain a copy. Account Passport snapshots do not save weekend edits.
-
-See [development completion](docs/DEVELOPMENT_COMPLETION.md) for current validation and [demo script](docs/HACKATHON_DEMO.md) for the end-to-end story. Supabase activation and deployment remain separate tasks.
-
-Discovery correctness, live Toronto findings and opt-in evaluation/browser commands are documented in [docs/DISCOVERY_INTEGRITY.md](docs/DISCOVERY_INTEGRITY.md).
+Licensed under [MIT](LICENSE). Verify repository visibility and all submitted links while signed out before submission. The live URL above is provided for review; local tests do not establish its current deployment status.

@@ -11,8 +11,6 @@ export function suggestedMatch(query: string, candidates: Candidate[]): string |
   if (exact.length !== 1) return;
   const match = exact[0];
   if (match.id.startsWith("urn:tag:")) return;
-  // Same-name editions/remakes across the catalog still require a choice.
-  if (exact.some((c) => c.id !== match.id)) return;
   return match.id;
 }
 export function suggestedMatches(items: { query: string; candidates: Candidate[] }[]) {

@@ -38,7 +38,8 @@ export function discoveryQueries(
   if (section !== "Music" && !state.intent?.concepts.length) {
     const ids = (adjacent["filter.tags"] ?? "").split(",").filter(Boolean);
     const soft = ids.filter((id) =>
-      state.tags.some((t) => t.id === id && !t.id.includes(":ambience:")),
+      state.selected.some(selected => selected.id === id) &&
+      !/^urn:tag:(?:ambience|dietary_option|dietary_attribute):/.test(id),
     );
     const hard = ids.filter((id) => !soft.includes(id));
     if (soft.length)

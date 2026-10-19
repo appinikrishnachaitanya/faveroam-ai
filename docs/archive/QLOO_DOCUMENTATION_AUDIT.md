@@ -1,3 +1,5 @@
+> Historical development record. This snapshot may describe superseded behavior. Use the [current documentation index](../README.md) for the submission release.
+
 # Qloo documentation and implementation audit
 
 Reviewed 2026-10-18 against the live official documentation and bounded live hackathon API requests. This report contains implementation observations and aggregate verification counts only, not Qloo response payloads or credentials. Application code was not changed during the audit.

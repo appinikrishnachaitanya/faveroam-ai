@@ -456,9 +456,7 @@ export async function runTurn(
   if (intent.familiarity)
     for (const section of targets)
       state.categoryModes[section] = intent.familiarity;
-  if (input.familiarity || intent.familiarity)
-    for (const section of targets) delete state.categoryConcepts[section];
-  else if (intent.kind === "refine") {
+  if (intent.kind === "refine") {
     if (!intent.concepts.length && targets.length === 1)
       intent.concepts = [...(state.categoryConcepts[targets[0]] ?? [])];
     for (const section of targets)
@@ -618,10 +616,6 @@ export async function runTurn(
     const excluding = intent.excludeConcepts?.includes(concept) ?? false;
     const scopedTargets = excluding ? targets : conceptSections(concept, targets);
     if (!scopedTargets.length) continue;
-    const words = concept
-      .toLowerCase()
-      .split(/\s+/)
-      .filter((w) => !["cuisine", "food"].includes(w));
     if (
       !excluding &&
       scopedTargets.every((section) => conceptAlreadyApplied(state, section, concept))

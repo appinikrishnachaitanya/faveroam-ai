@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { activities, extractDraft } from '../src/workspace/state.ts';
-import { ActivityFeed, PassportSections, TranslationMap } from '../app/components/passport.tsx';
+import { extractDraft } from '../src/workspace/state.ts';
+import { PassportSections, TranslationMap } from '../app/components/passport.tsx';
 import { CandidateChoices } from '../app/components/disambiguation.tsx';
 import type { Candidate } from '../src/passport/model.ts';
 import type { Passport } from '../src/workspace/state.ts';
@@ -14,11 +14,6 @@ test('conversation produces a reviewable draft without inferring entities',()=>{
  const d=extractDraft("I'm moving to New York. I love A.R. Rahman, Interstellar and Blue Tokai.",'Paris');
  assert.equal(d.city,'New York City');assert.deepEqual(d.tastes,['A.R. Rahman','Interstellar','Blue Tokai']);
  assert.deepEqual(extractDraft('Biryani\nCoffee\nBooks','London').tastes,['Biryani','Coffee','Books']);
-});
-test('execution activity never marks unresolved or in-flight discoveries complete',()=>{
- const pending=activities('exploring','New York City',undefined,[signal]);
- assert.equal(pending.find(a=>a.label.startsWith('Explore'))?.state,'active');assert.equal(pending.at(-1)?.state,'waiting');
- const html=renderToStaticMarkup(createElement(ActivityFeed,{phase:'resolving',city:'New York City',signals:[]}));assert.match(html,/Resolve cultural signals/);assert.match(html,/activity-row active/);assert.doesNotMatch(html,/Confirmed Protocol signal/);
 });
 test('disambiguation renders all choices with accessible labels and no implicit selection',()=>{
  const html=renderToStaticMarkup(createElement(CandidateChoices,{query:'Test query',candidates:[signal,{...signal,id:'second',types:['urn:entity:person']}],onSelect:()=>{}}));

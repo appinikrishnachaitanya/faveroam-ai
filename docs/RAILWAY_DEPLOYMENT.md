@@ -1,6 +1,6 @@
 # Railway hackathon deployment
 
-Railway is the user's selected host. Deploy the full Next.js app as one Node service; no separate database is required for guest mode. `render.yaml` is an unused alternative and is not Railway configuration.
+Railway is the user's selected host. Deploy the full Next.js app as one Node service; no separate database is required for guest mode.
 
 ## Service setup
 
@@ -31,7 +31,7 @@ $env:PASSPORT_SMOKE_URL = 'https://<your-railway-domain>'
 npm run smoke:production
 ```
 
-Smoke checks verify the app, health no-store response and custom 404 without calling paid providers. Then use the public app: resolve/confirm tastes, build actual Qloo discoveries, inspect evidence, refine, like/reject, edit/download the weekend and check mobile. Test the concierge and verify real function selection, Qloo/MCP invocation and returned-result log events. Recent Gemini HTTP 503 responses remain an external acceptance limitation until a live request succeeds; guided fallback works independently.
+Smoke checks verify the app, health no-store response and custom 404 without calling paid providers. Then use the public app: resolve/confirm tastes, build actual Qloo discoveries, inspect evidence, refine, like/reject, edit/download the weekend and check mobile. Test the concierge and verify real function selection, Qloo/MCP invocation and returned-result log events. Provider health is time-dependent; verify a fresh native call rather than relying on historical acceptance. Guided fallback works independently.
 
 ## Demo operations and cost
 

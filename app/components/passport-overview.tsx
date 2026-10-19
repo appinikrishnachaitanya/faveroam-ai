@@ -82,7 +82,6 @@ export function SavedDiscoveries({
             <DiscoveryCard
               key={card.id}
               card={card}
-              signals={[]}
               feedback={feedback[card.id]}
               onFeedback={onFeedback}
               live
@@ -176,7 +175,7 @@ export function ConnectionExplorer({ passport, onExplore }: { passport: Passport
           <li key={card.id}>
             <strong>{card.name}</strong>
             <span>{card.address || card.section}</span>
-            {!!card.evidence?.result.tags.length && <div className="connection-result-tags" aria-label="Place details">{card.evidence.result.tags.slice(0, 3).map((tag) => <span key={tag.id}>{tag.name}</span>)}</div>}
+            {!!card.evidence?.result.tags.length && <div className="connection-result-tags" aria-label="Place details">{displayTags(card.evidence.result.tags).slice(0, 3).map((tag) => <span key={tag.id}>{tag.name}</span>)}</div>}
             <details>
               <summary>How this was suggested</summary>
               {(() => {

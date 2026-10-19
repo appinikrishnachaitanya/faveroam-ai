@@ -71,7 +71,7 @@ try {
     throw Error();
   console.log(
     JSON.stringify({
-      request,
+      check: "native-model-mcp",
       operations,
       section: reply.state.intent?.sections,
       confirmationRequired: Boolean(reply.state.pending),

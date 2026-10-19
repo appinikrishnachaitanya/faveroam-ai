@@ -552,13 +552,3 @@ test("turn deadline aborts linked work and prevents later queued calls", async (
     /cancelled/,
   );
 });
-
-test("interpretation activity does not pretend Qloo resolution started", async () => {
-  const { activities } = await import("../src/workspace/state.ts");
-  const rows = activities("interpreting", "New York City");
-  assert.equal(rows[0].label, "Understanding your request");
-  assert.equal(
-    rows.find((r) => r.label === "Resolve cultural signals")?.state,
-    "waiting",
-  );
-});

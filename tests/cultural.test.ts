@@ -18,7 +18,7 @@ import { discoveryQueries, mixPools } from "../src/agent/strategy.ts";
 import { normalizeSession } from "../src/agent/session.ts";
 import { runTurn } from "../src/agent/orchestrator.ts";
 import { interpret } from "../src/agent/intent.ts";
-import type { Candidate, Card } from "../src/passport/model.ts";
+import type { Candidate } from "../src/passport/model.ts";
 import type { Entity } from "../src/qloo/types.ts";
 const entityId = "00000000-0000-0000-0000-000000000030";
 const artist: Candidate = {
@@ -185,7 +185,6 @@ test("Qloo evidence uses raw returned fields and excludes headers and fabricated
   const html = renderToStaticMarkup(
     createElement(DiscoveryCard, {
       card: cards[0],
-      signals: [artist],
       onFeedback: () => {},
     }),
   );
@@ -211,7 +210,6 @@ test("missing raw affinity never becomes a displayed metric even if the input ca
   const html = renderToStaticMarkup(
     createElement(DiscoveryCard, {
       card,
-      signals: [artist],
       onFeedback: () => {},
     }),
   );

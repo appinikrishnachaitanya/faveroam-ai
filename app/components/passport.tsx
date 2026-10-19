@@ -6,12 +6,10 @@ import { threeChoices } from "../../src/passport/shortlist";
 import { bridgeRoutes, sparseSections } from "../../src/passport/evidence";
 import type { Candidate, Card, Section } from "../../src/passport/model";
 import {
-  activities,
   typeLabel,
   visibleSections,
 } from "../../src/workspace/state";
-import type { AgentEvent } from "../../src/agent/types";
-import type { Phase, Resolution, Passport } from "../../src/workspace/state";
+import type { Passport } from "../../src/workspace/state";
 export function Icon({ name, size = 18 }: { name: string; size?: number }) {
   const paths: Record<string, React.ReactNode> = {
     Movies: <><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 4v16M17 4v16M3 9h4M3 15h4M17 9h4M17 15h4"/></>,
@@ -99,80 +97,6 @@ export function Icon({ name, size = 18 }: { name: string; size?: number }) {
     >
       {paths[name] ?? paths.star}
     </svg>
-  );
-}
-export function ActivityFeed({
-  phase,
-  city,
-  resolution,
-  signals,
-  result,
-  events = [],
-}: {
-  events?: AgentEvent[];
-  phase: Phase;
-  city: string;
-  resolution?: Resolution;
-  signals: Candidate[];
-  result?: Passport;
-}) {
-  return (
-    <section
-      className="activity-feed"
-      aria-label="Agent execution activity"
-      aria-live="polite"
-    >
-      <div className="micro-label">
-        LIVE ACTIVITY{" "}
-        <span
-          className={
-            phase === "resolving" || phase === "exploring"
-              ? "live-dot active"
-              : "live-dot"
-          }
-        />
-      </div>
-      <ol>
-        {activities(phase, city, resolution, signals, result).map((a, i) => (
-          <li key={i} className={`activity-row ${a.state}`}>
-            <span className="activity-icon">
-              {a.state === "complete" ? (
-                <Icon name="check" size={12} />
-              ) : a.state === "attention" ? (
-                "!"
-              ) : a.state === "active" ? (
-                <span className="activity-pulse" />
-              ) : (
-                <span className="waiting-dot" />
-              )}
-            </span>
-            <span>{a.label}</span>
-            <span className="sr-only">{a.state}</span>
-          </li>
-        ))}
-      </ol>
-      {events.length > 0 && (
-        <>
-          <div className="micro-label refinement-label">CURRENT REFINEMENT</div>
-          <ol>
-            {events.map((e, i) => (
-              <li className={`activity-row ${e.status}`} key={i}>
-                <span className="activity-icon">
-                  {e.status === "complete" ? (
-                    <Icon name="check" size={12} />
-                  ) : e.status === "active" ? (
-                    <span className="activity-pulse" />
-                  ) : (
-                    "!"
-                  )}
-                </span>
-                {e.label}
-              </li>
-            ))}
-          </ol>
-        </>
-      )}
-    </section>
   );
 }
 export function TasteDNA({
@@ -368,7 +292,6 @@ function EntityPhoto({url,name,section}:{url?:string;name:string;section:Section
 export function DiscoveryCard({
   session,
   card,
-  signals,
   feedback,
   onFeedback,
   live = false,
@@ -378,7 +301,6 @@ export function DiscoveryCard({
   live?: boolean;
   disabled?: boolean;
   card: Card;
-  signals: Candidate[];
   feedback?: Feedback;
   onFeedback: (id: string, value: Feedback) => void;
 }) {
@@ -568,7 +490,6 @@ export function PassportSections({
                   session={result.agent}
                   key={c.id}
                   card={c}
-                  signals={result.selected}
                   feedback={feedback[c.id]}
                   onFeedback={onFeedback}
                   live={Boolean(result.agent)}

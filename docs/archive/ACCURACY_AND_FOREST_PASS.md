@@ -1,3 +1,5 @@
+> Historical development record. This snapshot may describe superseded behavior. Use the [current documentation index](../README.md) for the submission release.
+
 # Accuracy and Forest & Butter delivery
 
 Implemented locally on 2026-10-18 after the [live documentation audit](QLOO_DOCUMENTATION_AUDIT.md). No deployment or push was performed. Earlier local account/profile changes were preserved and integrated.
@@ -57,6 +59,6 @@ Live checks require securely configured provider credentials, use quota, and out
 
 ## Remaining external requirements
 
-Apply pending Supabase migrations, including `202610180001_flexible_destinations_and_plans.sql` and `202610180002_reusable_taste_profiles.sql`, and configure the existing Supabase credentials securely. They are absent in this workspace, so real registration/email, password persistence, saved-passport writes and reusable-profile writes remain unverified. See [account setup requirements](ACCOUNT_PROFILES_AND_VISUAL_PROPOSAL.md).
+Apply pending Supabase migrations, including `202610180001_flexible_destinations_and_plans.sql` and `202610180002_reusable_taste_profiles.sql`, and configure the existing Supabase credentials securely. They are absent in this workspace, so real registration/email, password persistence, saved-passport writes and reusable-profile writes remain unverified. See [account setup requirements](../PRODUCT.md).
 
 The existing ten-city selector remains for validated product/time-zone behavior. Other documented entity types are routed in code but have not all been live-tested across every city. Optional provider/review-count/metro filters need broader paired-query acceptance before claiming universal enforcement. No unsupported local-concert, reservation, route-optimization or individual demographic claims were added.

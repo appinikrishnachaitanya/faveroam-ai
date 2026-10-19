@@ -1,3 +1,5 @@
+> Historical development record. This snapshot may describe superseded behavior. Use the [current documentation index](../README.md) for the submission release.
+
 # Judge regression: protected categories and a usable cinema stop
 
 ## Reproduced defects

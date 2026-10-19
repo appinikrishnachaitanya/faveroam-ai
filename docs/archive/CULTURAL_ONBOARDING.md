@@ -1,3 +1,5 @@
+> Historical development record. This snapshot may describe superseded behavior. Use the [current documentation index](../README.md) for the submission release.
+
 # TastePassport: cultural onboarding and Qloo evidence
 
 **Move anywhere. Keep your vibe.** TastePassport translates the culture someone already loves into discoveries in an unfamiliar city. It helps newcomers rebuild familiar routines and gradually explore beyond them. It is not an itinerary, ranking of top restaurants, or tourist planner.
