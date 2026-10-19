@@ -125,12 +125,22 @@ if (conversation) {
 await evaluate("document.querySelector('[aria-label=\"Close Taste Concierge\"]').click()");
 if(conversation) assert.equal(await evaluate(`document.querySelector('[aria-label="Maximum price"]').value`),'1','Budget control must refresh after a contextual cheaper follow-up');
 await clickText('Plan a day');
-const dinner=await evaluate("document.querySelector('#day-out-Eat').value");
+let dinner=await evaluate("document.querySelector('#day-out-Eat').value");
+if (!dinner) {
+ await evaluate("(()=>{const select=document.querySelector('#day-out-Eat');select.value=[...select.options].find(option=>option.value)?.value ?? '';select.dispatchEvent(new Event('change',{bubbles:true}));})()");
+ dinner=await evaluate("document.querySelector('#day-out-Eat').value");
+}
+assert.ok(dinner,'A dinner venue must be selected for the complete two-stop scenario');
 await evaluate("[...document.querySelectorAll('.outing-activities label')].find(label=>label.textContent.trim()==='Cinema').querySelector('input').click()");
 await waitFor(`window.__judgeReplies.length===${repliesBeforeCinema+1} && Boolean(document.querySelector('#day-out-Cinema:not(:disabled)'))`);
 assert.equal(await evaluate("document.querySelector('#day-out-Eat').value"),dinner,'Finding cinemas must keep the chosen dinner');
 assert.equal(await evaluate("document.querySelectorAll('.day-out-stops select:not(:disabled)').length"),2);
 assert.ok(await evaluate("document.querySelector('#day-out-Cinema').value"));
+const chosenVenues = await evaluate("[...document.querySelectorAll('.day-out-stops select')].map(select=>[select.id,select.value]).sort()");
+await evaluate("document.querySelector('[aria-label=\"Move Cinema earlier\"]').click()");
+assert.deepEqual(await evaluate("[...document.querySelectorAll('.day-out-stops select')].map(select=>[select.id,select.value]).sort()"),chosenVenues,'Reordering physical venues must preserve both selected defaults');
+assert.equal(await evaluate("document.querySelector('.day-out-plan').textContent.includes('Download partial plan')"),false,'A complete two-stop plan is not partial');
+
 await evaluate("document.querySelector('.day-out-plan').scrollIntoView({block:'start',behavior:'instant'})");
 await shot('/tmp/tastepassport-judge-plan.png');
 await call('Emulation.setDeviceMetricsOverride',{width:390,height:900,deviceScaleFactor:1,mobile:true});

@@ -49,6 +49,19 @@ export default function DayOutPlan({
     if(chosen)previousStop=chosen;
     return {...stop,pool,selected:chosen,distance};
   });
+  // Pin every displayed default; sequence changes must never choose new venues.
+  const displayedKey = stops.map(stop => `${stop.id}:${stop.selected?.id ?? ""}`).join("|");
+  useEffect(() => {
+    setChoices(current => {
+      const next = {...current};
+      let changed = false;
+      for (const stop of stops) if (stop.selected && current[stop.id] === undefined) {
+        next[stop.id] = stop.selected.id;
+        changed = true;
+      }
+      return changed ? next : current;
+    });
+  }, [displayedKey]);
   const selected = stops.flatMap((stop) =>
     stop.selected ? [stop.selected] : [],
   );
@@ -63,6 +76,18 @@ export default function DayOutPlan({
       [next[index], next[destination]] = [next[destination], next[index]];
       return next;
     });
+  }
+
+  function reselectNearby() {
+    const next: Record<string,string> = {};
+    let previous: Card | undefined;
+    for (const id of activities) {
+      if (omitted[id]) continue;
+      const chosen = nearbyOutingOptions(options.filter(card=>activityMatches(card,id)),previous)[0];
+      if (chosen) { next[id]=chosen.id; previous=chosen; }
+    }
+    setChoices(next);
+    setStatus("Venues reselected for this order from your current discoveries. Check travel times and availability.");
   }
 
   function download() {
@@ -125,7 +150,7 @@ export default function DayOutPlan({
             : " Check locations and hours before going."}
         </p>
         <p>
-          Choose your activities and their order. Swap or skip any stop without changing the others.
+          Choose your activities and their order. Swap or skip any stop without changing the others. Reordering keeps your selected venues.
         </p>
         {activities.length < 2 && <p role="note">Start with dinner, then select Cinema or Coffee below to build a fuller outing. Missing venues are looked up without changing your dinner.</p>}
         <p className="helper">
@@ -244,6 +269,7 @@ export default function DayOutPlan({
             </li>
           ))}
         </ol>
+        <button type="button" className="quiet-button" disabled={disabled || !options.length} onClick={reselectNearby}>Reselect venues for this order</button>
         {selected.some(
           (card, index) =>
             index > 0 && (stopDistance(selected[index - 1], card) ?? 0) > 15,
@@ -260,7 +286,7 @@ export default function DayOutPlan({
             onClick={download}
             disabled={disabled || !selected.length || duplicateStops}
           >
-            {selected.length === 3
+            {selected.length === activities.length
               ? "Download my plan"
               : "Download partial plan"}
           </button>

@@ -46,7 +46,10 @@ export async function request(
   )
     throw new QlooError("Unsupported Qloo API base URL");
   const url = new URL(path, base);
-  url.search = new URLSearchParams(params).toString();
+  // Live hackathon Insights accepts videogame; docs/app use video_game.
+  const wireParams = path === "/v2/insights/" && params["filter.type"] === "urn:entity:video_game"
+    ? {...params,"filter.type":"urn:entity:videogame"} : params;
+  url.search = new URLSearchParams(wireParams).toString();
   const requestSignal = signal ?? AbortSignal.timeout(30_000);
   return paced(
     `${key}:${url}`,

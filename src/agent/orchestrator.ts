@@ -184,6 +184,8 @@ export async function runTurn(
     return reply(passportAnswer(state, intent));
   }
   if (input.familiarity) {
+    const previous = state.queryPreferences?.[input.familiarity.section];
+    if (previous?.goal === "surprise") previous.goal = "discover";
     state.categoryModes[input.familiarity.section] = input.familiarity.mode;
     intent = guidedIntent(
       input.familiarity.section,

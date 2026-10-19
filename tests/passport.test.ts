@@ -27,3 +27,12 @@ test('429 retry is bounded, honors Retry-After and uses backoff',async()=>{
  assert.equal(retryDelay(0,'5'),5000);assert.equal(retryDelay(1,null),2000);
  calls=0;await fetchWithRetry(new URL('https://example.com'),{},async()=>{calls++;return new Response('',{status:429,headers:{'retry-after':'120'}})},async()=>{});assert.equal(calls,1);
 });
+
+test('transient gateway errors retry while permanent validation errors fail immediately',async()=>{
+ for(const status of [502,503,504,400]){
+  let calls=0;
+  const response=await fetchWithRetry(new URL('https://example.com'),{},async()=>{calls++;return new Response('',{status:calls===1?status:200});},async()=>{});
+  assert.equal(calls,status===400?1:2);
+  assert.equal(response.status,status===400?400:200);
+ }
+});

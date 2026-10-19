@@ -58,3 +58,7 @@ Qloo image URLs can be unavailable or blocked by the viewer's network. The UI us
 Use the opt-in commands in [development](DEVELOPMENT.md). Tests and fixtures establish parsing and state invariants, not current live provider coverage. Aggregate live records are in [the release checklist](RELEASE_CHECKLIST.md) and the clearly labelled [archive](archive/README.md); raw Qloo response dumps and credentials do not belong in the repository.
 
 Official references: [hackathon guide](https://docs.qloo.com/reference/qloo-llm-hackathon-developer-guide), [Insights](https://docs.qloo.com/reference/insights-api-deep-dive), [parameters](https://docs.qloo.com/reference/parameters), [Compare](https://docs.qloo.com/reference/analysis-compare).
+
+### Games wire compatibility
+
+Live hackathon verification on October 19, 2026 found that Insights rejects the documented `urn:entity:video_game` output type with HTTP 400 and accepts `urn:entity:videogame`. The HTTP boundary maps the documented app type to the accepted wire type; parsed results normalize back to `video_game`, preserving existing profiles and category routing. Full Tokyo Games retrieval returned 20 real results after this mapping. Transient 502/503/504 responses receive bounded retries; validation errors are not retried. Missing categories also have a scoped retry action in Discover.

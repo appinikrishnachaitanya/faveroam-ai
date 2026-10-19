@@ -103,3 +103,9 @@ Titles and counts describe a particular provider response. They are not a Precis
 ## What to measure next
 
 A relevance benchmark needs human judgements. Use a fixed, contrasting profile set and label the first three/ten results for usefulness, recording the active constraints and mode. Compare Precision@3 and nDCG@10, repeat-business rate, distinct-category coverage and constraint-violation rate. Keep profile changes controlled and separate provider failures from relevance failures. Do not publish a quality percentage from simple list overlap or test pass counts.
+
+### Feedback and control consistency
+
+A new explicit familiarity choice clears an older Surprise goal for that category, so a previous goal cannot silently override Balanced. “Too mainstream” retains popularity filtering and excludes a conservative list of known dining/coffee chains from every retrieval pool before display. This is not comprehensive chain detection or certification of independent ownership. Sparse results remain sparse.
+
+Planner venue IDs are pinned when first displayed. Changing activity order preserves them; “Reselect venues for this order” explicitly requests new defaults from current discoveries. Refinements that remove a selected venue require reselection. Completeness compares chosen stops with the number of requested activities, not a fixed three-stop assumption.

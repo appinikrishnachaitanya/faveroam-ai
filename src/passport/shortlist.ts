@@ -23,7 +23,7 @@ export function threeChoices(cards: Card[]): Choice[] {
   if (priced.length) {
     const firstPrice=choices[0].card.intelligence?.commercial.priceLevel;
     const lower=firstPrice !== undefined && priced[0].intelligence!.commercial.priceLevel! < firstPrice;
-    take(priced[0], lower ? "Lower-price option" : "Known budget", lower ? "A lower typical cost than the first choice. Check current menu prices." : "Lowest known typical cost among these alternatives. Check current menu prices.");
+    take(priced[0], lower ? "Lower-price option" : "Known budget", lower ? "A lower typical cost than the first choice. Check current prices." : "Lowest known typical cost among these alternatives. Check current prices.");
   }
   const adjacent = distinct().find(c => c.evidence?.pool === "adjacent");
   if (adjacent && choices.length < 3) take(adjacent, "Explore a little", "A broader connection to your tastes, for when you feel like trying something new.");

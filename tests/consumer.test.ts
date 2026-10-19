@@ -95,7 +95,7 @@ test("day-out starts with available local activities without forcing empty categ
   assert.doesNotMatch(markup, /id="day-out-Coffee"/);
   assert.match(markup, /What would you like to do/);
   assert.match(markup, /not a timed route or a reservation/);
-  assert.match(markup, /Download partial plan/);
+  assert.match(markup, /Download my plan/);
 });
 const deps = {
   tools: async () => [],

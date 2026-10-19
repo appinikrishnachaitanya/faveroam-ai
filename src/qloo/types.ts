@@ -58,6 +58,11 @@ export function parseEntities(
     ) {
       throw new Error("Unexpected Qloo entity fields");
     }
-    return entry as unknown as Entity;
+    const canonical = (type: unknown) => type === "urn:entity:videogame" ? "urn:entity:video_game" : type;
+    return {...entry,
+      ...(entry.type !== undefined ? {type:canonical(entry.type)} : {}),
+      ...(entry.subtype !== undefined ? {subtype:canonical(entry.subtype)} : {}),
+      ...(Array.isArray(entry.types) ? {types:entry.types.map(canonical)} : {}),
+    } as unknown as Entity;
   });
 }
