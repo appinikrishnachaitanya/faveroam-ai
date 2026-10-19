@@ -115,7 +115,7 @@ Built with **Next.js, React, TypeScript, Google’s native `@google/genai` SDK, 
 
 Verification recorded **19 October 2026**:
 
-- **236 tests passed**, covering domain rules, orchestration, provider protocols and UI regressions.
+- **239 tests passed**, covering domain rules, orchestration, provider protocols and UI regressions.
 - Strict TypeScript checks, production build and isolated production smoke checks passed.
 - Live Gemini acceptance selected `qloo_find_tags`, invoked MCP and received five real matches; the workflow correctly awaited confirmation.
 - Live Qloo checks preserved Indian cuisine, vegetarian-option, maximum-price and minimum-rating constraints across all three discovery styles, without changing Music or Movies.

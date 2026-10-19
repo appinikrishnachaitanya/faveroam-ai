@@ -64,6 +64,7 @@ const cards = ["Coffee", "Culture", "Eat"].map((section, index) => ({
   types: ["urn:entity:place"],
   detail: "UI protocol fixture",
   address: "Fixture address",
+  intelligence: {id:`fixture-${index}`,name:`Protocol ${section} stop`,type:"urn:entity:place",taste:{contributingSignals:[]},quality:{businessRating:4.7},commercial:{priceLevel:2},externalProof:{},location:{latitude:43.65+index*.001,longitude:-79.38}},
   evidence: {
     source: "Qloo",
     operation: "/v2/insights/",
@@ -586,8 +587,11 @@ for (let attempt=0; themeUpdates===0 && attempt<100; attempt++) await new Promis
 assert.equal(themeUpdates,1,"Returned theme produces a structured scoped refinement");
 await textClick("Taste insights");
 await textClick("Find an area in Toronto");
-await wait("Boolean(document.querySelector('.affinity-plot'))");
-assert.equal(await evaluate("document.querySelectorAll('.affinity-plot circle').length"),3);
+await wait("Boolean(document.querySelector('.area-guide .area-choices article'))");
+assert.ok(await evaluate("document.querySelector('.area-guide').textContent.includes('Start at Protocol')"));
+assert.equal(await evaluate("document.querySelector('.area-guide').textContent.includes('43.650')"),false,"Area previews do not expose raw coordinates");
+assert.equal(await evaluate("Boolean(document.querySelector('.affinity-plot'))"),false);
+assert.equal(await evaluate("document.querySelectorAll('.area-nearby li').length"),2,"Show actual nearby discoveries");
 await evaluate("document.querySelector('.audience-context').open=true");
 await textClick("Show audience context");
 await wait("Boolean(document.querySelector('.audience-values'))");
