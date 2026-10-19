@@ -271,3 +271,13 @@
 .theme-next-step select { min-height:48px; padding:12px 38px 12px 14px; border:1px solid #bdcbb2; border-radius:12px; background-color:#fffdf5; color:#294632; font:inherit; width:100%; }
 .theme-next-step > button { display:inline-flex; gap:12px; align-items:center; min-height:48px; }
 @media(max-width:640px) { .intelligence-preferences { padding:18px; } .together-preference-summary { align-items:stretch; flex-direction:column; } .theme-next-step { align-items:stretch; flex-direction:column; } .theme-next-step label { max-width:none; } }
+
+.area-guide .area-choices { grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr)); }
+.area-guide .area-choices article { background:#fffdf5; padding:22px; gap:8px; }
+.area-guide .area-choices h4 { font-size:21px; line-height:1.35; margin-top:8px; overflow-wrap:anywhere; }
+.area-guide .area-place-details { color:#294d36; font-weight:600; }
+.area-nearby { padding-top:14px; border-top:1px solid #ccd6be; margin-top:8px; font-size:14px; }
+.area-nearby ul { padding-left:18px; margin:8px 0; }
+.area-nearby li { margin:8px 0; }
+.area-nearby small { display:block; color:#51654f; margin-top:3px; }
+.area-guide .area-choices a { line-height:1.6; }

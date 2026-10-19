@@ -43,7 +43,7 @@ Preserve the existing guest, conversation, Qloo, Together, profile/account and o
 | Visual contrast | PASS: checked Insights text ratios 7.30–7.85:1; no overflow at 320/390px |
 | Import reachability / documentation links | PASS: Previous audit reached 136 code files; current local links checked in 27 Markdown files |
 
-The latest runner completed **236 tests: 236 passed, 0 failed, 0 skipped**. The earlier stabilization pass completed 214 tests; recommendation work adds routing, fusion, preservation, diversity and budget-clearing regressions. The import audit covers Next.js, test and CLI entry points; it is not a claim that every CSS selector or export has been formally proven necessary.
+The latest runner completed **239 tests: 239 passed, 0 failed, 0 skipped**. The earlier stabilization pass completed 214 tests; recommendation work adds routing, fusion, preservation, diversity and budget-clearing regressions. The import audit covers Next.js, test and CLI entry points; it is not a claim that every CSS selector or export has been formally proven necessary.
 
 ## Live evidence and remaining limits
 

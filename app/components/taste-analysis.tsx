@@ -6,7 +6,8 @@ import type { Passport } from '../../src/workspace/state';
 import { sectionOrder } from '../../src/workspace/state';
 import type { Section } from '../../src/passport/model';
 import type { AgentInput } from '../../src/agent/types';
-import type { AnalysisKind, AnalysisResult, HeatPoint } from '../../src/qloo/analysis';
+import { buildAreaGuide } from '../../src/passport/area-guide';
+import type { AnalysisKind, AnalysisResult } from '../../src/qloo/analysis';
 
 export default function TasteAnalysis({passport,busy,onRefine}:{passport:Passport;busy:boolean;onRefine:(input:AgentInput)=>void}) {
   const [results,setResults]=useState<Partial<Record<AnalysisKind,AnalysisResult>>>({});
@@ -31,13 +32,14 @@ export default function TasteAnalysis({passport,busy,onRefine}:{passport:Passpor
   }
   const taste=results.taste?.kind==='taste'?results.taste:undefined;
   const heat=results.heatmap?.kind==='heatmap'?results.heatmap:undefined;
+  const areas=heat ? buildAreaGuide(heat.points,passport.cards) : [];
   const demo=results.demographics?.kind==='demographics'?results.demographics:undefined;
   function exploreTheme() {
     if (!themeId || busy) return;
     const existing = passport.session?.queryPreferences?.[themeSection]?.includeTags ?? [];
     onRefine({discovery:{section:themeSection,preferences:{includeTags:[...new Set([...existing,themeId])]}}});
   }
-  function nearby(point:HeatPoint) {
+  function nearby(point:{latitude:number;longitude:number}) {
     onRefine({discovery:{section:'Eat',preferences:{locationPoint:`POINT(${point.longitude} ${point.latitude})`,radius:1500}}});
   }
   return <section className="taste-analysis" aria-labelledby="analysis-title">
@@ -70,39 +72,31 @@ export default function TasteAnalysis({passport,busy,onRefine}:{passport:Passpor
       </> : <p>No taste themes were returned for this combination. You can still browse your discoveries or explore an area.</p>}
 
     </div>}
-    {heat&&<div className="analysis-result"><span className="micro-label">PICK YOUR NEXT STARTING POINT</span><h3>Areas to explore in {passport.city}</h3><p>These areas have stronger audience affinity for your interests. Open one on the map, then find nearby dining with your current preferences.</p>
-      {heat.points.length?<><AffinityPlot points={heat.points}/><p className="helper">Darker dots show stronger cultural audience affinity in this result. This is an affinity plot, not a street map or a view of live crowds.</p>
-      <div className="area-choices">{distinctAreas(heat.points).map((point,index)=><article key={`${point.latitude}:${point.longitude}`}><h4>Explore area {index+1}</h4>
-        <p>{point.latitude.toFixed(3)}, {point.longitude.toFixed(3)}</p>
-        <a href={`https://www.google.com/maps/search/?api=1&query=${point.latitude},${point.longitude}`} target="_blank" rel="noreferrer">View area on map ↗</a>
-        <button disabled={busy||Boolean(loading)} onClick={()=>nearby(point)}>Find dining nearby</button>
-      </article>)}</div><p className="helper">Nearby dining searches within 1.5 km of the selected point while keeping your current dining preferences. Results depend on local coverage.</p></>:<p>No geographic affinity data was returned.</p>}
+    {heat&&<div className="analysis-result area-guide"><span className="micro-label">TURN A PLACE INTO AN OUTING</span>
+      <h3>Places to start exploring in {passport.city}</h3>
+      <p>{areas.some(area=>area.fromAreaSignal)
+        ? "These discoveries sit near areas connected to your tastes. Start at a place you like, then see what else is nearby."
+        : "We couldn’t connect the suggested areas to places in your current Passport. Start with these taste-led discoveries instead."}</p>
+      {areas.length ? <div className="area-choices">{areas.map(area=><article key={area.anchor.id}>
+        <span className="micro-label">{area.fromAreaSignal ? "NEAR A TASTE-CONNECTED AREA" : "FROM YOUR DISCOVERIES"}</span>
+        <h4>Start at {area.anchor.name}</h4>
+        <p>{area.anchor.address || area.anchor.intelligence?.location.address || `${area.anchor.section} in ${passport.city}`}</p>
+        <p className="area-place-details">{area.anchor.section}{area.anchor.intelligence?.quality.businessRating !== undefined ? ` · ★ ${area.anchor.intelligence.quality.businessRating.toFixed(1)} / 5` : ""}</p>
+        {area.nearby.length > 0 && <div className="area-nearby"><strong>Also nearby</strong><ul>{area.nearby.map(place=><li key={place.id}>{place.name}<small>{place.section}</small></li>)}</ul></div>}
+        <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([area.anchor.name,area.anchor.address,passport.city].filter(Boolean).join(', '))}`} target="_blank" rel="noreferrer">Open this place on the map ↗</a>
+        {area.point && <button disabled={busy||Boolean(loading)} onClick={()=>nearby(area.point!)}>Find dining around here</button>}
+      </article>)}</div> : <p>No local places are available to preview yet. Find dining in Discover, then return to explore where to start.</p>}
+      <p className="helper">“Find dining around here” searches within 1.5 km of the named place and keeps your dining preferences. Nearby means straight-line distance; check routes, opening hours and availability before going.</p>
     </div>}
-    <details className="audience-context"><summary>Curious who shares these interests?</summary><p>Optional aggregate audience patterns for each interest. This does not describe you, change your recommendations or show audience percentages.</p>
+    <details className="audience-context"><summary>Curious who shares these interests?</summary><p>Optional audience patterns for each interest. These show the strongest associations within the returned groups, not audience size or facts about you. Your recommendations stay unchanged.</p>
       <button disabled={busy||Boolean(loading)} onClick={()=>void load('demographics')}>{loading==='demographics'?'Reading audience context…':'Show audience context'}</button>
       {demo&&(!demo.records.length?<p>No audience context was returned.</p>:demo.records.map(record=><div className="analysis-result" key={record.id}><h4>{passport.selected.find(s=>s.id.toLowerCase()===record.id.toLowerCase())?.name ?? 'Returned interest'}</h4>
-        <dl className="audience-values">{Object.entries({...record.age,...record.gender}).map(([label,value])=><div key={label}><dt>{label.replaceAll('_',' ')}</dt><dd>{value>0?'+':''}{value.toFixed(2)} affinity</dd></div>)}</dl>
+        <dl className="audience-values">{([["Most associated age group",record.age],["Most associated gender",record.gender]] as const).map(([label,values])=>{
+          const entries=Object.entries(values).sort((a,b)=>b[1]-a[1]);
+          if(!entries.length)return null;
+          return <div key={String(label)}><dt>{String(label)}</dt><dd>{entries.filter(([,value])=>value===entries[0][1]).map(([key])=>key.replaceAll('_',' ')).join(' / ')}</dd></div>;
+        })}</dl>
       </div>))}
     </details>
   </section>;
-}
-
-function distinctAreas(points:HeatPoint[]) {
-  const chosen:HeatPoint[]=[];
-  for(const p of [...points].sort((a,b)=>b.affinity-a.affinity)) {
-    if(chosen.every(q=>Math.hypot((q.longitude-p.longitude)*Math.cos(p.latitude*Math.PI/180),q.latitude-p.latitude)*111>1.5))chosen.push(p);
-    if(chosen.length===3)break;
-  }
-  return chosen;
-}
-function AffinityPlot({points}:{points:HeatPoint[]}) {
-  const xs=points.map(p=>p.longitude),ys=points.map(p=>p.latitude),values=points.map(p=>p.affinity);
-  const west=Math.min(...xs),east=Math.max(...xs),south=Math.min(...ys),north=Math.max(...ys),low=Math.min(...values),high=Math.max(...values);
-  const longitudeScale=Math.max(.01,Math.cos((north+south)/2*Math.PI/180));
-  const scale=Math.min(620/Math.max(.001,(east-west)*longitudeScale),240/Math.max(.001,north-south));
-  const width=(east-west)*longitudeScale*scale,height=(north-south)*scale;
-  return <svg className="affinity-plot" viewBox="0 0 700 300" role="img" aria-label={`Geographic affinity plot of ${points.length} returned points; north is up`}>
-    <title>Audience affinity across the city</title><text x="24" y="24">N ↑</text>
-    {points.map((p,i)=><circle key={i} cx={350-width/2+(p.longitude-west)*longitudeScale*scale} cy={150-height/2+(north-p.latitude)*scale} r="3.5" fill="currentColor" opacity={.2+.8*(high===low?1:(p.affinity-low)/(high-low))}><title>{`${p.latitude.toFixed(4)}, ${p.longitude.toFixed(4)} · relative affinity ${p.affinity.toFixed(3)}`}</title></circle>)}
-  </svg>;
 }
