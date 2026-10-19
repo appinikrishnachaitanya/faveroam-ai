@@ -84,3 +84,16 @@ test("a returned-theme action preserves other categories and existing category p
   assert.deepEqual(reply.state.cards.filter(card => card.section === "Music"), original.cards.filter(card => card.section === "Music"));
   assert.deepEqual(original.queryPreferences!.Eat!.includeTags, ["urn:tag:cuisine:restaurant:indian"]);
 });
+
+test("an explicit Balanced choice clears a previous Surprise goal in that category", async () => {
+  const original=fixture();
+  original.queryPreferences!.Eat!.goal="surprise";
+  original.categoryModes!.Eat="explore";
+  const result=await runTurn(original,{familiarity:{section:"Eat",mode:"balanced"}},{...readonly,discover:async(state,section)=>{
+    assert.equal(state.queryPreferences!.Eat!.goal,"discover");
+    assert.equal(state.categoryModes!.Eat,"balanced");
+    return state.cards.filter(card=>card.section===section);
+  }});
+  assert.equal(result.state.categoryModes.Eat,"balanced");
+  assert.equal(original.queryPreferences!.Eat!.goal,"surprise");
+});

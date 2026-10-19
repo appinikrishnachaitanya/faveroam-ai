@@ -1,4 +1,5 @@
 import { request } from "./client.ts";
+import { cleanTagName } from "./explanation.ts";
 import { isObject } from "./types.ts";
 export interface TasteComparison {
   shared: { id: string; name: string; score?: number }[];
@@ -19,7 +20,7 @@ export function normalizeCompare(body: unknown): TasteComparison {
             ? [
                 {
                   id: t.tag_id,
-                  name: t.name,
+                  name: cleanTagName(t.name),
                   ...(isObject(t.query) &&
                   typeof t.query.score === "number" &&
                   Number.isFinite(t.query.score)
@@ -30,7 +31,7 @@ export function normalizeCompare(body: unknown): TasteComparison {
             : [],
         )
       : [];
-  const shared = rows(r.tags),
+  const shared = [...new Map(rows(r.tags).map(row=>[row.name.toLowerCase(),row])).values()],
     ids = new Set(shared.map((t) => t.id));
   return {
     shared,

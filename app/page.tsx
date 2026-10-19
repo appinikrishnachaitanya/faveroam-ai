@@ -760,6 +760,7 @@ export default function Home() {
                 />
               )}
             </div>
+            {workspaceView === "discover" && (result.session?.activeCategories ?? []).filter(section=>!result.session?.hiddenCategories.includes(section) && !result.cards.some(card=>card.section===section)).length > 0 && <section className="missing-discoveries" aria-label="Retry missing discoveries"><p>Some categories have no discoveries yet. Retry one without changing your other results.</p><div>{(result.session?.activeCategories ?? []).filter(section=>!result.session?.hiddenCategories.includes(section) && !result.cards.some(card=>card.section===section)).map(section=><button key={section} className="quiet-button" disabled={busy} onClick={()=>void refine({guided:{section,constraints:result.session?.categoryConstraints[section] ?? []}})}>Retry {section}</button>)}</div></section>}
             {result.agent?.pending && (
               <div className="pending-concept">
                 <strong>A little clarity for your next discovery</strong>
@@ -944,6 +945,7 @@ export default function Home() {
             </button>
           </div>
           <div className="concierge-body" ref={agentScroll}>
+            {workspaceView === "discover" && (result.session?.activeCategories ?? []).filter(section=>!result.session?.hiddenCategories.includes(section) && !result.cards.some(card=>card.section===section)).length > 0 && <section className="missing-discoveries" aria-label="Retry missing discoveries"><p>Some categories have no discoveries yet. Retry one without changing your other results.</p><div>{(result.session?.activeCategories ?? []).filter(section=>!result.session?.hiddenCategories.includes(section) && !result.cards.some(card=>card.section===section)).map(section=><button key={section} className="quiet-button" disabled={busy} onClick={()=>void refine({guided:{section,constraints:result.session?.categoryConstraints[section] ?? []}})}>Retry {section}</button>)}</div></section>}
             {result.agent?.pending && (
               <div className="pending-concept">
                 <strong>Choose what you meant</strong>

@@ -127,3 +127,9 @@ export function card(e: Entity, section: Section): Card {
       : {}),
   };
 }
+
+/** Conservative exclusion of known chains, not certification of independent ownership. */
+export function knownChain(card: Card): boolean {
+  const names = [card.name, ...(card.evidence?.result.tags ?? []).filter(tag=>/brand|chain|franchise/i.test(tag.type ?? tag.id)).map(tag=>tag.name)].join(" ");
+  return /\b(?:starbucks|costa(?: coffee)?|pret(?: a manger)?|harris\s*(?:\+|and|&)\s*hoole|caff[eè] nero|tim hortons|dunkin|mcdonald'?s|burger king|kfc|subway|pizza hut|domino'?s|greggs|panera|blue bottle|joe\s*(?:&|and)\s*the juice)\b/i.test(names);
+}

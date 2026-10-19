@@ -12,7 +12,7 @@ import { search, insights, insightParams, QlooError } from "../qloo/client.ts";
 import { candidates } from "../passport/model.ts";
 import type { AgentDependencies } from "./orchestrator.ts";
 import type { AgentState, Constraint } from "./types.ts";
-import { diversifyCards, sectionTypes } from "../passport/model.ts";
+import { diversifyCards, sectionTypes, knownChain } from "../passport/model.ts";
 import type { Card, Section } from "../passport/model.ts";
 import { buildQuery } from "../qloo/query-plan.ts";
 import { findTags } from "../qloo/lookups.ts";
@@ -401,7 +401,12 @@ export async function discoverSection(
       pools.push(local);
     }
   }
-  const cards = diversifyCards(mixPools(pools), section);
+  const mixed = mixPools(pools);
+  const avoidMainstream = constraints.includes("mainstream") && ["Eat","Coffee"].includes(section);
+  const eligible = avoidMainstream ? mixed.filter(card=>!knownChain(card)) : mixed;
+  if (avoidMainstream && eligible.length < mixed.length)
+    state.notices.push(`Excluded ${mixed.length-eligible.length} known chain listings from ${section}. Independent ownership of remaining venues is not verified.`);
+  const cards = diversifyCards(eligible, section);
   debugEvent("discovery.completed", { section, mode, count: cards.length });
   return cards;
 }

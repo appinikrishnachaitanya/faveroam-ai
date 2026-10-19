@@ -28,7 +28,8 @@ export async function fetchWithRetry(
         ? AbortSignal.any([init.signal, AbortSignal.timeout(30_000)])
         : AbortSignal.timeout(30_000),
     });
-    if (response.status !== 429 || attempt >= 2) return response;
+    const retryable = response.status === 429 || [502,503,504].includes(response.status);
+    if (!retryable || attempt >= 2) return response;
     const header = response.headers.get("retry-after");
     // A long server cooldown should surface to the user, rather than retry early.
     if (
@@ -39,7 +40,7 @@ export async function fetchWithRetry(
     await response.body?.cancel();
     const delay = retryDelay(attempt, header);
     debugEvent("qloo.retry", {
-      status: 429,
+      status: response.status,
       attempt: attempt + 1,
       delayMs: delay,
     });

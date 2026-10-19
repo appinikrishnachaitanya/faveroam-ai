@@ -108,10 +108,7 @@ export function WhyEvidence({
             .map((i) => i.name)
             .join(", ") || "Category and location requirements"}
         </p>
-        <p>
-          These interests were considered together. Inclusion in a search does
-          not establish an individual relationship.
-        </p>
+        {!screenTasteConnection(card) && <p>Search inputs are shown here; they do not by themselves establish an individual relationship.</p>}
       </details>
       {screenTasteConnection(card) ? <p>{screenTasteConnection(card)}</p> : !!connected.length && (
         <p>Connected to {connected.join(", ")} in your interests.</p>
@@ -120,14 +117,14 @@ export function WhyEvidence({
         {m?.quality.businessRating !== undefined && (
           <>
             <dt>Rating</dt>
-            <dd>{m.quality.businessRating} / 5</dd>
+            <dd>{m.quality.businessRating.toFixed(1)} / 5</dd>
           </>
         )}
         {m?.externalProof.tripadvisorRating !== undefined && (
           <>
             <dt>Tripadvisor</dt>
             <dd>
-              {m.externalProof.tripadvisorRating} / 5
+              {m.externalProof.tripadvisorRating.toFixed(1)} / 5
               {m.externalProof.tripadvisorReviewCount !== undefined
                 ? ` · ${m.externalProof.tripadvisorReviewCount} reviews`
                 : ""}
