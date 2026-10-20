@@ -111,7 +111,8 @@ export function ConnectionExplorer({ passport, onExplore }: { passport: Passport
   if (!allRoutes.length) return null;
   if (!route) return <section className="connection-explorer"><h2>No current suggestions use this interest yet.</h2><button className="quiet-button" onClick={() => setInterest(undefined)}>Show all interests</button></section>;
   const cards = passport.cards
-    .filter((c) => `${c.evidence?.queryId}:${c.section}` === route.id)
+    .filter((c) => c.section === route.section && c.evidence?.source === "Qloo" && c.evidence.result.id === c.id)
+    .filter((c) => !interest || c.evidence?.inputs.some((input) => input.id === interest))
     .slice(0, 3);
   return (
     <section
@@ -128,7 +129,7 @@ export function ConnectionExplorer({ passport, onExplore }: { passport: Passport
         <button aria-pressed={!interest} onClick={() => setInterest(undefined)}>All interests</button>
         {passport.selected.filter((selected) => allRoutes.some((r) => r.inputs.some((input) => input.id === selected.id))).map((selected) => <button key={selected.id} aria-pressed={interest === selected.id} onClick={() => setInterest(selected.id)}>{selected.name}</button>)}
       </div>
-      <p className="helper">Follow a combination of interests into a category. Filtering by one interest shows groups that included it, rather than claiming it caused each suggestion.</p>
+      <p className="helper">Each category appears once, combining evidence from its Qloo queries. Choose an interest to show only discoveries whose queries included that interest; query input does not prove individual causation.</p>
       <div
         className="connection-routes"
         role="group"
@@ -154,7 +155,7 @@ export function ConnectionExplorer({ passport, onExplore }: { passport: Passport
       </div>
       <div className="connection-path">
         <div>
-          {route.inputs.map((s: Candidate) => (
+          {route.inputs.filter((input) => !interest || input.id === interest).map((s: Candidate) => (
             <span key={s.id}>{s.name}</span>
           ))}
         </div>

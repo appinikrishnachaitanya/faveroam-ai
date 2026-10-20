@@ -2,6 +2,7 @@ import "server-only";
 import { GoogleGenAI, FunctionCallingConfigMode } from "@google/genai";
 import { conversationContext } from "./context.ts";
 import { boundedToolLoop } from "./tool-loop.ts";
+import { retryGemini502 } from "./gemini-retry.ts";
 import { debugEvent } from "./debug.ts";
 import { recordProviderHealth } from "./health.ts";
 import { culturalText, validateIntent } from "./intent.ts";
@@ -77,7 +78,7 @@ export function configuredProvider(): ModelProvider | undefined {
           if (previous?.role === role) previous.parts.push({ text: message.content });
           else contents.push({ role, parts: [{ text: message.content }] });
         }
-        const response = await gemini.models.generateContent({
+        const response = await retryGemini502(() => gemini.models.generateContent({
           model: model!,
           contents,
           config: {
@@ -100,7 +101,7 @@ export function configuredProvider(): ModelProvider | undefined {
               },
             },
           },
-        });
+        }));
         const calls = response.functionCalls ?? [];
         if (calls.length > 3 || (required && !calls.length))
           throw Error("Invalid provider tool selection");
@@ -216,14 +217,14 @@ export function configuredProvider(): ModelProvider | undefined {
         const trace = crypto.randomUUID();
         debugEvent("gemini.request", { trace, operation: "baseline" });
         try {
-          const response = await gemini.models.generateContent({
+          const response = await retryGemini502(() => gemini.models.generateContent({
             model: model!,
             contents: JSON.stringify({ request, destination, tastes }),
             config: {
               systemInstruction:
                 "Produce a concise cultural onboarding suggestion using only model knowledge. No tools or Qloo data are available. Explicitly state details and local availability are unverified. Never claim Qloo evidence.",
             },
-          });
+          }));
           const text = response.text;
           if (
             !text?.trim() ||
@@ -440,7 +441,7 @@ export function configuredProvider(): ModelProvider | undefined {
       return validateIntent(calls[0].arguments);
     },
     ...(gemini && process.env.AGENT_TOOL_LOOP !== "0" ? {
-      async chooseWithObservation(text: string, state: AgentState, tools: ToolDefinition[], execute: (choice: ToolChoice) => Promise<import("./types.ts").ToolResult>, signal?: AbortSignal, remainingCalls?: number, onCall?: (choice: ToolChoice) => void) {
+      async chooseWithObservation(text: string, state: AgentState, tools: ToolDefinition[], execute: (choice: ToolChoice) => Promise<import("./types.ts").ToolResult>, signal?: AbortSignal) {
         culturalText(text);
         const trace = crypto.randomUUID();
         debugEvent("gemini.request", { trace, operation: "observe-tools" });
@@ -450,7 +451,7 @@ export function configuredProvider(): ModelProvider | undefined {
             conversation: conversationContext(state),
             intent: state.intent,
             destination: state.city,
-          }), tools, execute, signal, remainingCalls, onCall);
+          }), tools, execute, signal);
           recordProviderHealth("healthy");
           debugEvent("gemini.result", { trace, count: observed.observations.length });
           return observed;
