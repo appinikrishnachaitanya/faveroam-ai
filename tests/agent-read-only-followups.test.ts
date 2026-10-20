@@ -51,5 +51,5 @@ test("read-only comparison does not invent price or rating when metadata is miss
  const out=readOnlyFollowUp(x,"compare the first two venues");
  assert.match(out,/Business rating unavailable/);
  assert.match(out,/Price category unavailable/);
- assert.match(out,/doesn't establish a clear winner/);
+ assert.match(out,/don't establish a clear winner/);
 });

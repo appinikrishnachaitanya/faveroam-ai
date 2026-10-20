@@ -10,13 +10,16 @@ import { priceLabel } from "../passport/pricing.ts";
  */
 export function isReadOnlyFollowUp(input: string): boolean {
   const q=input.trim().toLowerCase();
-  if (/\b(?:find|discover|search|update|replace|refine|remove|hide|show me more|make (?:this|it)|give me more|recommend new)\b/.test(q)) return false;
-  if (/\b(?:compare|comparison|differences?|versus|vs\.?|which (?:one|of (?:these|the two)))\b/.test(q)) return true;
-  const item=/\b(?:first|second|third|1st|2nd|3rd|#\s*[123]|this|that|those|them|both|one|venue|place|restaurant)\b/.test(q);
-  const info=/^(?:why|what|which|how|tell me|explain|is |are |does |do |can you explain|could you explain)/.test(q) ||
-    /\b(?:rating|rated|price|cost|cheaper|details|review|reason|recommend(?:ed|ation)?)\b/.test(q);
-  if (/\b(?:why (?:did|is|the)|why recommend|reason for recommending)\b/.test(q)) return true;
-  return item && info;
+  // An information request cannot silently change results; equally, a real
+  // refinement must not be misclassified as read-only.
+  if (/\b(?:find|discover|search|update|replace|refine|remove|hide|make|change|adjust|show me more|give me more|recommend new)\b/.test(q))
+    return false;
+  if (/\b(?:compare|comparison|differences?|versus|vs\.?)\b/.test(q))
+    return true;
+  if (/^why (?:did you recommend|recommend this|the (?:first|second|third))\b/.test(q))
+    return true;
+  const ordinal=/(?:\b(?:first|second|third|1st|2nd|3rd)\b|#\s*[123]\b)/.test(q);
+  return ordinal && /^(?:why|what|which|how|tell me|explain|is |are |does |do |can you|could you)/.test(q);
 }
 function categoryInText(text:string): Section|undefined {
   const t=text.toLowerCase();
@@ -61,7 +64,7 @@ export function readOnlyFollowUp(state:AgentState,query:string):string {
     return "Which category should I use—Dining, Coffee, Culture or another chapter? I haven't changed your Passport.";
   if(!cards.length)
     return `There aren't current ${section==="Eat"?"Dining":section} recommendations to explain. I haven't changed anything.`;
-  const isCompare=/\b(?:compare|comparison|differences?|versus|vs\.?|which (?:one|of (?:these|the two)))\b/.test(query);
+  const isCompare=/\b(?:compare|comparison|differences?|versus|vs\.?|which (?:one|of (?:these|the two)))\b/i.test(query);
   const index=ordinal(query);
   const named=cards.find(c=>query.toLowerCase().includes(c.name.toLowerCase()));
   const lastNamed=(state.history??[]).slice(-8).reverse().find(row=>row.role==="user" && cards.some(card=>row.text.toLowerCase().includes(card.name.toLowerCase())));
