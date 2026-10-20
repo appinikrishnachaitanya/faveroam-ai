@@ -64,7 +64,7 @@ type DebugEvent =
 interface DebugMeta {
   service?: "supabase-auth" | "supabase-storage";
   trace?: string;
-  operation?: "interpret" | "choose" | "baseline" | "explain";
+  operation?: "interpret" | "choose" | "baseline" | "explain" | "observe-tools";
   tool?: string;
   transport?: "exec" | "mcp";
   count?: number;
@@ -129,6 +129,7 @@ export function debugEvent(event: DebugEvent, meta: DebugMeta = {}) {
       operation: allowed(meta.operation, [
         "interpret",
         "choose",
+        "observe-tools",
         "baseline",
         "explain",
       ]),
