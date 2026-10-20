@@ -13,6 +13,14 @@ alter table public.saved_passports add constraint saved_passports_snapshot_check
     and snapshot ? 'city' and snapshot->>'city' = city
     and octet_length(snapshot::text) <= 2000000
   );
+-- Plans may also retain historical fixed-city and small-stop constraints.
+alter table public.saved_plans drop constraint if exists saved_plans_city_check;
+alter table public.saved_plans add constraint saved_plans_city_check
+  check (char_length(btrim(city)) between 2 and 100);
+alter table public.saved_plans drop constraint if exists saved_plans_stops_check;
+alter table public.saved_plans add constraint saved_plans_stops_check
+  check (jsonb_typeof(stops) = 'array' and jsonb_array_length(stops) between 1 and 5
+    and octet_length(stops::text) <= 120000);
 commit;
 -- Read-only diagnostic query for app owners after applying the migration:
 -- select conname, pg_get_constraintdef(oid) from pg_constraint

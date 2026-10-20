@@ -10,7 +10,7 @@ In your project's Supabase dashboard, open **SQL Editor → New query**. Run eac
 6. `migrations/202610180004_named_taste_profiles.sql` — named, reusable profiles.
 7. `migrations/202610200001_expand_saved_passport_snapshot.sql` — allow evidence-rich Passport snapshots up to 2 MB without deleting existing rows.
 8. `migrations/202610200002_active_passport_sessions.sql` — **required for restart-safe Passport/plan saving**, adds service-role-only temporary active sessions; does not change existing saved Passports or plans.
-9. `migrations/202610200003_repair_saved_passport_constraints.sql` — non-destructive, idempotent repair for old saved-Passport city/snapshot CHECK constraints that cause PostgreSQL `23514` when the earlier upgrades were not run. Preserves existing data and permissions.
+9. `migrations/202610200003_repair_saved_passport_constraints.sql` — non-destructive, idempotent repair for old saved-Passport city/snapshot and saved-plan city/stop CHECK constraints that cause PostgreSQL `23514` when the earlier upgrades were not run. Preserves existing data and permissions.
 
 Use **Table Editor → destinations** to add a city (name, enabled, sort_order), disable one, or reorder the list. Only enabled cities appear. The server validates both new Passports and saved-taste reuse against this same table. Changes appear on the next onboarding load; no code deployment is needed. Use clear locality names (for example `Portland, Oregon`) where names are ambiguous. A listed city does not guarantee Qloo has enough recommendations there.
 

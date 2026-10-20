@@ -60,7 +60,8 @@ test("asking to list Coffee only includes Coffee and preserves other categories"
 
 test("a refinement reply previews returned venues instead of only saying suggestions were updated",async()=>{
  const original=fixture();
- const result=await runTurn(original,{message:"show me Indian restaurants"},{
+ original.queryPreferences={Eat:{priceMax:3}};
+ const result=await runTurn(original,{message:"cheaper"},{
    tools:async()=>[],
    workflow:async()=>({status:"ok",results:[]}),
    discover:async(_state,section)=>[

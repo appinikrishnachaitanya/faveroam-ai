@@ -119,7 +119,7 @@ export function previewRefinedResults(state: AgentState, sections: readonly impo
     if (!cards.length) return [];
     const label=section==="Eat"?"Dining":section;
     const examples=cards.slice(0,3).map((c,i)=>{
-      const rating=c.intelligence?.quality.businessRating;
+      const rating=c.intelligence?.quality?.businessRating;
       const rated=rating!==undefined && formatReturnedRating(rating)!==undefined
         ? ` · ★ ${formatReturnedRating(rating)}/5 (Qloo-reported)` : "";
       return `${i+1}. ${c.name}${c.address ? ` — ${c.address}` : ""}${rated}`;
