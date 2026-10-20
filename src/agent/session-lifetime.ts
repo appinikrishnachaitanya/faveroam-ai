@@ -3,7 +3,7 @@ export const ACTIVE_SESSION_LIFETIME_MS = 24 * 60 * 60_000;
 export const MAX_ACTIVE_SESSION_BYTES = 4_500_000;
 export const activeSessionExpiry = (now = Date.now()) => now + ACTIVE_SESSION_LIFETIME_MS;
 export const validSessionId = (id: unknown): id is string =>
-  typeof id === "string" && /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(id);
+  typeof id === "string" && /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(id);
 /** Only persist trusted backend-generated state; bound arrays to control storage. */
 export function compactActiveSession(state: AgentState): AgentState {
   return {
