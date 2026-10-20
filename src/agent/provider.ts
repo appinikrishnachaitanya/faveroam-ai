@@ -1,6 +1,7 @@
 import "server-only";
 import { GoogleGenAI, FunctionCallingConfigMode } from "@google/genai";
 import { conversationContext } from "./context.ts";
+import { boundedToolLoop } from "./tool-loop.ts";
 import { debugEvent } from "./debug.ts";
 import { recordProviderHealth } from "./health.ts";
 import { culturalText, validateIntent } from "./intent.ts";
@@ -438,6 +439,28 @@ export function configuredProvider(): ModelProvider | undefined {
         throw Error("Invalid interpretation");
       return validateIntent(calls[0].arguments);
     },
+    ...(gemini && process.env.AGENT_TOOL_LOOP !== "0" ? {
+      async chooseWithObservation(text: string, state: AgentState, tools: ToolDefinition[], execute: (choice: ToolChoice) => Promise<import("./types.ts").ToolResult>, signal?: AbortSignal) {
+        culturalText(text);
+        const trace = crypto.randomUUID();
+        debugEvent("gemini.request", { trace, operation: "observe-tools" });
+        try {
+          const observed = await boundedToolLoop(gemini, model!, JSON.stringify({
+            request: text,
+            conversation: conversationContext(state),
+            intent: state.intent,
+            destination: state.city,
+          }), tools, execute, signal);
+          recordProviderHealth("healthy");
+          debugEvent("gemini.result", { trace, count: observed.observations.length });
+          return observed;
+        } catch (error) {
+          debugEvent("gemini.failed", { trace, status: safeStatus(error) });
+          // The existing deterministic Qloo path is retained by the orchestrator.
+          throw Error("Model tool observation unavailable");
+        }
+      },
+    } : {}),
     async choose(text: string, state: AgentState, tools: ToolDefinition[]) {
       culturalText(text);
       return complete(

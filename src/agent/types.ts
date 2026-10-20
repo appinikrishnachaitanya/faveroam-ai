@@ -151,6 +151,13 @@ export interface ModelProvider {
     source: "model-only";
     request: string;
   }>;
+  chooseWithObservation?(
+    text: string,
+    state: AgentState,
+    tools: ToolDefinition[],
+    execute: (choice: ToolChoice) => Promise<ToolResult>,
+    signal?: AbortSignal,
+  ): Promise<import("./tool-loop.ts").ObservedChoices>;
   choose(
     text: string,
     state: AgentState,

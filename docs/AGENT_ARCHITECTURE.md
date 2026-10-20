@@ -91,3 +91,11 @@ Production logs contain allowlisted request IDs, event names, counts, statuses a
 ## Verification
 
 The regression suite covers scope preservation, contextual interpretation contracts, strict numeric metadata, dietary taxonomy, style changes, provider function protocols, role grouping, pending state, cancellation, feedback and account guards. Live provider probes and real browser journeys are separate from mocked tests. Consult the [release checklist](RELEASE_CHECKLIST.md) for the actual recorded results and unresolved deployment/account checks.
+
+## Bounded native tool-observation spike
+
+Native Gemini can now optionally perform a bounded **function call → Qloo MCP execution → native functionResponse → Gemini observation** cycle for unresolved user-requested taxonomy concepts. `src/agent/tool-loop.ts` implements the protocol; the orchestrator authorizes each actual query against the interpreted concept list, charges it to `TurnGuard`, and reuses its result so a successful lookup is not issued twice. The feature is enabled when a Vertex Express key is configured; set `AGENT_TOOL_LOOP=0` for an immediate rollback to previous one-shot tool selection. The OpenAI-compatible adapter, existing ranking route, deterministic discovery and guided actions retain their prior behavior.
+
+The native loop exposes **only `qloo_find_tags`**, never arbitrary MCP tools or HTTP endpoints. It permits a maximum of two sequential calls, rejects duplicate names/queries or attempts to call unadvertised tools, and forces a final no-tools model turn after the budget. Each returned MCP observation is reduced to at most five tag IDs/names/types before being sent back to Gemini. Tool data is untrusted, and Gemini's free-text acknowledgement is intentionally *not* used as a factual Passport response. Backend validation still owns final Qloo discoveries, scope, evidence, and user-facing messages. Any model/MCP failure falls back to the original validated refinement path; it does not turn into invented recommendations. The existing 90-second turn deadline, duplicate-call guard and cancellation remain in force.
+
+This is a safe incremental, feature-switchable experiment, not an unrestricted self-replanning agent. A broader conversational answer generator needs separate evidence-grounding acceptance tests before production use.

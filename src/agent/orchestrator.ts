@@ -586,6 +586,7 @@ export async function runTurn(
   let tools: ToolDefinition[] = [];
   let modelChoices: Awaited<ReturnType<ModelProvider["choose"]>> =
     rememberedRank ? [{ name: "qloo_rank", arguments: {} }] : [];
+  const observedTags = new Map<string, ToolResult>();
   const neededConcepts = [
     ...intent.concepts,
     ...(intent.constraints.includes("crowded") ? ["quiet"] : []),
@@ -615,11 +616,32 @@ export async function runTurn(
         t.name === "qloo_find_tags" || (t.name === "qloo_rank" && intent.strategy === "rank" && state.cards.some(card=>targets.includes(card.section))),
       );
       choosingModelTool=true;
-      modelChoices = await deps.provider.choose(
-        input.message ?? "",
-        state,
-        tools,
-      );
+      if (deps.provider.chooseWithObservation && intent.strategy !== "rank" &&
+          neededConcepts.some(concept=>conceptUnknown(concept))) {
+        const permitted = [...new Set(neededConcepts.map(concept =>
+          /quiet/i.test(concept) ? "quiet atmosphere" : concept
+        ))];
+        const observed = await deps.provider.chooseWithObservation(
+          input.message ?? "", state, tools.filter(t => t.name === "qloo_find_tags"),
+          async choice => {
+            const requested = choice.arguments.query;
+            if (choice.name !== "qloo_find_tags" || typeof requested !== "string")
+              throw Error("Invalid model-selected Qloo operation");
+            const canonical = permitted.find(c => c.toLowerCase() === requested.trim().toLowerCase());
+            if (!canonical) throw Error("Tool argument outside user request");
+            const args = { query: canonical, limit: 5 };
+            return guard.run("qloo_find_tags", args, () =>
+              deps.workflow("mcp", "qloo_find_tags", args, guard.signal));
+          }, guard.signal,
+        );
+        modelChoices = observed.choices;
+        for (const observation of observed.observations) {
+          const query = String(observation.choice.arguments.query).trim().toLowerCase();
+          observedTags.set(query, observation.result);
+        }
+      } else {
+        modelChoices = await deps.provider.choose(input.message ?? "", state, tools);
+      }
       if (modelChoices.length > 2) throw Error("Tool budget");
       if (modelChoices.some((c) => !tools.some((t) => t.name === c.name)))
         throw Error("Unadvertised tool");
@@ -716,7 +738,8 @@ export async function runTurn(
       const args = { query: /quiet/i.test(concept) ? "quiet atmosphere" : concept, limit: 5 };
       let result: ToolResult;
       try {
-        result = await guard.run("qloo_find_tags", args, () =>
+        const observed = observedTags.get(args.query.toLowerCase());
+        result = observed ?? await guard.run("qloo_find_tags", args, () =>
           deps.workflow(transport, "qloo_find_tags", args, guard.signal),
         );
         if (transport === "mcp" && result.status !== "ok")
