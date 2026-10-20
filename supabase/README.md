@@ -7,6 +7,8 @@ In your project's Supabase dashboard, open **SQL Editor → New query**. Run eac
 3. `migrations/202610180001_flexible_destinations_and_plans.sql` — removes the old ten-city database constraint and supports flexible plans.
 4. `migrations/202610180002_reusable_taste_profiles.sql` — reusable interests across cities.
 5. `migrations/202610180003_destination_catalog.sql` — database-managed destination dropdown.
+6. `migrations/202610180004_named_taste_profiles.sql` — named, reusable profiles.
+7. `migrations/202610200001_expand_saved_passport_snapshot.sql` — allow evidence-rich Passport snapshots up to 2 MB without deleting existing rows.
 
 Use **Table Editor → destinations** to add a city (name, enabled, sort_order), disable one, or reorder the list. Only enabled cities appear. The server validates both new Passports and saved-taste reuse against this same table. Changes appear on the next onboarding load; no code deployment is needed. Use clear locality names (for example `Portland, Oregon`) where names are ambiguous. A listed city does not guarantee Qloo has enough recommendations there.
 
@@ -26,4 +28,4 @@ The fresh script creates the current schema directly. It does not temporarily cr
 
 ## Named profiles
 
-For an existing database, run `migrations/202610180004_named_taste_profiles.sql` after the other migrations. It preserves existing tastes under “My tastes” and allows multiple profiles per account. If starting fresh, the updated `reset_app_data.sql` already contains this schema; do not reset merely to add profile names.
+For an existing database, run `migrations/202610180004_named_taste_profiles.sql` after the earlier migrations, then run the 202610200001 Passport snapshot upgrade. It preserves existing tastes under “My tastes” and allows multiple profiles per account. If starting fresh, the updated `reset_app_data.sql` already contains this schema; do not reset merely to add profile names.

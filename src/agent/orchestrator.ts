@@ -728,11 +728,23 @@ export async function runTurn(
           deps.workflow("exec", "qloo_find_tags", args, guard.signal),
         );
       }
-      const choices = tagCandidates(result, concept).filter(
+      let choices = tagCandidates(result, concept).filter(
         (t) =>
           !/quiet/i.test(concept) ||
           (t.id.includes(":ambience:") && /quiet|calm|tranquil/i.test(t.name)),
       );
+      // If Qloo does not index the phrase “Indian cuisine”, try the shorter
+      // cultural term once. Never invent a tag or show unfiltered venues.
+      const cuisineName = !excluding && scopedTargets.includes("Eat")
+        ? concept.match(/^([\\p{L}]+) cuisine$/iu)?.[1] : undefined;
+      if (cuisineName && !choices.length) {
+        const fallbackArgs = {query:cuisineName,limit:5};
+        try {
+          const fallbackTags=await guard.run("qloo_find_tags_cuisine",fallbackArgs,()=>
+            deps.workflow("exec","qloo_find_tags",fallbackArgs,guard.signal));
+          choices=tagCandidates(fallbackTags,cuisineName);
+        } catch { /* Keep original empty result and explain the limitation. */ }
+      }
       // A dietary option is a venue requirement, not a new cultural seed.
       // Prefer the returned options taxonomy over audience/cuisine homonyms.
       if (!excluding && /^vegetarian$/i.test(concept)) {
@@ -765,6 +777,26 @@ export async function runTurn(
         state.tags = [...state.tags.filter((old) => old.id !== tag.id), tag];
         state.categoryTags!.Eat = [...new Set([...(state.categoryTags!.Eat ?? []), tag.id])];
         continue;
+      }
+      // A clearly identified cuisine is already the user's explicit choice.
+      // Do not ask them to confirm an unambiguous Qloo taxonomy entry twice.
+      if (cuisineName) {
+        const canonical=cuisineName.toLowerCase();
+        const matches=choices.filter(tag =>
+          /urn:tag:(?:cuisine|category:place)/i.test(tag.id) &&
+          (tag.name.toLowerCase()===canonical || tag.name.toLowerCase()===canonical+" cuisine" ||
+           tag.name.toLowerCase()===canonical+" restaurant" || tag.name.toLowerCase()===canonical+" restaurants")
+        );
+        const preferred=matches.filter(tag=>tag.id.startsWith("urn:tag:cuisine:"));
+        const verified=preferred.length===1?preferred[0]:matches.length===1?matches[0]:undefined;
+        if(verified) {
+          state.tags=[...state.tags.filter(tag=>tag.id!==verified.id),verified].slice(-50);
+          const old=state.categoryTags!.Eat??[];
+          // Switching cuisines replaces the old restrictive cuisine filter.
+          state.categoryTags!.Eat=[...new Set([...old.filter(id=>!state.tags.some(tag=>tag.id===id && /cuisine|restaurant/i.test(`${tag.id} ${tag.name}`))),verified.id])];
+          event(`${verified.name} dining filter confirmed by Qloo`,"complete");
+          continue;
+        }
       }
       // Generic venue genres describe the requested output, not a new personal taste.
       // Resolve their actual Qloo taxonomy without another taste-confirmation dialog.
@@ -856,7 +888,9 @@ export async function runTurn(
       event("No matching concept returned", "attention");
       if (/quiet/i.test(concept)) return reply("I could not verify the requested quiet-atmosphere requirement. Your discoveries are unchanged; retry or explicitly relax quietness.");
       return reply(
-        "No matching interest was found. Your existing Passport is unchanged; try a more specific term.",
+        scopedTargets.includes("Eat")
+          ? `I can help find ${concept} restaurants in ${state.city}, but Qloo did not return a verified cuisine tag this time. I kept your current discoveries rather than showing unrelated places. Try a specific dish such as biryani, or try the cuisine again.`
+          : "I couldn’t verify that interest in Qloo. Your discoveries are safe; try a more specific phrase.",
       );
     } catch {
       event("Concept workflow unavailable", "attention");

@@ -38,8 +38,6 @@ export default function AccountControl({
   const [tab, setTab] = useState<"login" | "register" | "recover" | "password">(
     "login",
   );
-  const [deleteConfirmation, setDeleteConfirmation] = useState("");
-  const [deletePassword, setDeletePassword] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
@@ -95,14 +93,17 @@ export default function AccountControl({
       const data = await request("/api/account");
       if (epoch !== authEpoch.current) return;
       const identity = data.user?.email ?? null;
-      if (accountIdentity.current !== identity) {
+      const identityChanged = accountIdentity.current !== identity;
+      if (identityChanged) {
         setEntries([]);
         setPlans([]);
       }
       accountIdentity.current = identity;
       setAccount(data);
-      onAccountChange?.(Boolean(data.user));
-      accountChanged();
+      if (identityChanged) {
+        onAccountChange?.(Boolean(data.user));
+        accountChanged();
+      }
       if (data.user && loadLibrary) {
         try {
           const list = await request("/api/account/passports");
@@ -175,8 +176,6 @@ export default function AccountControl({
       setPassword("");
       setCurrentPassword("");
       setConfirmPassword("");
-      setDeletePassword("");
-      setDeleteConfirmation("");
       opener.current?.focus();
     }
     return () => {
@@ -312,33 +311,6 @@ export default function AccountControl({
       const text = e instanceof Error ? e.message : "Could not sign out.";
       setMessage(text);
       showNotice(text, "error");
-    } finally {
-      setBusy(false);
-    }
-  }
-  async function deleteAccount() {
-    setBusy(true);
-    try {
-      await request(
-        "/api/account",
-        { password: deletePassword, confirmation: deleteConfirmation },
-        "DELETE",
-      );
-      setDeletePassword("");
-      setDeleteConfirmation("");
-      authEpoch.current++;
-      accountIdentity.current = null;
-      setEntries([]);
-      setAccount((a) => (a ? { ...a, user: null } : a));
-      onAccountChange?.(false);
-      setPlans([]);
-      setVerificationPending(false);
-      accountChanged();
-      onSignOut();
-      setOpen(false);
-      showNotice("You’re signed out.");
-    } catch (e) {
-      setMessage(e instanceof Error ? e.message : "Could not delete account.");
     } finally {
       setBusy(false);
     }
@@ -607,44 +579,6 @@ export default function AccountControl({
                 >
                   Sign out and clear this screen
                 </button>
-                <details className="delete-account">
-                  <summary>Delete my account</summary>
-                  <p>
-                    This permanently deletes your account and all saved
-                    Passports.
-                  </p>
-                  <label>
-                    Confirm password
-                    <input
-                      type="password"
-                      autoComplete="current-password"
-                      value={deletePassword}
-                      maxLength={128}
-                      onChange={(e) => setDeletePassword(e.target.value)}
-                    />
-                  </label>
-                  <label>
-                    Type DELETE
-                    <input
-                      value={deleteConfirmation}
-                      maxLength={6}
-                      autoComplete="off"
-                      onChange={(e) => setDeleteConfirmation(e.target.value)}
-                    />
-                  </label>
-                  <button
-                    className="quiet-button"
-                    disabled={
-                      busy ||
-                      !account.storage ||
-                      !deletePassword ||
-                      deleteConfirmation !== "DELETE"
-                    }
-                    onClick={() => void deleteAccount()}
-                  >
-                    Permanently delete account
-                  </button>
-                </details>
               </>
             ) : (
               <form onSubmit={submit}>

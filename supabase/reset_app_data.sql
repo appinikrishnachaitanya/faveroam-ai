@@ -14,7 +14,7 @@ create table public.saved_passports (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
   city text not null,
-  snapshot jsonb not null check (jsonb_typeof(snapshot) = 'object' and snapshot ? 'version' and snapshot->>'version' = '1' and snapshot ? 'city' and snapshot->>'city' = city and octet_length(snapshot::text) <= 600000),
+  snapshot jsonb not null check (jsonb_typeof(snapshot) = 'object' and snapshot ? 'version' and snapshot->>'version' = '1' and snapshot ? 'city' and snapshot->>'city' = city and octet_length(snapshot::text) <= 2000000),
   updated_at timestamptz not null default now(),
   unique(user_id,city)
 );

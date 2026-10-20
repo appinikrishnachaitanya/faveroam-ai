@@ -11,7 +11,7 @@ import { configuredProvider } from "../../../../src/agent/provider";
 import { evidenceFacts } from "../../../../src/qloo/explanation";
 import { debugRequest } from "../../../../src/agent/debug";
 import { discoverSection } from "../../../../src/agent/runtime";
-import { analyze, type AnalysisKind } from "../../../../src/qloo/analysis";
+import { analyze, selectAnalysisSignals, type AnalysisKind } from "../../../../src/qloo/analysis";
 export const runtime = "nodejs";
 const running = new Set<string>();
 const json = (value: unknown, status = 200) =>
@@ -67,10 +67,10 @@ async function handlePOST(request: Request) {
     acquired = true;
     if (b.action === "analysis") {
       if (!["taste","heatmap","demographics"].includes(b.kind)) return json({error:"Choose a supported analysis."},400);
-      const analysis = await analyze(b.kind as AnalysisKind, {
-        entities: state.selected.filter(s=>!s.id.startsWith("urn:tag:")).map(s=>s.id),
-        tags: state.selected.filter(s=>s.id.startsWith("urn:tag:")).map(s=>s.id),
-      }, state.city, signal);
+      let interests;
+      try { interests=selectAnalysisSignals(state.selected,b.interestIds); }
+      catch { return json({error:"Choose one to five confirmed interests to explore."},400); }
+      const analysis = await analyze(b.kind as AnalysisKind, interests, state.city, signal);
       return json({analysis});
     }
     if (b.action === "trends") {

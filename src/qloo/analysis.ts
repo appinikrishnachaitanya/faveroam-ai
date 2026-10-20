@@ -9,6 +9,26 @@ export type AnalysisResult =
   | { kind:'heatmap'; points:HeatPoint[]; recordedAt:string }
   | { kind:'demographics'; records:DemographicRecord[]; recordedAt:string };
 const finite = (v:unknown):v is number => typeof v === 'number' && Number.isFinite(v);
+/** Never trust arbitrary client IDs: analysis uses only confirmed interests in this session. */
+export function selectAnalysisSignals(selected: readonly {id:string}[], ids:unknown) {
+  if (!Array.isArray(ids) || ids.length < 1 || ids.length > 5 || ids.some(id=>typeof id !== 'string') || new Set(ids).size !== ids.length)
+    throw Error('Select one to five different confirmed interests.');
+  const known = new Set(selected.map(t=>t.id));
+  if (ids.some(id=>!known.has(id))) throw Error('Choose only interests confirmed in your Passport.');
+  return {
+    entities: ids.filter((id:string)=>!id.startsWith('urn:tag:')) as string[],
+    tags: ids.filter((id:string)=>id.startsWith('urn:tag:')) as string[],
+  };
+}
+/** Qloo can return the same theme with different identifiers or label variants. */
+function distinctTasteTags(tags:TasteTag[]):TasteTag[] {
+  const seen=new Set<string>();
+  return [...tags].sort((a,b)=>(b.affinity??-1)-(a.affinity??-1)).filter(tag=>{
+    const key=tag.name.toLowerCase().replace(/\\b(?:cuisine|food|style)\\b/g,'').replace(/[^\\p{L}\\p{N}]/gu,'');
+    if(!key || seen.has(key))return false;
+    seen.add(key);return true;
+  });
+}
 
 /** Special Insights collections have their own schemas, never entity parsers. */
 export function parseAnalysis(kind:AnalysisKind, body:unknown):AnalysisResult {
@@ -17,11 +37,11 @@ export function parseAnalysis(kind:AnalysisKind, body:unknown):AnalysisResult {
   const field=kind==='taste' ? 'tags' : kind==='heatmap' ? 'heatmap' : 'demographics';
   if (!Array.isArray(results[field])) throw Error('Unexpected analysis collection');
   const rows=results[field].filter(isObject);
-  if(kind==='taste') return {kind,recordedAt,tags:rows.flatMap(t=>{
+  if(kind==='taste') return {kind,recordedAt,tags:distinctTasteTags(rows.flatMap(t=>{
     if(typeof t.tag_id!=='string' || !/^urn:tag:[\w:-]+$/.test(t.tag_id) || typeof t.name!=='string')return [];
     const q=isObject(t.query)?t.query:{};
     return [{id:t.tag_id,name:t.name.slice(0,180),...(finite(q.affinity)?{affinity:q.affinity}:{})}];
-  }).slice(0,12)};
+  })).slice(0,12)};
   if(kind==='heatmap') return {kind,recordedAt,points:rows.flatMap(t=>{
     const p=isObject(t.location)?t.location:{},q=isObject(t.query)?t.query:{};
     if(!finite(p.latitude)||Math.abs(p.latitude)>90||!finite(p.longitude)||Math.abs(p.longitude)>180||!finite(q.affinity))return [];

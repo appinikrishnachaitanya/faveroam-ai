@@ -14,15 +14,17 @@ export default function TasteAnalysis({passport,busy,onRefine}:{passport:Passpor
   const [loading,setLoading]=useState<AnalysisKind>();
   const [error,setError]=useState('');
   const [themeId,setThemeId]=useState('');
+  // Start with one interest. Users explicitly choose any other combination.
+  const [interestIds,setInterestIds]=useState<string[]>(()=>passport.selected[0]?[passport.selected[0].id]:[]);
   const categories=sectionOrder.filter(section=>!passport.session?.hiddenCategories.includes(section));
   const [themeSection,setThemeSection]=useState<Section>(()=>categories.find(section=>section==='Movies') ?? categories[0] ?? 'Eat');
   const active=useRef(false);
   async function load(kind:AnalysisKind) {
-    if(!passport.agent || active.current || busy)return;
+    if(!passport.agent || !interestIds.length || active.current || busy)return;
     active.current=true;setLoading(kind);setError('');
     try {
       const response=await fetch('/api/agent/intelligence',{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({...passport.agent,action:'analysis',kind}),signal:AbortSignal.timeout(65000)});
+        body:JSON.stringify({...passport.agent,action:'analysis',kind,interestIds}),signal:AbortSignal.timeout(65000)});
       const data=await response.json();
       if(!response.ok)throw Error();
       setResults(current=>({...current,[kind]:data.analysis}));
@@ -44,13 +46,27 @@ export default function TasteAnalysis({passport,busy,onRefine}:{passport:Passpor
   }
   return <section className="taste-analysis" aria-labelledby="analysis-title">
     <div className="analysis-intro"><span className="analysis-emblem" aria-hidden="true"><Icon name="star" size={28}/></span><div><span className="micro-label">MAKE THE CITY FEEL MORE LIKE YOU</span><h2 id="analysis-title">Follow your taste. Find your next corner.</h2><p>See the connections behind your interests, or choose an area to explore next. Your discoveries stay here while you look around.</p></div></div>
+    <fieldset className="analysis-interest-picker" disabled={busy||Boolean(loading)}>
+      <legend>Choose the interests to explore</legend>
+      <p>Select one or more of your confirmed interests. Insights are generated for exactly this selection, not every possible combination.</p>
+      <div className="analysis-interest-options">
+        {passport.selected.map(interest=><label key={interest.id} className={interestIds.includes(interest.id)?"selected":""}>
+          <input type="checkbox" checked={interestIds.includes(interest.id)} onChange={event=>{
+            setInterestIds(previous=>event.target.checked?[...previous,interest.id]:previous.filter(id=>id!==interest.id));
+            setResults({});setThemeId('');setError('');
+          }}/><span>{interest.name}</span>
+        </label>)}
+      </div>
+      <small>{interestIds.length} of {passport.selected.length} selected</small>
+    </fieldset>
     <div className="analysis-actions">
-      <button className="analysis-action" aria-pressed={Boolean(taste)} disabled={busy||Boolean(loading)} onClick={()=>void load('taste')}><Icon name="star" size={22}/><span><strong>{loading==='taste'?'Finding taste connections…':'Find my taste themes'}</strong><small>Discover cultural threads in the things you love.</small></span><Icon name="arrow" size={18}/></button>
+      <button className="analysis-action" aria-pressed={Boolean(taste)} disabled={busy||Boolean(loading)||!interestIds.length} onClick={()=>void load('taste')}><Icon name="star" size={22}/><span><strong>{loading==='taste'?'Finding taste connections…':'Find my taste themes'}</strong><small>Discover cultural threads in the things you love.</small></span><Icon name="arrow" size={18}/></button>
       <button className="analysis-action" aria-pressed={Boolean(heat)} disabled={busy||Boolean(loading)} onClick={()=>void load('heatmap')}><Icon name="pin" size={22}/><span><strong>{loading==='heatmap'?'Mapping your interests…':`Find an area in ${passport.city}`}</strong><small>Choose a starting point, then find dining nearby.</small></span><Icon name="arrow" size={18}/></button>
     </div>
+    {!interestIds.length&&<p role="status">Choose at least one interest to see relevant insights.</p>}
     {error&&<p role="alert">{error}</p>}
     {loading&&<p role="status">Looking for patterns in your confirmed tastes…</p>}
-    {taste&&<div className="analysis-result"><span className="micro-label">THE THREADS BETWEEN YOUR FAVORITES</span><h3>Your taste themes</h3><p>Use these connections as inspiration for what to try next. They describe associations between your interests, rather than your personality.</p>
+    {taste&&<div className="analysis-result"><span className="micro-label">THE THREADS BETWEEN YOUR FAVORITES</span><h3>Your taste themes</h3><p>Based on {passport.selected.filter(interest=>interestIds.includes(interest.id)).map(interest=>interest.name).join(" + ")}. These are cultural associations, not personality predictions.</p>
       {displayTags(taste.tags).length ? <>
         <div className="taste-theme-list" role="group" aria-label="Choose a taste theme">
           {displayTags(taste.tags).map(tag => <button key={tag.id} type="button"

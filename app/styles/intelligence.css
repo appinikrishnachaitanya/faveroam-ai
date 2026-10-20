@@ -281,3 +281,12 @@
 .area-nearby li { margin:8px 0; }
 .area-nearby small { display:block; color:#51654f; margin-top:3px; }
 .area-guide .area-choices a { line-height:1.6; }
+
+.analysis-interest-picker { margin-top:24px; padding:18px; border:1px solid var(--ui-border); border-radius:16px; background:var(--ui-surface); min-width:0; }
+.analysis-interest-picker legend { padding:0 6px; font-size:16px; font-weight:700; }
+.analysis-interest-picker p { margin:6px 0 16px; font-size:14px; line-height:1.6; color:var(--ui-muted); }
+.analysis-interest-options { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
+.analysis-interest-options label { display:flex; gap:8px; align-items:center; min-height:44px; padding:9px 13px; border:1px solid var(--ui-border); border-radius:12px; cursor:pointer; font-size:14px; background:var(--ui-surface); overflow-wrap:anywhere; }
+.analysis-interest-options label.selected { border-color:var(--ui-action); background:var(--ui-tint); font-weight:650; }
+.analysis-interest-options input { width:17px; height:17px; accent-color:var(--ui-action); flex-shrink:0; }
+.analysis-interest-picker small { color:var(--ui-muted); }

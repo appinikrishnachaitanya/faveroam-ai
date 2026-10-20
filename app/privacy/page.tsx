@@ -13,8 +13,8 @@ export default function Privacy() {
         An account stores the latest Passport per city: confirmed tastes, Qloo
         discoveries and evidence, explicit feedback and your My Vibe shortlist.
         If you save an outing, we also store its date, destination and chosen
-        stops. Plans can be deleted individually and are removed when you delete
-        your account. They do not represent bookings.
+        stops. Plans can be deleted individually; account deletion also removes
+        your saved plans and Passports. They do not represent bookings.
         You can separately save a reusable taste profile containing confirmed interests and discovery preferences, without city-specific results or conversation history. First and last names are stored in your Supabase account metadata and are not included in Qloo or Gemini requests.
         We do not save conversation history, model-only comparisons, provider
         credentials or guest-session tokens in account storage. Saved evidence
@@ -44,11 +44,12 @@ export default function Privacy() {
       </p>
       <h2>Account deletion</h2>
       <p>
-        Open My Passports, expand Delete my account, re-enter your password and
-        type DELETE to permanently remove the account and saved Passports. This
-        requires connected account storage. Operators must still publish
-        applicable retention/contact details and review this notice for their
-        jurisdiction before launch.
+        Account deletion is not shown in the hackathon demo interface. For a
+        permanent deletion request, contact the project operator privately;
+        never post your password or personal details in a public issue. The
+        server keeps its re-authenticated deletion endpoint available. Operators
+        must publish a private support channel and applicable retention details
+        before public launch.
       </p>
     </main>
   );
