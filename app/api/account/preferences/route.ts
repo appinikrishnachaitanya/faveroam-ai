@@ -8,6 +8,7 @@ import { normalizeSession } from "../../../../src/agent/session";
 import { discoverSection } from "../../../../src/agent/runtime";
 import { passportView, sectionOrder } from "../../../../src/workspace/state";
 import { debugRequest } from "../../../../src/agent/debug";
+import { assertSessionWriteCommitted } from "../../../../src/agent/session-lifetime";
 export const runtime = "nodejs";
 
 async function handle(request: Request) {
@@ -70,7 +71,8 @@ async function handle(request: Request) {
     const cards = [...new Map(results.flat().map(c=>[c.id,c])).values()];
     const state = createSession({...initial,cards,notices:working.notices},profile.constraints);
     Object.assign(state,profile);
-    await syncSession(state);
+    const persisted = await syncSession(state);
+    assertSessionWriteCommitted(storageConfigured(), persisted);
     return privateJson({passport:passportView(state,"Fresh discoveries using your reusable taste profile.")});
   } catch {
     return privateJson({error:"Saved tastes are temporarily unavailable. If this is new, apply the taste_profiles database migration. Your current Passport is preserved."},503);

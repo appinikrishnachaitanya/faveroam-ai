@@ -3,26 +3,32 @@ import { debugEvent } from "./debug.ts";
 import { normalizeSession, clearPassport } from "./session.ts";
 import { randomUUID } from "node:crypto";
 import { loadActiveSession, persistActiveSession, removeActiveSession } from "./active-session-db.ts";
-import { activeSessionExpiry } from "./session-lifetime.ts";
+import { activeSessionExpiry, assertSessionWriteCommitted } from "./session-lifetime.ts";
 import type { Candidate } from "../passport/model.ts";
 import type { AgentState, Constraint, TastePassportSession } from "./types.ts";
 import type { Passport } from "../workspace/state.ts";
 const globalStore = globalThis as typeof globalThis & {
   tastePassportSessions?: Map<string, AgentState>;
   tastePassportLocks?: Set<string>;
+  tastePassportDurableIds?: Set<string>;
 };
 const sessions = (globalStore.tastePassportSessions ??= new Map<
   string,
   AgentState
 >());
 const locks = (globalStore.tastePassportLocks ??= new Set<string>());
+const durableIds = (globalStore.tastePassportDurableIds ??= new Set<string>());
 export function createSession(
   passport: Passport,
   constraints: Constraint[] = [],
 ): TastePassportSession {
   for (const [id, s] of sessions)
-    if (s.expires < Date.now()) sessions.delete(id);
-  if (sessions.size >= 100) sessions.delete(sessions.keys().next().value!);
+    if (s.expires < Date.now()) { sessions.delete(id); durableIds.delete(id); }
+  if (sessions.size >= 100) {
+    const oldest = sessions.keys().next().value!;
+    sessions.delete(oldest);
+    durableIds.delete(oldest);
+  }
   const state: AgentState = {
     id: randomUUID(),
     revision: 0,
@@ -59,9 +65,14 @@ export function getSession(id: string): AgentState {
  */
 export async function loadSession(id: string): Promise<AgentState> {
   const persisted = await loadActiveSession(id);
+  if (persisted) durableIds.add(id);
   const local = sessions.get(id);
   const now = Date.now();
   const validLocal = local && local.expires > now ? local : undefined;
+  // A higher local revision than the shared row means a prior DB update was
+  // missed. Never treat that uncommitted state as authoritative for saving.
+  if (persisted && validLocal && validLocal.revision > persisted.revision)
+    throw Error("Your Passport could not be synchronized safely. Please retry the refinement.");
   const chosen = persisted && (!validLocal || persisted.revision >= validLocal.revision)
     ? normalizeSession(persisted) : validLocal;
   if (chosen) {
@@ -72,7 +83,9 @@ export async function loadSession(id: string): Promise<AgentState> {
 }
 /** Persist newly constructed trusted server state before returning it to the browser. */
 export async function syncSession(state: AgentState) {
-  return persistActiveSession(state);
+  const persisted = await persistActiveSession(state);
+  if (persisted) durableIds.add(state.id);
+  return persisted;
 }
 export async function inSession<T>(
   id: string,
@@ -110,7 +123,9 @@ export async function inSession<T>(
     if (!sessions.has(id)) throw Error("Passport was reset.");
     // CAS protects the revision when a second Railway instance processes a
     // concurrent edit. An unavailable shared table retains the legacy map.
-    await persistActiveSession(next.state, revision);
+    const committed = await persistActiveSession(next.state, revision);
+    assertSessionWriteCommitted(durableIds.has(id), committed);
+    if (committed) durableIds.add(id);
     sessions.set(id, next.state);
     debugEvent("session.updated", { count: next.state.cards.length });
     return next.value;
@@ -123,13 +138,18 @@ export async function discardSession(id: string) {
   const old = sessions.get(id);
   if (old) clearPassport(old);
   sessions.delete(id);
+  durableIds.delete(id);
   await removeActiveSession(id);
 }
 
 /** Rehydrate trusted account data with a fresh, bounded guest-session token. */
 export function registerRestoredSession(state: TastePassportSession) {
   for (const [id, s] of sessions)
-    if (s.expires < Date.now()) sessions.delete(id);
-  if (sessions.size >= 100) sessions.delete(sessions.keys().next().value!);
+    if (s.expires < Date.now()) { sessions.delete(id); durableIds.delete(id); }
+  if (sessions.size >= 100) {
+    const oldest = sessions.keys().next().value!;
+    sessions.delete(oldest);
+    durableIds.delete(oldest);
+  }
   sessions.set(state.id, state);
 }

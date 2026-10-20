@@ -7,6 +7,7 @@ import { QlooError } from "../../../src/qloo/client.ts";
 import { validDestination } from "../../../src/workspace/location";
 import { catalogCity } from "../../../src/workspace/destinations";
 import { sectionTypes, type Section } from "../../../src/passport/model";
+import { storageConfigured } from "../../../src/account/server";
 async function handlePOST(request: Request) {
   try {
     const raw = await request.text();
@@ -53,7 +54,12 @@ async function handlePOST(request: Request) {
             m.text.length <= 1200,
         )
         .slice(-30);
-    await syncSession(state);
+    const persisted = await syncSession(state);
+    if (storageConfigured() && !persisted) {
+      const warning = "Temporary Passport storage is unavailable. Your discoveries are visible now, but a server restart could lose this active session. Saving may fail until storage is restored.";
+      if (!state.notices.includes(warning)) state.notices.push(warning);
+      if (!result.notices.includes(warning)) result.notices.push(warning);
+    }
     return NextResponse.json(
       {
         ...result,

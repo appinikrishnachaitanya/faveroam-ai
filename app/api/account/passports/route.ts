@@ -1,4 +1,5 @@
 import { debugRequest } from "../../../../src/agent/debug";
+import { assertSessionWriteCommitted } from "../../../../src/agent/session-lifetime";
 import { passportStorageFailure, type PassportStorageStage } from "../../../../src/account/passport-storage-error";
 import {
   accountClient,
@@ -92,7 +93,8 @@ async function handlePOST(request: Request) {
       const state = restoreSnapshot(data.snapshot);
       stage = "restore-session";
       registerRestoredSession(state);
-      await syncSession(state);
+      const persisted = await syncSession(state);
+      assertSessionWriteCommitted(storageConfigured(), persisted);
       return privateJson({
         passport: passportView(
           state,

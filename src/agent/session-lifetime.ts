@@ -1,5 +1,10 @@
 import type { AgentState } from "./types.ts";
 export const ACTIVE_SESSION_LIFETIME_MS = 24 * 60 * 60_000;
+/** Once a session has entered shared storage, fail closed rather than silently lose later edits. */
+export function assertSessionWriteCommitted(wasDurable: boolean, committed: boolean): void {
+  if (wasDurable && !committed)
+    throw Error("Your Passport could not be synchronized safely. Please retry the refinement.");
+}
 export const MAX_ACTIVE_SESSION_BYTES = 4_500_000;
 export const activeSessionExpiry = (now = Date.now()) => now + ACTIVE_SESSION_LIFETIME_MS;
 export const validSessionId = (id: unknown): id is string =>
