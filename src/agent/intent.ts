@@ -259,3 +259,22 @@ export function reasonConstraint(reason: string): Constraint[] {
 }
 
 export { onboardingTastes } from "../workspace/state.ts";
+
+
+export function findMentionedCard<T extends { id: string; name: string }>(text: string, cards: readonly T[]): T | undefined {
+  if (!text || typeof text !== "string" || !cards?.length) return undefined;
+  const normalized = text.toLowerCase().trim();
+  const sorted = [...cards].sort((a, b) => b.name.length - a.name.length);
+  return sorted.find(c => {
+    if (!c.name || c.name.length < 3) return false;
+    const nameLow = c.name.toLowerCase();
+    if (normalized === nameLow) return true;
+    if (nameLow.length >= 4 && normalized.includes(nameLow)) return true;
+    const escaped = nameLow.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    try {
+      return new RegExp(`\\b${escaped}\\b`, "i").test(normalized);
+    } catch {
+      return false;
+    }
+  });
+}

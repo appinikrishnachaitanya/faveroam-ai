@@ -33,6 +33,13 @@ export function decisionSummary(before: AgentState, after: AgentState, changed: 
       return tag && /urn:tag:(?:cuisine|dietary_option|specialty_dish):/.test(tag.id) ? [tag.name] : [];
     });
     if (retained.length) sentences.push(`Kept: ${[...new Set(retained)].slice(0, 4).join(", ")}${retained.some(name => /vegetarian|vegan/i.test(name)) ? " options" : ""}.`);
+    const quietApplied = (after.categoryTags?.[section] ?? []).some(id => {
+      const tag = after.tags.find(t => t.id === id);
+      return tag && /quiet|calm|tranquil|atmosphere/i.test(tag.name);
+    });
+    if (quietApplied) {
+      sentences.push("Atmosphere: quiet filter applied via Qloo venue metadata (real-time noise levels not measured).");
+    }
     if (sentences.length) sentences.unshift(`${cards.length} ${label(section).toLowerCase()} ${cards.length === 1 ? "suggestion" : "suggestions"} returned.`);
     return sentences;
   }).join(" ");

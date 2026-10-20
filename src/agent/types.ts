@@ -15,7 +15,17 @@ export const reasons = [
   "Other",
 ] as const;
 export type Reason = (typeof reasons)[number];
+export interface ConversationCardSummary {
+  id: string;
+  name: string;
+  section: Section;
+  priceLevel?: number;
+  rating?: number;
+  tags?: string[];
+}
+
 export interface Intent {
+  targetCardId?: string;
   kind: "onboard" | "refine" | "hide" | "unknown";
   question?: "capabilities" | "preferences" | "explanation";
   destination?: string;
@@ -124,6 +134,7 @@ export interface ConversationContext {
   history?: {role: "user" | "agent"; text: string}[];
   tastes?: string[];
   lastSections?: Section[];
+  activeRecommendations?: ConversationCardSummary[];
   categories?: {section: Section; preferences: Record<string, string | number>; constraints: Constraint[]; concepts: string[]; requirements: string[]; exclusions: string[]; resultCount: number}[];
 }
 export interface ModelProvider {

@@ -1,7 +1,7 @@
 import { refinementScope } from "./scope.ts";
 import { conversationContext } from "./context.ts";
 import { decisionSummary } from "./decision-summary.ts";
-import { passportAnswer } from "./answers.ts";
+import { passportAnswer, cardSpecificAnswer } from "./answers.ts";
 import { debugEvent } from "./debug.ts";
 import {
   normalizeSession,
@@ -167,6 +167,18 @@ export async function runTurn(
     state.providerHealth = "configured";
   if (input.message) {
     culturalText(input.message);
+    const activeCards = [...state.cards, ...state.savedCards];
+    const mentioned = findMentionedCard(input.message, activeCards);
+    if (mentioned) {
+      const isCardInquiry =
+        /why|tell me|explain|what is|how is|is it|about|details|review|rating|price|location|quiet|where is|who is/i.test(input.message) ||
+        conceptKey(input.message) === conceptKey(mentioned.name) ||
+        input.message.trim().toLowerCase() === mentioned.name.trim().toLowerCase();
+      if (isCardInquiry) {
+        delete state.pending;
+        return reply(cardSpecificAnswer(mentioned, input.message));
+      }
+    }
     if (
       state.pending &&
       conceptKey(state.pending.request ?? "") === conceptKey(input.message)

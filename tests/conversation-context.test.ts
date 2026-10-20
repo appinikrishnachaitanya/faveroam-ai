@@ -34,3 +34,54 @@ test("history starts with a user message even after guided-only actions",()=>{
  assert.deepEqual(conversationContext(state).history,[{role:"user",text:"Find coffee"},{role:"agent",text:"Updated Coffee"}]);
  state.history=[{role:"agent",text:"Updated guided filters"}];assert.deepEqual(conversationContext(state).history,[]);
 });
+
+
+test("card inquiry resolves active card without triggering disambiguation modal", async () => {
+  const state = fixture();
+  state.cards = [
+    {
+      id: "venue-cross-restaurant",
+      name: "Cross Restaurant",
+      section: "Eat",
+      types: ["urn:entity:place"],
+      detail: "Indian dining",
+      address: "123 High St, London",
+      intelligence: {
+        commercial: { priceLevel: 2 },
+        quality: { businessRating: 4.6 }
+      },
+      evidence: {
+        source: "Qloo",
+        operation: "/v2/insights/",
+        queryId: "q1",
+        recordedAt: new Date().toISOString(),
+        destination: "London",
+        locality: "physical-city",
+        mode: "familiar",
+        pool: "direct",
+        inputs: [{ id: "t1", name: "Indian", types: ["urn:tag:cuisine"], role: "tag-signal" }],
+        params: {},
+        result: {
+          id: "venue-cross-restaurant",
+          type: "place",
+          tags: [
+            { id: "urn:tag:cuisine:indian", name: "Indian Cuisine" },
+            { id: "urn:tag:ambience:quiet", name: "Quiet" }
+          ]
+        }
+      }
+    }
+  ];
+
+  const reply = await runTurn(state, { message: "Tell me about Cross Restaurant" }, {
+    tools: async () => [],
+    workflow: async () => ({ status: "ok", results: [] }),
+    discover: async () => []
+  });
+
+  assert.ok(!reply.state.pending, "Must not set pending disambiguation for an active card");
+  assert.match(reply.message, /Cross Restaurant/);
+  assert.match(reply.message, /Dining/);
+  assert.match(reply.message, /123 High St/);
+  assert.match(reply.message, /4.6/);
+});
