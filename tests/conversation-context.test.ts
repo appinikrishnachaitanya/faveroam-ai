@@ -4,6 +4,7 @@ import { conversationContext } from "../src/agent/context.ts";
 import { normalizeSession } from "../src/agent/session.ts";
 import { runTurn } from "../src/agent/orchestrator.ts";
 import type { AgentState } from "../src/agent/types.ts";
+import { normalizeEntity } from "../src/qloo/normalizer.ts";
 function fixture():AgentState {
  return normalizeSession({id:"private-session-id",revision:0,expires:Date.now()+60000,city:"Toronto",selected:[{id:"public-taste-id",name:"Indian",types:["urn:tag:cuisine:qloo"],detail:"not context"}],tags:[{id:"urn:tag:dietary_option:qloo:vegetarian",name:"Vegetarian",types:["urn:tag:dietary_option:qloo"],detail:"not context"}],categoryTags:{Eat:["urn:tag:dietary_option:qloo:vegetarian"]},queryPreferences:{Eat:{priceMax:2,businessRatingMin:4.5}},constraints:[],categoryConstraints:{},cards:[],previous:[],feedback:[],notices:[],activeCategories:["Eat"],intent:{kind:"refine",sections:["Eat"],seeds:[],concepts:[],constraints:[],strategy:"discover"},history:Array.from({length:12},(_,index)=>({role:index%2?"agent":"user",text:`Cultural turn ${index}`}))});
 }
@@ -46,10 +47,12 @@ test("card inquiry resolves active card without triggering disambiguation modal"
       types: ["urn:entity:place"],
       detail: "Indian dining",
       address: "123 High St, London",
-      intelligence: {
-        commercial: { priceLevel: 2 },
-        quality: { businessRating: 4.6 }
-      },
+      intelligence: normalizeEntity({
+        entity_id: "venue-cross-restaurant",
+        name: "Cross Restaurant",
+        types: ["urn:entity:place"],
+        properties: { price_level: 2, business_rating: 4.6 },
+      }),
       evidence: {
         source: "Qloo",
         operation: "/v2/insights/",
