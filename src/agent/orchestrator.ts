@@ -1,7 +1,7 @@
 import { refinementScope } from "./scope.ts";
 import { conversationContext } from "./context.ts";
 import { decisionSummary } from "./decision-summary.ts";
-import { passportAnswer, cardSpecificAnswer } from "./answers.ts";
+import { passportAnswer, cardSpecificAnswer, isListRequest, listPassportResults } from "./answers.ts";
 import { debugEvent } from "./debug.ts";
 import {
   normalizeSession,
@@ -168,6 +168,12 @@ export async function runTurn(
     state.providerHealth = "configured";
   if (input.message) {
     culturalText(input.message);
+    // Handle presentation requests before intent classification. A model may
+    // otherwise interpret "list here" as another discovery/refinement request.
+    if (isListRequest(input.message)) {
+      state.pending = original.pending;
+      return reply(listPassportResults(state,input.message));
+    }
     const activeCards = [...state.cards, ...state.savedCards];
     const mentioned = findMentionedCard(input.message, activeCards);
     if (mentioned) {

@@ -1,5 +1,6 @@
 import type { Card } from "../passport/model.ts";
 import { priceLabel } from "../passport/pricing.ts";
+import { formatReturnedRating } from "../passport/rating-display.ts";
 export function cleanTagName(name: string): string {
   return name.replace(/(?:,\s*){2,}/g,", ").replace(/^[\s,;]+|[\s,;]+$/g,"").replace(/\s+/g," ");
 }
@@ -81,7 +82,7 @@ export function evidenceFacts(card: Card): string[] {
     }
   }
   if (m?.quality.businessRating !== undefined)
-    facts.push(`It has a rating of ${m.quality.businessRating.toFixed(1)} out of 5.`);
+    facts.push(`It has a rating of ${formatReturnedRating(m.quality.businessRating)} out of 5.`);
   if (priceLabel(m?.commercial.priceLevel))
     facts.push(
       `Its typical budget is ${priceLabel(m?.commercial.priceLevel)?.toLowerCase()}. Check current prices before going.`,

@@ -1,5 +1,5 @@
 import { trending } from "../../../../src/qloo/trending";
-import { getSession } from "../../../../src/agent/store";
+import { loadSession } from "../../../../src/agent/store";
 import { unseal } from "../../../../src/passport/service";
 import { compareProfiles } from "../../../../src/qloo/compare";
 import { entityDetails, tagTypes } from "../../../../src/qloo/lookups";
@@ -29,7 +29,7 @@ async function handlePOST(request: Request) {
     const b = JSON.parse(raw);
     if (typeof b.sessionId !== "string")
       return json({ error: "Build a Passport first." }, 400);
-    const state = getSession(b.sessionId);
+    const state = await loadSession(b.sessionId);
     id = state.id;
     if (b.revision !== state.revision)
       return json(

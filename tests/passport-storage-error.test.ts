@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { passportStorageFailure, safePassportStorageCode } from "../src/account/passport-storage-error.ts";
+import { passportStorageFailure, safePassportStorageCode, safePassportConstraint } from "../src/account/passport-storage-error.ts";
 
 test("passport storage diagnostics expose error code only, not database messages or secrets", () => {
   const failure = passportStorageFailure("save-upsert", {
@@ -10,7 +10,7 @@ test("passport storage diagnostics expose error code only, not database messages
   });
   assert.deepEqual(failure, {
     status: 503,
-    message: "Passport storage rejected a database constraint. Your current Passport is preserved.",
+    message: "Your Passport couldn't be saved because the database rules need updating. Please try again after maintenance. Your current Passport is still here.",
     code: "23514",
   });
   assert.doesNotMatch(JSON.stringify(failure), /email@example.test|secret token|snapshot body/);
@@ -21,7 +21,7 @@ test("passport storage diagnostics expose error code only, not database messages
 test("passport storage distinguishes missing schema, privileges, expired session and snapshot shape", () => {
   const missing = passportStorageFailure("save-upsert", { code: "PGRST205" });
   assert.equal(missing.status, 503);
-  assert.match(missing.message, /database table or migration/);
+  assert.match(missing.message, /database update/);
   const undefinedTable = passportStorageFailure("save-upsert", { code: "42P01" });
   assert.equal(undefinedTable.status, 503);
   const permission = passportStorageFailure("save-upsert", { code: "42501" });
@@ -38,4 +38,19 @@ test("passport storage distinguishes missing schema, privileges, expired session
   assert.equal(outage.status, 502);
   assert.doesNotMatch(outage.message, /private data/);
   assert.equal(passportStorageFailure("list", new Error("db failed")).status, 503);
+});
+
+test("legacy city and snapshot checks yield clear messages without leaking private SQL",()=>{
+  const city = passportStorageFailure("save-upsert",{code:"23514",message:'new row violates check constraint "saved_passports_city_check" user@example.test'});
+  assert.match(city.message,/destination requires an app database update/);
+  const snap = passportStorageFailure("save-upsert",{code:"23514",message:'check constraint "saved_passports_snapshot_check" and secret'});
+  assert.match(snap.message,/database.s current save rules/);
+  assert.equal(safePassportConstraint({message:"secret"}),"other");
+  assert.doesNotMatch(JSON.stringify([city,snap]),/user@example.test|and secret/);
+});
+test("unexpected save-session errors are not incorrectly called expiration",()=>{
+ const unknown = passportStorageFailure("save-session",new Error("temporary DB outage"));
+ assert.equal(unknown.status,503);
+ assert.doesNotMatch(unknown.message,/expired/);
+ assert.equal(passportStorageFailure("save-session",new Error("Passport changed. Use latest")).status,409);
 });

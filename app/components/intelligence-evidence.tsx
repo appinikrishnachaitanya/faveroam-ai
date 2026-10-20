@@ -4,6 +4,7 @@ import type { Card } from "../../src/passport/model";
 import type { TasteResult } from "../../src/qloo/normalizer";
 import { screenTasteConnection } from "../../src/qloo/explanation";
 import { isPlaceSection } from "../../src/passport/model";
+import { formatReturnedRating } from "../../src/passport/rating-display";
 export function ResultMetrics({ card }: { card: Card }) {
   const m = card.intelligence;
   return (
@@ -13,12 +14,12 @@ export function ResultMetrics({ card }: { card: Card }) {
     >
       {m?.quality.businessRating !== undefined ? (
         <span
-          aria-label={`Rated ${m.quality.businessRating.toFixed(1)} out of 5`}
+          aria-label={`Rated ${formatReturnedRating(m.quality.businessRating)} out of 5`}
         >
-          ★ {m.quality.businessRating.toFixed(1)} / 5
+          ★ {formatReturnedRating(m.quality.businessRating)} / 5 <small>Qloo-reported business rating</small>
         </span>
       ) : m?.externalProof.tripadvisorRating !== undefined ? (
-        <span aria-label={`Tripadvisor rating ${m.externalProof.tripadvisorRating.toFixed(1)} out of 5`}>★ {m.externalProof.tripadvisorRating.toFixed(1)} / 5 <small>Tripadvisor</small></span>
+        <span aria-label={`Tripadvisor rating ${formatReturnedRating(m.externalProof.tripadvisorRating)} out of 5`}>★ {formatReturnedRating(m.externalProof.tripadvisorRating)} / 5 <small>Tripadvisor</small></span>
       ) : isPlaceSection(card.section) ? <span className="metric-unavailable">Rating unavailable</span> : null}
 
     </div>
@@ -116,15 +117,15 @@ export function WhyEvidence({
       <dl className="evidence-metrics">
         {m?.quality.businessRating !== undefined && (
           <>
-            <dt>Rating</dt>
-            <dd>{m.quality.businessRating.toFixed(1)} / 5</dd>
+            <dt>Business rating (Qloo-reported)</dt>
+            <dd>{formatReturnedRating(m.quality.businessRating)} / 5</dd>
           </>
         )}
         {m?.externalProof.tripadvisorRating !== undefined && (
           <>
             <dt>Tripadvisor</dt>
             <dd>
-              {m.externalProof.tripadvisorRating.toFixed(1)} / 5
+              {formatReturnedRating(m.externalProof.tripadvisorRating)} / 5
               {m.externalProof.tripadvisorReviewCount !== undefined
                 ? ` · ${m.externalProof.tripadvisorReviewCount} reviews`
                 : ""}

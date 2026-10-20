@@ -1,5 +1,7 @@
 import type { Card } from "../passport/model.ts";
 import { displayTags } from "../qloo/explanation.ts";
+import { formatReturnedRating } from "../passport/rating-display.ts";
+import { sectionOrder } from "../workspace/state.ts";
 
 export function cardSpecificAnswer(card: Card, query?: string): string {
   const m = card.intelligence;
@@ -7,10 +9,10 @@ export function cardSpecificAnswer(card: Card, query?: string): string {
   const price = priceLabel(m?.commercial.priceLevel);
   const tags = displayTags(card.evidence?.result.tags ?? []).map(t => t.name);
   const lines: string[] = [
-    `**${card.name}** (${card.section === "Eat" ? "Dining" : card.section}):`
+    `${card.name} (${card.section === "Eat" ? "Dining" : card.section}):`
   ];
   if (card.address) lines.push(`• **Location:** ${card.address}`);
-  if (rating !== undefined) lines.push(`• **Rating:** ${rating.toFixed(1)} / 5`);
+  if (rating !== undefined) lines.push(`• **Qloo-reported business rating:** ${formatReturnedRating(rating)} / 5`);
   if (price) lines.push(`• **Price Category:** ${price} (${m?.commercial.priceLevel ?? 1}/4)`);
   if (tags.length) lines.push(`• **Returned Tags:** ${[...new Set(tags)].slice(0, 4).join(", ")}`);
 
@@ -70,4 +72,42 @@ export function passportAnswer(state: AgentState, intent: Intent): string {
   const cards = state.cards.filter(card => !sections.length || sections.includes(card.section)).slice(0, 3);
   if (!cards.length) return "There are no returned matches in that section to explain yet. Tell me which category you want to discover. Your Passport is unchanged.";
   return cards.map(card => `${card.name}: ${evidenceFacts(card).filter(fact => !fact.startsWith("Your interests were considered together")).slice(0, 2).join(" ")}`).join("\n\n") + "\n\nThese are returned listing and taste signals, not proof that one interest caused a recommendation. Your Passport is unchanged.";
+}
+
+// Chat is a first-class recommendation surface. "List them here" is read-only,
+// so it must never re-run Qloo, change the Passport, or invent venue metadata.
+export function isListRequest(text: string): boolean {
+  const request=text.trim().toLowerCase();
+  const verb = /^(?:(?:please|can you|could you|bro|hey)\s+)*(?:list|show|display|give me|tell me|name|what are|which are|what did you find|what have you found)\b/.test(request);
+  if (!verb || /\b(?:new|more|different|fresh|another|find me)\b/.test(request)) return false;
+  return /\b(?:here|them|these|those|results|suggestions|recommendations|your list|already|current|existing|you found|found)\b/.test(request) ||
+    /^(?:(?:please|can you|could you|bro|hey)\s+)*list\b/.test(request) &&
+      /\b(?:restaurants?|dining|places|venues|coffee|cafes?|movies|films|books|music)\b/.test(request);
+}
+export function listPassportResults(state: AgentState, request: string): string {
+  const q=request.toLowerCase();
+  const section = /\b(?:restaurants?|dining|food|eat)\b/.test(q) ? "Eat"
+    : /\b(?:coffee|cafes?)\b/.test(q) ? "Coffee"
+    : /\b(?:movies?|films?)\b/.test(q) ? "Movies"
+    : /\bbooks?\b/.test(q) ? "Books"
+    : /\bmusic\b/.test(q) ? "Music"
+    : /\b(?:museums?|culture|gallery|galleries)\b/.test(q) ? "Culture"
+    : state.intent?.sections?.length === 1 ? state.intent.sections[0] : undefined;
+  const requested = section ? [section] : sectionOrder.filter(s => state.cards.some(c=>c.section===s) && !(state.hiddenCategories ?? []).includes(s));
+  const visible = state.cards.filter(c=>requested.includes(c.section) && !(state.hiddenCategories??[]).includes(c.section));
+  if (!visible.length) return "I don't have any current recommendations for that category yet. Ask me to discover them first—your existing Passport hasn't changed.";
+  const rows=visible.slice(0,40).map((card,i)=>{
+    const m=card.intelligence;
+    const rating=m?.quality.businessRating!==undefined ? ` · ★ ${formatReturnedRating(m.quality.businessRating)}/5 (Qloo-reported)`
+      : m?.externalProof.tripadvisorRating!==undefined ? ` · ★ ${formatReturnedRating(m.externalProof.tripadvisorRating)}/5 (Tripadvisor)` : "";
+    const location=card.address ?? m?.location.address;
+    return `${i+1}. **${card.name}** (${card.section === "Eat" ? "Dining" : card.section})${location ? ` — ${location}` : ""}${rating}`;
+  });
+  const sectionLabel = section === "Eat" ? "dining" : section?.toLowerCase() ?? "Passport";
+  const countNote = visible.length>rows.length ? ` Showing ${rows.length} of ${visible.length}.` : "";
+  return `Here are your ${visible.length} current ${sectionLabel} suggestions in ${state.city}:
+
+${rows.join("\n")}
+
+These are the recommendations already in your Passport, not new searches.${countNote} Ask me about any place or tell me which ones to refine.`;
 }

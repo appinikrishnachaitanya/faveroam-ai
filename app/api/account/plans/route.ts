@@ -98,7 +98,7 @@ async function handlePOST(request: Request) {
       .single();
     if (error) {
       if (error.code === "23514")
-        return privateJson({ error: "Account storage needs a database update for this destination or number of stops. Your selections are preserved; you can still download the plan." }, 503);
+        return privateJson({ error: "We couldn't save this plan because the database rules haven't been updated. You can still download it, and your selections remain available." }, 503);
       throw Error();
     }
     return privateJson({ saved: true, id: data.id });

@@ -10,6 +10,7 @@ In your project's Supabase dashboard, open **SQL Editor → New query**. Run eac
 6. `migrations/202610180004_named_taste_profiles.sql` — named, reusable profiles.
 7. `migrations/202610200001_expand_saved_passport_snapshot.sql` — allow evidence-rich Passport snapshots up to 2 MB without deleting existing rows.
 8. `migrations/202610200002_active_passport_sessions.sql` — **required for restart-safe Passport/plan saving**, adds service-role-only temporary active sessions; does not change existing saved Passports or plans.
+9. `migrations/202610200003_repair_saved_passport_constraints.sql` — non-destructive, idempotent repair for old saved-Passport city/snapshot CHECK constraints that cause PostgreSQL `23514` when the earlier upgrades were not run. Preserves existing data and permissions.
 
 Use **Table Editor → destinations** to add a city (name, enabled, sort_order), disable one, or reorder the list. Only enabled cities appear. The server validates both new Passports and saved-taste reuse against this same table. Changes appear on the next onboarding load; no code deployment is needed. Use clear locality names (for example `Portland, Oregon`) where names are ambiguous. A listed city does not guarantee Qloo has enough recommendations there.
 
@@ -30,3 +31,7 @@ The fresh script creates the current schema directly. It does not temporarily cr
 ## Named profiles
 
 For an existing database, run `migrations/202610180004_named_taste_profiles.sql` after the earlier migrations, then run the 202610200001 Passport snapshot upgrade. It preserves existing tastes under “My tastes” and allows multiple profiles per account. If starting fresh, the updated `reset_app_data.sql` already contains this schema; do not reset merely to add profile names.
+
+## Passport save fails with PostgreSQL 23514
+
+The original saved_passports schema accepted only five cities and snapshots up to 600 KB. Applying the app code alone does **not** update those database constraints. If `passport.storage.failed` includes stage `save-upsert` and code `23514`, check that migrations 202610180001 and 202610200001 were applied; run `202610200003_repair_saved_passport_constraints.sql` to idempotently fix those two known constraints. This migration is additive to the application and does not reset customer data. **Do not run `reset_app_data.sql`.** The error code alone does not prove which constraint failed: use the read-only `pg_constraint` query at the bottom of the repair migration to identify any other named CHECK constraint. The application never logs customer values or raw SQL error messages.
