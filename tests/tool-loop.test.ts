@@ -41,13 +41,14 @@ test("real Gemini protocol sends functionResponse after executing allowed Qloo l
  assert.deepEqual(response.response.matches.map((m:Record<string,unknown>)=>m.id),["urn:tag:cuisine:indian"]);
  assert.ok(!JSON.stringify(requests[1]).includes("never send this"));
 });
-test("at most two sequential calls, with forced tool-free final model turn",async()=>{
- const {model,requests}=stub([{functionCalls:[call("Indian cuisine")]},{functionCalls:[call("quiet atmosphere")]},{text:"Done."}]);
+test("at most three sequential calls, with forced tool-free final model turn",async()=>{
+ const {model,requests}=stub([{functionCalls:[call("Indian cuisine")]},{functionCalls:[call("quiet atmosphere")]},{functionCalls:[call("Thai cuisine")]},{text:"Done."}]);
  const observed=await boundedToolLoop(model,"model","{}",tools,async c=>result(String(c.arguments.query)));
- assert.deepEqual(observed.choices.map(c=>c.arguments.query),["Indian cuisine","quiet atmosphere"]);
+ assert.deepEqual(observed.choices.map(c=>c.arguments.query),["Indian cuisine","quiet atmosphere","Thai cuisine"]);
+ assert.equal(MAX_OBSERVED_TOOL_CALLS,3);
  assert.equal(observed.observations.length,MAX_OBSERVED_TOOL_CALLS);
- assert.equal(requests.length,3);
- assert.equal(requests[2].config.tools,undefined);
+ assert.equal(requests.length,4);
+ assert.equal(requests[3].config.tools,undefined);
 });
 test("repeating the same tool query is rejected before executing twice",async()=>{
  const {model}=stub([{functionCalls:[call("Indian cuisine")]},{functionCalls:[call(" INDIAN CUISINE ")]}]);
@@ -66,11 +67,12 @@ test("unadvertised, malformed, and parallel tool calls cannot execute",async()=>
    assert.equal(executed,false);
  }
 });
-test("model cannot force extra iterations after the two-call cap",async()=>{
- const {model}=stub([{functionCalls:[call("Indian cuisine")]},{functionCalls:[call("quiet atmosphere")]},{functionCalls:[call("Thai cuisine")]}]);
+test("model cannot force extra iterations after the three-call cap",async()=>{
+ const {model,requests}=stub([{functionCalls:[call("Indian cuisine")]},{functionCalls:[call("quiet atmosphere")]},{functionCalls:[call("Thai cuisine")]},{functionCalls:[call("Japanese cuisine")]}]);
  let count=0;
  await assert.rejects(boundedToolLoop(model,"model","{}",tools,async()=>{count++;return result("Indian");}),/limit exceeded/);
- assert.equal(count,2);
+ assert.equal(count,3);
+ assert.equal(requests[3].config.tools,undefined);
 });
 test("compacted observations exclude raw payloads and invalid taxonomy entries",()=>{
  const observed=compactToolObservation({status:"ok",results:[

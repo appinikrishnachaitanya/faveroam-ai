@@ -15,7 +15,7 @@ export interface ObservedChoices {
   choices: ToolChoice[];
   observations: ToolObservation[];
 }
-export const MAX_OBSERVED_TOOL_CALLS = 2;
+export const MAX_OBSERVED_TOOL_CALLS = 3;
 
 /** Never put raw MCP responses (or incidental prompt-injection text) into model context. */
 export function compactToolObservation(result: ToolResult): Record<string, unknown> {

@@ -642,7 +642,7 @@ export async function runTurn(
       } else {
         modelChoices = await deps.provider.choose(input.message ?? "", state, tools);
       }
-      if (modelChoices.length > 2) throw Error("Tool budget");
+      if (modelChoices.length > 3) throw Error("Tool budget");
       if (modelChoices.some((c) => !tools.some((t) => t.name === c.name)))
         throw Error("Unadvertised tool");
     } catch {
