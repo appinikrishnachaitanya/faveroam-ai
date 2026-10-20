@@ -808,7 +808,17 @@ export default function Home() {
                 </summary>
                 <ConnectionExplorer
                   passport={result}
-                  onAsk={(question) => {setComposer(question);setAssistantTab("ask");setAssistantOpen(true);}}
+                  onAsk={(question) => {
+                     setAssistantTab("ask");
+                     setAssistantOpen(true);
+                     if (busy || activeTurn.current) {
+                       setComposer(question);
+                       return;
+                     }
+                     // Act on the selected Qloo result immediately. The normal
+                     // read-only agent turn resolves it against trusted state.
+                     void refine({message:question});
+                   }}
                   onExplore={(section) => {
                     setWorkspaceView("discover");
                     setShowSaved(false);
