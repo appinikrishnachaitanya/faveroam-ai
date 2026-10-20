@@ -47,7 +47,7 @@ import { priceLabel } from "../passport/pricing.ts";
 /** Read-only answers are rendered from current server state, never invented by the model. */
 export function passportAnswer(state: AgentState, intent: Intent): string {
   if (intent.targetCardId) {
-    const card = [...state.cards, ...state.savedCards, ...state.previous].find(c => c.id === intent.targetCardId);
+    const card = [...state.cards, ...(state.savedCards ?? []), ...state.previous].find(c => c.id === intent.targetCardId);
     if (card) return cardSpecificAnswer(card);
   }
   if (intent.question === "capabilities")
