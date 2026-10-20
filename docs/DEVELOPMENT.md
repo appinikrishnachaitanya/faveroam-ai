@@ -81,4 +81,4 @@ No browser script should be reported as successful unless its actual runner comp
 
 `.next`, `node_modules`, TypeScript caches, private evidence, screenshots and test artifacts are generated/ignored. They are not dead source folders. Removing dependencies or build output is not a product cleanup and can disrupt a running service.
 
-Keep `package-lock.json`, migration history, the manual reset script and licensing records. Do not run the destructive Supabase reset as part of CI/deployment. Legacy local API routes remain supported compatibility boundaries unless separately retired.
+Keep `package-lock.json`, the single manual Supabase setup script and licensing records. Do not run the destructive Supabase setup as part of CI/deployment. Legacy local API routes remain supported compatibility boundaries unless separately retired.

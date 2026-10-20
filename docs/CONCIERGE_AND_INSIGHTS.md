@@ -20,11 +20,15 @@ Onboarding proposes a unique returned exact name, an explicit cuisine match, a u
 
 Familiarity controls show only current/requested, visible output categories. Each mode acts on its labelled category. Advanced preferences use the same active-category source. They no longer expose unrelated catalogue categories as if these were already in the Passport.
 
+Preferences resubmit one chosen Discover category with the existing tastes and explicit constraints. For you uses the default category search. Trending adds Qloo trend bias, Hidden gems adds quality bias and an upper popularity filter, and Safe bets adds quality bias plus a listed business-rating minimum of 4 for places. Surprise me selects the broader Explore pool. These are search and ranking instructions, **not** measured user satisfaction, accuracy scores or availability guarantees. The legacy `bias.content_based` parameter is also sent for Surprise; its effect needs live confirmation against the current API reference before making a stronger product claim.
+
+Together starts with one named interest for the other person; two more are optional. The app resolves each name to a returned entity for customer confirmation. It submits your named interests and theirs to the Qloo Compare endpoint, uses returned shared tags to search one selected category in the destination, and keeps your Passport unchanged. A result badge distinguishes a shared tag actually present on its returned listing, a result from the shared-interest search, and a broader local fallback. These are evidence labels, not a likelihood that both people will enjoy the result. A proper accuracy measure would require rated examples from real pairs and an evaluation set.
+
 ### Insights
 
 Lead with two jobs: find a cultural direction to try and choose somewhere to start. Show a small, diverse set of returned theme families, with remaining themes available on request. Route cuisine/dietary themes to Dining, coffee themes to Coffee, and media themes to relevant media outputs. Preserve existing filters when applying a theme.
 
-Named existing places and map links lead the geographic view. The schematic affinity plot is supporting evidence behind a disclosure; it is not a street map, travel-time estimate or enjoyment probability. When current places cannot be connected to returned area points, say so. Audience patterns remain optional research context, never inferred traits of the user. Historical analysis is not reintroduced.
+Named existing places and map links lead the area view. A customer can find food within 1.5 km of a named starting place while retaining food preferences. If geographic points do not connect to current places, the screen explicitly offers existing discoveries instead. The coordinate plot and audience demographics are omitted from the consumer screen because they do not help someone choose an outing. The analysis endpoint remains available for research; demographic association must never be presented as a trait of the customer.
 
 ## What makes this more than asking Gemini for restaurants?
 

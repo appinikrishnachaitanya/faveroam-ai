@@ -45,7 +45,6 @@ import { JourneyLoading, ToastNotice } from "./components/status";
 import {
   PassportCover,
   SavedDiscoveries,
-  ConnectionExplorer,
 } from "./components/passport-overview";
 import { sectionOrder } from "../src/workspace/state";
 import TasteAnalysis from "./components/taste-analysis";
@@ -850,34 +849,6 @@ export default function Home() {
                   Explore your taste patterns <Icon name="arrow" size={16} />
                 </summary>
                 <TasteAnalysis key={`analysis:${result.session?.id ?? result.city}`} passport={result} busy={busy} onRefine={input=>{setWorkspaceView("discover");void refine(input);}}/>
-                <details className="taste-evidence-explorer"><summary>How were my current discoveries found?</summary>
-                <ConnectionExplorer
-                  passport={result}
-                  onAsk={(question) => {
-                     setAssistantTab("ask");
-                     setAssistantOpen(true);
-                     if (busy || activeTurn.current) {
-                       setComposer(question);
-                       return;
-                     }
-                     // Act on the selected Qloo result immediately. The normal
-                     // read-only agent turn resolves it against trusted state.
-                     void refine({message:question});
-                   }}
-                  onExplore={(section) => {
-                    setWorkspaceView("discover");
-                    setShowSaved(false);
-                    requestAnimationFrame(() =>
-                      document
-                        .getElementById(`section-${section}`)
-                        ?.scrollIntoView({
-                          behavior: "smooth",
-                          block: "start",
-                        }),
-                    );
-                  }}
-                />
-                </details>
                 {process.env.NODE_ENV === "development" && (
                   <details className="all-query-routes">
                     <summary>Technical recommendation details</summary>

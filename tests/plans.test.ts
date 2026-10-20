@@ -15,7 +15,7 @@ function card(id: string, section: Section): Card {
 function state() {
   return normalizeSession({ id: "private-session", city: "Toronto", revision: 3, expires: Date.now() + 10000, selected: [], tags: [], constraints: [], categoryConstraints: {}, cards: [card("coffee", "Coffee"), card("culture", "Culture"), card("eat", "Eat"), card("eat2", "Eat")], previous: [], feedback: [], notices: [] });
 }
-const input = { revision: 3, ids: ["coffee", "culture", "eat"], date: "2026-10-18" };
+const input = { revision: 3, ids: ["coffee", "culture", "eat"], date: "2026-10-18", stopTimes: ["10:00", "12:00", "19:00"] };
 test("plans copy only server-held current stop data and never client snapshots", () => {
   const original = state();
   const plan = planFromSession(original, { ...input, stops: [{ name: "Fabricated" }], user_id: "someone-else" }, now);
@@ -46,7 +46,7 @@ test("five-activity plans preserve requested order and allow distinct cinema and
   nightlife.evidence!.result.tags=[{id:"urn:tag:category:place:night_club",name:"Night club",type:"urn:tag:category:place"}];
   s.cards.push(cinema,nightlife);
   const ids=["cinema","eat","nightlife","coffee","culture"];
-  const plan=planFromSession(s,{...input,ids},now);
+  const plan=planFromSession(s,{...input,ids,stopTimes:["10:00","12:00","15:00","17:00","20:00"]},now);
   assert.deepEqual(plan.stops.map(stop=>stop.id),ids);
 });
 test("plan dates are real future destination-local dates", () => {
@@ -59,21 +59,28 @@ test("next-weekend shortcut uses Saturday on the destination calendar", () => {
   assert.equal(nextWeekend("Toronto", now), "2026-10-24");
   assert.equal(nextWeekend("Toronto", new Date("2026-10-18T01:00:00Z")), "2026-10-24");
 });
-test("calendar export is all-day, correctly ends next day, escapes content and folds UTF-8 lines", () => {
+test("calendar export gives each stop a local start time, escapes content and folds UTF-8 lines", () => {
   const plan = planFromSession(state(), input, now);
   plan.stops[0].name = "Café, ".repeat(30) + "\r\nBEGIN:VALARM";
   const text = calendarFile({ id: "fixture-id", ...plan });
-  assert.match(text, /DTSTART;VALUE=DATE:20261018/);
-  assert.match(text, /DTEND;VALUE=DATE:20261019/);
+  assert.match(text, /DTSTART;TZID=America\/Toronto:20261018T100000/);
+  assert.match(text, /DTSTART;TZID=America\/Toronto:20261018T190000/);
   assert.doesNotMatch(text, /^BEGIN:VALARM$/m);
   assert.ok(text.split("\r\n").every((line) => new TextEncoder().encode(line).length <= 75));
-  assert.match(text.replace(/\r\n /g, ""), /Personal plan\\, not a reservation/);
+  assert.match(text.replace(/\r\n /g, ""), /Suggested start time\\, not a booking/);
+});
+test("plan times align to selected stops and calendar keeps old all-day plans readable", () => {
+  for (const stopTimes of [["10:00"], ["12:00", "10:00", "19:00"], ["25:00", "12:00", "19:00"]])
+    assert.throws(() => planFromSession(state(), { ...input, stopTimes }, now));
+  const plan = planFromSession(state(), input, now);
+  assert.deepEqual(plan.stop_times, input.stopTimes);
+  assert.match(calendarFile({ id: "old", ...plan, stop_times: null }), /DTSTART;VALUE=DATE:20261018/);
 });
 test("upcoming plan library renders saved stops and calendar actions without exposing session credentials", () => {
   const plan = { id: "fixture-id", ...planFromSession(state(), { ...input, date: "2099-10-18" }, now), created_at: now.toISOString() };
   const html = renderToStaticMarkup(createElement(UpcomingPlans, { plans: [plan], busy: false, error: "", onDelete() {}, onRetry() {} }));
   assert.match(html, /Protocol coffee/);
   assert.match(html, /Add to calendar/);
-  assert.match(html, /not booked events/);
+  assert.match(html, /not bookings/);
   assert.doesNotMatch(html, /private-session/);
 });

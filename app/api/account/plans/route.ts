@@ -23,7 +23,7 @@ async function handleGET() {
       return privateJson({ error: "Please sign in." }, 401);
     const { data, error } = await client
       .from("saved_plans")
-      .select("id,city,scheduled_date,time_zone,stops,created_at")
+      .select("id,city,scheduled_date,time_zone,stop_times,stops,created_at")
       .eq("user_id", user.id)
       .gte(
         "scheduled_date",
@@ -31,6 +31,16 @@ async function handleGET() {
       )
       .order("scheduled_date", { ascending: true })
       .limit(100);
+    if (error?.code === "42703" || error?.code === "PGRST204") {
+      // Keep older dated plans readable until the one-time schema reset runs.
+      const older = await client.from("saved_plans")
+        .select("id,city,scheduled_date,time_zone,stops,created_at")
+        .eq("user_id", user.id)
+        .gte("scheduled_date", new Date(Date.now() - 86400000).toISOString().slice(0, 10))
+        .order("scheduled_date", { ascending: true }).limit(100);
+      if (older.error) throw Error();
+      return privateJson({ plans: older.data?.map(plan => ({ ...plan, stop_times: null })) ?? [] });
+    }
     if (error) throw Error();
     return privateJson({ plans: data });
   } catch {
@@ -97,7 +107,7 @@ async function handlePOST(request: Request) {
       .select("id")
       .single();
     if (error) {
-      if (error.code === "23514")
+      if (error.code === "23514" || error.code === "PGRST204" || error.code === "42703")
         return privateJson({ error: "We couldn't save this plan because the database rules haven't been updated. You can still download it, and your selections remain available." }, 503);
       throw Error();
     }

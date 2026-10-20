@@ -47,5 +47,5 @@ test("changing budget is an edit, never an implicit network submission",()=>{
  assert.ok(start!==-1&&end>start);
  assert.match(budgetSelect,/setPrice\(value\)/);
  assert.doesNotMatch(budgetSelect,/onRefine\(/);
- assert.match(component,/Changes apply only after you choose Update suggestions/);
+ assert.match(component,/Choose Update suggestions to apply it/);
 });

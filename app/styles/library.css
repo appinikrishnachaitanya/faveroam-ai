@@ -37,6 +37,8 @@
 .plan-schedule label { display: grid; gap: 8px; font-size: 14px; font-weight: 600; }
 .plan-schedule input { display: block; min-height: 48px; min-width: 190px; max-width: 100%; padding: 10px 12px; border: 1px solid var(--ui-border); border-radius: 12px; background: #fff; color: var(--ui-ink); font-size: 16px; }
 .plan-schedule .helper { flex-basis: 100%; font-weight: 400; }
+.stop-time-label { display: grid !important; gap: 6px; margin-bottom: 12px !important; color: var(--ui-ink); font-size: 14px; font-weight: 650; }
+.stop-time-label input { width: 100%; min-height: 44px; padding: 8px 12px; border: 1px solid var(--ui-border); border-radius: 10px; background: var(--ui-surface); color: var(--ui-ink); font: inherit; }
 .connection-interest-picker { display: flex; flex-wrap: wrap; gap: 8px; margin: 24px 0 12px; }
 .connection-interest-picker button { min-height: 44px; padding: 10px 16px; border: 1px solid var(--ui-border); border-radius: 24px; background: var(--ui-surface); color: var(--ui-ink); font-size: 14px; }
 .connection-interest-picker button[aria-pressed="true"] { border-color: var(--ui-action); background: var(--ui-action); color: #fff; }

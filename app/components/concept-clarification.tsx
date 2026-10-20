@@ -14,6 +14,6 @@ export default function ConceptClarification({pending,disabled,onChoose,onSkip}:
       {pending.candidates.map(candidate=><button key={candidate.id} type="button" disabled={disabled}
         onClick={()=>onChoose(candidate.id)}>{candidate.name}</button>)}
     </div>
-    <button className="quiet-button" type="button" disabled={disabled} onClick={onSkip}>Skip this concept</button>
+    <button className="quiet-button" type="button" disabled={disabled} onClick={onSkip}>None of these — I’ll describe it another way</button>
   </div>;
 }

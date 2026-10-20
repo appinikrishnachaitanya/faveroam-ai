@@ -150,7 +150,7 @@ npm run dev -- --port 3000
 
 Open **http://localhost:3000**. Guided discovery is available when Gemini is not configured or is unavailable; Qloo credentials are needed for live discovery.
 
-For accounts, configure `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY` and the schema in [supabase/README.md](supabase/README.md). Set `APP_ORIGIN` to the deployed HTTPS origin. Never put server secrets in public environment variables, browser code or source control.
+For accounts, configure `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` and `SUPABASE_SERVICE_ROLE_KEY`, then run the [single Supabase setup script](supabase/setup.sql) manually. **It deletes saved app data but preserves Auth accounts and destination rows.** Set `APP_ORIGIN` to the deployed HTTPS origin. Never put server secrets in public environment variables, browser code or source control.
 
 ### Checks and deployment
 
@@ -162,7 +162,7 @@ npm run build
 npm run smoke:production
 ```
 
-Tests use isolated fixtures; opt-in live checks require provider credentials. [Development guide](docs/DEVELOPMENT.md) explains commands and prerequisites. [Railway deployment](docs/RAILWAY_DEPLOYMENT.md) covers the persistent Node runtime, health checks and release steps. Guest sessions currently live in process memory, so use one replica or introduce shared session infrastructure.
+Tests use isolated fixtures; opt-in live checks require provider credentials. [Development guide](docs/DEVELOPMENT.md) explains commands and prerequisites. [Railway deployment](docs/RAILWAY_DEPLOYMENT.md) covers the persistent Node runtime, health checks and release steps. When Supabase is configured, active sessions also persist in a server-only table so they can survive a Railway restart.
 
 ## Honest boundaries
 

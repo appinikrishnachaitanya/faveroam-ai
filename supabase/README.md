@@ -1,37 +1,11 @@
-# Supabase database setup
+# Supabase setup
 
-In your project's Supabase dashboard, open **SQL Editor → New query**. Run each migration separately, in this order. For an existing installation, run only migrations you have not already applied.
+The only app database script is [`setup.sql`](setup.sql). In **Supabase → SQL Editor → New query**, paste the whole file and run it once. It drops and recreates saved Passports, saved plans, named taste profiles and temporary editing sessions. **All data in those four tables is lost.** Supabase Auth accounts remain. The `destinations` table and every existing destination row, including custom entries, enabled states and ordering, remain; the ten starter cities are inserted only when absent.
 
-1. `migrations/202610160001_saved_passports.sql` — saved Passports and ownership policies.
-2. `migrations/202610170001_saved_plans.sql` — dated personal plans.
-3. `migrations/202610180001_flexible_destinations_and_plans.sql` — removes the old ten-city database constraint and supports flexible plans.
-4. `migrations/202610180002_reusable_taste_profiles.sql` — reusable interests across cities.
-5. `migrations/202610180003_destination_catalog.sql` — database-managed destination dropdown.
-6. `migrations/202610180004_named_taste_profiles.sql` — named, reusable profiles.
-7. `migrations/202610200001_expand_saved_passport_snapshot.sql` — allow evidence-rich Passport snapshots up to 2 MB without deleting existing rows.
-8. `migrations/202610200002_active_passport_sessions.sql` — **required for restart-safe Passport/plan saving**, adds service-role-only temporary active sessions; does not change existing saved Passports or plans.
-9. `migrations/202610200003_repair_saved_passport_constraints.sql` — non-destructive, idempotent repair for old saved-Passport city/snapshot and saved-plan city/stop CHECK constraints that cause PostgreSQL `23514` when the earlier upgrades were not run. Preserves existing data and permissions.
+The script is one transaction. If any statement fails, the data changes roll back. It creates no city allowlist, city foreign key, snapshot-size CHECK constraint or stop-count CHECK constraint. The app validates incoming snapshots, stop IDs, times and size before using the server writer. Database primary keys, owner foreign keys, unique records and row-level security remain in place. Browsers may read or delete only their own saved rows; only the server role writes them. Active editing sessions are server-role-only.
 
-Use **Table Editor → destinations** to add a city (name, enabled, sort_order), disable one, or reorder the list. Only enabled cities appear. The server validates both new Passports and saved-taste reuse against this same table. Changes appear on the next onboarding load; no code deployment is needed. Use clear locality names (for example `Portland, Oregon`) where names are ambiguous. A listed city does not guarantee Qloo has enough recommendations there.
+Run the SQL **before** using a build that reads `saved_plans.stop_times`. After success, refresh the app, sign in, create a new Passport and save it. Then save a dated plan and a named taste profile. Old open Passports reference discarded editing sessions, so start a new one. The final query should list five app tables. If saving still fails, inspect the backend's sanitized `passport.storage.failed` stage and code; a `23514` after this reset would indicate a constraint outside this script. Do not paste secrets or private SQL error details into chat.
 
-The catalogue is publicly readable through RLS; browser clients cannot insert, edit or delete rows. Manage rows through the Supabase dashboard or trusted administrative tooling. No service key is sent to the browser. If Supabase is configured but its catalogue is unavailable, discovery shows a retry state rather than silently reverting to the original ten cities. The original list remains available for guest-only environments without Supabase configuration.
+Manage destinations in **Table Editor → destinations**. Add or disable entries and set `sort_order` there. A listed destination is eligible for discovery but does not guarantee enough returned recommendations. New cities without a known local time zone use the planner's disclosed UTC fallback.
 
-Existing ten cities have local calendar time zones. Newly added cities currently use the planner's disclosed UTC fallback; verify dates before saving/exporting a plan.
-
-Registration names are stored in Supabase Auth user metadata, not a separate table. Enable email confirmation under Auth settings and configure the deployed app's redirect URL. Keep credentials in secure environment settings.
-
-## Start fresh (deletes app data)
-
-If you want to discard the existing saved data, run **`reset_app_data.sql`** in SQL Editor instead of running the migrations individually. It drops and recreates only TastePassport's four public app tables, with no city CHECK constraints or city foreign keys, while restoring snapshot integrity checks and RLS policies, and seeds the ten initial destinations. Existing Supabase Auth accounts remain. It is atomic and does not use CASCADE. Do not add this file to automatic deployment steps.
-
-After success, refresh the app, sign in again if needed, and generate a new Passport. Old refinement sessions in an already running app may remain until expiry; restarting the app clears them. Manage cities in Table Editor → destinations.
-
-The fresh script creates the current schema directly. It does not temporarily create the old fixed-city constraints or replay historical migrations. The ten inserted cities are editable starter data, not an allowed-values constraint.
-
-## Named profiles
-
-For an existing database, run `migrations/202610180004_named_taste_profiles.sql` after the earlier migrations, then run the 202610200001 Passport snapshot upgrade. It preserves existing tastes under “My tastes” and allows multiple profiles per account. If starting fresh, the updated `reset_app_data.sql` already contains this schema; do not reset merely to add profile names.
-
-## Passport save fails with PostgreSQL 23514
-
-The original saved_passports schema accepted only five cities and snapshots up to 600 KB. Applying the app code alone does **not** update those database constraints. If `passport.storage.failed` includes stage `save-upsert` and code `23514`, check that migrations 202610180001 and 202610200001 were applied; run `202610200003_repair_saved_passport_constraints.sql` to idempotently fix those two known constraints. This migration is additive to the application and does not reset customer data. **Do not run `reset_app_data.sql`.** The error code alone does not prove which constraint failed: use the read-only `pg_constraint` query at the bottom of the repair migration to identify any other named CHECK constraint. The application never logs customer values or raw SQL error messages.
+Expired active sessions cannot be loaded. Schedule this separate maintenance query in Supabase when convenient: `delete from public.active_passport_sessions where expires_at < now();` The setup script itself never runs automatically during CI or Railway deployment.

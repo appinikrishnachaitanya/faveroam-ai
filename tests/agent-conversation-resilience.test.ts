@@ -120,7 +120,7 @@ test("taste connections hide confusing generic tag chips and expose useful chat 
  assert.match(html,/Star Trek: Picard/);
  assert.match(html,/Cultural suggestions, not local events/);
  assert.match(html,/Ask concierge about this/);
- assert.match(html,/List these in chat/);
- assert.match(html,/What Qloo actually used/);
+ assert.doesNotMatch(html,/List these in chat/);
+ assert.match(html,/Why did this appear\?/);
  for(const term of ["Close to home","Veteran quiet","Matched together","City audience tastes"]) assert.ok(!html.includes(term),term);
 });

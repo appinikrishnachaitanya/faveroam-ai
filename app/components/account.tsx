@@ -334,7 +334,7 @@ export default function AccountControl({
       )}
       <button
         className="quiet-button account-launch"
-        aria-label={account?.user ? "My Saved Passports" : "Sign in"}
+        aria-label={account?.user ? "My plans & Passports" : "Sign in"}
         disabled={disabled || busy}
         onClick={() => {
           setPendingSave(false);
@@ -348,8 +348,8 @@ export default function AccountControl({
       >
         {account?.user ? (
           <>
-            <span className="nav-label-long">My Saved Passports</span>
-            <span className="nav-label-short">Saved</span>
+            <span className="nav-label-long">My plans &amp; Passports</span>
+            <span className="nav-label-short">My stuff</span>
           </>
         ) : (
           "Sign in"
@@ -357,20 +357,9 @@ export default function AccountControl({
       </button>
       {account?.user && (
         <>
-          <button
-            className="quiet-button upcoming-launch"
-            aria-label="Upcoming plans"
-            disabled={disabled || busy}
-            onClick={() => {
-              setLibraryTab("plans");
-              setPendingSave(false);
-              setOpen(true);
-              void refreshPlans();
-            }}
-          >
-            <span className="nav-label-long">Upcoming plans</span>
-            <span className="nav-label-short">Plans</span>
-          </button>
+          <button className="quiet-button" disabled={disabled || busy} onClick={() => {
+            setRecoveringPassword(false); setTab("password"); setPassword(""); setCurrentPassword(""); setConfirmPassword(""); setMessage(""); setOpen(true);
+          }}><span className="nav-label-long">Account settings</span><span className="nav-label-short">Settings</span></button>
           <button
             className="quiet-button signout-button"
             disabled={disabled || busy}
@@ -565,20 +554,6 @@ export default function AccountControl({
                     )}
                   </div>
                 )}
-                <button
-                  className="text-button"
-                  disabled={busy}
-                  onClick={() => { setRecoveringPassword(false); setTab("password"); setPassword(""); setCurrentPassword(""); setConfirmPassword(""); setMessage(""); }}
-                >
-                  Update password
-                </button>
-                <button
-                  className="text-button"
-                  disabled={busy}
-                  onClick={() => void logout()}
-                >
-                  Sign out and clear this screen
-                </button>
               </>
             ) : (
               <form onSubmit={submit}>

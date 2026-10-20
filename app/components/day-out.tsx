@@ -31,6 +31,7 @@ export default function DayOutPlan({
   const [omitted, setOmitted] = useState<Record<string, boolean>>({});
   const [status, setStatus] = useState("");
   const [date, setDate] = useState(() => cityDate(passport.city));
+  const [stopTimes, setStopTimes] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const requestOrder = passport.session?.outingActivities?.filter(id=>outingActivities.some(a=>a.id===id));
   const [activities, setActivities] = useState<string[]>(()=>requestOrder?.length ? requestOrder : ["Coffee","Culture","Eat"].filter(id=>dayOutOptions(passport.cards,passport.city).some(c=>activityMatches(c,id))));
@@ -66,6 +67,9 @@ export default function DayOutPlan({
     stop.selected ? [stop.selected] : [],
   );
   const duplicateStops = new Set(selected.map(card => card.id)).size !== selected.length;
+  const timeFor = (id: string, index: number) => stopTimes[id] ?? `${String(11 + Math.floor(index * 90 / 60)).padStart(2, "0")}:${String(index * 90 % 60).padStart(2, "0")}`;
+  const selectedStops = stops.filter(stop => Boolean(stop.selected));
+  const timesInOrder = selectedStops.every((stop, index) => index === 0 || timeFor(selectedStops[index - 1].id, stops.indexOf(selectedStops[index - 1])) < timeFor(stop.id, stops.indexOf(stop)));
 
   function moveActivity(id: string, direction: -1 | 1) {
     setActivities(current => {
@@ -91,7 +95,8 @@ export default function DayOutPlan({
   }
 
   function download() {
-    const blob = new Blob([dayOutText(passport.city, selected, date)], {
+    const schedule = stops.filter(stop=>stop.selected).map(stop=>`${timeFor(stop.id,stops.indexOf(stop))} · ${stop.selected!.name}`);
+    const blob = new Blob([`${dayOutText(passport.city, selected, date)}\nSuggested times (${cityTimeZone(passport.city)}):\n${schedule.join("\n")}\nCheck hours and travel time before going.\n`], {
       type: "text/plain;charset=utf-8",
     });
     const url = URL.createObjectURL(blob);
@@ -118,10 +123,11 @@ export default function DayOutPlan({
         sessionId: passport.agent.sessionId,
         revision: passport.agent.revision,
         ids: selected.map((s) => s.id),
+        stopTimes: selectedStops.map(stop => timeFor(stop.id, stops.indexOf(stop))),
         date,
       });
       setStatus(
-        "Saved! Open Upcoming plans in the navigation to find it again.",
+        "Saved! Open My plans & Passports in the navigation, then choose Upcoming plans.",
       );
       showNotice("Your plan is saved to Upcoming plans.");
       window.dispatchEvent(new Event("tastepassport:plans-updated"));
@@ -154,8 +160,7 @@ export default function DayOutPlan({
         </p>
         {activities.length < 2 && <p role="note">Start with a food stop, then add cinema, coffee or another activity. Missing venues are looked up without changing your food stop.</p>}
         <p className="helper">
-          Check opening hours, travel times, prices and availability before
-          going. This is not a timed route or a reservation.
+          Set a start time for each stop. These are your suggested times, not verified opening hours or a reservation. Check travel times and availability before going.
         </p>
         <div className="plan-schedule">
           <label htmlFor="plan-date">
@@ -169,6 +174,7 @@ export default function DayOutPlan({
               onChange={(event) => setDate(event.target.value)}
             />
           </label>
+          <p className="helper">Choose times for the stops below. They use {cityTimeZone(passport.city) === "UTC" ? "UTC" : `local time in ${passport.city}`}.</p>
           <button
             className="quiet-button"
             type="button"
@@ -195,6 +201,9 @@ export default function DayOutPlan({
           {stops.map((stop, index) => (
             <li key={stop.id}>
               <h3>{stop.label}</h3>
+              <label className="stop-time-label">Start time
+                <input type="time" value={timeFor(stop.id,index)} disabled={disabled || saving} onChange={event=>setStopTimes(old=>({...old,[stop.id]:event.target.value}))}/>
+              </label>
               <div className="outing-order">
                 <button type="button" className="quiet-button"
                   disabled={disabled || saving || index === 0}
@@ -269,6 +278,7 @@ export default function DayOutPlan({
             </li>
           ))}
         </ol>
+        {!timesInOrder && <p role="alert">Your stop times need to follow the order above. Adjust a time or move a stop.</p>}
         <button type="button" className="quiet-button" disabled={disabled || !options.length} onClick={reselectNearby}>Reselect venues for this order</button>
         {selected.some(
           (card, index) =>
@@ -292,7 +302,7 @@ export default function DayOutPlan({
           </button>
           <button
             className="primary-button"
-            disabled={disabled || saving || !selected.length || !date || duplicateStops}
+            disabled={disabled || saving || !selected.length || !date || duplicateStops || !timesInOrder}
             onClick={() => void savePlan()}
           >
             {saving

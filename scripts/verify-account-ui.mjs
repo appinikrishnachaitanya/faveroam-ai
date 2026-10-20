@@ -287,6 +287,7 @@ ws.addEventListener("message", async (event) => {
             city: "Toronto",
             scheduled_date: body.date,
             time_zone: "America/Toronto",
+            stop_times: body.stopTimes,
             stops: cards,
             created_at: new Date().toISOString(),
           },
@@ -456,12 +457,13 @@ assert.equal(
 );
 assert.ok(
   await evaluate(
-    "document.querySelector('[aria-label=\"My Saved Passports\"]')!==null && document.querySelector('.upcoming-launch')!==null",
+    "document.querySelector('[aria-label=\"My plans & Passports\"]')!==null && document.querySelector('.signout-button')!==null",
   ),
 );
 await click(".account-launch");
 await wait("Boolean(document.querySelector('.saved-passport-list article'))");
-await textClick("Update password");
+await click('[aria-label="Close account"]');
+await textClick("Account settings");
 await input('.account-dialog input[autocomplete="current-password"]', "Protocol-only-1234");
 await input('.account-dialog input[autocomplete="new-password"]', "Updated-protocol-1234");
 await evaluate(`(()=>{const fields=document.querySelectorAll('.account-dialog input[autocomplete="new-password"]');const field=fields[1];Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(field,'Updated-protocol-1234');field.dispatchEvent(new Event('input',{bubbles:true}));})()`);
@@ -539,6 +541,9 @@ assert.ok(
   ),
 );
 await textClick("Preferences");
+await evaluate("document.querySelector('.intelligence-preferences').scrollIntoView({block:'start',behavior:'instant'})");
+const preferencesShot=await call("Page.captureScreenshot",{format:"png"});
+await fs.writeFile("/tmp/tastepassport-preferences.png",Buffer.from(preferencesShot.result.data,"base64"));
 await input('[aria-label=\"Maximum price\"]', "2", "HTMLSelectElement");
 assert.equal(budgetUpdates,0,"Draft budget waits for the explicit Update action");
 await textClick("Update suggestions");
@@ -549,15 +554,18 @@ for (let attempt=0; budgetUpdates===0 && attempt<100; attempt++) await new Promi
 assert.equal(budgetUpdates, 1, "Explicit Update applies the chosen budget");
 await textClick("Together");
 assert.equal(await evaluate("document.querySelector('.intelligence-preferences').hidden"),true,"Together must not expose personal preference controls");
-for (let i = 0; i < 3; i++)
+assert.equal(await evaluate("document.querySelectorAll('.partner-interests input').length"),1,"One partner interest is enough to begin");
+for (let i = 0; i < 3; i++) {
+  if (i > 0) await textClick("Add another interest");
   await input(
     `.partner-interests label:nth-child(${i + 1}) input`,
     `Protocol interest ${i}`,
   );
+}
 await textClick("Find their interests");
-await wait("document.querySelectorAll('.partner-matches fieldset').length===3");
+await wait("document.querySelectorAll('.partner-choice-list').length===3");
 await evaluate(
-  "document.querySelectorAll('.partner-matches input[type=radio]').forEach(input=>input.click())",
+  "document.querySelectorAll('.partner-choice-list button:first-child').forEach(button=>button.click())",
 );
 assert.equal(
   await evaluate(
@@ -581,7 +589,7 @@ togetherShot=await call("Page.captureScreenshot",{format:"png"});
 await fs.writeFile("/tmp/tastepassport-together-results.png",Buffer.from(togetherShot.result.data,"base64"));
 await textClick("Taste insights");
 assert.equal(await evaluate("Boolean(document.querySelector('.trend-analysis'))"),false,"Retired historical-data controls must stay absent");
-await textClick("Find my taste themes");
+await textClick("Find a new theme from my tastes");
 await wait("Boolean(document.querySelector('.taste-theme-list'))");
 assert.ok(await evaluate("document.querySelector('.taste-theme-list').textContent.includes('Fixture cultural theme')"));
 
@@ -591,15 +599,13 @@ await textClick("Find movies with this theme");
 for (let attempt=0; themeUpdates===0 && attempt<100; attempt++) await new Promise(resolve=>setTimeout(resolve,50));
 assert.equal(themeUpdates,1,"Returned theme produces a structured scoped refinement");
 await textClick("Taste insights");
-await textClick("Find an area in Toronto");
+await textClick("Start from a place in Toronto");
 await wait("Boolean(document.querySelector('.area-guide .area-choices article'))");
 assert.ok(await evaluate("document.querySelector('.area-guide').textContent.includes('Start at Protocol')"));
-assert.equal(await evaluate("document.querySelector('.taste-map-panel').open"),false,"Coordinate evidence starts collapsed behind named place previews");
+assert.equal(await evaluate("Boolean(document.querySelector('.taste-map-panel'))"),false,"Coordinate evidence is absent from customer insights");
 assert.equal(await evaluate("Boolean(document.querySelector('.affinity-plot'))"),false);
 assert.equal(await evaluate("document.querySelectorAll('.area-nearby li').length"),2,"Show actual nearby discoveries");
-await evaluate("document.querySelector('.audience-context').open=true");
-await textClick("Show audience context");
-await wait("Boolean(document.querySelector('.audience-values'))");
+assert.equal(await evaluate("Boolean(document.querySelector('.audience-context'))"), false, "Demographic research is absent from the customer screen");
 for(const width of [320,390,1440]) {
   await call("Emulation.setDeviceMetricsOverride",{width,height:900,deviceScaleFactor:1,mobile:width<768});
   assert.equal(await evaluate("document.documentElement.scrollWidth>innerWidth"),false,`Analysis UI overflow at ${width}`);
@@ -649,7 +655,8 @@ await click(".plan-save-actions .primary-button");
 await wait(
   "Boolean(document.querySelector('.toast-notice')) && document.querySelector('.day-out-plan').textContent.includes('Saved!')",
 );
-await click(".upcoming-launch");
+await click(".account-launch");
+await click(".account-library-tabs button:last-child");
 await wait("Boolean(document.querySelector('.saved-plan'))");
 assert.ok(
   await evaluate(
@@ -662,7 +669,7 @@ await evaluate(
 await textClick("Add to calendar");
 assert.match(
   await evaluate("window.__calendarBlob.text()"),
-  /DTSTART;VALUE=DATE:20991018/,
+  /DTSTART;TZID=America\/Toronto:20991018T110000/,
 );
 await evaluate("URL.createObjectURL=window.__realObjectURL");
 for (const width of [320, 390, 768, 1440]) {

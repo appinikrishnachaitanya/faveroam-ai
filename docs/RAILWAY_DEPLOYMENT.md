@@ -4,17 +4,17 @@ Railway is the user's selected host. Deploy the full Next.js app as one Node ser
 
 ## Service setup
 
-1. Create a Railway project from `appinikrishnachaitanya/tastepassport-ai`, branch **work**, repository root `/`. Do not select `master`: this pass pushes to `work` only.
+1. Connect `appinikrishnachaitanya/tastepassport-ai`, branch **feat/discover-first-workspace-polish**, repository root `/`. This is the branch currently selected for the live app; verify the branch setting in Railway before redeploying.
 2. Confirm Railway detects `railway.toml`: Railpack builder, build `npm run build`, start `npm start`, health check `/api/health`, one replica and bounded failure restarts. `.node-version` selects Node 24. Confirm the actual build log reports Node 24; if necessary explicitly set `RAILPACK_NODE_VERSION=24.19.0`. Keep the lockfile install and build-time dev dependencies needed by Next/TypeScript/Tailwind.
 3. Securely add `QLOO_API_KEY`, `QLOO_API_BASE_URL=https://hackathon.api.qloo.com`, `GEMINI_API_KEY`, `GEMINI_MODEL=gemini-3.1-flash-lite`, `NODE_ENV=production`, `NEXT_TELEMETRY_DISABLED=1`, and optionally `AGENT_DEBUG=1`. Verify the configured model is available to your key. Never use `NEXT_PUBLIC_` for API keys or paste keys into chat.
 4. Let Railway supply `PORT`. The existing start command binds `0.0.0.0` and respects that port. No custom port or startup wrapper is needed.
-5. Deploy, then generate an HTTPS public domain under service networking using the detected app port. Set `APP_ORIGIN` to that exact public origin, without a trailing slash, then redeploy if needed. Supabase can remain unset; guest mode works and account saving/login remains explicitly unavailable.
+5. If using accounts, run the [one-time Supabase setup](../supabase/setup.sql) **before the new build serves account requests**. It deletes saved app data while preserving Auth accounts and destinations. Deploy, then generate an HTTPS public domain under service networking using the detected app port. Set `APP_ORIGIN` to that exact public origin, without a trailing slash, then redeploy if needed. Supabase can remain unset for guest mode.
 
 The official Qloo harness must stay installed at `node_modules/@qloo/qloo-harness/dist/bin.js`; it launches Node child processes and uses writable `/tmp`. Local acceptance does not establish that child processes or provider access succeeded on Railway: check the actual hosted flow.
 
 ## CI and deployment controls
 
-GitHub CI is already configured for `work` and `master`: lockfile install, tests, production build, typecheck and quota-free production smoke. It does not require provider credentials. Wait for the actual GitHub run to pass before publishing a commit. If Railway offers **Wait for CI**, enable it; otherwise keep automatic deploy disabled and deploy checked commits manually. `railway.toml` does not configure GitHub CI gating, branch protection, public domains or credentials.
+GitHub CI runs quota-free checks on its configured branches. Confirm the workflow covers the deployed branch and wait for its actual run before calling a deployment verified. If Railway offers **Wait for CI**, enable it; otherwise deploy checked commits manually. `railway.toml` does not configure GitHub CI gating, branch protection, public domains or credentials.
 
 ## Hosted acceptance
 
@@ -35,7 +35,7 @@ Smoke checks verify the app, health no-store response and custom 404 without cal
 
 ## Demo operations and cost
 
-Keep **one replica** and disable sleeping/serverless behavior if enabled when you need the service continuously running. Active guest sessions and caches are process-local and are lost on restart/deployment. Do not deploy during judging. An optional Supabase account snapshot does not turn active guest sessions into shared storage. A volume does not fix this.
+Keep **one replica** unless you have verified the shared active-session table and request behavior across replicas. With Supabase configured, trusted active sessions persist in `active_passport_sessions`; transient caches remain process-local. Without Supabase, active guest sessions are process-local and lost on restart. Do not deploy during judging.
 
 Confirm current plan/trial eligibility and usage charges in Railway before subscribing. Included usage credits offset usage; they do not make a paid subscription free. Set available billing alerts/limits and observe actual memory/CPU during rehearsal. Local tests do not prove cloud resource capacity.
 

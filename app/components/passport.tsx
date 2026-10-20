@@ -132,7 +132,7 @@ export function TasteDNA({
                 <summary aria-label={`Inspect ${s.name}`}>↗</summary>
                 <div className="signal-receipt">
                   <p>
-                    Resolution source: Qloo{" "}
+                    Matched as a{" "}
                     {s.id.startsWith("urn:tag:")
                       ? "tag workflow"
                       : "entity search"}
@@ -222,7 +222,7 @@ export function TranslationMap({
                 </svg>
                 <span>
                   <Icon name="star" size={23} />
-                  <b>Qloo</b>
+                  <b>Taste</b>
                 </span>
               </div>
               <div className="bridge-output">
@@ -257,7 +257,7 @@ export function TranslationMap({
           <p>
             A bridge built from evidence.
             <span>
-              Connections appear only after a Qloo query returns a grounded
+              Connections appear only after a search returns a grounded
               discovery.
             </span>
           </p>
@@ -277,7 +277,7 @@ export function TranslationMap({
       <p className="provenance-note">
         These are collective query-input → returned-category connections.
         Individual taste-to-place links are not provided. Inspect each card’s
-        Qloo evidence for exact IDs and parameters.
+        the returned evidence for each suggestion.
       </p>
     </section>
   );

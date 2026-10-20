@@ -66,11 +66,17 @@ test("both account save endpoints restore trusted active state, never use a brow
   const turns=readFileSync(new URL("../src/agent/store.ts",import.meta.url),"utf8");
   assert.match(turns,/await persistActiveSession\(next\.state, revision\)/);
 });
-test("active session migration is additive and denies browser roles",()=>{
-  const sql=readFileSync(new URL("../supabase/migrations/202610200002_active_passport_sessions.sql",import.meta.url),"utf8");
-  assert.match(sql,/create table if not exists public\.active_passport_sessions/i);
+test("fresh schema creates active sessions with server-only access and keeps destinations",()=>{
+  const sql=readFileSync(new URL("../supabase/setup.sql",import.meta.url),"utf8");
+  assert.match(sql,/create table public\.active_passport_sessions/i);
   assert.match(sql,/enable row level security/i);
   assert.match(sql,/revoke all on public\.active_passport_sessions from anon, authenticated/i);
   assert.match(sql,/grant select, insert, update, delete on public\.active_passport_sessions to service_role/i);
-  assert.doesNotMatch(sql,/drop table|truncate|cascade/i);
+  assert.match(sql,/create table if not exists public\.destinations/i);
+  assert.doesNotMatch(sql,/drop table if exists public\.destinations/i);
+  assert.doesNotMatch(sql,/saved_passports_city_check|saved_passports_snapshot_check/i);
+  for (const table of ["saved_passports", "saved_plans", "taste_profiles", "active_passport_sessions"])
+    assert.match(sql, new RegExp(`alter table public\\.${table} enable row level security`, "i"));
+  assert.match(sql,/stop_times text\[\]/i);
+  assert.doesNotMatch(sql,/drop table if exists auth\.|drop table[^;]*cascade|\bcheck\s*\(/i);
 });

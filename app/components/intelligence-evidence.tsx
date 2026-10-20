@@ -5,6 +5,7 @@ import type { TasteResult } from "../../src/qloo/normalizer";
 import { screenTasteConnection } from "../../src/qloo/explanation";
 import { isPlaceSection } from "../../src/passport/model";
 import { formatReturnedRating } from "../../src/passport/rating-display";
+import { priceLabel } from "../../src/passport/pricing";
 export function ResultMetrics({ card }: { card: Card }) {
   const m = card.intelligence;
   return (
@@ -16,11 +17,12 @@ export function ResultMetrics({ card }: { card: Card }) {
         <span
           aria-label={`Rated ${formatReturnedRating(m.quality.businessRating)} out of 5`}
         >
-          ★ {formatReturnedRating(m.quality.businessRating)} / 5 <small>Qloo-reported business rating</small>
+          ★ {formatReturnedRating(m.quality.businessRating)} / 5
         </span>
       ) : m?.externalProof?.tripadvisorRating !== undefined ? (
         <span aria-label={`Tripadvisor rating ${formatReturnedRating(m.externalProof?.tripadvisorRating)} out of 5`}>★ {formatReturnedRating(m.externalProof?.tripadvisorRating)} / 5 <small>Tripadvisor</small></span>
       ) : isPlaceSection(card.section) ? <span className="metric-unavailable">Rating unavailable</span> : null}
+      {isPlaceSection(card.section) && priceLabel(m?.commercial?.priceLevel) && <span aria-label={`Listed price category: ${priceLabel(m?.commercial?.priceLevel)}`}>{priceLabel(m?.commercial?.priceLevel)}</span>}
 
     </div>
   );
@@ -117,7 +119,7 @@ export function WhyEvidence({
       <dl className="evidence-metrics">
         {m?.quality?.businessRating !== undefined && (
           <>
-            <dt>Business rating (Qloo-reported)</dt>
+            <dt>Listed rating</dt>
             <dd>{formatReturnedRating(m.quality.businessRating)} / 5</dd>
           </>
         )}
