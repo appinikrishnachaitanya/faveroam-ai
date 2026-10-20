@@ -179,7 +179,7 @@ export function ConnectionExplorer({ passport, onExplore }: { passport: Passport
             <details>
               <summary>How this was suggested</summary>
               {(() => {
-                const facts=evidenceFacts(card).filter(f=>/helped shape|returned tags include/.test(f)).slice(0,2);
+                const facts=evidenceFacts(card).filter(f=>/helped shape|returned tags include|Associated via cross-domain audience affinity with/.test(f)).slice(0,2);
                 return facts.length ? facts.map(f=><p key={f}>{f}</p>) : <p>These interests were considered together. Individual contribution evidence was not returned for this suggestion.</p>;
               })()}
               <small>Based on the interests shown above.</small>
