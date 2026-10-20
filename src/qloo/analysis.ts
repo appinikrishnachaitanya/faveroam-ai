@@ -24,7 +24,7 @@ export function selectAnalysisSignals(selected: readonly {id:string}[], ids:unkn
 function distinctTasteTags(tags:TasteTag[]):TasteTag[] {
   const seen=new Set<string>();
   return [...tags].sort((a,b)=>(b.affinity??-1)-(a.affinity??-1)).filter(tag=>{
-    const key=tag.name.toLowerCase().replace(/\\b(?:cuisine|food|style)\\b/g,'').replace(/[^\\p{L}\\p{N}]/gu,'');
+    const key=tag.name.toLowerCase().replace(/\b(?:cuisine|food|style)\b/g,'').replace(/[^\p{L}\p{N}]/gu,'');
     if(!key || seen.has(key))return false;
     seen.add(key);return true;
   });

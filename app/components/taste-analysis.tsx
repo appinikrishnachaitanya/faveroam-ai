@@ -61,7 +61,7 @@ export default function TasteAnalysis({passport,busy,onRefine}:{passport:Passpor
     </fieldset>
     <div className="analysis-actions">
       <button className="analysis-action" aria-pressed={Boolean(taste)} disabled={busy||Boolean(loading)||!interestIds.length} onClick={()=>void load('taste')}><Icon name="star" size={22}/><span><strong>{loading==='taste'?'Finding taste connections…':'Find my taste themes'}</strong><small>Discover cultural threads in the things you love.</small></span><Icon name="arrow" size={18}/></button>
-      <button className="analysis-action" aria-pressed={Boolean(heat)} disabled={busy||Boolean(loading)} onClick={()=>void load('heatmap')}><Icon name="pin" size={22}/><span><strong>{loading==='heatmap'?'Mapping your interests…':`Find an area in ${passport.city}`}</strong><small>Choose a starting point, then find dining nearby.</small></span><Icon name="arrow" size={18}/></button>
+      <button className="analysis-action" aria-pressed={Boolean(heat)} disabled={busy||Boolean(loading)||!interestIds.length} onClick={()=>void load('heatmap')}><Icon name="pin" size={22}/><span><strong>{loading==='heatmap'?'Mapping your interests…':`Find an area in ${passport.city}`}</strong><small>Choose a starting point, then find dining nearby.</small></span><Icon name="arrow" size={18}/></button>
     </div>
     {!interestIds.length&&<p role="status">Choose at least one interest to see relevant insights.</p>}
     {error&&<p role="alert">{error}</p>}
@@ -105,7 +105,7 @@ export default function TasteAnalysis({passport,busy,onRefine}:{passport:Passpor
       <p className="helper">“Find dining around here” searches within 1.5 km of the named place and keeps your dining preferences. Nearby means straight-line distance; check routes, opening hours and availability before going.</p>
     </div>}
     <details className="audience-context"><summary>Curious who shares these interests?</summary><p>Optional audience patterns for each interest. These show the strongest associations within the returned groups, not audience size or facts about you. Your recommendations stay unchanged.</p>
-      <button disabled={busy||Boolean(loading)} onClick={()=>void load('demographics')}>{loading==='demographics'?'Reading audience context…':'Show audience context'}</button>
+      <button disabled={busy||Boolean(loading)||!interestIds.length} onClick={()=>void load('demographics')}>{loading==='demographics'?'Reading audience context…':'Show audience context'}</button>
       {demo&&(!demo.records.length?<p>No audience context was returned.</p>:demo.records.map(record=><div className="analysis-result" key={record.id}><h4>{passport.selected.find(s=>s.id.toLowerCase()===record.id.toLowerCase())?.name ?? 'Returned interest'}</h4>
         <dl className="audience-values">{([["Most associated age group",record.age],["Most associated gender",record.gender]] as const).map(([label,values])=>{
           const entries=Object.entries(values).sort((a,b)=>b[1]-a[1]);

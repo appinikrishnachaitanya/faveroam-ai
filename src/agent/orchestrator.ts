@@ -736,7 +736,7 @@ export async function runTurn(
       // If Qloo does not index the phrase “Indian cuisine”, try the shorter
       // cultural term once. Never invent a tag or show unfiltered venues.
       const cuisineName = !excluding && scopedTargets.includes("Eat")
-        ? concept.match(/^([\\p{L}]+) cuisine$/iu)?.[1] : undefined;
+        ? concept.match(/^([\p{L}]+) cuisine$/iu)?.[1] : undefined;
       if (cuisineName && !choices.length) {
         const fallbackArgs = {query:cuisineName,limit:5};
         try {
