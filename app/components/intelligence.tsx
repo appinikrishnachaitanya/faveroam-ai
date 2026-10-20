@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import type { Passport, Resolution } from "../../src/workspace/state";
+import { activeCategories } from "../../src/passport/active-categories";
 import { sectionOrder } from "../../src/workspace/state";
 import type { AgentInput } from "../../src/agent/types";
 import type { Card, Section } from "../../src/passport/model";
@@ -54,6 +55,9 @@ export default function TasteIntelligence({
   onPreferences?: () => void;
 }) {
   const [section, setSection] = useState<Section>(()=>sectionOrder.find(s=>passport.cards.some(c=>c.section===s)) ?? "Eat");
+  const available=activeCategories(passport.session,passport.cards);
+  const availableKey=available.join(",");
+  useEffect(()=>{if(available.length&&!available.includes(section))setSection(available[0]);},[availableKey,section]);
   const prefs = passport.session?.queryPreferences?.[section];
   const [goal, setGoal] = useState<DiscoveryGoal>(
     () => prefs?.goal ?? "discover",
@@ -165,8 +169,7 @@ export default function TasteIntelligence({
               setTogether(undefined);
             }}
           >
-            {sectionOrder
-              .filter((s) => !passport.session?.hiddenCategories.includes(s))
+            {available
               .map((s) => (
                 <option key={s}>{s}</option>
               ))}

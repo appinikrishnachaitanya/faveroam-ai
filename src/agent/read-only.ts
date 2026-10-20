@@ -1,3 +1,5 @@
+import { categoryLanguage } from "./category-language.ts";
+import { lastPresentedIds } from "./chat-shortlist.ts";
 import type { Card, Section } from "../passport/model.ts";
 import type { AgentState } from "./types.ts";
 import { sectionOrder } from "../workspace/state.ts";
@@ -22,7 +24,7 @@ export function isReadOnlyFollowUp(input: string): boolean {
   return ordinal && /^(?:why|what|which|how|tell me|explain|is |are |does |do |can you|could you)/.test(q);
 }
 function categoryInText(text:string): Section|undefined {
-  const t=text.toLowerCase();
+  const t=categoryLanguage(text).toLowerCase();
   if (/\b(?:restaurants?|dining|dinner|lunch|food|eat)\b/.test(t))return "Eat";
   if (/\b(?:coffee|cafe|cafes|cafés)\b/.test(t))return "Coffee";
   if (/\b(?:movies?|films?)\b/.test(t))return "Movies";
@@ -58,12 +60,29 @@ function compact(card:Card):string {
   return `${card.name}${card.address?` — ${card.address}`:""}${rating!==undefined?` · ★ ${rating}/5 (Qloo-reported)`:" · Business rating unavailable"}${budget?` · Typical price: ${budget} (${card.intelligence?.commercial?.priceLevel}/4)`:" · Price category unavailable"}`;
 }
 export function readOnlyFollowUp(state:AgentState,query:string):string {
+  const presented=lastPresentedIds(state);
+  const requestedIndex=ordinal(query);
+  const comparing=/\b(?:compare|comparison|differences?|versus|vs\.?)\b/i.test(query);
+  if(presented.length && requestedIndex && !categoryInText(query) && !comparing) {
+    const id=presented[requestedIndex-1];
+    const card=state.cards.find(card=>card.id===id && !state.hiddenCategories?.includes(card.section));
+    if(!card)return "That choice is no longer in your current discoveries. Ask for a new shortlist; I haven’t changed your Passport.";
+    if(/\b(?:rating|rated|stars?)\b/i.test(query)) {
+      const rating=formatReturnedRating(card.intelligence?.quality?.businessRating ?? card.intelligence?.quality?.qlooRating);
+      return rating ? `${card.name} has a returned ${card.intelligence?.quality?.businessRating!==undefined?"business ":""}rating of ${rating}/5. Your Passport is unchanged.` : `A rating wasn’t returned for ${card.name}. Your Passport is unchanged.`;
+    }
+    return cardSpecificAnswer(card,query);
+  }
+  if(comparing && !categoryInText(query) && presented.some(id=>!state.cards.some(card=>card.id===id && !state.hiddenCategories?.includes(card.section))))
+    return "One of those choices is no longer in your current discoveries. Ask for a new shortlist before comparing. Your Passport is unchanged.";
+  const focused=presented.flatMap(id=>state.cards.find(card=>card.id===id) ?? []);
   const section=contextSection(state,query);
-  const cards=section?state.cards.filter(c=>c.section===section && !(state.hiddenCategories??[]).includes(c.section)):[];
-  if(!section)
+
+  const cards=comparing && focused.length && !categoryInText(query) ? focused : section?state.cards.filter(c=>c.section===section && !(state.hiddenCategories??[]).includes(c.section)):[];
+  if(!section && !(comparing && focused.length))
     return "Which category should I use—Dining, Coffee, Culture or another chapter? I haven't changed your Passport.";
   if(!cards.length)
-    return `There aren't current ${section==="Eat"?"Dining":section} recommendations to explain. I haven't changed anything.`;
+    return `There aren't current ${section==="Eat"?"Dining":section ?? "Passport"} recommendations to explain. I haven't changed anything.`;
   const isCompare=/\b(?:compare|comparison|differences?|versus|vs\.?|which (?:one|of (?:these|the two)))\b/i.test(query);
   const index=ordinal(query);
   const named=cards.find(c=>query.toLowerCase().includes(c.name.toLowerCase()));
@@ -74,7 +93,7 @@ export function readOnlyFollowUp(state:AgentState,query:string):string {
     const explicitOrdinals=[...query.matchAll(/\b(first|second|third|1st|2nd|3rd)\b/gi)].map(m=>ordinal(m[0])).filter((n):n is number=>n!==undefined);
     const targets=explicitOrdinals.length>=2?[cards[explicitOrdinals[0]-1],cards[explicitOrdinals[1]-1]]:cards.slice(0,2);
     if(targets.length<2 || !targets[0] || !targets[1])
-      return `I need two current ${section} results to compare. Here's what I have:\n${list}\nYour Passport is unchanged.`;
+      return `I need two current ${section ?? "Passport"} results to compare. Here's what I have:\n${list}\nYour Passport is unchanged.`;
     const [a,b]=targets;
     const ra=a.intelligence?.quality?.businessRating,rb=b.intelligence?.quality?.businessRating;
     const pa=a.intelligence?.commercial?.priceLevel,pb=b.intelligence?.commercial?.priceLevel;
@@ -82,11 +101,11 @@ export function readOnlyFollowUp(state:AgentState,query:string):string {
     if(ra!==undefined&&rb!==undefined && ra!==rb)differences.push(`${ra>rb?a.name:b.name} has the higher Qloo-reported business rating; that doesn't prove it suits your tastes better.`);
     if(pa!==undefined&&pb!==undefined&&pa!==pb)differences.push(`${pa<pb?a.name:b.name} has the lower returned typical price category.`);
     if(!differences.length)differences.push("The returned ratings and prices don't establish a clear winner. Consider location and the atmosphere you're looking for.");
-    return `Here's a comparison of two existing ${section==="Eat"?"Dining":section} options:\n\n1. ${compact(a)}\n2. ${compact(b)}\n\n${differences.join(" ")} Qloo's taste associations don't verify current noise, hours, availability or exact prices. Tell me which matters more and I'll help you choose. Your Passport is unchanged.`;
+    return `Here's a comparison of two existing ${section==="Eat"?"Dining":section ?? "Passport"} options:\n\n1. ${compact(a)}\n2. ${compact(b)}\n\n${differences.join(" ")} Qloo's taste associations don't verify current noise, hours, availability or exact prices. Tell me which matters more and I'll help you choose. Your Passport is unchanged.`;
   }
   const card=index!==undefined?cards[index-1]:named??remembered;
   if(!card)
-    return `Which ${section==="Eat"?"restaurant":section.toLowerCase()+" result"} do you mean? Here are the first choices:\n${list}\n\nYou can say "the second one" or name it. Your Passport is unchanged.`;
+    return `Which ${section==="Eat"?"restaurant":(section?.toLowerCase() ?? "Passport")+" result"} do you mean? Here are the first choices:\n${list}\n\nYou can say "the second one" or name it. Your Passport is unchanged.`;
   if(/\b(?:rating|rated|stars?)\b/i.test(query)){
     const rating=formatReturnedRating(card.intelligence?.quality?.businessRating);
     return rating!==undefined?`${card.name} has a Qloo-reported business rating of ${rating}/5. That is separate from its cultural taste affinity. Your Passport is unchanged.`

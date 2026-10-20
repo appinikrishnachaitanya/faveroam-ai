@@ -61,9 +61,13 @@ Prior live native Gemini/Qloo context acceptance completed rating-minimum follow
 
 Historical-data UI and automatic history enrichment have been removed; the retained backend diagnostic remains only partially accepted. Real Supabase/email/ownership acceptance has not been established by mocked UI tests. Public Railway access was blocked by the execution environment's HTTP 403 proxy response during media preparation. Real venue photos from `images.qloo.com` were also unavailable from that capture environment. Do not label local screenshots as captures of the Railway site.
 
+## Concierge and Insights regression pass — 20 October 2026
+
+The updated customer flows passed the production build, type checking and the fixture-backed browser contract, including chat choice cards, 44 px action targets and containment at 320/390/1440 px. The live native Gemini/MCP probe selected and executed `qloo_find_tags`, observed five returned tags and correctly stopped for confirmation; the same-request model-only baseline completed. This does not certify a completed venue refinement or hosted Supabase account flows. No additional database migration or payload-limit increase is introduced. See [product decisions and source review](CONCIERGE_AND_INSIGHTS.md).
+
 ## Final deployment and submission gates
 
-- [ ] Railway deploys the intended `work` release; compare its commit with the submitted code. The repository's `master` branch previously differed from `work`.
+- [ ] Railway deploys the intended `feat/discover-first-workspace-polish` release; compare its commit with the submitted code. Do not assume `master` matches the deployed branch.
 - [ ] GitHub CI passes for the submitted commit; deployed `/api/health` returns HTTP 200.
 - [ ] A fresh signed-out browser completes entity confirmation and real discovery.
 - [ ] Native Gemini is healthy and completes constrained dining plus a contextual follow-up. Check safe request/tool/Qloo/result logs.

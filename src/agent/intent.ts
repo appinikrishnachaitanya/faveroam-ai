@@ -1,3 +1,4 @@
+import { categoryLanguage } from "./category-language.ts";
 import { refinementScope } from "./scope.ts";
 import {
   extractDraft,
@@ -56,6 +57,7 @@ export function isConcept(text: string) {
   );
 }
 export function interpret(text: string, fallback = "New York City"): Intent {
+  text=categoryLanguage(text);
   culturalText(text);
   const constraints = constraintsFrom(text);
   const onboarding =

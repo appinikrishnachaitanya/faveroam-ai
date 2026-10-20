@@ -31,9 +31,10 @@ import {
   StepIndicator,
 } from "./components/onboarding";
 import ConciergeDrawer from "./components/concierge";
+import ChatRecommendations from "./components/chat-recommendations";
 import DiscoveryConcierge from "./components/discovery-concierge";
 import PassportNavigation from "./components/passport-navigation";
-import { suggestedMatches } from "../src/passport/matching";
+import { reviewMatches } from "../src/passport/matching";
 import AccountControl from "./components/account";
 import ReusableTastes from "./components/taste-profile";
 import DayOutPlan from "./components/day-out";
@@ -51,6 +52,7 @@ import type { Familiarity } from "../src/passport/evidence";
 interface Message {
   role: "agent" | "user";
   text: string;
+  recommendationIds?: string[];
 }
 const welcome: Message = {
   role: "agent",
@@ -391,7 +393,7 @@ export default function Home() {
         concepts: conceptSeeds,
       });
       setResolution(r);
-      setChosen(suggestedMatches(r.items));
+      setChosen(reviewMatches(r.items));
       setPhase("confirming");
       say(
         r.items.some((i) => !i.candidates.length)
@@ -829,6 +831,8 @@ export default function Home() {
                 <summary>
                   Explore your taste patterns <Icon name="arrow" size={16} />
                 </summary>
+                <TasteAnalysis key={`analysis:${result.session?.id ?? result.city}`} passport={result} busy={busy} onRefine={input=>{setWorkspaceView("discover");void refine(input);}}/>
+                <details className="taste-evidence-explorer"><summary>How were my current discoveries found?</summary>
                 <ConnectionExplorer
                   passport={result}
                   onAsk={(question) => {
@@ -855,7 +859,7 @@ export default function Home() {
                     );
                   }}
                 />
-                <TasteAnalysis key={`analysis:${result.session?.id ?? result.city}`} passport={result} busy={busy} onRefine={input=>{setWorkspaceView("discover");void refine(input);}}/>
+                </details>
                 {process.env.NODE_ENV === "development" && (
                   <details className="all-query-routes">
                     <summary>Technical recommendation details</summary>
@@ -1000,10 +1004,18 @@ export default function Home() {
                       <span className="message-label">
                         {m.role === "agent" ? "TASTEPASSPORT" : "YOU"}
                       </span>
-                      <p>{m.text}</p>
+                      <p>{m.role==='agent' && m.recommendationIds?.length ? m.text.split(/\n\nHere are \d+ choices to consider:|\n\n1\. /)[0] : m.text}</p>
+                      {m.role === "agent" && Array.isArray(m.recommendationIds) && m.recommendationIds.length ? <ChatRecommendations city={result.city}
+                        cards={m.recommendationIds.flatMap(id=>result.cards.find(card=>card.id===id && !result.session?.hiddenCategories?.includes(card.section)) ?? [])}
+                        busy={busy} savedIds={result.session?.savedCards?.map(card=>card.id) ?? []}
+                        onAsk={question=>void refine({message:question})}
+                        onSave={id=>recordFeedback(id,"like")}/> : null}
                     </div>
                   ))}
                 </div>
+                {visibleMessages.length>0 && !busy && !result.agent?.pending && <div className="chat-next-actions" aria-label="Continue your conversation">
+                  {["Pick three things across my interests","Compare the first and second choices","What filters are saved?"].map(question=><button type="button" key={question} onClick={()=>{setComposer(question);document.querySelector<HTMLTextAreaElement>("#conversation-input")?.focus();}}>{question}</button>)}
+                </div>}
               </div>
             ) : (
               <div

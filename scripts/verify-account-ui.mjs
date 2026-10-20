@@ -171,6 +171,7 @@ ws.addEventListener("message", async (event) => {
                         {
                           role: "agent",
                           text: "Your existing matches remain available.",
+                          recommendationIds: session.cards.slice(0,3).map(card=>card.id),
                         },
                       ],
                     },
@@ -537,11 +538,13 @@ assert.ok(
 );
 await textClick("Preferences");
 await input('[aria-label=\"Maximum price\"]', "2", "HTMLSelectElement");
+assert.equal(budgetUpdates,0,"Draft budget waits for the explicit Update action");
+await textClick("Update suggestions");
 await wait(
   "document.querySelector('.intelligence-content').textContent.includes('Moderate or less')",
 );
 for (let attempt=0; budgetUpdates===0 && attempt<100; attempt++) await new Promise(resolve=>setTimeout(resolve,50));
-assert.equal(budgetUpdates, 1, "Budget dropdown applies immediately");
+assert.equal(budgetUpdates, 1, "Explicit Update applies the chosen budget");
 await textClick("Together");
 assert.equal(await evaluate("document.querySelector('.intelligence-preferences').hidden"),true,"Together must not expose personal preference controls");
 for (let i = 0; i < 3; i++)
@@ -589,7 +592,7 @@ await textClick("Taste insights");
 await textClick("Find an area in Toronto");
 await wait("Boolean(document.querySelector('.area-guide .area-choices article'))");
 assert.ok(await evaluate("document.querySelector('.area-guide').textContent.includes('Start at Protocol')"));
-assert.equal(await evaluate("document.querySelector('.area-guide').textContent.includes('43.650')"),false,"Area previews do not expose raw coordinates");
+assert.equal(await evaluate("document.querySelector('.taste-map-panel').open"),false,"Coordinate evidence starts collapsed behind named place previews");
 assert.equal(await evaluate("Boolean(document.querySelector('.affinity-plot'))"),false);
 assert.equal(await evaluate("document.querySelectorAll('.area-nearby li').length"),2,"Show actual nearby discoveries");
 await evaluate("document.querySelector('.audience-context').open=true");
@@ -726,6 +729,14 @@ await textClick("Retry last refinement");
 await wait(
   "!document.querySelector('#conversation-input').disabled && ![...document.querySelectorAll('#taste-concierge button')].some(b=>b.textContent.includes('Retry last refinement'))",
 );
+await wait("document.querySelectorAll('.chat-recommendations article').length===3");
+const chatShot=await call("Page.captureScreenshot",{format:"png"});
+await fs.writeFile("/tmp/tastepassport-chat-choices.png",Buffer.from(chatShot.result.data,"base64"));
+for (const width of [320,390,1440]) {
+  await call("Emulation.setDeviceMetricsOverride",{width,height:900,deviceScaleFactor:1,mobile:width<768});
+  assert.equal(await evaluate("document.documentElement.scrollWidth>innerWidth"),false,`Chat choices overflow at ${width}`);
+  assert.ok(await evaluate("[...document.querySelectorAll('.chat-choice-actions button,.chat-choice-actions a')].every(button=>button.getBoundingClientRect().height>=44)"),"Chat actions meet the 44px target size");
+}
 await click('[aria-label="Close Taste Concierge"]');
 await textClick("Preferences");
 assert.equal(await evaluate("Boolean(document.querySelector('.reusable-tastes'))"),false,'Saving tastes is offered only when starting another Passport');

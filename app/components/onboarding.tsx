@@ -1,4 +1,5 @@
 "use client";
+import { rankCandidates } from "../../src/passport/matching";
 import { useEffect, useState } from "react";
 import type { Candidate, Section } from "../../src/passport/model";
 import type { Familiarity } from "../../src/passport/evidence";
@@ -311,7 +312,7 @@ export function TasteConfirmation({
           <br />
           <em>interests</em>
         </h1>
-        <p>Clear matches are suggested for you. Review or change them; choose a match where a name is ambiguous.</p>
+        <p>We’ve suggested the closest clear matches. Check each name and type, change any you meant differently, then confirm. Similar titles may still need your choice.</p>
       </div>
       <div className="confirmation-list">
         {items.map(({ item, index }) => {
@@ -355,7 +356,7 @@ export function TasteConfirmation({
                     <option value="" disabled>
                       Select the one you love
                     </option>
-                    {item.candidates.map((c) => (
+                    {rankCandidates(item.query,item.candidates).map((c) => (
                       <option key={c.id} value={c.id}>
                         {c.name} · {friendlyType(c)}
                         {c.id.startsWith("urn:tag:")

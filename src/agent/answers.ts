@@ -1,3 +1,5 @@
+import { categoryLanguage } from "./category-language.ts";
+import { chatShortlist, chatReason } from "./chat-shortlist.ts";
 import type { Card } from "../passport/model.ts";
 import { displayTags } from "../qloo/explanation.ts";
 import { formatReturnedRating } from "../passport/rating-display.ts";
@@ -76,16 +78,18 @@ export function passportAnswer(state: AgentState, intent: Intent): string {
 
 // Chat is a first-class recommendation surface. "List them here" is read-only,
 // so it must never re-run Qloo, change the Passport, or invent venue metadata.
+const listWords = new Set("please can could you bro hey list show display give me tell name what are which did find have found here them these those results suggestions recommendations your already current existing the my all in passport restaurants restaurant dining places place venues venue coffee cafes cafe movies movie films film books book music culture museums museum galleries gallery cinema nightlife nightclubs nightclub shows show series tv games game gaming podcasts podcast lifestyle shops shop shopping bookstores bookstore brands brand people artists artist authors author destinations destination cities".split(" "));
 export function isListRequest(text: string): boolean {
-  const request=text.trim().toLowerCase();
+  const request=categoryLanguage(text).trim().toLowerCase();
+  if (request.match(/[a-z]+/g)?.some(word=>!listWords.has(word))) return false;
   const verb = /^(?:(?:please|can you|could you|bro|hey)\s+)*(?:list|show|display|give me|tell me|name|what are|which are|what did you find|what have you found)\b/.test(request);
-  if (!verb || /\b(?:new|more|different|fresh|another|find me)\b/.test(request)) return false;
+  if (!verb || /\b(?:new|more|different|fresh|another|find me|cheaper|quieter|vegetarian|vegan|budget|rating|under|without|exclude|independent)\b/.test(request)) return false;
   return /\b(?:here|them|these|those|results|suggestions|recommendations|your list|already|current|existing|you found|found)\b/.test(request) || /\bwhat did you find\b/.test(request) ||
     /^(?:(?:please|can you|could you|bro|hey)\s+)*list\b/.test(request) &&
       /\b(?:restaurants?|dining|places|venues|coffee|cafes?|movies|films|books|music)\b/.test(request);
 }
 export function listPassportResults(state: AgentState, request: string): string {
-  const q=request.toLowerCase();
+  const q=categoryLanguage(request).toLowerCase();
   const section = /\b(?:restaurants?|dining|food|eat)\b/.test(q) ? "Eat"
     : /\b(?:coffee|cafes?)\b/.test(q) ? "Coffee"
     : /\b(?:movies?|films?)\b/.test(q) ? "Movies"
@@ -107,7 +111,7 @@ export function listPassportResults(state: AgentState, request: string): string 
     const m=card.intelligence;
     const rating=m?.quality?.businessRating!==undefined ? ` · ★ ${formatReturnedRating(m.quality.businessRating)}/5 (Qloo-reported)`
       : m?.externalProof?.tripadvisorRating!==undefined ? ` · ★ ${formatReturnedRating(m.externalProof!.tripadvisorRating)}/5 (Tripadvisor)` : "";
-    const location=card.address ?? m?.location.address;
+    const location=card.address ?? m?.location?.address;
     return `${i+1}. ${card.name} (${card.section === "Eat" ? "Dining" : card.section})${location ? ` — ${location}` : ""}${rating}`;
   });
   const sectionLabel = section === "Eat" ? "dining" : section?.toLowerCase() ?? "Passport";
@@ -121,17 +125,11 @@ These are the recommendations already in your Passport, not new searches.${count
 
 /** Evidence-only preview: an agent update should show what changed, not only a counter. */
 export function previewRefinedResults(state: AgentState, sections: readonly import("../passport/model.ts").Section[]): string {
-  const lines=sections.slice(0,3).flatMap(section=>{
-    const cards=state.cards.filter(c=>c.section===section && !(state.hiddenCategories??[]).includes(section));
-    if (!cards.length) return [];
-    const label=section==="Eat"?"Dining":section;
-    const examples=cards.slice(0,3).map((c,i)=>{
-      const rating=c.intelligence?.quality?.businessRating;
-      const rated=rating!==undefined && formatReturnedRating(rating)!==undefined
-        ? ` · ★ ${formatReturnedRating(rating)}/5 (Qloo-reported)` : "";
-      return `${i+1}. ${c.name}${c.address ? ` — ${c.address}` : ""}${rated}`;
-    });
-    return [`Here are some of your ${label.toLowerCase()} results:\n${examples.join("\n")}`];
+  const cards=chatShortlist(state,sections);
+  if(!cards.length)return "";
+  const lines=cards.map((card,index)=>{
+    const rating=formatReturnedRating(card.intelligence?.quality?.businessRating);
+    return `${index+1}. ${card.name} (${card.section==="Eat"?"Dining":card.section})${card.address ? ` — ${card.address}` : ""}${rating ? ` · ★ ${rating}/5 (Qloo-reported)` : ""}\n${chatReason(card)}`;
   });
-  return lines.length ? `\n\n${lines.join("\n\n")}\n\nSay "list them here" to see the complete returned list, or tell me what to change next.` : "";
+  return `\n\nHere are ${cards.length} choices to consider:\n${lines.join("\n\n")}\n\nAsk why one fits, compare two, or say "list them here" for the complete returned list.`;
 }

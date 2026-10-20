@@ -224,3 +224,11 @@ test("model-selected taxonomy request outside user intent is rejected and safe l
  assert.deepEqual(reply.changed,["Eat"]);
  assert.ok(!JSON.stringify(reply).includes("Thai cuisine"));
 });
+
+test("the model sees the exact authorized taxonomy queries and cannot execute a synonym",async()=>{
+ const {model,requests}=stub([{functionCalls:[call("art galleries")]}]);
+ let executed=false;
+ await assert.rejects(boundedToolLoop(model,"model","{}",tools,async()=>{executed=true;return result("Art");},undefined,["contemporary art"]),/outside user request/);
+ assert.equal(executed,false);
+ assert.deepEqual(requests[0].config.tools[0].functionDeclarations[0].parametersJsonSchema.properties.query.enum,["contemporary art"]);
+});

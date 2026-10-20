@@ -51,6 +51,11 @@ export interface FeedbackRecord {
   reason?: Reason;
   detail?: string;
 }
+export interface ConversationMessage {
+  role: "user" | "agent";
+  text: string;
+  recommendationIds?: string[];
+}
 export interface AgentState {
   id: string;
   revision: number;
@@ -82,7 +87,7 @@ export interface AgentState {
   queryPreferences?: Partial<
     Record<Section, import("../qloo/query-plan.ts").QueryPreferences>
   >;
-  history?: { role: "user" | "agent"; text: string }[];
+  history?: ConversationMessage[];
   providerHealth?: "unconfigured" | "configured" | "healthy" | "unavailable";
   recovery?: Section[];
   relaxed?: { section: Section; constraints: Constraint[] }[];
@@ -115,7 +120,7 @@ export interface TastePassportSession extends AgentState {
     Record<Section, import("../passport/evidence.ts").Familiarity>
   >;
   categoryTags: Partial<Record<Section, string[]>>;
-  history: { role: "user" | "agent"; text: string }[];
+  history: ConversationMessage[];
   providerHealth: "unconfigured" | "configured" | "healthy" | "unavailable";
   recovery: Section[];
   relaxed: { section: Section; constraints: Constraint[] }[];
@@ -157,6 +162,7 @@ export interface ModelProvider {
     tools: ToolDefinition[],
     execute: (choice: ToolChoice) => Promise<ToolResult>,
     signal?: AbortSignal,
+    allowedQueries?: readonly string[],
   ): Promise<import("./tool-loop.ts").ObservedChoices>;
   choose(
     text: string,

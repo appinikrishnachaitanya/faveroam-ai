@@ -1,3 +1,4 @@
+import { chatShortlist } from "./chat-shortlist.ts";
 import { culturalText } from "./intent.ts";
 import type { AgentState, ConversationContext } from "./types.ts";
 
@@ -25,16 +26,16 @@ export function conversationContext(state: AgentState): ConversationContext {
       return name ? [name] : [];
     }),
     lastSections: state.intent?.sections ?? [],
-    activeRecommendations: (state.cards ?? []).slice(0, 15).flatMap(card => {
+    activeRecommendations: [...new Map([...chatShortlist(state),...state.cards].map(card=>[card.id,card])).values()].slice(0,15).flatMap(card => {
       const name = safe(card.name, 100);
       if (!name) return [];
       return [{
         id: card.id,
         name,
         section: card.section,
-        priceLevel: card.intelligence?.commercial.priceLevel,
-        rating: card.intelligence?.quality.businessRating,
-        tags: (card.evidence?.result.tags ?? []).slice(0, 4).flatMap(t => {
+        priceLevel: card.intelligence?.commercial?.priceLevel,
+        rating: card.intelligence?.quality?.businessRating,
+        tags: (card.evidence?.result?.tags ?? []).slice(0, 4).flatMap(t => {
           const n = safe(t.name, 50);
           return n ? [n] : [];
         }),

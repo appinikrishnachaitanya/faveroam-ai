@@ -1,3 +1,5 @@
+import { incompleteUtterance } from "./category-language.ts";
+import { chatShortlist, chatShortlistText, isShortlistRequest, requestedShortlistSections } from "./chat-shortlist.ts";
 import { refinementScope } from "./scope.ts";
 import { groundedModelIntent, isGreetingOrTypo } from "./conversation-grounding.ts";
 import { conversationContext } from "./context.ts";
@@ -137,14 +139,14 @@ export async function runTurn(
     events.push(e);
     emit(e);
   };
-  const reply = (message: string): AgentReply => {
+  const reply = (message: string, recommendations?: Card[]): AgentReply => {
     const text = fallback + message;
     state.history = [
       ...state.history!,
       ...(input.message
         ? [{ role: "user" as const, text: input.message }]
         : []),
-      { role: "agent" as const, text },
+      { role: "agent" as const, text, ...(recommendations ? {recommendationIds:recommendations.slice(0,3).map(card=>card.id)} : {}) },
     ].slice(-100);
     return { state, changed, events, mode, message: text };
   };
@@ -170,15 +172,22 @@ export async function runTurn(
     state.providerHealth = "configured";
   if (input.message) {
     culturalText(input.message);
+    if(incompleteUtterance(input.message) && !isGreetingOrTypo(input.message))return reply("I didn’t catch that. You can say ‘list restaurants’, ask for three starting choices, or tell me what to change. Your Passport and current context are unchanged.");
     if (state.pending && /^(?:cancel(?: that| the)?(?: concept| choice)?|skip(?: this| the)?(?: concept| choice)?|never ?mind|start over)[!,.\s]*$/i.test(input.message.trim())) {
       delete state.pending;
       return reply("Okay, I've skipped that concept choice. Your Passport hasn't changed. What would you like to explore next?");
     }
     // Handle presentation requests before intent classification. A model may
     // otherwise interpret "list here" as another discovery/refinement request.
+    if (isShortlistRequest(input.message)) {
+      const cards=chatShortlist(state,requestedShortlistSections(input.message));
+      return reply(chatShortlistText(state,cards),cards);
+    }
+    if (/^(?:thanks(?: bro)?|thank you(?: bro)?|cheers)[!,.\s]*$/i.test(input.message.trim()))
+      return reply("You’re welcome. Want to compare a couple of choices, find a different vibe, or put an outing together?");
     if (isListRequest(input.message)) {
       delete state.pending; // A read-only listing supersedes an unrelated choice.
-      return reply(listPassportResults(state,input.message));
+      return reply(listPassportResults(state,input.message),[]);
     }
     // Questions about an existing result must be handled BEFORE Gemini intent
     // classification. Otherwise "rating for second" can become a filter and
@@ -209,7 +218,7 @@ export async function runTurn(
     delete state.pending;
   }
   if (input.message && isGreetingOrTypo(input.message))
-    return reply(`Hi! What would you like to explore in ${state.city}? I can find dining, nightlife, coffee or an evening outing based on your tastes.`);
+    return reply(`Hi! What would you like to explore in ${state.city}? I can help you choose from your current discoveries, compare a couple, or refine what isn’t working. Want three starting choices or do you have something in mind?`);
   let intent = interpret(input.message ?? "", state.city);
   if (input.message && intent.question) {
     state.pending = original.pending;
@@ -654,7 +663,7 @@ export async function runTurn(
             const args = { query: canonical, limit: 5 };
             return guard.run("qloo_find_tags_model", args, () =>
               deps.workflow("mcp", "qloo_find_tags", args, guard.signal));
-          }, guard.signal,
+          }, guard.signal, permitted,
         );
         modelChoices = observed.choices;
         for (const observation of observed.observations) {
@@ -1168,5 +1177,6 @@ export async function runTurn(
     changed.length
       ? `Updated ${changed.map(section => section === "Eat" ? "Dining" : section).join(", ")} suggestions. ${decisionSummary(original, state, changed)} ${state.relaxed!.length ? "I couldn't find a strong match satisfying every preference, so these results prioritize your confirmed cultural tastes. Optional preferences relaxed: " + [...new Set(state.relaxed!.flatMap((r) => r.constraints))].map((c) => (c === "crowded" ? "quiet atmosphere" : c)).join(", ") + ". " : ""}${state.pending ? "You can also confirm the atmosphere concept to refine further. " : ""}Your other categories and confirmed interests are unchanged.${previewRefinedResults(state, changed)}`
       : "No strong match yet. Your Passport is preserved. Keep your cuisine, relax quiet, allow popular places, or show closest matches below.",
+    changed.length ? chatShortlist(state,changed) : undefined,
   );
 }

@@ -10,6 +10,7 @@
 
 ## For maintainers
 
+- [Concierge and Insights decisions](CONCIERGE_AND_INSIGHTS.md): customer outcomes, research, context safety and grounded shortlists.
 - [Development](DEVELOPMENT.md): local setup, standards, repository ownership and verification commands.
 - [Recommendation policy and live evaluation](RECOMMENDATION_POLICY.md): category routing, rank fusion, research and controlled profile checks.
 - [Qloo integration](QLOO_INTELLIGENCE.md): endpoints, output types, filters, evidence and known limitations.

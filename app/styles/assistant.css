@@ -132,3 +132,17 @@ html { scrollbar-gutter: stable; }
   .concierge-drawer .composer textarea { min-height: 48px; max-height: 72px; }
   .concierge-drawer .reset-conversation { min-height: 36px; padding-block: 4px; }
 }
+
+/* Grounded choices stay inside the existing single-scroller conversation. */
+.chat-recommendations { display:grid; gap:12px; margin-top:16px; min-width:0; }
+.chat-recommendations article { padding:16px; border:1px solid #c5d0b9; border-radius:16px; background:#fffdf5; color:#284432; min-width:0; }
+.chat-choice-category { font-size:11px; font-weight:650; letter-spacing:.06em; color:#4a624c; }
+.chat-recommendations h3 { font-size:18px; line-height:1.4; margin:8px 0; overflow-wrap:anywhere; }
+.chat-recommendations .chat-choice-details { font-size:12px; line-height:1.6; color:#52684f; }
+.chat-recommendations .chat-choice-reason { margin-top:10px; font-size:13px; line-height:1.7; color:#304d38; }
+.chat-choice-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; align-items:center; }
+.chat-choice-actions button,.chat-choice-actions a { display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:44px; border:1px solid #bdcbb1; border-radius:10px; padding:8px 10px; background:#edf2e4; color:#284a35; font:inherit; font-size:12px; text-decoration:none; }
+.chat-choice-actions a { background:transparent; }
+.chat-recommendation-note { color:#53654f; font-size:12px; line-height:1.6; }
+.chat-next-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:20px; }
+.chat-next-actions button { min-height:44px; padding:10px 12px; border:1px solid #c5d0b9; border-radius:12px; background:#edf2e4; color:#284a35; font:inherit; font-size:12px; line-height:1.5; text-align:left; }
