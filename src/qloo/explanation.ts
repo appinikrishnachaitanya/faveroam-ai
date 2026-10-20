@@ -8,7 +8,9 @@ export function displayTags<T extends {id:string;name:string}>(tags: readonly T[
   const seen = new Set<string>();
   return tags.map(tag=>({...tag,name:cleanTagName(tag.name)})).filter(tag => {
     if (!/^urn:tag:(?:genre|category|cuisine|specialty_dish|ambience|dietary_option|style|subgenre):/.test(tag.id)) return false;
-    const key = tag.name.trim().toLowerCase().replace(/\s+(?:cuisine|food|cooking)$/," ").trim();
+    const key = tag.name.trim().toLowerCase()
+      .replace(/[-_\s]*(?:style|cuisine|food|cooking)\b/gi, "")
+      .replace(/[^a-z0-9]/g, "");
     if (!key || seen.has(key)) return false;
     seen.add(key); return true;
   });
@@ -70,7 +72,13 @@ export function evidenceFacts(card: Card): string[] {
     const name = card.evidence?.inputs.find(
       (i) => i.id.toLowerCase() === signal.id.toLowerCase(),
     )?.name;
-    if (name) facts.push(`${name} helped shape this suggestion.`);
+    if (name) {
+      if (card.section === "Eat" || card.section === "Coffee") {
+        facts.push(`Associated via cross-domain audience affinity with ${name}; reflects cultural overlap rather than a direct culinary link.`);
+      } else {
+        facts.push(`${name} helped shape this suggestion.`);
+      }
+    }
   }
   if (m?.quality.businessRating !== undefined)
     facts.push(`It has a rating of ${m.quality.businessRating.toFixed(1)} out of 5.`);

@@ -84,7 +84,7 @@ export default function TasteAnalysis({passport,busy,onRefine}:{passport:Passpor
         <p className="area-place-details">{area.anchor.section}{area.anchor.intelligence?.quality.businessRating !== undefined ? ` · ★ ${area.anchor.intelligence.quality.businessRating.toFixed(1)} / 5` : ""}</p>
         {area.nearby.length > 0 && <div className="area-nearby"><strong>Also nearby</strong><ul>{area.nearby.map(place=><li key={place.id}>{place.name}<small>{place.section}</small></li>)}</ul></div>}
         <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([area.anchor.name,area.anchor.address,passport.city].filter(Boolean).join(', '))}`} target="_blank" rel="noreferrer">Open this place on the map ↗</a>
-        {area.point && <button disabled={busy||Boolean(loading)} onClick={()=>nearby(area.point!)}>Find dining around here</button>}
+        {area.point && <button disabled={busy||Boolean(loading)} onClick={()=>nearby(area.point!, area.anchor.name)}>Find dining around here</button>}
       </article>)}</div> : <p>No local places are available to preview yet. Find dining in Discover, then return to explore where to start.</p>}
       <p className="helper">“Find dining around here” searches within 1.5 km of the named place and keeps your dining preferences. Nearby means straight-line distance; check routes, opening hours and availability before going.</p>
     </div>}

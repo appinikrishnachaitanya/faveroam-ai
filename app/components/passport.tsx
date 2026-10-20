@@ -316,7 +316,7 @@ export function DiscoveryCard({
           <Icon name={card.section} size={14} />
           {card.section}
         </span>
-        {card.evidence && <span className="helper">{card.evidence.pool === "adjacent" ? "Broader discovery" : card.evidence.pool === "direct" ? "Familiar starting point" : "Your taste profile"}</span>}
+        {card.evidence && <span className="helper">{card.evidence.params?.["filter.goal"] === "hidden-gems" || card.evidence.params?.["goal"] === "hidden-gems" || card.evidence.mode === "explore" ? "Hidden gem · Connected to your taste" : card.evidence.pool === "adjacent" ? "Broader discovery" : card.evidence.pool === "direct" ? "Familiar starting point" : "Your taste profile"}</span>}
       </div>
       <div className="discovery-title">
         <span className="card-cultural-mark" aria-hidden="true">
@@ -481,6 +481,12 @@ export function PassportSections({
               Updating your {s} passport… Your current discoveries stay
               available.
             </p>
+          )}
+          {s === "Eat" && result.session?.queryPreferences?.Eat?.locationPoint && (
+            <div className="active-area-banner" style={{ display: "flex", alignItems: "center", gap: "8px", padding: "10px 14px", background: "var(--surface-subtle, #f1f5f9)", borderRadius: "8px", marginBottom: "16px", fontSize: "13px" }}>
+              <Icon name="pin" size={16} />
+              <span><strong>Area filter:</strong> Discoveries within 1.5 km of {result.session.queryPreferences.Eat.locationQuery?.replace(/^Near\s+/i, "") || "selected cultural anchor"}.</span>
+            </div>
           )}
           <div className="discovery-grid">
             {(expanded[s] || previewLimit !== 3
