@@ -41,14 +41,14 @@ test("real Gemini protocol sends functionResponse after executing allowed Qloo l
  assert.deepEqual(response.response.matches.map((m:Record<string,unknown>)=>m.id),["urn:tag:cuisine:indian"]);
  assert.ok(!JSON.stringify(requests[1]).includes("never send this"));
 });
-test("at most three sequential calls, with forced tool-free final model turn",async()=>{
+test("at most three sequential calls, without an unnecessary fourth Gemini request",async()=>{
  const {model,requests}=stub([{functionCalls:[call("Indian cuisine")]},{functionCalls:[call("quiet atmosphere")]},{functionCalls:[call("Thai cuisine")]},{text:"Done."}]);
  const observed=await boundedToolLoop(model,"model","{}",tools,async c=>result(String(c.arguments.query)));
  assert.deepEqual(observed.choices.map(c=>c.arguments.query),["Indian cuisine","quiet atmosphere","Thai cuisine"]);
  assert.equal(MAX_OBSERVED_TOOL_CALLS,3);
  assert.equal(observed.observations.length,MAX_OBSERVED_TOOL_CALLS);
- assert.equal(requests.length,4);
- assert.equal(requests[3].config.tools,undefined);
+ assert.equal(requests.length,3);
+ assert.equal(requests[2].config.tools[0].functionDeclarations[0].name,"qloo_find_tags");
 });
 test("repeating the same tool query is rejected before executing twice",async()=>{
  const {model}=stub([{functionCalls:[call("Indian cuisine")]},{functionCalls:[call(" INDIAN CUISINE ")]}]);
@@ -67,13 +67,88 @@ test("unadvertised, malformed, and parallel tool calls cannot execute",async()=>
    assert.equal(executed,false);
  }
 });
-test("model cannot force extra iterations after the three-call cap",async()=>{
+test("the three-call cap prevents an additional Gemini iteration entirely",async()=>{
  const {model,requests}=stub([{functionCalls:[call("Indian cuisine")]},{functionCalls:[call("quiet atmosphere")]},{functionCalls:[call("Thai cuisine")]},{functionCalls:[call("Japanese cuisine")]}]);
  let count=0;
- await assert.rejects(boundedToolLoop(model,"model","{}",tools,async()=>{count++;return result("Indian");}),/limit exceeded/);
+ const observed=await boundedToolLoop(model,"model","{}",tools,async()=>{count++;return result("Indian");});
  assert.equal(count,3);
- assert.equal(requests[3].config.tools,undefined);
+ assert.equal(observed.choices.length,3);
+ assert.equal(requests.length,3);
 });
+
+test("a remaining conversation budget of one permits exactly one model-selected Qloo tool",async()=>{
+ const {model,requests}=stub([{functionCalls:[call("Indian cuisine")]},{functionCalls:[call("Thai cuisine")]}]);
+ let attempts=0;
+ const observed=await boundedToolLoop(model,"model","{}",tools,async()=>result("Indian"),undefined,1,()=>attempts++);
+ assert.equal(attempts,1);
+ assert.equal(observed.observations.length,1);
+ assert.equal(requests.length,1);
+});
+test("an exhausted conversation budget makes no further tool-selection model requests",async()=>{
+ const {model,requests}=stub([]);let attempted=false;
+ const observed=await boundedToolLoop(model,"model","{}",tools,async()=>{attempted=true;return result("Indian");},undefined,0);
+ assert.equal(attempted,false);
+ assert.equal(requests.length,0);
+ assert.deepEqual(observed,{choices:[],observations:[]});
+});
+test("completed tool observations survive a subsequent model failure",async()=>{
+ const {model,requests}=stub([{functionCalls:[call("Indian cuisine")]}]);
+ const observed=await boundedToolLoop(model,"model","{}",tools,async()=>result("Indian"));
+ assert.equal(requests.length,2,"second model request fails in mock");
+ assert.equal(observed.observations.length,1);
+ assert.equal(observed.observations[0].result.status,"ok");
+});
+test("failed tool attempts count against the conversation budget",async()=>{
+ const {model}=stub([{functionCalls:[call("Indian cuisine")]}]);let attempted=0;
+ await assert.rejects(boundedToolLoop(model,"model","{}",tools,async()=>{throw Error("MCP unavailable");},undefined,3,()=>{attempted++;}),/MCP unavailable/);
+ assert.equal(attempted,1);
+});
+test("conversation-wide three-call budget resets only on Reset Conversation",async()=>{
+ const providerCalls:number[]=[];
+ let plannerInvocations=0;
+ const provider={
+  interpret:async(text:string)=>{
+   const cuisine=text.match(/(Indian|Thai|Japanese|Korean)/i)?.[1] ?? "Indian";
+   return {kind:"refine" as const,seeds:[],concepts:[cuisine+" cuisine"],constraints:[],sections:["Eat" as const],strategy:"discover" as const};
+  },
+  choose:async()=>{throw Error("Legacy model planner should not run");},
+  chooseWithObservation:async(
+   _text:string,_state:AgentState,_tools:ToolDefinition[],
+   execute:(choice:{name:string;arguments:Record<string,unknown>})=>Promise<ToolResult>,
+   _signal:AbortSignal|undefined,remaining=3,onCall?:(choice:{name:string;arguments:Record<string,unknown>})=>void
+  )=>{
+   providerCalls.push(remaining);
+   const choice={name:"qloo_find_tags",arguments:{query:_state.intent!.concepts[0],limit:5}};
+   onCall?.(choice);plannerInvocations++;
+   const returned=await execute(choice);
+   return {choices:[choice],observations:[{choice,result:returned}]};
+  },
+ };
+ let state=fixture();
+ const queries=["Show me Indian restaurants","Show me Thai restaurants","Show me Japanese restaurants","Show me Korean restaurants"];
+ const transports:string[]=[];
+ for(let i=0;i<queries.length;i++){
+  const reply=await runTurn(state,{message:queries[i]},{
+   provider,tools:async()=>tools,
+   workflow:async(mode,_name,args)=>{
+    transports.push(mode);
+    const cuisine=String(args.query).split(" ")[0].toLowerCase();
+    return {status:"ok",results:[{id:"urn:tag:cuisine:place:"+cuisine,name:cuisine[0].toUpperCase()+cuisine.slice(1),type:"urn:tag:cuisine"}]};
+   },
+   discover:async(_state,section)=>[{id:"venue-"+i,name:"Verified venue "+i,types:["urn:entity:place"],detail:"",section}]
+  });
+  state=reply.state;
+  assert.equal(state.modelToolCalls,Math.min(i+1,3));
+  assert.ok(reply.changed.includes("Eat"));
+ }
+ assert.deepEqual(providerCalls,[3,2,1],"no fourth model-selected tool call");
+ assert.equal(plannerInvocations,3);
+ assert.deepEqual(transports,["mcp","mcp","mcp","exec"],"after model budget, Qloo still works directly");
+ const reset=await runTurn(state,{reset:"conversation"},{tools:async()=>tools,workflow:async()=>({status:"ok"}),discover:async()=>[]});
+ assert.equal(reset.state.modelToolCalls,0);
+ assert.deepEqual(reset.state.history,[]);
+});
+
 test("compacted observations exclude raw payloads and invalid taxonomy entries",()=>{
  const observed=compactToolObservation({status:"ok",results:[
   {id:"invalid",name:"Fake"},

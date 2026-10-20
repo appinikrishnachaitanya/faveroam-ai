@@ -83,6 +83,8 @@ export interface AgentState {
     Record<Section, import("../qloo/query-plan.ts").QueryPreferences>
   >;
   history?: { role: "user" | "agent"; text: string }[];
+  /** Successful or failed model-selected MCP attempts in the active chat. */
+  modelToolCalls?: number;
   providerHealth?: "unconfigured" | "configured" | "healthy" | "unavailable";
   recovery?: Section[];
   relaxed?: { section: Section; constraints: Constraint[] }[];
@@ -116,6 +118,7 @@ export interface TastePassportSession extends AgentState {
   >;
   categoryTags: Partial<Record<Section, string[]>>;
   history: { role: "user" | "agent"; text: string }[];
+  modelToolCalls: number;
   providerHealth: "unconfigured" | "configured" | "healthy" | "unavailable";
   recovery: Section[];
   relaxed: { section: Section; constraints: Constraint[] }[];
@@ -157,6 +160,8 @@ export interface ModelProvider {
     tools: ToolDefinition[],
     execute: (choice: ToolChoice) => Promise<ToolResult>,
     signal?: AbortSignal,
+    remainingCalls?: number,
+    onCall?: (choice: ToolChoice) => void,
   ): Promise<import("./tool-loop.ts").ObservedChoices>;
   choose(
     text: string,

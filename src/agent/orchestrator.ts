@@ -1,5 +1,6 @@
 import { refinementScope } from "./scope.ts";
 import { conversationContext } from "./context.ts";
+import { MAX_OBSERVED_TOOL_CALLS } from "./tool-loop.ts";
 import { decisionSummary } from "./decision-summary.ts";
 import { passportAnswer, cardSpecificAnswer } from "./answers.ts";
 import { debugEvent } from "./debug.ts";
@@ -608,7 +609,8 @@ export async function runTurn(
     mode === "model-mcp" &&
     deps.provider &&
     !input.tagChoice &&
-    (intent.strategy === "rank" || neededConcepts.some(concept=>!/^(?:quiet(?: atmosphere)?|vegetarian)$/i.test(concept) && conceptUnknown(concept)))
+    (intent.strategy === "rank" || neededConcepts.some(concept=>!/^(?:quiet(?: atmosphere)?|vegetarian)$/i.test(concept) && conceptUnknown(concept))) &&
+    !(deps.provider.chooseWithObservation && intent.strategy !== "rank" && state.modelToolCalls >= MAX_OBSERVED_TOOL_CALLS)
   ) {
     let choosingModelTool=false;
     try {
@@ -630,9 +632,11 @@ export async function runTurn(
             const canonical = permitted.find(c => c.toLowerCase() === requested.trim().toLowerCase());
             if (!canonical) throw Error("Tool argument outside user request");
             const args = { query: canonical, limit: 5 };
-            return guard.run("qloo_find_tags", args, () =>
+            return guard.run("qloo_find_tags_model", args, () =>
               deps.workflow("mcp", "qloo_find_tags", args, guard.signal));
           }, guard.signal,
+          MAX_OBSERVED_TOOL_CALLS - state.modelToolCalls,
+          () => { state.modelToolCalls++; },
         );
         modelChoices = observed.choices;
         for (const observation of observed.observations) {
@@ -647,13 +651,11 @@ export async function runTurn(
         throw Error("Unadvertised tool");
     } catch {
       mode = "deterministic";
-      if(choosingModelTool) {
-        state.providerHealth = "unavailable";
-        recordProviderHealth("unavailable");
-        fallback = "Taste Concierge is temporarily unavailable. You can still refine your Passport. ";
-      } else {
-        fallback = "The tool connection is unavailable. Using validated Qloo discovery. ";
-      }
+      // Optional MCP planning can fail even when intent interpretation worked.
+      // Do not falsely report Gemini as unavailable or erase a successful
+      // observation; ordinary validated Qloo discovery can still proceed.
+      if (!choosingModelTool)
+        event("Qloo tool catalog unavailable; using direct lookup", "attention");
       debugEvent("agent.fallback", { mode: "deterministic" });
       event("Guided refinement is available", "attention");
     }

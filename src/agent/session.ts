@@ -21,6 +21,8 @@ export function normalizeSession(state: AgentState): TastePassportSession {
   state.categoryModes ??= {};
   state.categoryConcepts ??= {};
   state.history ??= [];
+  if (!Number.isInteger(state.modelToolCalls) || state.modelToolCalls! < 0 || state.modelToolCalls! > 3)
+    state.modelToolCalls = 0;
   state.recovery ??= [];
   state.relaxed ??= [];
   state.providerHealth ??= "unconfigured";
@@ -32,6 +34,7 @@ export function normalizeSession(state: AgentState): TastePassportSession {
 export function resetConversation(original: AgentState): TastePassportSession {
   const state = normalizeSession(structuredClone(original));
   state.history = [];
+  state.modelToolCalls = 0;
   state.constraints = [];
   state.categoryConstraints = {};
   state.categoryConcepts = {};

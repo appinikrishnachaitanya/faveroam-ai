@@ -440,7 +440,7 @@ export function configuredProvider(): ModelProvider | undefined {
       return validateIntent(calls[0].arguments);
     },
     ...(gemini && process.env.AGENT_TOOL_LOOP !== "0" ? {
-      async chooseWithObservation(text: string, state: AgentState, tools: ToolDefinition[], execute: (choice: ToolChoice) => Promise<import("./types.ts").ToolResult>, signal?: AbortSignal) {
+      async chooseWithObservation(text: string, state: AgentState, tools: ToolDefinition[], execute: (choice: ToolChoice) => Promise<import("./types.ts").ToolResult>, signal?: AbortSignal, remainingCalls?: number, onCall?: (choice: ToolChoice) => void) {
         culturalText(text);
         const trace = crypto.randomUUID();
         debugEvent("gemini.request", { trace, operation: "observe-tools" });
@@ -450,7 +450,7 @@ export function configuredProvider(): ModelProvider | undefined {
             conversation: conversationContext(state),
             intent: state.intent,
             destination: state.city,
-          }), tools, execute, signal);
+          }), tools, execute, signal, remainingCalls, onCall);
           recordProviderHealth("healthy");
           debugEvent("gemini.result", { trace, count: observed.observations.length });
           return observed;
