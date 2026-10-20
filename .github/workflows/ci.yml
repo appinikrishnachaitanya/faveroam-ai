@@ -2,9 +2,15 @@ name: CI
 
 on:
   push:
-    branches: [work, master]
+    branches:
+      - work
+      - master
+      - 'feat/**'
+      - 'release/**'
   pull_request:
-    branches: [master]
+    branches:
+      - master
+      - 'release/**'
   workflow_dispatch:
 
 permissions:
@@ -23,6 +29,8 @@ jobs:
       NEXT_TELEMETRY_DISABLED: "1"
     steps:
       - uses: actions/checkout@v4
+      - name: Record validated commit
+        run: git rev-parse HEAD
       - uses: actions/setup-node@v4
         with:
           node-version-file: .node-version
