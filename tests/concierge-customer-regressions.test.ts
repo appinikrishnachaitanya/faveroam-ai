@@ -1,3 +1,5 @@
+import { groundedModelIntent } from "../src/agent/conversation-grounding.ts";
+import { interpret } from "../src/agent/intent.ts";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { runTurn } from "../src/agent/orchestrator.ts";
@@ -92,4 +94,26 @@ test("unrecognized text cannot authorize a model-invented broad refresh",async()
  assert.deepEqual(output.state.cards,initial.cards);
  assert.deepEqual(output.state.queryPreferences,initial.queryPreferences);
  assert.match(output.message,/didn't catch/);
+});
+
+ test("a conservative spelling correction can ground noodles without inventing a different concept",()=>{
+ const explicit=interpret("i want to eat noddles man","London");
+ const model={...explicit,concepts:["noodles"]};
+ assert.ok(groundedModelIntent("i want to eat noddles man",model,explicit).concepts.includes("noodles"));
+ assert.ok(!groundedModelIntent("i want to eat noddles man",{...model,concepts:["seafood"]},explicit).concepts.includes("seafood"));
+ });
+
+test("a cancelled chicken clarification cannot block a new peaceful-seating request",async()=>{
+ const initial=state();
+ const quiet={id:"urn:tag:ambience:place:quiet",name:"Quiet",types:["urn:tag"],detail:""};
+ initial.tags=[quiet];initial.categoryTags={Eat:[quiet.id]};
+ initial.intent!.sections=["Eat"];
+ initial.pending={query:"chicken",request:"i want to eat chicken man",sections:["Eat"],constraints:[],candidates:[{id:"urn:tag:specialty_dish:qloo:chicken",name:"Chicken",types:["urn:tag"],detail:""}]};
+ const output=await runTurn(initial,{message:"i don't need any chicken , all i want to sit peacefully man"},{...forbidden,provider:{
+  interpret:async()=>({kind:"refine",sections:["Eat"],seeds:[],concepts:["chicken","quiet atmosphere"],constraints:["crowded"],strategy:"discover"}),choose:async()=>[]
+ },discover:async(current,section)=>{assert.equal(current.pending,undefined);return [card("Quiet returned place",section)];}});
+ assert.equal(output.state.pending,undefined);
+ assert.deepEqual(output.changed,["Eat"]);
+ assert.ok(!output.state.categoryTags?.Eat?.some(id=>/chicken/.test(id)));
+ assert.ok(output.state.categoryConstraints.Eat?.includes("crowded"));
 });

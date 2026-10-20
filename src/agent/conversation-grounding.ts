@@ -1,3 +1,4 @@
+import { categoryLanguage } from "./category-language.ts";
 import type { Intent } from "./types.ts";
 
 /** A discovery goal is a search mode, not a cultural taxonomy tag. */
@@ -10,7 +11,9 @@ function words(value: string): string[] {
 /** Model ideas may help classify an explicit request but may not manufacture a
  * blocking Qloo concept unrelated to that request. */
 export function groundedModelIntent(request: string, model: Intent, explicit: Intent): Intent {
-  const spoken = new Set(words(request));
+  const currentRequest = categoryLanguage(request).replace(
+    /\b(?:i\s+)?(?:don['’]t|do not|no longer)\s+need\s+[^.!?;]*?(?=\b(?:all i want|instead|just|but)\b)/gi, " ");
+  const spoken = new Set(words(currentRequest));
   const explicitConcepts = new Set(explicit.concepts.map(x=>words(x).join(" ")));
   const grounded = (concept: string) => {
     if (isDiscoveryGoalConcept(concept)) return false;

@@ -388,7 +388,7 @@ test("429-like discovery failure preserves unrelated results and honors the reje
   );
   assert.deepEqual(r.changed, []);
   assert.deepEqual(r.state.cards, state().cards.filter(c => c.id !== id));
-  assert.match(r.message, /preserved/);
+  assert.match(r.message, /existing discoveries are still here/);
 });
 test("rank workflow cannot introduce a generated entity or address", async () => {
   const d = dependencies();

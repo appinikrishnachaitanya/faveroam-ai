@@ -42,7 +42,7 @@ export function constraintsFrom(text: string): Constraint[] {
     )
   )
     values.push("touristy");
-  if (/quiet|quieter|less crowded|too crowded|not crowded/i.test(text))
+  if (/quiet|quieter|peaceful|peacefully|less crowded|too crowded|not crowded/i.test(text))
     values.push("crowded");
   if (/niche|less mainstream|too mainstream|not mainstream/i.test(text))
     values.push("mainstream");

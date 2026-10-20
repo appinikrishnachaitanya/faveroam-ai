@@ -292,7 +292,7 @@ test("empty results expose real recovery actions that change state and rerun dis
   );
   assert.deepEqual(empty.state.recovery, ["Eat"]);
   assert.deepEqual(empty.state.cards, fresh().cards);
-  assert.match(empty.message, /No strong match yet/);
+  assert.match(empty.message, /couldn’t find a verified match/);
   let called = false;
   d.discover = async (_s, section, constraints) => {
     called = true;

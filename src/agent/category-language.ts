@@ -1,10 +1,10 @@
-/** Correct only common category nouns in chat, never cultural entity names. */
+/** Bounded common chat vocabulary, not arbitrary cultural entity-name matching. */
 import { editDistance } from "../text/edit-distance.ts";
 
 export function categoryLanguage(text:string):string {
   return text.replace(/\b[a-z]{5,16}\b/gi,word=>{
     const lower=word.toLowerCase();
-    const targets=lower.startsWith('res')?['restaurant','restaurants']:lower.startsWith('mus')||lower==='muisc'?['music']:lower.startsWith('cof')?['coffee']:[];
+    const targets=lower.startsWith('res')?['restaurant','restaurants']:lower.startsWith('mus')||lower==='muisc'?['music']:lower.startsWith('cof')?['coffee']:lower.startsWith('pea')?['peaceful','peacefully']:/\b(?:eat|food|dish|restaurant)\b/i.test(text)&&lower.startsWith('bir')?['biryani']:/\b(?:eat|food|dish|restaurant)\b/i.test(text)&&/^(?:nod|nood)/.test(lower)?['noodles']:[];
     if(targets.includes(lower))return word;
     const matches=targets.map(target=>({target,distance:editDistance(lower,target)})).sort((a,b)=>a.distance-b.distance);
     const best=matches[0];

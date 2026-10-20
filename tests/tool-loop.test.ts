@@ -40,6 +40,7 @@ test("real Gemini protocol sends functionResponse after executing allowed Qloo l
  assert.equal(requests.length,2);assert.equal(requests[0].config.tools[0].functionDeclarations.length,1);
  assert.equal(requests[0].config.tools[0].functionDeclarations[0].name,"qloo_find_tags");
  assert.equal(requests[0].config.toolConfig.functionCallingConfig.mode,"AUTO");
+ assert.equal(requests[0].config.temperature,1);assert.equal(requests[0].config.maxOutputTokens,4096);
  assert.equal(requests[1].contents[1].role,"model");
  assert.equal(requests[1].contents[1].parts[0].functionCall.name,"qloo_find_tags");
  assert.equal(requests[1].contents[1].parts[0].thoughtSignature,"test-signature-1");
@@ -57,6 +58,7 @@ test("three sequential calls followed by one tool-free final Gemini response",as
  assert.equal(requests.length,4);
  assert.equal(requests[2].config.tools[0].functionDeclarations[0].name,"qloo_find_tags");
  assert.equal(requests[3].config.tools,undefined);
+ assert.equal(requests[3].config.maxOutputTokens,1024);
  assert.equal(observed.finalText,"Done.");
  assert.equal(requests[3].contents[5].parts[0].thoughtSignature,"test-signature-3");
 });

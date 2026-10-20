@@ -33,6 +33,7 @@ import {
 } from "./components/onboarding";
 import ConciergeDrawer from "./components/concierge";
 import ChatRecommendations from "./components/chat-recommendations";
+import ConceptClarification from "./components/concept-clarification";
 import DiscoveryConcierge from "./components/discovery-concierge";
 import PassportNavigation from "./components/passport-navigation";
 import { reviewMatches } from "../src/passport/matching";
@@ -184,7 +185,7 @@ export default function Home() {
     const body = agentScroll.current;
     if (!assistantOpen || !body) return;
     body.scrollTop =
-      assistantTab === "ask" && !result?.agent?.pending ? body.scrollHeight : 0;
+      assistantTab === "ask" ? body.scrollHeight : 0;
   }, [
     assistantOpen,
     assistantTab,
@@ -949,27 +950,6 @@ export default function Home() {
           </div>
           <div className="concierge-body" ref={agentScroll}>
 
-            {result.agent?.pending && (
-              <div className="pending-concept">
-                <strong>Choose what you meant</strong>
-                <p>{result.agent.pending.query}</p>
-                <div className="pending-match-options" aria-label="Matching interests">
-                  {result.session?.pending?.candidates.map((candidate) => (
-                    <button
-                      key={candidate.id}
-                      type="button"
-                      disabled={busy}
-                      onClick={() => void refine({ tagChoice: candidate.id })}
-                    >
-                      {candidate.name}
-                    </button>
-                  ))}
-                </div>
-                <button className="quiet-button" type="button" disabled={busy} onClick={() => void refine({message:"Skip this concept"})}>
-                  Skip this concept
-                </button>
-              </div>
-            )}
             {assistantTab === "ask" ? (
               <div id="ask-panel" role="tabpanel" aria-labelledby="ask-tab">
                 <p className="concierge-intro">
@@ -1027,6 +1007,14 @@ export default function Home() {
                         busy={busy} savedIds={result.session?.savedCards?.map(card=>card.id) ?? []}
                         onAsk={question=>void refine({message:question})}
                         onSave={id=>recordFeedback(id,"like")}/> : null}
+                      {m.role === "agent" && i === visibleMessages.findLastIndex(message => message.role === "agent") && <>
+                        {result.session?.pending && <ConceptClarification pending={result.session.pending} disabled={busy}
+                          onChoose={id=>void refine({tagChoice:id})} onSkip={()=>void refine({message:"Skip this concept"})}/>}
+                        {!result.agent?.pending && Boolean(result.session?.recovery?.length) && result.session && <>
+                          <RefinementRecovery session={result.session} disabled={busy} onApply={input=>void refine(input)}/>
+                          <button className="quiet-button" disabled={busy} onClick={()=>{setAssistantOpen(false);selectWorkspaceView("preferences");}}>Adjust preferences</button>
+                        </>}
+                      </>}
                     </div>
                   ))}
                 </div>
@@ -1040,6 +1028,8 @@ export default function Home() {
                 role="tabpanel"
                 aria-labelledby="manual-tab"
               >
+                        {result.session?.pending && <ConceptClarification pending={result.session.pending} disabled={busy}
+                          onChoose={id=>void refine({tagChoice:id})} onSkip={()=>void refine({message:"Skip this concept"})}/>}
                 {result.session && (
                   <GuidedRefinement
                     session={result.session}

@@ -109,10 +109,13 @@ export function RefinementRecovery({
     <>
       {session.recovery?.map((section) => (
         <section className="refinement-recovery" key={section} role="status">
-          <h3>No strong {sectionLabel(section)} match yet.</h3>
+          <h3>Let’s adjust your {sectionLabel(section).toLowerCase()} search</h3>
           <p>
-            Your existing discoveries are still here. Keep your confirmed
-            cultural concept and try fewer preferences.
+            Current requirements: {[
+              ...session.tags.filter(tag=>[...(session.categoryTags?.[section] ?? []),...(session.queryPreferences?.[section]?.includeTags ?? [])].includes(tag.id)).map(tag=>tag.name),
+              ...(session.queryPreferences?.[section]?.priceMax ? [`budget up to ${session.queryPreferences[section]!.priceMax}/4`] : []),
+              ...(session.queryPreferences?.[section]?.businessRatingMin ? [`rating ${session.queryPreferences[section]!.businessRatingMin}+`] : []),
+            ].join(", ") || "your confirmed tastes"}. Your existing discoveries remain available. Broader taste matching keeps these requirements; it does not guarantee availability.
           </p>
           <div>
             {(
@@ -124,11 +127,15 @@ export function RefinementRecovery({
                       ? `Keep ${session.tags.find((t) => session.categoryTags?.Eat?.includes(t.id) && /cuisine/i.test(t.id))?.name ?? "cuisine"}`
                       : "Keep cultural tastes",
                 },
-                { action: "relax-quiet", label: "Relax quiet" },
-                { action: "allow-popular", label: "Allow popular places" },
-                { action: "closest", label: "Show closest matches" },
+                { action: "relax-quiet", label: "Try without the quietness preference" },
+                { action: "allow-popular", label: "Include popular places" },
+
               ] as const
-            ).map(({ action, label }) => (
+            ).filter(({action}) => {
+              const constraints=session.categoryConstraints[section] ?? [];
+              return action==="relax-quiet" ? constraints.some(value=>value==="crowded"||value==="atmosphere")
+                : action==="allow-popular" ? constraints.some(value=>value==="mainstream"||value==="touristy") : constraints.length>0;
+            }).map(({ action, label }) => (
               <button
                 key={action}
                 className="quiet-button"
@@ -138,6 +145,7 @@ export function RefinementRecovery({
                 {label}
               </button>
             ))}
+            {(session.categoryModes?.[section] ?? session.discoveryMode) !== "explore" && <button className="quiet-button" disabled={disabled} onClick={()=>onApply({familiarity:{section,mode:"explore"}})}>Explore broader taste matches</button>}
           </div>
         </section>
       ))}

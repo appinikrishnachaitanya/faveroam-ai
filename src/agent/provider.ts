@@ -1,4 +1,5 @@
 import "server-only";
+import { generationSettings } from "./generation-policy.ts";
 import { GoogleGenAI, FunctionCallingConfigMode } from "@google/genai";
 import { conversationContext } from "./context.ts";
 import { boundedToolLoop } from "./tool-loop.ts";
@@ -82,6 +83,7 @@ export function configuredProvider(): ModelProvider | undefined {
           model: model!,
           contents,
           config: {
+            ...generationSettings(tools[0]?.function.name === "explain_qloo_evidence" ? "response" : "decision"),
             systemInstruction: messages.find((m) => m.role === "system")
               ?.content,
             tools: [
@@ -221,6 +223,7 @@ export function configuredProvider(): ModelProvider | undefined {
             model: model!,
             contents: JSON.stringify({ request, destination, tastes }),
             config: {
+              ...generationSettings("response"),
               systemInstruction:
                 "Produce a concise cultural onboarding suggestion using only model knowledge. No tools or Qloo data are available. Explicitly state details and local availability are unverified. Never claim Qloo evidence.",
             },

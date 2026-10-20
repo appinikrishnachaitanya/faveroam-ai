@@ -14,6 +14,7 @@
 - [Development](DEVELOPMENT.md): local setup, standards, repository ownership and verification commands.
 - [Recommendation policy and live evaluation](RECOMMENDATION_POLICY.md): category routing, rank fusion, research and controlled profile checks.
 - [Qloo integration](QLOO_INTELLIGENCE.md): endpoints, output types, filters, evidence and known limitations.
+- [Prompt review](PROMPT_REVIEW.md): exact system instructions, generation settings and proposed workflow boundaries.
 - [Gemini runtime](GEMINI_RUNTIME.md): native SDK, bounded context, function calling and fallback.
 - [Flow and debugging](FLOW_AND_DEBUGGING.md): safe backend logs and request tracing.
 - [Railway deployment](RAILWAY_DEPLOYMENT.md): branch, runtime, health check and deployment verification.

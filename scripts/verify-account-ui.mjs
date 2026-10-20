@@ -166,7 +166,8 @@ ws.addEventListener("message", async (event) => {
                     state: {
                       ...session,
                       revision: ++session.revision,
-                      ...(turnScenario === "empty-food" ? {cards:session.cards.filter(card=>card.section!=="Eat"),activeCategories:["Eat","Coffee","Culture"]} : {}),
+                      ...(turnScenario === "empty-food" ? {cards:session.cards.filter(card=>card.section!=="Eat"),activeCategories:["Eat","Coffee","Culture"],recovery:["Eat"]} : {}),
+                      pending: turnScenario==="pending-choice" ? {query:"chicken",sections:["Eat"],constraints:[],request:"find chicken",candidates:[{id:"urn:tag:specialty_dish:fixture:chicken",name:"Chicken dishes",types:["urn:tag"],detail:"Returned fixture concept"}]} : undefined,
                       history: [
                         { role: "user", text: body.input.message },
                         {
@@ -742,6 +743,14 @@ await click('[aria-label="Close Taste Concierge"]');
 await textClick("Discover");
 assert.ok(await evaluate("document.querySelector('#section-Eat').textContent.includes('Food')"),"Food heading uses the customer-facing label");
 assert.ok(await evaluate("document.querySelector('#section-Coffee').textContent.includes('Coffee & cafés')"),"Café heading uses the customer-facing label");
+turnScenario="pending-choice";
+await click(".assistant-launch");
+await input("#conversation-input","Find chicken","HTMLTextAreaElement");
+await click('[aria-label="Send message"]');
+await wait("Boolean(document.querySelector('.conversation .message.agent .pending-concept'))");
+assert.equal(await evaluate("document.querySelectorAll('.pending-concept').length"),1,"Clarification appears once inside its assistant message");
+assert.ok(await evaluate("document.querySelector('.concierge-body').scrollTop>0"),"Clarification stays at the conversation end rather than jumping to the top");
+await click('[aria-label="Close Taste Concierge"]');
 turnScenario="empty-food";
 await click(".assistant-launch");
 await input("#conversation-input","Fixture missing food","HTMLTextAreaElement");
@@ -749,6 +758,7 @@ await click('[aria-label="Send message"]');
 await wait("Boolean(document.querySelector('.missing-discoveries'))");
 assert.equal(await evaluate("document.querySelectorAll('.missing-discoveries').length"),1,"Empty category recovery is not duplicated in chat");
 assert.ok(await evaluate("document.querySelector('.missing-discoveries').textContent.includes('Try Food again')"));
+assert.ok(await evaluate("Boolean(document.querySelector('.message.agent .refinement-recovery'))"),"Recovery actions appear beneath the latest assistant reply");
 assert.equal(await evaluate("document.querySelector('#passport-content').textContent.includes('Retry Eat')"),false);
 await click('[aria-label="Close Taste Concierge"]');
 turnScenario="success";

@@ -2,7 +2,7 @@
 
 ## Configuration
 
-`configuredProvider()` uses Google's native `@google/genai` SDK when `GEMINI_API_KEY` is present. Configure server-only `GEMINI_MODEL`; `.env.example` recommends `gemini-3.1-flash-lite`, previously exercised here. The code fallback when no model is supplied is `gemini-2.5-flash`. Do not infer the deployed model from a local environment or example file.
+`configuredProvider()` uses Google's native `@google/genai` SDK when `GOOGLE_API_KEY` or `GEMINI_API_KEY` is present (`GOOGLE_API_KEY` takes precedence). Configure server-only `GEMINI_MODEL`; `.env.example` recommends `gemini-3.1-flash-lite`, previously exercised here. The code fallback when no model is supplied is `gemini-3.1-flash-lite`. Do not infer the deployed model from a local environment or example file.
 
 Gemini does not need `AGENT_MODEL_BASE_URL`. The optional OpenAI-compatible adapter uses `AGENT_MODEL_API_KEY`, `AGENT_MODEL_BASE_URL` and `AGENT_MODEL_NAME` only when the native key is absent. A native failure retains guided fallback rather than silently switching credentials or providers.
 
@@ -33,3 +33,7 @@ node --use-env-proxy --env-file-if-exists=.env --env-file-if-exists=.env.local -
 ```
 
 The live sequence changes a dining rating minimum through two follow-ups while checking cuisine, diet, price and protected categories. See [release evidence](RELEASE_CHECKLIST.md). Prior native success and the subsequently observed HTTP 504 are recorded distinctly; guided fallback is never counted as native success.
+
+## Generation policy and prompt review
+
+Native requests explicitly set temperature **1.0**. Decisions/tool steps have a **4,096** output-token ceiling; evidence selection, comparison baseline and loop finalization have a **1,024** ceiling. These starting limits are defined in [generation policy](../src/agent/generation-policy.ts), not inferred as confidence or an end-to-end cost cap. See [exact prompt snapshot and architecture distinctions](PROMPT_REVIEW.md).
