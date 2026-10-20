@@ -726,26 +726,7 @@ export default function Home() {
               )}
             </div>
             {workspaceView === "discover" && (result.session?.activeCategories ?? []).filter(section=>!result.session?.hiddenCategories.includes(section) && !result.cards.some(card=>card.section===section)).length > 0 && <section className="missing-discoveries" aria-label="Retry missing discoveries"><p>Some categories have no discoveries yet. Retry one without changing your other results.</p><div>{(result.session?.activeCategories ?? []).filter(section=>!result.session?.hiddenCategories.includes(section) && !result.cards.some(card=>card.section===section)).map(section=><button key={section} className="quiet-button" disabled={busy} onClick={()=>void refine({guided:{section,constraints:result.session?.categoryConstraints[section] ?? []}})}>Retry {section}</button>)}</div></section>}
-            {result.agent?.pending && (
-              <div className="pending-concept">
-                <strong>A little clarity for your next discovery</strong>
-                <p>
-                  Choose the meaning you had in mind for “
-                  {result.agent.pending.query}”.
-                </p>
-                <button
-                  className="quiet-button"
-                  disabled={busy}
-                  onClick={(e) => {
-                    matchOpener.current = e.currentTarget;
-                    setConceptDialog(true);
-                  }}
-                >
-                  Choose a match <Icon name="arrow" />
-                </button>
-              </div>
-            )}
-            {result.session && (
+             {result.session && (
               <RefinementRecovery
                 session={result.session}
                 disabled={busy}
@@ -827,6 +808,7 @@ export default function Home() {
                 </summary>
                 <ConnectionExplorer
                   passport={result}
+                  onAsk={(question) => {setComposer(question);setAssistantTab("ask");setAssistantOpen(true);}}
                   onExplore={(section) => {
                     setWorkspaceView("discover");
                     setShowSaved(false);
@@ -929,15 +911,8 @@ export default function Home() {
                     </button>
                   ))}
                 </div>
-                <button
-                  className="quiet-button"
-                  disabled={busy}
-                  onClick={(e) => {
-                    matchOpener.current = e.currentTarget;
-                    setConceptDialog(true);
-                  }}
-                >
-                  Choose a match
+                <button className="quiet-button" type="button" disabled={busy} onClick={() => void refine({message:"Skip this concept"})}>
+                  Skip this concept
                 </button>
               </div>
             )}

@@ -1,0 +1,43 @@
+import type { Intent } from "./types.ts";
+
+/** A discovery goal is a search mode, not a cultural taxonomy tag. */
+export function isDiscoveryGoalConcept(value: string): boolean {
+  return /^(?:(?:hidden[-\s]?gems?|trending|popular|safe[-\s]?bets?|surprise(?:[-\s]?me)?|discover(?:y)?)\s*)+$/i.test(value.trim());
+}
+function words(value: string): string[] {
+  return value.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").split(" ").filter(Boolean);
+}
+/** Model ideas may help classify an explicit request but may not manufacture a
+ * blocking Qloo concept unrelated to that request. */
+export function groundedModelIntent(request: string, model: Intent, explicit: Intent): Intent {
+  const spoken = new Set(words(request));
+  const explicitConcepts = new Set(explicit.concepts.map(x=>words(x).join(" ")));
+  const grounded = (concept: string) => {
+    if (isDiscoveryGoalConcept(concept)) return false;
+    if (explicitConcepts.has(words(concept).join(" "))) return true;
+    const meaningful = words(concept).filter(x=>![
+      "cuisine","restaurant","restaurants","place","places","venue","venues",
+      "food","foods","dining","type","category","genre","interest","interests","qloo"
+    ].includes(x));
+    // The model may normalize requested nouns ("sushi" -> "sushi cuisine"),
+    // but cannot introduce concepts the user never mentioned.
+    return meaningful.length>0 && meaningful.every(x=>spoken.has(x));
+  };
+  const concepts = [...new Set([...explicit.concepts,...model.concepts.filter(grounded)])].slice(0,5);
+  const excludeConcepts = [...new Set([
+    ...(explicit.excludeConcepts ?? []),
+    ...(model.excludeConcepts ?? []).filter(grounded),
+  ])].slice(0,5);
+  const query = model.query ? {...model.query} : undefined;
+  // A hidden-gems/trending search request is a goal, not a requirement to
+  // choose between homonymous taxonomy tags. No goal carries over to greetings.
+  if (query?.goal && !explicit.query?.goal) delete query.goal;
+  if (explicit.query?.goal) {
+    if (query) query.goal=explicit.query.goal;
+    else return {...model,concepts,excludeConcepts,query:{goal:explicit.query.goal}};
+  }
+  return {...model,concepts,excludeConcepts, ...(query?{query}:{})};
+}
+export function isGreetingOrTypo(text: string): boolean {
+  return /^(?:h[iyj]|he(?:llo|lli|llo+|ya|y)|hello|hi|hey|hiya)(?:\s+bro)?[!,.?\s]*$/i.test(text.trim());
+}

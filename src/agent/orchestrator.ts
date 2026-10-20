@@ -1,4 +1,5 @@
 import { refinementScope } from "./scope.ts";
+import { groundedModelIntent, isGreetingOrTypo } from "./conversation-grounding.ts";
 import { conversationContext } from "./context.ts";
 import { decisionSummary } from "./decision-summary.ts";
 import { passportAnswer, cardSpecificAnswer, isListRequest, listPassportResults, previewRefinedResults } from "./answers.ts";
@@ -168,10 +169,14 @@ export async function runTurn(
     state.providerHealth = "configured";
   if (input.message) {
     culturalText(input.message);
+    if (state.pending && /^(?:cancel(?: that| the)?(?: concept| choice)?|skip(?: this| the)?(?: concept| choice)?|never ?mind|start over)[!,.\s]*$/i.test(input.message.trim())) {
+      delete state.pending;
+      return reply("Okay, I've skipped that concept choice. Your Passport hasn't changed. What would you like to explore next?");
+    }
     // Handle presentation requests before intent classification. A model may
     // otherwise interpret "list here" as another discovery/refinement request.
     if (isListRequest(input.message)) {
-      state.pending = original.pending;
+      delete state.pending; // A read-only listing supersedes an unrelated choice.
       return reply(listPassportResults(state,input.message));
     }
     const activeCards = [...state.cards, ...state.savedCards];
@@ -195,8 +200,8 @@ export async function runTurn(
       );
     delete state.pending;
   }
-  if (input.message && /^(?:hi|hello|hey|hi bro|hello bro)[!,.\s]*$/i.test(input.message.trim()))
-    return reply(`Hi! What would you like to do in ${state.city}? Try “find chicken biryani” or “find a cinema and dinner”.`);
+  if (input.message && isGreetingOrTypo(input.message))
+    return reply(`Hi! What would you like to explore in ${state.city}? I can find dining, nightlife, coffee or an evening outing based on your tastes.`);
   let intent = interpret(input.message ?? "", state.city);
   if (input.message && intent.question) {
     state.pending = original.pending;
@@ -357,9 +362,9 @@ export async function runTurn(
   } else if (deps.provider && input.message) {
     event("Interpreting your cultural request", "active");
     try {
-      intent = validateIntent(
+      intent = groundedModelIntent(input.message,validateIntent(
         await deps.provider.interpret(input.message ?? "", conversationContext(state)),
-      );
+      ),interpret(input.message,state.city));
       mode = "model-mcp";
       state.providerHealth = "healthy";
       event("Cultural intent recognized", "complete");
@@ -414,6 +419,9 @@ export async function runTurn(
     const preserved=refinementScope(input.message).preserved;
     intent.sections=intent.sections.filter(section=>!preserved.includes(section));
     intent.hide=intent.hide?.filter(section=>!preserved.includes(section));
+    // The current user message, not a remembered model guess, authorizes a
+    // new taxonomy filter or special discovery mode.
+    intent = groundedModelIntent(input.message, intent, explicit);
     if (explicit.activityGenres?.length) {
       intent.activityGenres = explicit.activityGenres;
       intent.concepts = explicit.concepts;
@@ -434,7 +442,7 @@ export async function runTurn(
   }
   if (intent.kind === "unknown" || intent.kind === "onboard")
     return reply(
-      "For this passport, name a section to refine, ask for cuisine or quietness, or select Not my vibe on a card. Start a new taste draft to change the destination or seeds.",
+      `I didn't catch a discovery request. You can ask naturally—for example, “Find a nightclub in ${state.city}”, “Show my restaurants here”, or “Make dining quieter”. Your Passport is unchanged.`,
     );
   const acceptedScope = state.feedback
     .filter((f) => f.accepted)
@@ -817,7 +825,8 @@ export async function runTurn(
            tag.name.toLowerCase()===canonical+" restaurant" || tag.name.toLowerCase()===canonical+" restaurants")
         );
         const preferred=matches.filter(tag=>tag.id.startsWith("urn:tag:cuisine:"));
-        const verified=preferred.length===1?preferred[0]:matches.length===1?matches[0]:undefined;
+        const verified=choices.length===1 && matches.length > 0 ? choices[0]
+          : preferred.length===1?preferred[0]:matches.length===1?matches[0]:undefined;
         if(verified) {
           state.tags=[...state.tags.filter(tag=>tag.id!==verified.id),verified].slice(-50);
           const old=state.categoryTags!.Eat??[];

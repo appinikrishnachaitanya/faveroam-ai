@@ -6,6 +6,7 @@ import type { Constraint, ToolResult } from "./types.ts";
 import { matchesDestination } from "../workspace/location.ts";
 export function tagCandidates(result: ToolResult, query: string): Candidate[] {
   if (result.status !== "ok" || !Array.isArray(result.results)) return [];
+  const seen = new Set<string>();
   return result.results
     .filter(isObject)
     .filter(
@@ -14,6 +15,17 @@ export function tagCandidates(result: ToolResult, query: string): Candidate[] {
         /^urn:tag:[\w:-]+$/.test(t.id) &&
         typeof t.name === "string",
     )
+    .sort((a,b) =>
+      Number(String(b.id).includes(":place:")) - Number(String(a.id).includes(":place:"))
+    )
+    .filter(t => {
+      // Qloo may return the same user-visible concept through several tag
+      // namespaces. A dialog with five identical labels is not actionable.
+      const label = String(t.name).toLowerCase().replace(/[^a-z0-9]+/g," ").trim().replace(/s\b/g,"");
+      if (!label || seen.has(label)) return false;
+      seen.add(label);
+      return true;
+    })
     .slice(0, 5)
     .map((t) => ({
       id: String(t.id),

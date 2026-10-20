@@ -91,7 +91,14 @@ export function listPassportResults(state: AgentState, request: string): string 
     : /\b(?:movies?|films?)\b/.test(q) ? "Movies"
     : /\bbooks?\b/.test(q) ? "Books"
     : /\bmusic\b/.test(q) ? "Music"
-    : /\b(?:museums?|culture|gallery|galleries)\b/.test(q) ? "Culture"
+    : /\b(?:museums?|culture|gallery|galleries|cinema|nightlife|nightclubs?)\b/.test(q) ? "Culture"
+    : /\b(?:shows?|series|tv)\b/.test(q) ? "Shows"
+    : /\b(?:games?|gaming)\b/.test(q) ? "Games"
+    : /\bpodcasts?\b/.test(q) ? "Podcasts"
+    : /\b(?:lifestyle|shops?|shopping|bookstores?)\b/.test(q) ? "Lifestyle"
+    : /\bbrands?\b/.test(q) ? "Brands"
+    : /\b(?:people|artists?|authors?)\b/.test(q) ? "People"
+    : /\b(?:destinations?|cities)\b/.test(q) ? "Destinations"
     : state.intent?.sections?.length === 1 ? state.intent.sections[0] : undefined;
   const requested = section ? [section] : sectionOrder.filter(s => state.cards.some(c=>c.section===s) && !(state.hiddenCategories ?? []).includes(s));
   const visible = state.cards.filter(c=>requested.includes(c.section) && !(state.hiddenCategories??[]).includes(c.section));
