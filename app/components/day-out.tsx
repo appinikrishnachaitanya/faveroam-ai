@@ -152,7 +152,7 @@ export default function DayOutPlan({
         <p>
           Choose your activities and their order. Swap or skip any stop without changing the others. Reordering keeps your selected venues.
         </p>
-        {activities.length < 2 && <p role="note">Start with dinner, then select Cinema or Coffee below to build a fuller outing. Missing venues are looked up without changing your dinner.</p>}
+        {activities.length < 2 && <p role="note">Start with a food stop, then add cinema, coffee or another activity. Missing venues are looked up without changing your food stop.</p>}
         <p className="helper">
           Check opening hours, travel times, prices and availability before
           going. This is not a timed route or a reservation.

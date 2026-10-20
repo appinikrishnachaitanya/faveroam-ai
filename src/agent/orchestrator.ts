@@ -1,3 +1,4 @@
+import { sectionLabel } from "../passport/labels.ts";
 import { incompleteUtterance } from "./category-language.ts";
 import { chatShortlist, chatShortlistText, isShortlistRequest, requestedShortlistSections } from "./chat-shortlist.ts";
 import { refinementScope } from "./scope.ts";
@@ -1175,7 +1176,7 @@ export async function runTurn(
     );
   return reply(
     changed.length
-      ? `Updated ${changed.map(section => section === "Eat" ? "Dining" : section).join(", ")} suggestions. ${decisionSummary(original, state, changed)} ${state.relaxed!.length ? "I couldn't find a strong match satisfying every preference, so these results prioritize your confirmed cultural tastes. Optional preferences relaxed: " + [...new Set(state.relaxed!.flatMap((r) => r.constraints))].map((c) => (c === "crowded" ? "quiet atmosphere" : c)).join(", ") + ". " : ""}${state.pending ? "You can also confirm the atmosphere concept to refine further. " : ""}Your other categories and confirmed interests are unchanged.${previewRefinedResults(state, changed)}`
+      ? `Updated ${changed.map(section => sectionLabel(section)).join(", ")} suggestions. ${decisionSummary(original, state, changed)} ${state.relaxed!.length ? "I couldn't find a strong match satisfying every preference, so these results prioritize your confirmed cultural tastes. Optional preferences relaxed: " + [...new Set(state.relaxed!.flatMap((r) => r.constraints))].map((c) => (c === "crowded" ? "quiet atmosphere" : c)).join(", ") + ". " : ""}${state.pending ? "You can also confirm the atmosphere concept to refine further. " : ""}Your other categories and confirmed interests are unchanged.${previewRefinedResults(state, changed)}`
       : "No strong match yet. Your Passport is preserved. Keep your cuisine, relax quiet, allow popular places, or show closest matches below.",
     changed.length ? chatShortlist(state,changed) : undefined,
   );

@@ -33,7 +33,7 @@ test("user can list all 18 returned Dining venues in chat without a model or API
  assert.equal(apiCalls,0);
  assert.deepEqual(result.changed,[]);
  assert.equal(result.mode,"deterministic");
- assert.match(result.message,/18 current dining suggestions/);
+ assert.match(result.message,/18 current food suggestions/);
  assert.match(result.message,/1\. Returned venue 1/);
  assert.match(result.message,/18\. Returned venue 18/);
  assert.doesNotMatch(result.message,/Returned venue 19/);

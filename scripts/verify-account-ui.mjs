@@ -166,6 +166,7 @@ ws.addEventListener("message", async (event) => {
                     state: {
                       ...session,
                       revision: ++session.revision,
+                      ...(turnScenario === "empty-food" ? {cards:session.cards.filter(card=>card.section!=="Eat"),activeCategories:["Eat","Coffee","Culture"]} : {}),
                       history: [
                         { role: "user", text: body.input.message },
                         {
@@ -479,7 +480,7 @@ const discoveryShot=await call("Page.captureScreenshot",{format:"png"});
 await fs.writeFile("/tmp/tastepassport-discover-layout.png",Buffer.from(discoveryShot.result.data,"base64"));
 await click('.discovery-prompts button');
 await wait("Boolean(document.querySelector('#taste-concierge[open]'))");
-assert.equal(await evaluate("document.querySelector('#conversation-input').value"),"Find cheaper dining. Keep my music and movies unchanged.","Conversation starter prepares a request without automatically changing results");
+assert.equal(await evaluate("document.querySelector('#conversation-input').value"),"Find cheaper food. Keep my music and movies unchanged.","Conversation starter prepares a request without automatically changing results");
 await click('[aria-label="Close Taste Concierge"]');
 for (const width of [320, 390, 640, 768, 1024, 1440]) {
   await call("Emulation.setDeviceMetricsOverride", {
@@ -738,6 +739,19 @@ for (const width of [320,390,1440]) {
   assert.ok(await evaluate("[...document.querySelectorAll('.chat-choice-actions button,.chat-choice-actions a')].every(button=>button.getBoundingClientRect().height>=44)"),"Chat actions meet the 44px target size");
 }
 await click('[aria-label="Close Taste Concierge"]');
+await textClick("Discover");
+assert.ok(await evaluate("document.querySelector('#section-Eat').textContent.includes('Food')"),"Food heading uses the customer-facing label");
+assert.ok(await evaluate("document.querySelector('#section-Coffee').textContent.includes('Coffee & cafés')"),"Café heading uses the customer-facing label");
+turnScenario="empty-food";
+await click(".assistant-launch");
+await input("#conversation-input","Fixture missing food","HTMLTextAreaElement");
+await click('[aria-label="Send message"]');
+await wait("Boolean(document.querySelector('.missing-discoveries'))");
+assert.equal(await evaluate("document.querySelectorAll('.missing-discoveries').length"),1,"Empty category recovery is not duplicated in chat");
+assert.ok(await evaluate("document.querySelector('.missing-discoveries').textContent.includes('Try Food again')"));
+assert.equal(await evaluate("document.querySelector('#passport-content').textContent.includes('Retry Eat')"),false);
+await click('[aria-label="Close Taste Concierge"]');
+turnScenario="success";
 await textClick("Preferences");
 assert.equal(await evaluate("Boolean(document.querySelector('.reusable-tastes'))"),false,'Saving tastes is offered only when starting another Passport');
 await click('[aria-label="Start a new Passport"]');

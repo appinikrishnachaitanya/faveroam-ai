@@ -1,4 +1,5 @@
 "use client";
+import { sectionLabel } from "../../src/passport/labels";
 
 import type { Card } from "../../src/passport/model";
 import { isPlaceSection } from "../../src/passport/model";
@@ -22,7 +23,7 @@ export default function ChatRecommendations({cards,city,busy,savedIds,onAsk,onSa
       const location=card.address ?? card.intelligence?.location?.address;
       const saved=savedIds.includes(card.id);
       return <article key={card.id}>
-        <span className="chat-choice-category">{index+1} · {card.section==="Eat"?"Dining":card.section==="Music"?"Artist discovery":card.section}</span>
+        <span className="chat-choice-category">{index+1} · {card.section==="Music"?"Artist discovery":sectionLabel(card.section)}</span>
         <h3>{card.name}</h3>
         {(location || rating) && <p className="chat-choice-details">{location}{location && rating?" · ":""}{rating?`★ ${rating}/5`:""}</p>}
         <p className="chat-choice-reason">{chatReason(card)}</p>

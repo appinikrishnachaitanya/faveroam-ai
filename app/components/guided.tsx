@@ -1,4 +1,5 @@
 "use client";
+import { sectionLabel } from "../../src/passport/labels";
 import { useEffect, useState } from "react";
 import { sectionOrder } from "../../src/workspace/state";
 import type { AgentInput, AgentState, Constraint } from "../../src/agent/types";
@@ -38,7 +39,7 @@ export default function GuidedRefinement({
         onChange={(e) => setSection(e.target.value as Section)}
       >
         {sectionOrder.map((s) => (
-          <option key={s}>{s}</option>
+          <option key={s} value={s}>{sectionLabel(s)}</option>
         ))}
       </select>
       {session.hiddenCategories?.includes(section) && (
@@ -108,7 +109,7 @@ export function RefinementRecovery({
     <>
       {session.recovery?.map((section) => (
         <section className="refinement-recovery" key={section} role="status">
-          <h3>No strong {section} match yet.</h3>
+          <h3>No strong {sectionLabel(section)} match yet.</h3>
           <p>
             Your existing discoveries are still here. Keep your confirmed
             cultural concept and try fewer preferences.

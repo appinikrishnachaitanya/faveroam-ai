@@ -1,4 +1,5 @@
 "use client";
+import { sectionLabel } from "../../src/passport/labels";
 import { useEffect, useRef, useState } from "react";
 import type { AgentInput, TastePassportSession } from "../../src/agent/types";
 import type { Card, Section } from "../../src/passport/model";
@@ -23,9 +24,9 @@ export function FamiliarityControl({
       <div className="panel-heading">
         <div>
           <span className="micro-label">YOUR KIND OF DISCOVERY</span>
-          <h2 id="familiarity-title">How should your {effectiveSection === "Eat" ? "dining" : effectiveSection.toLowerCase()} suggestions feel?</h2>
+          <h2 id="familiarity-title">How should your {sectionLabel(effectiveSection).toLowerCase()} suggestions feel?</h2>
         </div>
-        {available.length>1 && <div className="mode-category-tabs" role="group" aria-label="Choose a Passport category">{available.map(category=><button type="button" key={category} disabled={disabled} aria-pressed={effectiveSection===category} onClick={()=>setSection(category)}>{category==="Eat"?"Dining":category}</button>)}</div>}
+        {available.length>1 && <div className="mode-category-tabs" role="group" aria-label="Choose a Passport category">{available.map(category=><button type="button" key={category} disabled={disabled} aria-pressed={effectiveSection===category} onClick={()=>setSection(category)}>{sectionLabel(category)}</button>)}</div>}
 
       </div>
       <div className="familiarity-axis">
@@ -68,7 +69,7 @@ export function FamiliarityControl({
           : applied === "balanced"
             ? "Mix closer matches with broader cultural discoveries."
             : "Explore further while keeping a connection to your tastes."}{" "}
-        Changes refresh {effectiveSection==="Eat"?"Dining":effectiveSection} in Discover. My Vibe keeps the specific discoveries you saved; results can overlap when coverage is limited.
+        Changes refresh {sectionLabel(effectiveSection)} in Discover. My Vibe keeps the specific discoveries you saved; results can overlap when coverage is limited.
       </p>
     </section>
   );

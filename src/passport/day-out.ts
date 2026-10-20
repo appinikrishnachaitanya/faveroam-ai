@@ -7,9 +7,9 @@ export const dayOutStops: { section: Section; label: string }[] = [
   { section: "Eat", label: "Make yourself at home" },
 ];
 export const outingActivities = [
-  { id: "Coffee", section: "Coffee", label: "Coffee" },
+  { id: "Coffee", section: "Coffee", label: "Coffee & cafés" },
   { id: "Culture", section: "Culture", label: "Culture" },
-  { id: "Eat", section: "Eat", label: "Dinner" },
+  { id: "Eat", section: "Eat", label: "Food" },
   { id: "Cinema", section: "Culture", label: "Cinema" },
   { id: "Nightlife", section: "Culture", label: "Nightlife" },
 ] as const;

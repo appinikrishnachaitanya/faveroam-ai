@@ -1,4 +1,5 @@
 "use client";
+import { sectionLabel } from "../../src/passport/labels";
 import { useState } from "react";
 import { ResultMetrics, WhyEvidence } from "./intelligence-evidence";
 import { evidenceFacts, recommendationSummary } from "../../src/qloo/explanation";
@@ -230,7 +231,7 @@ export function TranslationMap({
                   <strong>
                     {route.destination}
                     <small>
-                      {route.section} · {route.count} returned{" "}
+                      {sectionLabel(route.section)} · {route.count} returned{" "}
                       {route.count === 1 ? "discovery" : "discoveries"}
                     </small>
                   </strong>
@@ -287,7 +288,7 @@ function EntityPhoto({url,name,section}:{url?:string;name:string;section:Section
   const [failed,setFailed]=useState(false);
   return <div className={`discovery-photo${!url || failed ? " photo-placeholder" : ""}`}>
     {url && !failed ? <img src={url} alt={name} loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={()=>setFailed(true)}/>
-      : <><Icon name={section} size={44}/><span>{section === "Eat" ? "Dining discovery" : `${section} discovery`}</span></>}
+      : <><Icon name={section} size={44}/><span>{`${sectionLabel(section)} discovery`}</span></>}
   </div>;
 }
 export function DiscoveryCard({
@@ -314,7 +315,7 @@ export function DiscoveryCard({
       <div className="card-header">
         <span className="category-token">
           <Icon name={card.section} size={14} />
-          {card.section}
+          {sectionLabel(card.section)}
         </span>
         {card.evidence && <span className="helper">{card.evidence.params?.["filter.goal"] === "hidden-gems" || card.evidence.params?.["goal"] === "hidden-gems" || card.evidence.mode === "explore" ? "Hidden gem · Connected to your taste" : card.evidence.pool === "adjacent" ? "Broader discovery" : card.evidence.pool === "direct" ? "Familiar starting point" : "Your taste profile"}</span>}
       </div>
@@ -461,7 +462,7 @@ export function PassportSections({
           <div className="result-heading">
             <h3 id={`section-${s}`} tabIndex={-1}>
               <Icon name={s} />
-              {s}
+              {sectionLabel(s)}
               <span>{result.cards.filter((c) => c.section === s).length}</span>
             </h3>
             <p>
@@ -478,7 +479,7 @@ export function PassportSections({
           </div>
           {updating.includes(s) && (
             <p className="section-progress" role="status">
-              Updating your {s} passport… Your current discoveries stay
+              Updating your {sectionLabel(s)} passport… Your current discoveries stay
               available.
             </p>
           )}

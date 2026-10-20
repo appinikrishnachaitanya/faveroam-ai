@@ -1,3 +1,4 @@
+import { sectionLabel } from "../passport/labels.ts";
 import { categoryLanguage } from "./category-language.ts";
 import { lastPresentedIds } from "./chat-shortlist.ts";
 import type { Card, Section } from "../passport/model.ts";
@@ -43,8 +44,8 @@ function contextSection(state: AgentState, input:string): Section|undefined {
   const recent=(state.history??[]).slice(-12).reverse();
   for(const entry of recent) {
     if(entry.role!=="agent")continue;
-    const match=entry.text.match(/(?:Here are your \d+ current|Here are some of your|Updated)\s+(dining|eat|coffee|culture|movies|shows|music|books|lifestyle|games|podcasts|brands|people|destinations)\s+(?:suggestions|results)/i);
-    if(match) return match[1].toLowerCase()==="dining"?"Eat":sectionOrder.find(s=>s.toLowerCase()===match[1].toLowerCase());
+    const match=entry.text.match(/(?:Here are your \d+ current|Here are some of your|Updated)\s+(food|dining|eat|coffee(?:\s*&\s*cafés)?|culture|movies|shows|music|books|lifestyle|games|podcasts|brands|people|destinations)\s+(?:suggestions|results)/i);
+    if(match) return /^(?:food|dining|eat)$/.test(match[1].toLowerCase())?"Eat":sectionOrder.find(s=>sectionLabel(s).toLowerCase()===match[1].toLowerCase() || s.toLowerCase()===match[1].toLowerCase());
   }
   const intent=state.intent?.sections?.filter(s=>state.cards.some(c=>c.section===s))??[];
   return intent.length===1?intent[0]:undefined;
@@ -80,9 +81,9 @@ export function readOnlyFollowUp(state:AgentState,query:string):string {
 
   const cards=comparing && focused.length && !categoryInText(query) ? focused : section?state.cards.filter(c=>c.section===section && !(state.hiddenCategories??[]).includes(c.section)):[];
   if(!section && !(comparing && focused.length))
-    return "Which category should I use—Dining, Coffee, Culture or another chapter? I haven't changed your Passport.";
+    return "Which category should I use—Food, Coffee & cafés, Culture or another chapter? I haven't changed your Passport.";
   if(!cards.length)
-    return `There aren't current ${section==="Eat"?"Dining":section ?? "Passport"} recommendations to explain. I haven't changed anything.`;
+    return `There aren't current ${section ? sectionLabel(section) : "Passport"} recommendations to explain. I haven't changed anything.`;
   const isCompare=/\b(?:compare|comparison|differences?|versus|vs\.?|which (?:one|of (?:these|the two)))\b/i.test(query);
   const index=ordinal(query);
   const named=cards.find(c=>query.toLowerCase().includes(c.name.toLowerCase()));
@@ -101,7 +102,7 @@ export function readOnlyFollowUp(state:AgentState,query:string):string {
     if(ra!==undefined&&rb!==undefined && ra!==rb)differences.push(`${ra>rb?a.name:b.name} has the higher Qloo-reported business rating; that doesn't prove it suits your tastes better.`);
     if(pa!==undefined&&pb!==undefined&&pa!==pb)differences.push(`${pa<pb?a.name:b.name} has the lower returned typical price category.`);
     if(!differences.length)differences.push("The returned ratings and prices don't establish a clear winner. Consider location and the atmosphere you're looking for.");
-    return `Here's a comparison of two existing ${section==="Eat"?"Dining":section ?? "Passport"} options:\n\n1. ${compact(a)}\n2. ${compact(b)}\n\n${differences.join(" ")} Qloo's taste associations don't verify current noise, hours, availability or exact prices. Tell me which matters more and I'll help you choose. Your Passport is unchanged.`;
+    return `Here's a comparison of two existing ${section ? sectionLabel(section) : "Passport"} options:\n\n1. ${compact(a)}\n2. ${compact(b)}\n\n${differences.join(" ")} Qloo's taste associations don't verify current noise, hours, availability or exact prices. Tell me which matters more and I'll help you choose. Your Passport is unchanged.`;
   }
   const card=index!==undefined?cards[index-1]:named??remembered;
   if(!card)

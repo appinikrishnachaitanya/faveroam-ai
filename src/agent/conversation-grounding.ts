@@ -28,6 +28,13 @@ export function groundedModelIntent(request: string, model: Intent, explicit: In
     ...(explicit.excludeConcepts ?? []),
     ...(model.excludeConcepts ?? []).filter(grounded),
   ])].slice(0,5);
+  // Conversation history supplies references, never authorization for a new edit.
+  // If neither the current message nor grounded concepts identify an action,
+  // a model-generated category/filter guess must become a clarification.
+  if ((model.kind === "refine" || model.kind === "hide") && explicit.kind === "unknown" && !explicit.question && !explicit.sections.length &&
+      !explicit.concepts.length && !explicit.constraints.length && !Object.keys(explicit.query ?? {}).length &&
+      !concepts.length && !excludeConcepts.length &&
+      !(/\b(?:raise|lower|increase|decrease|set)\b/i.test(request) && /\d/.test(request))) return {...explicit};
   const query = model.query ? {...model.query} : undefined;
   // A hidden-gems/trending search request is a goal, not a requirement to
   // choose between homonymous taxonomy tags. No goal carries over to greetings.

@@ -423,3 +423,9 @@
   .passport-navigation { display:none; margin-top:12px; border-top:1px solid #c6d0b8; padding-top:12px; }
   .passport-sidebar[data-menu-open="true"] .passport-navigation { display:flex; }
 }
+
+.missing-discoveries { margin: 20px 0; padding: 20px; border: 1px solid var(--ui-border); border-radius: 16px; background: var(--ui-surface); color: var(--ui-ink); }
+.missing-discoveries h3 { margin: 0 0 8px; font-size: 18px; }
+.missing-discoveries p { margin: 0; max-width: 65ch; color: var(--ui-muted); line-height: 1.6; }
+.missing-discoveries > div { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+.missing-discoveries button { min-height: 44px; white-space: normal; }

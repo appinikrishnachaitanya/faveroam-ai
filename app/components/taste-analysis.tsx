@@ -1,4 +1,5 @@
 "use client";
+import { sectionLabel } from "../../src/passport/labels";
 import { Icon } from "./passport";
 import { displayTags } from "../../src/qloo/explanation";
 import { useEffect, useRef, useState } from 'react';
@@ -83,7 +84,7 @@ export default function TasteAnalysis({passport,busy,onRefine}:{passport:Passpor
     </fieldset>
     <div className="analysis-actions">
       <button className="analysis-action" aria-pressed={Boolean(taste)} disabled={busy||Boolean(loading)||!interestIds.length} onClick={()=>void load('taste')}><Icon name="star" size={22}/><span><strong>{loading==='taste'?'Finding taste connections…':'Find my taste themes'}</strong><small>Find related themes, then choose what to explore.</small></span><Icon name="arrow" size={18}/></button>
-      <button className="analysis-action" aria-pressed={Boolean(heat)} disabled={busy||Boolean(loading)||!interestIds.length} onClick={()=>void load('heatmap')}><Icon name="pin" size={22}/><span><strong>{loading==='heatmap'?'Mapping your interests…':`Find an area in ${passport.city}`}</strong><small>Find a real starting place and dining around it.</small></span><Icon name="arrow" size={18}/></button>
+      <button className="analysis-action" aria-pressed={Boolean(heat)} disabled={busy||Boolean(loading)||!interestIds.length} onClick={()=>void load('heatmap')}><Icon name="pin" size={22}/><span><strong>{loading==='heatmap'?'Mapping your interests…':`Find an area in ${passport.city}`}</strong><small>Find a real starting place and food around it.</small></span><Icon name="arrow" size={18}/></button>
     </div>
     {!interestIds.length&&<p role="status">Choose at least one interest to see relevant insights.</p>}
     {error&&<p role="alert">{error}</p>}
@@ -100,11 +101,11 @@ export default function TasteAnalysis({passport,busy,onRefine}:{passport:Passpor
         <div className="theme-next-step">
           <label>Explore this theme in
             <select value={effectiveThemeSection} disabled={busy} onChange={event => setThemeSection(event.target.value as Section)}>
-              {themeOptions.map(section => <option key={section}>{section}</option>)}
+              {themeOptions.map(section => <option key={section} value={section}>{sectionLabel(section)}</option>)}
             </select>
           </label>
           <button disabled={busy || !themeId || Boolean(loading)} onClick={exploreTheme}>
-            Find {effectiveThemeSection==='Eat'?'dining':effectiveThemeSection.toLowerCase()} with this theme <Icon name="arrow" size={16}/>
+            Find {sectionLabel(effectiveThemeSection).toLowerCase()} with this theme <Icon name="arrow" size={16}/>
           </button>
         </div>
         <p className="helper">Choose a returned theme and a category. We’ll search using that theme while keeping this category’s current preferences. A theme may have no local matches.</p>
@@ -132,13 +133,13 @@ export default function TasteAnalysis({passport,busy,onRefine}:{passport:Passpor
       {areas.length ? <div className="area-choices">{areas.map(area=><article key={area.anchor.id}>
         <span className="micro-label">{area.fromAreaSignal ? "NEAR A TASTE-CONNECTED AREA" : "FROM YOUR DISCOVERIES"}</span>
         <h4>Start at {area.anchor.name}</h4>
-        <p>{area.anchor.address || area.anchor.intelligence?.location?.address || `${area.anchor.section} in ${passport.city}`}</p>
-        <p className="area-place-details">{area.anchor.section}{area.anchor.intelligence?.quality?.businessRating !== undefined ? ` · ★ ${formatReturnedRating(area.anchor.intelligence.quality.businessRating)} / 5 (Qloo-reported business rating)` : ""}</p>
-        {area.nearby.length > 0 && <div className="area-nearby"><strong>Also nearby</strong><ul>{area.nearby.map(place=><li key={place.id}>{place.name}<small>{place.section}</small></li>)}</ul></div>}
+        <p>{area.anchor.address || area.anchor.intelligence?.location?.address || `${sectionLabel(area.anchor.section)} in ${passport.city}`}</p>
+        <p className="area-place-details">{sectionLabel(area.anchor.section)}{area.anchor.intelligence?.quality?.businessRating !== undefined ? ` · ★ ${formatReturnedRating(area.anchor.intelligence.quality.businessRating)} / 5 (Qloo-reported business rating)` : ""}</p>
+        {area.nearby.length > 0 && <div className="area-nearby"><strong>Also nearby</strong><ul>{area.nearby.map(place=><li key={place.id}>{place.name}<small>{sectionLabel(place.section)}</small></li>)}</ul></div>}
         <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([area.anchor.name,area.anchor.address,passport.city].filter(Boolean).join(', '))}`} target="_blank" rel="noreferrer">Open this place on the map ↗</a>
-        {area.point && <button disabled={busy||Boolean(loading)} onClick={()=>nearby(area.point!)}>Find dining around here</button>}
-      </article>)}</div> : <p>No local places are available to preview yet. Find dining in Discover, then return to explore where to start.</p>}
-      <p className="helper">“Find dining around here” searches within 1.5 km of the named place and keeps your dining preferences. Nearby means straight-line distance; check routes, opening hours and availability before going.</p>
+        {area.point && <button disabled={busy||Boolean(loading)} onClick={()=>nearby(area.point!)}>Find food around here</button>}
+      </article>)}</div> : <p>No local places are available to preview yet. Find food in Discover, then return to explore where to start.</p>}
+      <p className="helper">“Find food around here” searches within 1.5 km of the named place and keeps your food preferences. Nearby means straight-line distance; check routes, opening hours and availability before going.</p>
     </div>}
     <details className="audience-context"><summary>Audience patterns (optional research)</summary><p>This is extra context, not a recommendation about you. See which age or gender categories are most strongly associated with these interests in Qloo's returned data. These are not audience counts, personal traits, or proof of who will enjoy something. To find something useful to do next, choose a related taste theme above and explore it in a category.</p>
       <button disabled={busy||Boolean(loading)||!interestIds.length} onClick={()=>void load('demographics')}>{loading==='demographics'?'Reading audience context…':'Show audience context'}</button>

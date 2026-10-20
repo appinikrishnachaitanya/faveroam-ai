@@ -72,3 +72,24 @@ test("returned cuisine themes lead to Dining rather than movies and preview incl
  assert.deepEqual(themeCategories(film,["Movies","Eat"]),["Movies"]);
  assert.deepEqual(curatedThemes([indian,italian,film],2).map(t=>t.id),[indian.id,film.id]);
 });
+
+test("keyboard noise never changes the Passport even when a model would guess categories",async()=>{
+ const initial=state();
+ const output=await runTurn(initial,{message:"sdflmmnsdfklsndflknsdfks"},forbidden);
+ assert.deepEqual(output.changed,[]);
+ assert.deepEqual(output.state.cards,initial.cards);
+ assert.deepEqual(output.state.intent,initial.intent);
+ assert.match(output.message,/didn’t catch/);
+});
+test("unrecognized text cannot authorize a model-invented broad refresh",async()=>{
+ const initial=state();
+ let called=false;
+ const output=await runTurn(initial,{message:"asdfasdf qwertyuiop"},{...forbidden,provider:{
+  interpret:async()=>{called=true;return {kind:"refine",sections:["Eat","Coffee","Culture"],seeds:[],concepts:[],constraints:["expensive"],query:{priceMax:2},strategy:"discover"};},choose:async()=>[]
+ }});
+ assert.equal(called,true);
+ assert.deepEqual(output.changed,[]);
+ assert.deepEqual(output.state.cards,initial.cards);
+ assert.deepEqual(output.state.queryPreferences,initial.queryPreferences);
+ assert.match(output.message,/didn't catch/);
+});

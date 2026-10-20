@@ -12,5 +12,6 @@ export function categoryLanguage(text:string):string {
   });
 }
 export function incompleteUtterance(text:string):boolean {
+  if (/^[a-z]{8,}$/i.test(text.trim()) && !/[aeiouy]/i.test(text)) return true;
   return /^[a-z]{1,2}[!?.]*$/i.test(text.trim()) && !/^(?:hi|tv|ok|no|go|up)[!?.]*$/i.test(text.trim());
 }

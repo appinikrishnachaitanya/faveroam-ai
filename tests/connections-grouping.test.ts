@@ -44,7 +44,7 @@ test("connection selector displays one Coffee and one Lifestyle category choice"
  const passport={city:"London",selected:tastes,cards,notices:[],explanation:""} as Passport;
  const html=renderToStaticMarkup(createElement(ConnectionExplorer,{passport}));
  const buttons=html.match(/<button[^>]*aria-pressed="(?:true|false)"[^>]*>[^<]+<small>/g)??[];
- assert.equal(buttons.filter(v=>v.includes(">Coffee<small>")).length,1);
+ assert.equal(buttons.filter(v=>v.includes(">Coffee &amp; cafés<small>")).length,1);
  assert.equal(buttons.filter(v=>v.includes(">Lifestyle<small>")).length,1);
  assert.match(html,/3 discoveries/);
  assert.match(html,/Each category appears once/);

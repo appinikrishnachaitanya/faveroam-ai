@@ -1,4 +1,5 @@
 "use client";
+import { sectionLabel } from "../../src/passport/labels";
 import { useEffect, useState } from "react";
 import type { Passport, Resolution } from "../../src/workspace/state";
 import { activeCategories } from "../../src/passport/active-categories";
@@ -171,7 +172,7 @@ export default function TasteIntelligence({
           >
             {available
               .map((s) => (
-                <option key={s}>{s}</option>
+                <option key={s} value={s}>{sectionLabel(s)}</option>
               ))}
           </select>
         </label>
@@ -340,7 +341,7 @@ export default function TasteIntelligence({
           </button>
         </form>
         <section className="together-reveal" hidden={view !== "together"} aria-label="Find common ground">
-          <div className="together-preference-summary"><div><strong>{section} in {passport.city}</strong><p className="helper">Your current preferences for this category carry into the shared search{prefs?.priceMax && prefs.priceMax < 4 ? ` · ${priceLabel(prefs.priceMax)} or less` : ""}{prefs?.businessRatingMin ? ` · rating ${prefs.businessRatingMin}+` : ""}.</p></div><button type="button" className="quiet-button" onClick={onPreferences}>Review preferences</button></div>
+          <div className="together-preference-summary"><div><strong>{sectionLabel(section)} in {passport.city}</strong><p className="helper">Your current preferences for this category carry into the shared search{prefs?.priceMax && prefs.priceMax < 4 ? ` · ${priceLabel(prefs.priceMax)} or less` : ""}{prefs?.businessRatingMin ? ` · rating ${prefs.businessRatingMin}+` : ""}.</p></div><button type="button" className="quiet-button" onClick={onPreferences}>Review preferences</button></div>
           <div className="together-heading"><div><span className="micro-label">TWO TASTES. A SHARED DISCOVERY.</span><h3>1. Add what they love</h3></div><img src="/illustrations/together-passports.svg" width="440" height="260" alt="" aria-hidden="true" loading="lazy" /></div>
           <p>
             Add three named artists, films, books or brands they enjoy, then

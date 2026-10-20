@@ -1,4 +1,5 @@
 "use client";
+import { sectionLabel } from "../src/passport/labels";
 import { useEffect, useRef, useState } from "react";
 import { validDestination } from "../src/workspace/location";
 import { sendAgentTurn } from "../src/agent/browser";
@@ -161,6 +162,8 @@ export default function Home() {
       ? []
       : sessionHistory.slice(conversationStart)
     : messages;
+  const missingSections = (result?.session?.activeCategories ?? []).filter(section =>
+    !result?.session?.hiddenCategories?.includes(section) && !result?.cards.some(card => card.section === section));
   const visibleMessages = retryInput?.message
     ? [
         ...committedMessages,
@@ -750,7 +753,21 @@ export default function Home() {
                 />
               )}
             </div>
-            {workspaceView === "discover" && (result.session?.activeCategories ?? []).filter(section=>!result.session?.hiddenCategories.includes(section) && !result.cards.some(card=>card.section===section)).length > 0 && <section className="missing-discoveries" aria-label="Retry missing discoveries"><p>Some categories have no discoveries yet. Retry one without changing your other results.</p><div>{(result.session?.activeCategories ?? []).filter(section=>!result.session?.hiddenCategories.includes(section) && !result.cards.some(card=>card.section===section)).map(section=><button key={section} className="quiet-button" disabled={busy} onClick={()=>void refine({guided:{section,constraints:result.session?.categoryConstraints[section] ?? []}})}>Retry {section}</button>)}</div></section>}
+            {workspaceView === "discover" && !showSaved && missingSections.length > 0 && (
+              <section className="missing-discoveries" aria-label="Find more discoveries">
+                <h3>Still looking for a few matches</h3>
+                <p>We haven’t found matches for {missingSections.map(sectionLabel).join(", ")} yet. Try again, or adjust your preferences. Your other discoveries stay as they are.</p>
+                <div>
+                  {missingSections.map(section => (
+                    <button key={section} className="quiet-button" disabled={busy}
+                      onClick={() => void refine({guided:{section,constraints:result.session?.categoryConstraints[section] ?? []}})}>
+                      {busy ? "Finding matches…" : `Try ${sectionLabel(section)} again`}
+                    </button>
+                  ))}
+                  <button className="quiet-button" disabled={busy} onClick={() => selectWorkspaceView("preferences")}>Adjust preferences</button>
+                </div>
+              </section>
+            )}
              {result.session && (
               <RefinementRecovery
                 session={result.session}
@@ -760,7 +777,7 @@ export default function Home() {
             )}
             {result.session?.hiddenCategories.length ? (
               <p className="passport-mode">
-                Hidden chapters: {result.session.hiddenCategories.join(", ")}.
+                Hidden chapters: {result.session.hiddenCategories.map(sectionLabel).join(", ")}.
                 You can bring them back with manual refinement.
               </p>
             ) : null}
@@ -931,7 +948,7 @@ export default function Home() {
             </button>
           </div>
           <div className="concierge-body" ref={agentScroll}>
-            {workspaceView === "discover" && (result.session?.activeCategories ?? []).filter(section=>!result.session?.hiddenCategories.includes(section) && !result.cards.some(card=>card.section===section)).length > 0 && <section className="missing-discoveries" aria-label="Retry missing discoveries"><p>Some categories have no discoveries yet. Retry one without changing your other results.</p><div>{(result.session?.activeCategories ?? []).filter(section=>!result.session?.hiddenCategories.includes(section) && !result.cards.some(card=>card.section===section)).map(section=><button key={section} className="quiet-button" disabled={busy} onClick={()=>void refine({guided:{section,constraints:result.session?.categoryConstraints[section] ?? []}})}>Retry {section}</button>)}</div></section>}
+
             {result.agent?.pending && (
               <div className="pending-concept">
                 <strong>Choose what you meant</strong>

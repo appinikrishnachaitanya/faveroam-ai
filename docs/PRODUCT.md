@@ -90,3 +90,11 @@ Taste themes are actionable: choose a returned theme and a supported category to
 Passport sections use a visible, non-sticky desktop sidebar and a labelled collapsible menu below 1100 px. All six destinations and the saved-discovery count remain available. Mobile selection closes the menu, identifies the current section, and moves focus to the workspace; Escape closes the expanded menu and restores its toggle focus.
 
 Area discovery now presents named places, returned addresses/ratings and nearby discoveries from the existing Passport. Raw heatmap points and affinity scores are kept out of the consumer view. Places within 1.5 km of returned points receive the area connection label; if there is no overlap, the UI explicitly falls back to existing taste-led places. No neighbourhood name or travel time is inferred. Dining searches anchor to the named place, keeping existing preferences. This presentation adds no provider requests or paid geocoding service.
+
+### Customer-facing category names
+
+Discovery uses **Food** and **Coffee & cafés** throughout the interface and conversation receipts. The planner's food stop is also generic rather than assuming dinner. Internal `Eat` and `Coffee` IDs remain stable for existing accounts, saved profiles and Qloo routing. These labels do not assert verified breakfast, lunch or snack availability; specific offerings require returned evidence and venue verification.
+
+Empty requested categories show one recovery panel in Discover with labelled actions such as **Try Food again** and **Adjust preferences**. The same panel is not repeated inside chat, and existing successful discoveries are preserved.
+
+Unclear chat input is not permission to refresh discoveries. Short incomplete text and obvious keyboard noise request clarification immediately. The model is instructed to return unknown intent for nonsense; server-side grounding also rejects unsupported edit guesses when the current message supplies no actionable category, concept or preference. Meaningful contextual numeric edits (for example raising a previously discussed rating minimum) remain supported. Regression checks cover keyboard noise and a model incorrectly proposing a multi-category update; a real configured Gemini check also returned unknown intent with zero changes.

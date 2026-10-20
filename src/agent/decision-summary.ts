@@ -1,7 +1,8 @@
+import { sectionLabel } from "../passport/labels.ts";
 import type { AgentState } from "./types.ts";
 import type { Card, Section } from "../passport/model.ts";
 import { priceLabel } from "../passport/pricing.ts";
-const label = (section: Section) => section === "Eat" ? "Dining" : section;
+const label = (section: Section) => sectionLabel(section);
 const price = (card: Card) => card.intelligence?.commercial?.priceLevel;
 const knownPrice = (card: Card) => Boolean(priceLabel(price(card)));
 

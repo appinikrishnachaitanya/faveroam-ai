@@ -1,4 +1,5 @@
 "use client";
+import { sectionLabel } from "../../src/passport/labels";
 import { useState } from "react";
 import type { Passport } from "../../src/workspace/state";
 import type { Candidate, Card, Section } from "../../src/passport/model";
@@ -140,7 +141,7 @@ export function ConnectionExplorer({ passport, onExplore, onAsk }: { passport: P
             aria-pressed={r.id === route.id}
             onClick={() => setActive(r.id)}
           >
-            {r.section}
+            {sectionLabel(r.section)}
             <small>
               {r.count} discoveries · {r.locality === "audience-context" ? "Cultural suggestions" : "Places to consider"}
             </small>
@@ -157,7 +158,7 @@ export function ConnectionExplorer({ passport, onExplore, onAsk }: { passport: P
         <strong>Used to explore</strong>
         <Icon name="arrow" />
         <div>
-          <strong>{route.locality === "audience-context" ? route.section : route.destination}</strong>
+          <strong>{route.locality === "audience-context" ? sectionLabel(route.section) : route.destination}</strong>
            <small>{route.locality === "audience-context" ? "Cultural suggestions, not local events" : "Destination-based place discovery"}</small>
         </div>
       </div>
@@ -165,7 +166,7 @@ export function ConnectionExplorer({ passport, onExplore, onAsk }: { passport: P
         {cards.map((card) => (
           <li key={card.id}>
             <strong>{card.name}</strong>
-            <span>{card.address || card.section}</span>
+            <span>{card.address || sectionLabel(card.section)}</span>
             <p className="helper">{card.evidence?.locality === "audience-context" ? "Returned cultural discovery · not a local event or verified individual taste match" : "Qloo-returned venue · confirm current details"}</p>
             <details>
               <summary>What Qloo actually used</summary>
@@ -186,8 +187,8 @@ export function ConnectionExplorer({ passport, onExplore, onAsk }: { passport: P
         ))}
       </ul>
       <div className="connection-actions">
-        {onExplore && <button type="button" className="quiet-button connection-explore" onClick={() => onExplore(route.section)}>See all {route.section.toLowerCase()} results <Icon name="arrow" size={16}/></button>}
-        {onAsk && <button type="button" className="quiet-button" onClick={() => onAsk(`List my current ${route.section === "Eat" ? "dining" : route.section.toLowerCase()} suggestions here`)}>List these in chat <Icon name="arrow" size={16}/></button>}
+        {onExplore && <button type="button" className="quiet-button connection-explore" onClick={() => onExplore(route.section)}>See all {sectionLabel(route.section).toLowerCase()} results <Icon name="arrow" size={16}/></button>}
+        {onAsk && <button type="button" className="quiet-button" onClick={() => onAsk(`List my current ${sectionLabel(route.section).toLowerCase()} suggestions here`)}>List these in chat <Icon name="arrow" size={16}/></button>}
        </div>
       <p className="connection-honesty">
         These are returned suggestions, not predictions of what you will love. Ask the concierge to explain or refine a result.

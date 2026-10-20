@@ -1,3 +1,4 @@
+import { sectionLabel } from "../passport/labels.ts";
 import type { AgentState } from "./types.ts";
 import type { Card, Section } from "../passport/model.ts";
 import { sectionOrder } from "../workspace/state.ts";
@@ -55,7 +56,7 @@ export function chatShortlistText(state:AgentState,cards:Card[]):string {
   if(!cards.length)return "There aren’t any current choices to shortlist yet. Tell me which category you’d like to discover; I’ll keep the others as they are.";
   const rows=cards.map((card,index)=>{
     const rating=formatReturnedRating(card.intelligence?.quality?.businessRating);
-    return `${index+1}. ${card.name} (${card.section==="Eat"?"Dining":card.section})${rating ? ` · ★ ${rating}/5` : ""}\n${chatReason(card)}`;
+    return `${index+1}. ${card.name} (${sectionLabel(card.section)})${rating ? ` · ★ ${rating}/5` : ""}\n${chatReason(card)}`;
   });
   return `Here are ${cards.length} starting ${cards.length===1?"choice":"choices"} from your ${state.city} Passport:\n\n${rows.join("\n\n")}\n\nThese are current discoveries, not a new search. Ask why one fits, compare two, or tell me what you’d change.`;
 }

@@ -84,7 +84,7 @@ test("card inquiry resolves active card without triggering disambiguation modal"
 
   assert.ok(!reply.state.pending, "Must not set pending disambiguation for an active card");
   assert.match(reply.message, /Cross Restaurant/);
-  assert.match(reply.message, /Dining/);
+  assert.match(reply.message, /Food/);
   assert.match(reply.message, /123 High St/);
   assert.match(reply.message, /4.6/);
 });
