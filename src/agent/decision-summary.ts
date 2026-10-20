@@ -2,7 +2,7 @@ import type { AgentState } from "./types.ts";
 import type { Card, Section } from "../passport/model.ts";
 import { priceLabel } from "../passport/pricing.ts";
 const label = (section: Section) => section === "Eat" ? "Dining" : section;
-const price = (card: Card) => card.intelligence?.commercial.priceLevel;
+const price = (card: Card) => card.intelligence?.commercial?.priceLevel;
 const knownPrice = (card: Card) => Boolean(priceLabel(price(card)));
 
 /** A receipt of applied state changes and actual returned listings, not model-authored reasoning. */
