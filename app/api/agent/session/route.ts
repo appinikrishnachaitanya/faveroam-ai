@@ -7,7 +7,7 @@ async function handleDELETE(request: Request) {
     if (raw.length > 200) throw Error();
     const body = JSON.parse(raw);
     if (typeof body.sessionId !== "string") throw Error();
-    discardSession(body.sessionId);
+    await discardSession(body.sessionId);
     debugEvent("session.reset", { action: "new-passport" });
     return Response.json(
       { cleared: true },

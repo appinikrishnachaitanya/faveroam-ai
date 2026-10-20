@@ -3,7 +3,7 @@ import { suggestedSections } from "../../../../src/passport/routing";
 import { catalogCity } from "../../../../src/workspace/destinations";
 import { accountClient, storageConfigured, storageWriter, privateJson, sameOrigin } from "../../../../src/account/server";
 import { portableTasteProfile, readTasteProfile } from "../../../../src/account/taste-profile";
-import { createSession, getSession } from "../../../../src/agent/store";
+import { createSession, loadSession, syncSession } from "../../../../src/agent/store";
 import { normalizeSession } from "../../../../src/agent/session";
 import { discoverSection } from "../../../../src/agent/runtime";
 import { passportView, sectionOrder } from "../../../../src/workspace/state";
@@ -32,7 +32,7 @@ async function handle(request: Request) {
     }
     if (body.action === "save") {
       if (typeof body.sessionId !== "string" || !Number.isInteger(body.revision)) return privateJson({error:"Build a Passport first."},400);
-      const state = getSession(body.sessionId);
+      const state = await loadSession(body.sessionId);
       if (state.revision !== body.revision) return privateJson({error:"Your Passport changed. Save its latest tastes."},409);
       let name: string;
       try { name = profileName(body.name); } catch { return privateJson({error:"Use a profile name of 1–80 characters."},400); }
@@ -70,6 +70,7 @@ async function handle(request: Request) {
     const cards = [...new Map(results.flat().map(c=>[c.id,c])).values()];
     const state = createSession({...initial,cards,notices:working.notices},profile.constraints);
     Object.assign(state,profile);
+    await syncSession(state);
     return privateJson({passport:passportView(state,"Fresh discoveries using your reusable taste profile.")});
   } catch {
     return privateJson({error:"Saved tastes are temporarily unavailable. If this is new, apply the taste_profiles database migration. Your current Passport is preserved."},503);

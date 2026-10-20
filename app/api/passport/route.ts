@@ -1,7 +1,7 @@
 import { debugRequest } from "../../../src/agent/debug";
 import { NextResponse } from "next/server";
 import { passport } from "../../../src/passport/service.ts";
-import { createSession } from "../../../src/agent/store.ts";
+import { createSession, syncSession } from "../../../src/agent/store.ts";
 import type { Constraint } from "../../../src/agent/types.ts";
 import { QlooError } from "../../../src/qloo/client.ts";
 import { validDestination } from "../../../src/workspace/location";
@@ -53,6 +53,7 @@ async function handlePOST(request: Request) {
             m.text.length <= 1200,
         )
         .slice(-30);
+    await syncSession(state);
     return NextResponse.json(
       {
         ...result,

@@ -2,6 +2,8 @@ import "server-only";
 import { debugEvent } from "./debug.ts";
 import { normalizeSession, clearPassport } from "./session.ts";
 import { randomUUID } from "node:crypto";
+import { loadActiveSession, persistActiveSession, removeActiveSession } from "./active-session-db.ts";
+import { activeSessionExpiry } from "./session-lifetime.ts";
 import type { Candidate } from "../passport/model.ts";
 import type { AgentState, Constraint, TastePassportSession } from "./types.ts";
 import type { Passport } from "../workspace/state.ts";
@@ -24,7 +26,7 @@ export function createSession(
   const state: AgentState = {
     id: randomUUID(),
     revision: 0,
-    expires: Date.now() + 30 * 60_000,
+    expires: activeSessionExpiry(),
     city: passport.city,
     selected: passport.selected,
     tags: passport.selected.filter((s: Candidate) =>
@@ -52,13 +54,33 @@ export function getSession(id: string): AgentState {
   }
   return state;
 }
+/** Read the trusted shared session first when available, falling back to the in-process map.
+ * No browser-submitted recommendation data is accepted as a replacement.
+ */
+export async function loadSession(id: string): Promise<AgentState> {
+  const persisted = await loadActiveSession(id);
+  const local = sessions.get(id);
+  const now = Date.now();
+  const validLocal = local && local.expires > now ? local : undefined;
+  const chosen = persisted && (!validLocal || persisted.revision >= validLocal.revision)
+    ? normalizeSession(persisted) : validLocal;
+  if (chosen) {
+    sessions.set(id, chosen);
+    return chosen;
+  }
+  return getSession(id); // Existing safe, generic expired-session error.
+}
+/** Persist newly constructed trusted server state before returning it to the browser. */
+export async function syncSession(state: AgentState) {
+  return persistActiveSession(state);
+}
 export async function inSession<T>(
   id: string,
   revision: number,
   run: (state: AgentState) => Promise<{ state: AgentState; value: T }>,
   signal?: AbortSignal,
 ): Promise<T> {
-  const state = getSession(id);
+  const state = await loadSession(id);
   if (locks.has(id)) throw Error("A refinement is already in progress.");
   if (state.revision !== revision)
     throw Error("Passport changed. Use the latest state.");
@@ -84,8 +106,11 @@ export async function inSession<T>(
       : run(state));
     signal?.throwIfAborted();
     next.state.revision = revision + 1;
-    next.state.expires = Date.now() + 30 * 60_000;
+    next.state.expires = activeSessionExpiry();
     if (!sessions.has(id)) throw Error("Passport was reset.");
+    // CAS protects the revision when a second Railway instance processes a
+    // concurrent edit. An unavailable shared table retains the legacy map.
+    await persistActiveSession(next.state, revision);
     sessions.set(id, next.state);
     debugEvent("session.updated", { count: next.state.cards.length });
     return next.value;
@@ -94,10 +119,11 @@ export async function inSession<T>(
   }
 }
 
-export function discardSession(id: string) {
+export async function discardSession(id: string) {
   const old = sessions.get(id);
   if (old) clearPassport(old);
   sessions.delete(id);
+  await removeActiveSession(id);
 }
 
 /** Rehydrate trusted account data with a fresh, bounded guest-session token. */

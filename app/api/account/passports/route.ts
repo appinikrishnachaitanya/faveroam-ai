@@ -8,7 +8,7 @@ import {
   sameOrigin,
   privateJson,
 } from "../../../../src/account/server";
-import { getSession } from "../../../../src/agent/store";
+import { loadSession, syncSession } from "../../../../src/agent/store";
 import {
   passportSnapshot,
   restoreSnapshot,
@@ -92,6 +92,7 @@ async function handlePOST(request: Request) {
       const state = restoreSnapshot(data.snapshot);
       stage = "restore-session";
       registerRestoredSession(state);
+      await syncSession(state);
       return privateJson({
         passport: passportView(
           state,
@@ -106,7 +107,7 @@ async function handlePOST(request: Request) {
     )
       return privateJson({ error: "Invalid save request." }, 400);
     stage = "save-session";
-    const state = getSession(b.sessionId);
+    const state = await loadSession(b.sessionId);
     if (state.revision !== b.revision)
       return privateJson(
         { error: "Your Passport changed. Save the latest version." },

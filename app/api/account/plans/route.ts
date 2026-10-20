@@ -6,7 +6,7 @@ import {
   sameOrigin,
   privateJson,
 } from "../../../../src/account/server";
-import { getSession } from "../../../../src/agent/store";
+import { loadSession } from "../../../../src/agent/store";
 import { planFromSession } from "../../../../src/account/plans";
 export const runtime = "nodejs";
 const uuid = (value: unknown): value is string =>
@@ -78,7 +78,7 @@ async function handlePOST(request: Request) {
       );
     let plan;
     try {
-      plan = planFromSession(getSession(b.sessionId), b);
+      plan = planFromSession(await loadSession(b.sessionId), b);
     } catch (error) {
       return privateJson(
         {

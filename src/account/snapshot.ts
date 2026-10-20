@@ -1,6 +1,7 @@
 import type { AgentState } from "../agent/types.ts";
 import { normalizeSession } from "../agent/session.ts";
 import { randomUUID } from "node:crypto";
+import { activeSessionExpiry } from "../agent/session-lifetime.ts";
 import { validDestination } from "../workspace/location.ts";
 export const SNAPSHOT_VERSION = 1;
 // Leave room for JSONB serialization overhead under the 2 MB database limit.
@@ -71,7 +72,7 @@ export function restoreSnapshot(value: unknown) {
       ...structuredClone(v),
       id: randomUUID(),
       revision: 0,
-      expires: Date.now() + 30 * 60_000,
+      expires: activeSessionExpiry(),
       previous: [],
       notices: [],
     }),
@@ -80,7 +81,7 @@ export function restoreSnapshot(value: unknown) {
     ...clean,
     id: randomUUID(),
     revision: 0,
-    expires: Date.now() + 30 * 60_000,
+    expires: activeSessionExpiry(),
     previous: [],
     notices: [
       "Restored saved Qloo discoveries. Evidence shows when they were retrieved; refine a category for fresh results.",
