@@ -22,3 +22,13 @@ Browsers can select or delete only their own saved rows through RLS and explicit
 ## Verify after setup
 
 Create a new Passport after the reset, then sign in and test Save Passport, reopen, plan save/calendar, named profile save/reuse, password update and sign out. Check a second account cannot read or delete the first account's rows. The local unit tests and mocked browser contract cover application behavior, but they do not prove that the hosted SQL, RLS, email delivery or credentials are configured correctly.
+
+## Restart and reconnection behavior
+
+The browser backup preserves a view; the trusted `active_passport_sessions` row preserves the editable Passport. On a browser restore the app reads trusted server state and adopts its current revision. It never uploads the browser backup as authoritative data.
+
+A missing/expired session offers “Refresh with my tastes” in the page and chat. A stale revision reconnects before allowing a retry. Storage read failures return temporary storage trouble rather than claiming expiry. Successful persistence is required for a Passport to survive loss of server memory; the 24-hour rolling lease is not a substitute for a working database table and server credentials.
+
+The chat stream uses explicit recovery codes: `SESSION_MISSING`, `SESSION_EXPIRED`, `SESSION_CHANGED`, `STORAGE_UNAVAILABLE`, `CANCELLED`, `TIMEOUT` and `TEMPORARILY_UNAVAILABLE`. Customer text comes from an application-owned message map; raw service errors never become chat messages. Existing discoveries remain visible on failure. Safe diagnostics distinguish `session.missing`, `session.expired` and `session.persistence.failed` (sanitized database code only).
+
+`tests/session-restart.test.ts` verifies recovery after clearing process memory using a mocked durable store and verifies that a database outage is not classified as expiry. Real Railway/Supabase restart acceptance still requires the hosted database and credentials; these tests do not certify their configuration.

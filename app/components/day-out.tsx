@@ -1,4 +1,5 @@
 "use client";
+import { Icon } from "./passport";
 import { useState, useEffect } from "react";
 import type { Card } from "../../src/passport/model";
 import type { Passport } from "../../src/workspace/state";
@@ -145,23 +146,11 @@ export default function DayOutPlan({
     <details className="secondary-reveal day-out-reveal" open={expanded}>
       <summary>Plan a day out in {passport.city}</summary>
       <div className="day-out-plan">
-        <span className="micro-label">MAKE THE CITY YOURS</span>
-        <h2>
-          Build your first outing.
-        </h2>
-        <p role="status">
-          {selected.length} of {activities.length} stops selected.
-          {selected.length < activities.length
-            ? " This is a partial plan; leave a stop open or refine that category."
-            : " Check locations and hours before going."}
-        </p>
-        <p>
-          Choose your activities and their order. Swap or skip any stop without changing the others. Reordering keeps your selected venues.
-        </p>
-        {activities.length < 2 && <p role="note">Start with a food stop, then add cinema, coffee or another activity. Missing venues are looked up without changing your food stop.</p>}
-        <p className="helper">
-          Set a start time for each stop. These are your suggested times, not verified opening hours or a reservation. Check travel times and availability before going.
-        </p>
+        <header className="outing-intro"><span className="outing-emblem" aria-hidden="true"><Icon name="pin" size={28}/></span><div><span className="micro-label">A LITTLE TASTE. A WHOLE DAY OUT.</span>
+        <h2>Make a day of it.</h2><p>Your places, your pace. Bring a few favorites together into a plan.</p></div></header>
+        <div className="outing-progress" aria-label="Your plan at a glance"><span><Icon name="pin" size={16}/>{passport.city}</span><span>{selected.length}/{activities.length} stops chosen</span><span>{date ? new Date(`${date}T12:00:00Z`).toLocaleDateString(undefined,{month:"short",day:"numeric",timeZone:"UTC"}) : "Choose a date"}</span></div>
+        {selected.length < activities.length && <p role="status">{activities.length-selected.length} stops still need a place. Choose an option below, or leave them open.</p>}
+        <p>Swap a stop or change the order. Your selected venues stay put.</p>
         <div className="plan-schedule">
           <label htmlFor="plan-date">
             When are you going?
@@ -174,7 +163,7 @@ export default function DayOutPlan({
               onChange={(event) => setDate(event.target.value)}
             />
           </label>
-          <p className="helper">Choose times for the stops below. They use {cityTimeZone(passport.city) === "UTC" ? "UTC" : `local time in ${passport.city}`}.</p>
+
           <button
             className="quiet-button"
             type="button"
@@ -189,10 +178,7 @@ export default function DayOutPlan({
           >
             Next weekend
           </button>
-          <p className="helper">
-            Dates use {cityTimeZone(passport.city) === "UTC" ? "UTC until a destination time zone is available" : `local time in ${passport.city}`}. Saving again for the same city
-            and date updates that plan.
-          </p>
+          <span className="plan-zone">{cityTimeZone(passport.city) === "UTC" ? "Times shown in UTC" : `Local time in ${passport.city}`}</span>
         </div>
         <fieldset className="outing-activities"><legend>What would you like to do?</legend>
           {outingActivities.map(activity => <label key={activity.id}><input type="checkbox" checked={activities.includes(activity.id)} disabled={disabled || saving} onChange={e => {setActivities(old => e.target.checked ? [...old, activity.id] : old.filter(id => id !== activity.id)); if(e.target.checked && !options.some(card=>activityMatches(card,activity.id))) onFindActivity?.(activity.id);}} />{activity.label}</label>)}
@@ -200,7 +186,7 @@ export default function DayOutPlan({
         <ol className="day-out-stops">
           {stops.map((stop, index) => (
             <li key={stop.id}>
-              <h3>{stop.label}</h3>
+              <div className="stop-heading"><span className="stop-number">{String(index+1).padStart(2,"0")}</span><div><span className="micro-label">{stop.label}</span><h3>{stop.selected?.name ?? `Choose your ${stop.label.toLowerCase()} stop`}</h3></div><Icon name={stop.section} size={22}/></div>
               <label className="stop-time-label">Start time
                 <input type="time" value={timeFor(stop.id,index)} disabled={disabled || saving} onChange={event=>setStopTimes(old=>({...old,[stop.id]:event.target.value}))}/>
               </label>
@@ -289,6 +275,7 @@ export default function DayOutPlan({
             closer choice and check transport before going.
           </p>
         )}
+        <details className="outing-checklist"><summary>Before you go</summary><p>Your chosen times are suggestions, not verified opening hours or reservations. Check hours, travel times, current prices and availability. Saving again for the same city and date updates that plan.</p></details>
         <div className="plan-save-actions">
           {duplicateStops && <p role="alert">Choose different venues for each activity, or leave a repeated stop open.</p>}
           <button

@@ -65,7 +65,8 @@ export default function TasteAnalysis({passport,busy,onRefine}:{passport:Passpor
     onRefine({discovery:{section:'Eat',preferences:{locationPoint:`POINT(${point.longitude} ${point.latitude})`,radius:1500}}});
   }
   return <section className="taste-analysis" aria-labelledby="analysis-title">
-    <div className="analysis-intro"><span className="analysis-emblem" aria-hidden="true"><Icon name="star" size={28}/></span><div><span className="micro-label">MAKE THE CITY FEEL MORE LIKE YOU</span><h2 id="analysis-title">Find your next direction.</h2><p>Discover gives you places and culture to choose from now. Here, your interests can open a new theme or help you choose a place to start. Each choice leads back to Discover.</p></div></div>
+    <div className="analysis-intro"><span className="analysis-emblem" aria-hidden="true"><Icon name="star" size={28}/></span><div><span className="micro-label">MAKE THE CITY FEEL MORE LIKE YOU</span><h2 id="analysis-title">Find your next direction.</h2><p>Turn what you love into a new direction. Find a theme, or pick a starting place and explore food nearby.</p></div></div>
+    <ol className="insight-steps" aria-label="How Taste Insights works"><li><span>01</span>Choose your tastes</li><li><span>02</span>Find a connection</li><li><span>03</span>Explore it in Discover</li></ol>
     <fieldset className="analysis-interest-picker" disabled={busy||Boolean(loading)}>
       <legend>Choose the interests to explore</legend>
       <p>Select one or more of your confirmed interests. Insights are generated for exactly this selection, not every possible combination.</p>

@@ -303,3 +303,18 @@
 .additional-themes,.taste-evidence-explorer { border:1px solid #c5d0b9; border-radius:14px; background:#f7f6e9; padding:16px; margin-top:20px; }
 .additional-themes > summary,.taste-evidence-explorer > summary,.taste-map-panel > summary { min-height:44px; cursor:pointer; font-weight:600; color:#294b35; }
 .taste-evidence-explorer .connection-explorer { margin-top:16px; }
+
+/* Insights are a guided choice, with a visible path back to Discover. */
+.progressive-app .analysis-intro { padding: clamp(24px, 3vw, 36px); border: 1px solid #cad4ba; border-radius: 24px; background: radial-gradient(circle at 95% 0, #f0da9b77, transparent 45%), linear-gradient(125deg, #edf2e4, #f9f4e2); }
+.progressive-app .analysis-intro h2 { font-size: clamp(27px, 3vw, 38px); line-height: 1.15; color: #214a35; }
+.progressive-app .analysis-intro p { max-width: 52ch; margin-bottom: 0; color: #465a43; }
+.insight-steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; padding: 0; margin: 22px 0 28px; list-style: none; }
+.insight-steps li { display: flex; align-items: center; gap: 10px; padding: 15px; border: 1px solid #d9ddc8; border-radius: 14px; background: #fffdf5; color: #40563e; font-size: 13px; font-weight: 650; }
+.insight-steps li > span { font-size: 12px; color: #78622d; }
+.progressive-app .analysis-interest-picker { padding: 20px 24px; border: 1px solid #d3dac4; border-radius: 18px; background: #fffdf7; }
+.progressive-app .analysis-action { min-height: 132px; border-radius: 20px; box-shadow: 0 8px 23px #193e310b; }
+.progressive-app .analysis-action > svg:first-child { box-sizing: content-box; padding: 12px; border-radius: 14px; background: #e9efdd; color: #31543b; }
+.progressive-app .taste-theme-list button { border: 1px solid #b6c4a8; border-radius: 99px; background: #eff3e6; color: #2a4d34; }
+.progressive-app .taste-theme-list button[aria-pressed="true"] { border-color: #284e36; background: #284e36; color: #fff8e5; box-shadow: 0 6px 16px #173c3020; }
+.progressive-app .area-choices article { background: linear-gradient(145deg, #fcfaef, #eef3e4); box-shadow: 0 8px 20px #193e310a; }
+@media (max-width: 640px) { .insight-steps { grid-template-columns: 1fr; gap: 8px; } .insight-steps li { padding: 10px 14px; } .progressive-app .analysis-action { min-height: 112px; } .progressive-app .analysis-interest-picker { padding: 18px; } }

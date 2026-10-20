@@ -1,5 +1,5 @@
+import { RequestMachine, routeRequest, checkTurnCommit } from "./request-policy.ts";
 import { sectionLabel } from "../passport/labels.ts";
-import { incompleteUtterance } from "./category-language.ts";
 import { chatShortlist, chatShortlistText, isShortlistRequest, requestedShortlistSections } from "./chat-shortlist.ts";
 import { refinementScope } from "./scope.ts";
 import { groundedModelIntent, isGreetingOrTypo } from "./conversation-grounding.ts";
@@ -110,6 +110,71 @@ export async function runTurn(
   emit: (event: AgentEvent) => void = () => {},
   guard = new TurnGuard(),
 ): Promise<AgentReply> {
+  const request = new RequestMachine(routeRequest(input));
+  debugEvent("agent.route", { action: request.route });
+  const provider = deps.provider;
+  const wrapped: AgentDependencies = {
+    ...deps,
+    ...(provider ? { provider: {
+      ...provider,
+      interpret: async (text, context) => {
+        request.move("interpreting");
+        return guard.model(() => provider.interpret(text, context, guard.signal));
+      },
+      choose: async (text, state, tools) => {
+        request.move("interpreting");
+        return guard.model(() => provider.choose(text, state, tools, guard.signal));
+      },
+      ...(provider.chooseWithObservation ? {
+        chooseWithObservation: async (...args: Parameters<NonNullable<ModelProvider["chooseWithObservation"]>>) => {
+          request.move("interpreting");
+          return guard.model(() => provider.chooseWithObservation!(...args));
+        },
+      } : {}),
+    } } : {}),
+    workflow: async (...args) => {
+      request.move("executing");
+      return deps.workflow(...args);
+    },
+    discover: async (...args) => {
+      request.move("executing");
+      return deps.discover(...args);
+    },
+  };
+  let needsInput = false;
+  try {
+    const result = await executeTurn(original, input, wrapped, emit, guard, () => { needsInput = true; });
+    // Cancellation must never commit a partial in-flight mutation.
+    guard.signal.throwIfAborted();
+    request.move("checking");
+    if (!checkTurnCommit(normalizeSession(structuredClone(original)), result, input)) {
+      request.move("blocked");
+      debugEvent("agent.check_failed");
+      return {
+        state: normalizeSession(structuredClone(original)), changed: [], events: result.events,
+        mode: result.mode, execution: request.snapshot(),
+        message: "I couldn't safely apply that update. Your Passport is unchanged. Please try changing one category at a time.",
+      };
+    }
+    request.move(needsInput || result.state.pending || request.route === "clarification" ? "needs-input" :
+      result.state.recovery?.length ? (result.changed.length ? "partial" : "blocked") : "completed");
+    debugEvent("agent.completed", { action: request.snapshot().phase, count: result.changed.length, elapsedMs: request.snapshot().elapsedMs });
+    return { ...result, execution: request.snapshot() };
+  } catch (error) {
+    request.move(guard.signal.aborted ? "cancelled" : "failed");
+    debugEvent("agent.check_failed", { action: request.snapshot().phase });
+    throw error;
+  }
+}
+
+async function executeTurn(
+  original: AgentState,
+  input: AgentInput,
+  deps: AgentDependencies,
+  emit: (event: AgentEvent) => void = () => {},
+  guard = new TurnGuard(),
+  markNeedsInput: () => void = () => {},
+): Promise<AgentReply> {
   debugEvent("agent.started", {
     action: input.reset
       ? "conversation"
@@ -151,6 +216,10 @@ export async function runTurn(
     ].slice(-100);
     return { state, changed, events, mode, message: text };
   };
+  const clarify = (message: string): AgentReply => {
+    markNeedsInput();
+    return reply(message);
+  };
   if (input.reset === "conversation") {
     debugEvent("session.reset", {
       action: "conversation",
@@ -171,29 +240,30 @@ export async function runTurn(
     delete state.pending;
   if (deps.provider && state.providerHealth === "unconfigured")
     state.providerHealth = "configured";
+  const route = routeRequest(input);
   if (input.message) {
     culturalText(input.message);
-    if(incompleteUtterance(input.message) && !isGreetingOrTypo(input.message))return reply("I didn’t catch that. You can say ‘list restaurants’, ask for three starting choices, or tell me what to change. Your Passport and current context are unchanged.");
+    if(route === "clarification")return reply("I didn’t catch that. You can say ‘list restaurants’, ask for three starting choices, or tell me what to change. Your Passport and current context are unchanged.");
     if (state.pending && /^(?:cancel(?: that| the)?(?: concept| choice)?|skip(?: this| the)?(?: concept| choice)?|never ?mind|start over)[!,.\s]*$/i.test(input.message.trim())) {
       delete state.pending;
       return reply("Okay, I've skipped that concept choice. Your Passport hasn't changed. What would you like to explore next?");
     }
     // Handle presentation requests before intent classification. A model may
     // otherwise interpret "list here" as another discovery/refinement request.
-    if (isShortlistRequest(input.message)) {
+    if (route === "current-results" && isShortlistRequest(input.message)) {
       const cards=chatShortlist(state,requestedShortlistSections(input.message));
       return reply(chatShortlistText(state,cards),cards);
     }
     if (/^(?:thanks(?: bro)?|thank you(?: bro)?|cheers)[!,.\s]*$/i.test(input.message.trim()))
       return reply("You’re welcome. Want to compare a couple of choices, find a different vibe, or put an outing together?");
-    if (isListRequest(input.message)) {
+    if (route === "current-results" && isListRequest(input.message)) {
       delete state.pending; // A read-only listing supersedes an unrelated choice.
       return reply(listPassportResults(state,input.message),[]);
     }
     // Questions about an existing result must be handled BEFORE Gemini intent
     // classification. Otherwise "rating for second" can become a filter and
     // destroy the original shortlist or unrelated category state.
-    if (isReadOnlyFollowUp(input.message)) {
+    if (route === "current-results" && isReadOnlyFollowUp(input.message)) {
       delete state.pending;
       return reply(readOnlyFollowUp(state,input.message));
     }
@@ -459,7 +529,7 @@ export async function runTurn(
     return reply(passportAnswer(state, intent));
   }
   if (intent.kind === "unknown" || intent.kind === "onboard")
-    return reply(
+    return clarify(
       `I didn't catch a discovery request. You can ask naturally—for example, “Find a nightclub in ${state.city}”, “Show my restaurants here”, or “Make dining quieter”. Your Passport is unchanged.`,
     );
   const acceptedScope = state.feedback
@@ -476,7 +546,7 @@ export async function runTurn(
     ? original.intent.sections.filter(section => !state.hiddenCategories.includes(section)) : [];
   // An unresolved pronoun is not permission to update the first of several sections.
   if (input.message && !intent.sections.length && previousSections.length > 1)
-    return reply(`Which section should I change: ${previousSections.join(", ")}? Your Passport is unchanged.`);
+    return clarify(`Which section should I change: ${previousSections.join(", ")}? Your Passport is unchanged.`);
   const currentScope = previousSections.length === 1 ? previousSections[0] : undefined;
   const visibleSections = state.activeCategories.filter(section => !state.hiddenCategories.includes(section));
   const venueOnly = intent.query?.priceMax !== undefined || intent.query?.priceMin !== undefined ||
@@ -484,7 +554,7 @@ export async function runTurn(
   const implicitSections = venueOnly ? visibleSections.filter(isPlaceSection) : visibleSections;
   const implicitScope = currentScope ?? (implicitSections.length === 1 ? implicitSections[0] : undefined);
   if (input.message && !intent.sections.length && !implicitScope && visibleSections.length && !(refersToLike && acceptedScope))
-    return reply(`Which section should I change: ${visibleSections.join(", ")}? Your Passport is unchanged.`);
+    return clarify(`Which section should I change: ${visibleSections.join(", ")}? Your Passport is unchanged.`);
   const modeScope =
     implicitScope ??
     state.activeCategories.find((s) => !state.hiddenCategories.includes(s)) ??
@@ -499,7 +569,7 @@ export async function runTurn(
             ? modeScope
             : (implicitScope ?? "Eat"),
       ]).filter(section=>!preserved.includes(section));
-  if (!targets.length) return reply("Your protected categories are unchanged. Name the category you want to update.");
+  if (!targets.length) return clarify("Your protected categories are unchanged. Name the category you want to update.");
   if (input.message && mode === "model-mcp") {
     const positive = refinementScope(input.message).positive;
     const asksBudget = /cheap|afford|budget|price|cost|expensive|economical|inexpensive|moderate|premium|luxury|spend|[$£€₹]/i.test(positive);

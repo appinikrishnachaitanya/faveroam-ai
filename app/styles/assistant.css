@@ -146,3 +146,9 @@ html { scrollbar-gutter: stable; }
 .chat-recommendation-note { color:#53654f; font-size:12px; line-height:1.6; }
 .chat-next-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:20px; }
 .chat-next-actions button { min-height:44px; padding:10px 12px; border:1px solid #c5d0b9; border-radius:12px; background:#edf2e4; color:#284a35; font:inherit; font-size:12px; line-height:1.5; text-align:left; }
+
+/* Friendly recovery is one actionable notice, next to the conversation. */
+.conversation-recovery { padding: 14px 16px; margin: 10px 0; border: 1px solid #d5d6bc; border-radius: 15px; background: #f5efda; color: #35513d; }
+.conversation-recovery p { margin: 0 0 12px; font-size: 14px; line-height: 1.55; }
+.conversation-recovery > div { display: flex; flex-wrap: wrap; gap: 8px; }
+.conversation-recovery button { min-height: 44px; padding: 10px 14px; font-size: 13px; }

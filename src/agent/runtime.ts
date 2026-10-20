@@ -1,3 +1,4 @@
+import { rankDiverseChoices } from "./ranking.ts";
 import "server-only";
 import { debugEvent } from "./debug.ts";
 import { discoveryQueries, mixPools } from "./strategy.ts";
@@ -406,7 +407,7 @@ export async function discoverSection(
   const eligible = avoidMainstream ? mixed.filter(card=>!knownChain(card)) : mixed;
   if (avoidMainstream && eligible.length < mixed.length)
     state.notices.push(`Excluded ${mixed.length-eligible.length} known chain listings from ${section}. Independent ownership of remaining venues is not verified.`);
-  const cards = diversifyCards(eligible, section);
+  const cards = rankDiverseChoices(diversifyCards(eligible, section), section);
   debugEvent("discovery.completed", { section, mode, count: cards.length });
   return cards;
 }

@@ -123,6 +123,7 @@ const passport = {
   agent: { sessionId: uuid, revision: 0, tags: [], constraints: [] },
 };
 let signedIn = false;
+let reconnectExpired = false;
 let reusableProfile = null;
 let reusableName = "My tastes";
 const profileRecord=()=>({id:uuid,name:reusableName,updated_at:"2026-10-18T00:00:00Z",profile:reusableProfile});
@@ -148,17 +149,20 @@ ws.addEventListener("message", async (event) => {
     let responseStatus=200;
     if (path === "/api/destinations") {
       value = { destinations: ["London", "New York City", "Toronto", "Lisbon"] };
+    } else if (path === "/api/agent/session" && request.method === "POST") {
+      responseStatus = reconnectExpired ? 410 : 200;
+      value = reconnectExpired ? {error:"Refresh with your tastes to continue."} : {passport:{...passport,session,agent:{...passport.agent,revision:session.revision}}};
     } else if (path === "/api/agent/turn") {
       if (body.input.message) {
         if (turnScenario === "stall") return; // Cancelled by browser AbortSignal, never reaches the backend.
         const payload =
           turnScenario === "malformed"
             ? "invalid-json\n"
-            : turnScenario === "provider-error"
+            : ["provider-error", "session-changed", "storage-unavailable", "session-missing"].includes(turnScenario)
               ? JSON.stringify({
                   type: "error",
-                  message:
-                    "Provider unavailable. Your discoveries are preserved.",
+                  code: {"session-changed":"SESSION_CHANGED", "storage-unavailable":"STORAGE_UNAVAILABLE", "session-missing":"SESSION_MISSING"}[turnScenario],
+                  message: "Fixture service diagnostic must not reach the customer.",
                 })
               : JSON.stringify({
                   type: "result",
@@ -376,6 +380,30 @@ await wait("document.querySelector('.journey-illustration')?.complete && documen
 await evaluate("window.scrollTo({top:0,behavior:'instant'})");
 const artworkShot=await call("Page.captureScreenshot",{format:"png"});
 await fs.writeFile("/tmp/tastepassport-original-illustrations.png",Buffer.from(artworkShot.result.data,"base64"));
+// Recover a guest view through trusted server state, with actionable expiry.
+await evaluate(`sessionStorage.setItem('tastepassport.guest.recovery.v1', ${JSON.stringify(JSON.stringify({version:1,savedAt:Date.now(),expiresAt:Date.now()+7200000,passport}))})`);
+await call("Page.reload");
+await wait("Boolean(document.querySelector('.passport-cover')) && !document.querySelector('.passport-recovery')");
+assert.equal(await evaluate("document.body.textContent.includes('active server session')"),false);
+for (const [label,selector,file] of [["Discover",".discovery-concierge","discover"],["My Vibe",".vibe-intro","my-vibe"],["Taste insights",".analysis-intro","insights"],["Plan a day",".outing-intro","plan"]]) {
+  await textClick(label);
+  await wait(`Boolean(document.querySelector('${selector}'))`);
+  for(const width of [320,390,1440]) {
+    await call("Emulation.setDeviceMetricsOverride",{width,height:1000,deviceScaleFactor:1,mobile:width<768});
+    assert.equal(await evaluate("document.documentElement.scrollWidth>innerWidth"),false,`${label} overflow at ${width}`);
+  }
+  await evaluate(`document.querySelector('${selector}').scrollIntoView({block:'start',behavior:'instant'})`);
+  const shot=await call("Page.captureScreenshot",{format:"png"});
+  await fs.writeFile(`/tmp/tastepassport-rich-${file}.png`,Buffer.from(shot.result.data,"base64"));
+}
+reconnectExpired=true;
+await call("Page.reload");
+await wait("document.querySelector('.passport-recovery')?.textContent.includes('Refresh with my tastes')");
+assert.ok(await evaluate("Boolean(document.querySelector('.discovery-card'))"),"Expired editing window preserves browsable discoveries");
+await evaluate("sessionStorage.removeItem('tastepassport.guest.recovery.v1')");
+reconnectExpired=false;
+await call("Page.reload");
+await wait("Boolean(document.querySelector('.account-launch')) && !document.querySelector('.passport-cover')");
 await click(".account-launch");
 await wait(
   "Boolean(document.querySelector('.account-dialog[open] input[type=email]'))",
@@ -699,7 +727,7 @@ assert.ok(
   "Floating assistant stays inside viewport",
 );
 await click(".assistant-launch");
-for (const scenario of ["provider-error", "malformed", "stall", "deadline"]) {
+for (const scenario of ["provider-error", "session-changed", "storage-unavailable", "malformed", "stall", "deadline"]) {
   turnScenario = scenario === "deadline" ? "stall" : scenario;
   if (scenario === "deadline")
     await evaluate(
@@ -721,9 +749,10 @@ for (const scenario of ["provider-error", "malformed", "stall", "deadline"]) {
     await textClick("Cancel refinement");
   }
   await wait("!document.querySelector('#conversation-input').disabled");
+  await wait("Boolean(document.querySelector('.conversation-recovery .primary-button')) && !document.querySelector('.conversation-recovery .primary-button').disabled");
   assert.ok(
     await evaluate(
-      "[...document.querySelectorAll('#taste-concierge button')].some(b=>b.textContent.includes('Retry last refinement'))",
+      "[...document.querySelectorAll('#taste-concierge button')].some(b=>b.textContent.includes('Try my request again'))",
     ),
   );
   assert.equal(
@@ -734,9 +763,9 @@ for (const scenario of ["provider-error", "malformed", "stall", "deadline"]) {
     await evaluate("AbortSignal.timeout=window.__realTimeout");
 }
 turnScenario = "success";
-await textClick("Retry last refinement");
+await textClick("Try my request again");
 await wait(
-  "!document.querySelector('#conversation-input').disabled && ![...document.querySelectorAll('#taste-concierge button')].some(b=>b.textContent.includes('Retry last refinement'))",
+  "!document.querySelector('#conversation-input').disabled && ![...document.querySelectorAll('#taste-concierge button')].some(b=>b.textContent.includes('Try my request again'))",
 );
 await wait("document.querySelectorAll('.chat-recommendations article').length===3");
 const chatShot=await call("Page.captureScreenshot",{format:"png"});
@@ -792,6 +821,16 @@ assert.ok(await evaluate("document.querySelector('.reusable-tastes a[download]')
 await textClick("Use this profile in London");
 await wait("Boolean(document.querySelector('.passport-cover')) && document.querySelector('.passport-cover').textContent.includes('London')");
 assert.ok(await evaluate("document.querySelector('#passport-content').textContent.includes('Fresh discoveries using your saved tastes')"),"Saved tastes apply to a different city without retyping preferences");
+turnScenario="session-missing";
+await click(".assistant-launch");
+await input("#conversation-input","Please refine Food after restart","HTMLTextAreaElement");
+await click('[aria-label="Send message"]');
+await wait("document.querySelector('.conversation-recovery')?.textContent.includes('Refresh with my tastes')");
+assert.equal(await evaluate("document.querySelector('.conversation-recovery').textContent.includes('Try my request again')"),false,"A lost session must offer refresh rather than a futile retry");
+assert.equal(await evaluate("document.querySelector('.conversation-recovery').textContent.includes('Fixture service diagnostic')"),false);
+assert.equal(await evaluate("document.querySelectorAll('.discovery-card').length"),3,"Lost-session recovery preserves discoveries");
+await textClick("Keep exploring");
+turnScenario="success";
 await click(".signout-button");
 await wait(
   "!document.querySelector('.signout-button') && !document.querySelector('.upcoming-launch') && !document.querySelector('.passport-cover')",
@@ -818,5 +857,5 @@ await call("Fetch.disable");
 ws.close();
 if (failure) throw failure;
 console.log(
-  "UI contract PASS (mocked APIs): duplicate registration recovery, registration names, password change, named profiles/auto-filled tastes/export link, reusable tastes across cities, no sign-in library flash, budget updates, planner reordering, compact Together, saved plans/calendar, provider failure/cancellation/retry and responsive containment. Live providers remain separate acceptance.",
+  "UI contract PASS (mocked APIs): automatic guest reconnection, stale-version recovery, storage retry and lost-session refresh, duplicate registration recovery, registration names, password change, named profiles/auto-filled tastes/export link, reusable tastes across cities, no sign-in library flash, budget updates, planner reordering, compact Together, saved plans/calendar, provider failure/cancellation/retry and responsive containment. Live providers remain separate acceptance.",
 );

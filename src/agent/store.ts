@@ -52,7 +52,11 @@ export function createSession(
 }
 export function getSession(id: string): AgentState {
   const state = sessions.get(id);
-  if (!state || state.expires < Date.now()) {
+  if (!state) {
+    debugEvent("session.missing");
+    throw Error("Your Passport session is no longer available. Refresh with your tastes to continue.");
+  }
+  if (state.expires < Date.now()) {
     debugEvent("session.expired");
     throw Error(
       "Your refinement session expired. Build a passport again; your taste draft remains available.",
@@ -64,7 +68,10 @@ export function getSession(id: string): AgentState {
  * No browser-submitted recommendation data is accepted as a replacement.
  */
 export async function loadSession(id: string): Promise<AgentState> {
-  const persisted = await loadActiveSession(id);
+  let persisted: AgentState | undefined;
+  let storageUnavailable = false;
+  try { persisted = await loadActiveSession(id); }
+  catch { storageUnavailable = true; }
   if (persisted) durableIds.add(id);
   const local = sessions.get(id);
   const now = Date.now();
@@ -79,7 +86,8 @@ export async function loadSession(id: string): Promise<AgentState> {
     sessions.set(id, chosen);
     return chosen;
   }
-  return getSession(id); // Existing safe, generic expired-session error.
+  if (storageUnavailable) throw Error("Passport storage is temporarily unavailable.");
+  return getSession(id);
 }
 /** Persist newly constructed trusted server state before returning it to the browser. */
 export async function syncSession(state: AgentState) {

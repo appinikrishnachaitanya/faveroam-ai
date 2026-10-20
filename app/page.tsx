@@ -1,8 +1,9 @@
 "use client";
+import { refinementErrorMessage } from "../src/agent/customer-error";
 import { sectionLabel } from "../src/passport/labels";
 import { useEffect, useRef, useState } from "react";
 import { validDestination } from "../src/workspace/location";
-import { sendAgentTurn } from "../src/agent/browser";
+import { AgentTurnError, sendAgentTurn } from "../src/agent/browser";
 import type { Intent } from "../src/agent/types";
 import type { AgentInput, Constraint } from "../src/agent/types";
 import { FamiliarityControl, ModelComparison } from "./components/cultural";
@@ -76,6 +77,7 @@ export default function Home() {
   const [saveTastePrompt,setSaveTastePrompt]=useState(false);
   const [showSaved, setShowSaved] = useState(false);
   const [adaptation, setAdaptation] = useState("");
+  const [recoveryStatus, setRecoveryStatus] = useState<"checking" | "expired" | "unavailable">();
   const [city, setCity] = useState("");
   const [origin, setOrigin] = useState("");
   const [initialMode, setInitialMode] = useState<Familiarity>("familiar");
@@ -95,6 +97,8 @@ export default function Home() {
   >("discover");
   const [accountSignedIn, setAccountSignedIn] = useState(false);
 
+  const recoveryRequest = useRef<AbortController | null>(null);
+
   // Browser-tab fallback for unexpected React view failures. This is NOT a
   // substitute for shared Supabase session persistence; the server still
   // checks the session revision before any subsequent edit or save.
@@ -103,9 +107,37 @@ export default function Home() {
     if (!recovered) return;
     setResult(current => current ?? recovered);
     setCity(current => current || recovered.city);
+    setDraft(recovered.selected.map(taste => taste.name));
+    setConceptSeeds(recovered.selected.filter(taste => taste.id.startsWith("urn:tag:")).map(taste => taste.name));
+    setRequestedActivities((recovered.session?.activeCategories ?? []).filter(section=>!recovered.session?.hiddenCategories.includes(section)));
+    setInitialMode(recovered.session?.discoveryMode ?? "familiar");
+    setConstraints(recovered.session?.constraints ?? []);
     setPhase("ready");
-    setAdaptation("Your last Passport view was restored in this tab. Refreshing recommendations or saving still requires an active server session.");
+    const controller = new AbortController();
+    void reconnectPassport(recovered, controller.signal);
+    return () => controller.abort();
   }, []);
+  async function reconnectPassport(passport: Passport, signal?: AbortSignal) {
+    if (!passport.agent) return;
+    recoveryRequest.current?.abort();
+    const controller = new AbortController();
+    recoveryRequest.current = controller;
+    const requestSignal = AbortSignal.any([controller.signal, AbortSignal.timeout(12000), ...(signal ? [signal] : [])]);
+    setRecoveryStatus("checking");
+    try {
+      const response = await fetch("/api/agent/session", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId: passport.agent.sessionId }),
+        signal: requestSignal,
+      });
+      if (signal?.aborted || controller.signal.aborted || recoveryRequest.current !== controller) return;
+      if (!response.ok) { setRecoveryStatus(response.status === 410 ? "expired" : "unavailable"); return; }
+      const data = await response.json();
+      if (!data.passport?.agent || data.passport.agent.sessionId !== passport.agent.sessionId) throw Error();
+      setResult(current => current?.agent?.sessionId === passport.agent?.sessionId ? data.passport : current);
+      setRecoveryStatus(undefined);
+    } catch { if (!signal?.aborted && !controller.signal.aborted && recoveryRequest.current === controller) setRecoveryStatus("unavailable"); }
+  }
   // Effects run only after a successful commit. If new results crash a render,
   // the last successfully rendered guest Passport remains recoverable.
   useEffect(() => {
@@ -206,7 +238,7 @@ export default function Home() {
   }
   async function submitConversation(event: React.FormEvent) {
     event.preventDefault();
-    if (!composer.trim() || busy) return;
+    if (!composer.trim() || busy || recoveryStatus === "checking") return;
     const text = composer.trim();
     setComposer("");
     if (
@@ -258,7 +290,7 @@ export default function Home() {
     }
   }
   async function refine(input: AgentInput) {
-    if (!result?.agent || busy || activeTurn.current) return;
+    if (!result?.agent || busy || activeTurn.current || recoveryStatus === "checking") return;
     const controller = new AbortController();
     activeTurn.current = controller;
     setRetryInput(input);
@@ -342,18 +374,16 @@ export default function Home() {
         );
     } catch (e) {
       if (activeTurn.current !== controller) return;
-      setError(
-        controller.signal.aborted
-          ? "Refinement cancelled. Your discoveries are preserved. Retry when you’re ready."
-          : e instanceof Error && e.name === "TimeoutError"
-            ? "This search took too long. Your discoveries are preserved. Try again or adjust this category."
-            : e instanceof Error
-              ? e.message
-              : "Refinement is unavailable. Your passport is preserved.",
-      );
+      setError(refinementErrorMessage(e, controller.signal.aborted));
+      if ((e instanceof AgentTurnError && ["SESSION_EXPIRED", "SESSION_MISSING"].includes(e.code)) || (e instanceof Error && /session.*expired/i.test(e.message))) {
+        setRecoveryStatus("expired");
+        setRetryInput(undefined);
+      } else if (e instanceof AgentTurnError && e.code === "SESSION_CHANGED") {
+        void reconnectPassport(result);
+      }
       setPhase("ready");
       say(
-        "Refinement is temporarily unavailable. Your existing TastePassport is still available. Try the guided controls.",
+        "Your discoveries are still here. You can try your request again or keep exploring.",
       );
     } finally {
       if (activeTurn.current === controller) {
@@ -517,6 +547,7 @@ export default function Home() {
     else fresh();
   }
   function fresh() {
+    recoveryRequest.current?.abort();
     clearGuestPassport(window.sessionStorage);
     setSaveTastePrompt(false);
     setTasteDraftVersion(value=>value+1);
@@ -529,6 +560,7 @@ export default function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sessionId: result.agent.sessionId }),
       });
+    setRecoveryStatus(undefined);
     setShowSaved(false);
     setWorkspaceView("discover");
     setAdaptation("");
@@ -726,6 +758,15 @@ export default function Home() {
                 <Icon name="star" size={18} />
                 Ask TastePassport
               </button>
+            {recoveryStatus && (
+              <section className="passport-recovery" aria-label="Continue your Passport" role="status">
+                <Icon name={recoveryStatus === "checking" ? "star" : "refresh"} size={22} />
+                <div><strong>{recoveryStatus === "checking" ? "Picking up where you left off…" : recoveryStatus === "expired" ? "Ready for fresh discoveries?" : "Your discoveries are still here."}</strong>
+                <p>{recoveryStatus === "checking" ? "You can browse while we reconnect." : recoveryStatus === "expired" ? "Use the same tastes to build a fresh Passport and make changes again, or keep browsing these discoveries." : "We couldn't reconnect right now. Try again to keep refining and saving."}</p></div>
+                {recoveryStatus === "expired" && <button className="primary-button" disabled={busy} onClick={()=>{setRecoveryStatus(undefined);void resolve();}}>Refresh with my tastes <Icon name="arrow" size={15}/></button>}
+                {recoveryStatus === "unavailable" && <button className="quiet-button" disabled={busy} onClick={()=>void reconnectPassport(result)}>Try reconnecting</button>}
+              </section>
+            )}
             {adaptation && (
               <div className="adaptation-notice" role="status">
                 <Icon name="check" size={16} />
@@ -1022,16 +1063,14 @@ export default function Home() {
                   Cancel refinement
                 </button>
               )}
-              {error && <p role="alert">{error}</p>}
-              {retryInput && !busy && (
-                <button
-                  type="button"
-                  className="quiet-button"
-                  onClick={() => void refine(retryInput)}
-                >
-                  Retry last refinement
-                </button>
-              )}
+              {error && !busy && <div className="conversation-recovery" role="alert">
+                <p>{error}</p>
+                <div>
+                  {retryInput && <button type="button" className="primary-button" disabled={recoveryStatus === "checking"} onClick={()=>void refine(retryInput)}>{recoveryStatus === "checking" ? "Reconnecting…" : "Try my request again"}</button>}
+                  {recoveryStatus === "expired" && <button type="button" className="primary-button" onClick={()=>{setAssistantOpen(false);setRecoveryStatus(undefined);void resolve();}}>Refresh with my tastes</button>}
+                  <button type="button" className="quiet-button" onClick={()=>{setError("");setRetryInput(undefined);setAssistantOpen(false);}}>Keep exploring</button>
+                </div>
+              </div>}
               <form className="composer" onSubmit={submitConversation}>
                 <label htmlFor="conversation-input" className="sr-only">
                   Ask TastePassport
@@ -1050,7 +1089,7 @@ export default function Home() {
                   <button
                     type="submit"
                     aria-label="Send message"
-                    disabled={busy || !composer.trim()}
+                    disabled={busy || recoveryStatus === "checking" || !composer.trim()}
                   >
                     <Icon name="send" size={17} />
                     Send

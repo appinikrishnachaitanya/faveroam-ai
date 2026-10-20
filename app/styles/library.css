@@ -90,3 +90,12 @@
 .profile-save-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 24px; }
 .profile-save-actions button { min-height: 48px; }
 @media (max-width: 480px) { .profile-save-actions { flex-direction: column; } .profile-save-actions button { width: 100%; } }
+
+/* Keep scheduling compact; detailed guidance is available on demand. */
+.progressive-app .plan-schedule { align-items: flex-end; gap: 16px; margin: 20px 0; border: 1px solid #d9d4b2; background: #f4edce; }
+.progressive-app .plan-schedule .quiet-button { min-height: 48px; padding: 12px 18px; border: 1px solid #c9cba9; border-radius: 12px; background: #fffdf5; }
+.plan-zone { margin-left: auto; align-self: center; max-width: 28ch; color: #516047; font-size: 12px; }
+.outing-checklist { padding: 15px 18px; margin: 18px 0; border: 1px solid #d8ddca; border-radius: 14px; background: #f0f3e7; }
+.outing-checklist summary { min-height: 24px; cursor: pointer; font-weight: 650; }
+.outing-checklist p { color: #4a5c46; font-size: 13px; line-height: 1.65; }
+@media (max-width: 500px) { .plan-zone { flex-basis: 100%; margin-left: 0; } }

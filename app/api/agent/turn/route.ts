@@ -1,3 +1,4 @@
+import { turnFailure } from "../../../../src/agent/turn-failure";
 import { debugRequest, debugEvent } from "../../../../src/agent/debug";
 import { inSession } from "../../../../src/agent/store";
 import { TurnGuard } from "../../../../src/agent/guard";
@@ -137,13 +138,9 @@ async function handlePOST(request: Request) {
           count: reply.state.cards.length,
         });
         send({ type: "result", reply });
-      } catch {
+      } catch (error) {
         debugEvent("api.failed", { route: "agent.turn" });
-        send({
-          type: "error",
-          message:
-            "Refinement is temporarily unavailable or your Passport changed. Your discoveries are still here. Start a New Passport if your session expired.",
-        });
+        send({ type: "error", ...turnFailure(error, deadline.aborted) });
       }
       try {
         controller.close();

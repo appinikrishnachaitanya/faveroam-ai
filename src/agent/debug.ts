@@ -49,6 +49,8 @@ type DebugEvent =
   | "discovery.pool"
   | "discovery.completed"
   | "discovery.failed"
+  | "agent.route"
+  | "agent.check_failed"
   | "agent.started"
   | "agent.intent"
   | "agent.completed"
@@ -57,6 +59,7 @@ type DebugEvent =
   | "session.reset"
   | "session.created"
   | "session.updated"
+  | "session.missing"
   | "session.expired"
   | "service.invoked"
   | "service.response"
@@ -99,7 +102,7 @@ interface DebugMeta {
 export function debugEvent(event: DebugEvent, meta: DebugMeta = {}) {
   const error =
     event.endsWith(".failed") ||
-    event === "session.expired" ||
+    (event === "session.expired" || event === "session.missing") ||
     (typeof meta.status === "number" && meta.status >= 400);
   const primary = ![
     "qloo.cache_hit",
@@ -177,6 +180,8 @@ export function debugEvent(event: DebugEvent, meta: DebugMeta = {}) {
       kind: allowed(meta.kind, ["onboard", "refine", "hide", "unknown"]),
       pool: allowed(meta.pool, ["direct", "adjacent", "place", "artist"]),
       action: allowed(meta.action, [
+        "interpret", "action", "clarification", "current-results",
+        "completed", "needs-input", "partial", "blocked", "cancelled", "failed",
         "conversation",
         "new-passport",
         "feedback",

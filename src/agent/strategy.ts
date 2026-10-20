@@ -46,10 +46,11 @@ export function discoveryQueries(
       else delete direct["signal.interests.tags"];
     }
   }
-  // Explicitly selected content-based weighting wins. Otherwise each mode uses
-  // a distinct documented soft ranking setting without relaxing requirements.
-  if (!direct["bias.content_based"]) direct["bias.content_based"] = "0.8";
-  if (!adjacent["bias.content_based"]) adjacent["bias.content_based"] = "0.3";
+  // The current hackathon/type references do not document bias.content_based.
+  // Styles must differ through real seed routing and soft-tag expansion, not
+  // an undocumented numeric knob that can be silently ignored by Qloo.
+  delete direct["bias.content_based"];
+  delete adjacent["bias.content_based"];
   const explicitConcepts = state.categoryConcepts?.[section]?.length ||
     (state.intent?.sections.includes(section) && state.intent.concepts.length);
   if (section !== "Music" && !explicitConcepts) {
@@ -105,7 +106,7 @@ export function discoveryQueries(
  * and quota are product policy, not learned probabilities or measured accuracy. */
 export function mixPools(pools: Card[][]): Card[] {
   const available = pools.filter(pool => pool.length);
-  if (available.length < 2) return available[0] ?? [];
+  if (available.length < 2) return (available[0] ?? []).filter((card, index, cards) => cards.findIndex(item => item.id === card.id) === index);
   type FusedResult = {
     card: Card;
     score: number;
@@ -113,9 +114,13 @@ export function mixPools(pools: Card[][]): Card[] {
     sources: NonNullable<QlooEvidence["fusion"]>["sources"];
   };
   const ranked = new Map<string, FusedResult>();
+  // Activity subqueries must not gain extra influence simply because one
+  // family issued more queries. Normalize within direct/adjacent families.
+  const directCount = available.filter(pool => pool[0]?.evidence?.pool !== "adjacent").length;
+  const adjacentCount = available.length - directCount;
   for (const pool of available) {
     const direct = pool[0]?.evidence?.pool !== "adjacent";
-    const weight = direct ? 0.75 : 0.25;
+    const weight = direct ? 0.75 / directCount : 0.25 / adjacentCount;
     const seen = new Set<string>();
     pool.forEach((card, index) => {
       if (seen.has(card.id)) return;

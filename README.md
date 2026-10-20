@@ -94,6 +94,8 @@ The optional home-city field adds the starting point to the Passport cover. It d
 
 The pipeline resolves real entities, retrieves candidates with the appropriate Qloo output type, applies explicit constraints, then normalizes and diversifies the shortlist. Familiar content prioritizes seeds from its own domain; Balanced uses weighted reciprocal-rank fusion with a limited space for broader discoveries. Automatic cuisine tags do not overwhelm movie or artist signals. Deduplication and chain limits reduce repeated branches. Direct and adjacent discovery pools support different discovery styles.
 
+The conversation now has explicit request routing, execution states, shared cancellation and a deterministic check before committing updates. A bounded diversity pass improves the first three place choices while preserving the relevance leader. See [execution and ranking policy](docs/AGENT_EXECUTION.md) for budgets, formulas and verification limits.
+
 Name matching helps identify an entity; **it is not a cultural affinity score**. Qloo associations can establish a connection without proving a shared plot, genre or guaranteed enjoyment. When individual evidence is unavailable, explanations acknowledge that the tastes were considered together instead of fabricating a reason.
 
 [Matching policy, algorithm research and controlled live comparisons →](docs/RECOMMENDATION_POLICY.md)

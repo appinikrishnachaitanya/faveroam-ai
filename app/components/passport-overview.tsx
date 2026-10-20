@@ -70,13 +70,14 @@ export function SavedDiscoveries({
 }) {
   return (
     <section className="my-vibe" aria-labelledby="saved-title">
-      <div className="result-heading">
-        <h2 id="saved-title">Your kind of places. Your kind of culture.</h2>
-      </div>
-      <p className="helper">
-        My Vibe keeps discoveries you explicitly liked, even as other
-        recommendations change. Save your Passport to keep them across visits.
-      </p>
+      <header className="vibe-intro">
+        <span className="vibe-emblem" aria-hidden="true"><Icon name="heart" size={28}/></span>
+        <div><span className="micro-label">A COLLECTION THAT FEELS LIKE YOU</span>
+          <h2 id="saved-title">Your favorites, all in one place.</h2>
+          <p>The discoveries you love stay here as you explore. Save your Passport to keep them for your next visit.</p>
+          <div className="vibe-summary"><span>{cards.length} saved {cards.length === 1 ? "discovery" : "discoveries"}</span><span>{new Set(cards.map(card=>card.section)).size} categories</span></div>
+        </div>
+      </header>
       {cards.length ? (
         <div className="discovery-grid">
           {cards.map((card) => (

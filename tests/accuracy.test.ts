@@ -42,12 +42,13 @@ test('dish concepts stay specific and scoped to dining in multi-activity request
   assert.deepEqual(conceptSections('chicken biryani',['Culture','Eat']),['Eat']);
   assert.deepEqual(conceptSections('independent coffee shops',['Eat','Coffee']),['Coffee']);
 });
-test('documented property, metro and content weight controls survive query validation',()=>{
+test('documented property and metro controls survive while undocumented content weights are diagnosed',()=>{
   const plan=buildQuery({outputType:'place',interests:{entities:[id],tags:[]},preferences:{requiredProperties:['image'],metro:'Fixture metro',contentBasedBias:.6}});
   assert.equal(plan.params['filter.exists'],'properties.image');
   assert.equal(plan.params['filter.location.metro'],'Fixture metro');
-  assert.equal(plan.params['bias.content_based'],'0.6');
-  assert.deepEqual(plan.diagnostics.dropped,[]);
+  assert.equal(plan.params['bias.content_based'],undefined);
+  assert.ok(plan.diagnostics.dropped.some(item=>item.parameter === 'bias.content_based'));
+  assert.deepEqual(plan.diagnostics.dropped.map(item=>item.parameter),["bias.content_based"]);
   const surprise=buildQuery({outputType:'place',interests:{entities:[id],tags:[]},preferences:{goal:'surprise'}});
   assert.equal(surprise.params['diversify.take'],undefined);
 });

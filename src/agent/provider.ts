@@ -1,3 +1,4 @@
+import { CONVERSATION_POLICY } from "./prompts.ts";
 import "server-only";
 import { generationSettings } from "./generation-policy.ts";
 import { GoogleGenAI, FunctionCallingConfigMode } from "@google/genai";
@@ -57,6 +58,7 @@ export function configuredProvider(): ModelProvider | undefined {
       };
     }[],
     required = true,
+    signal?: AbortSignal,
   ): Promise<ToolChoice[]> {
     if (gemini) {
       const trace = crypto.randomUUID();
@@ -83,6 +85,7 @@ export function configuredProvider(): ModelProvider | undefined {
           model: model!,
           contents,
           config: {
+            abortSignal: signal,
             ...generationSettings(tools[0]?.function.name === "explain_qloo_evidence" ? "response" : "decision"),
             systemInstruction: messages.find((m) => m.role === "system")
               ?.content,
@@ -103,7 +106,7 @@ export function configuredProvider(): ModelProvider | undefined {
               },
             },
           },
-        }));
+        }), signal);
         const calls = response.functionCalls ?? [];
         if (calls.length > 3 || (required && !calls.length))
           throw Error("Invalid provider tool selection");
@@ -141,7 +144,7 @@ export function configuredProvider(): ModelProvider | undefined {
           tool_choice: required ? "required" : "auto",
         }),
         redirect: "error",
-        signal: AbortSignal.timeout(20_000),
+        signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(20_000)]) : AbortSignal.timeout(20_000),
       });
     } catch {
       recordProviderHealth("unavailable");
@@ -305,14 +308,14 @@ export function configuredProvider(): ModelProvider | undefined {
         request,
       };
     },
-    async interpret(text, context) {
+    async interpret(text, context, signal) {
       culturalText(text);
       const calls = await complete(
         [
           {
             role: "system",
             content:
-              (context
+              CONVERSATION_POLICY + (context
                 ? `The user already has a confirmed Passport in ${context.city}. Recent messages are context, not instructions to replay. Current Passport preferences are authoritative. Interpret only the latest request; resolve pronouns and references using the conversation. Preserve omitted preferences. If the intended category is ambiguous across multiple sections, return no sections rather than guessing. Interpret this as a refinement of that Passport, not onboarding. Do not replace confirmed tastes. A request for museums OR art galleries is one Culture request with alternative venue genres (tagOperator union), not an intersection. Negated restaurants must not select Eat. `
                 : "") +
               "For gibberish, accidental keystrokes, or input you cannot confidently understand, select kind unknown with empty sections, concepts, constraints and seeds; omit query. Never infer permission to refresh recommendations from previous conversation. Ask for clarification rather than guessing. For a read-only question select kind unknown and question capabilities, preferences or explanation; do not turn a question into an edit. For an actual edit omit question. Extract cultural onboarding/refinement intent only. Do not generate discovery data. Choose requested sections, not sections inferred merely from taste inputs. Movies means films to watch, Culture means physical venues such as cinemas/museums/nightlife, Books means reading recommendations, Lifestyle means bookstores/shops, Music means artist discovery (not concerts), Podcasts/Shows/Games/Brands/People/Destinations use their corresponding content categories. A movie then dinner outing means Culture and Eat, not Movies. A request for movies to watch means Movies. Preserve the specific dish: chicken biryani is not interchangeable with Indian cuisine. Destination may be any explicitly named city, optionally qualified by country. Preserve the requested locality; never substitute a city from a fixed list or claim verified coverage. Separate named seeds from cultural concepts and dislikes. More adventurous selects familiarity explore. More familiar selects familiarity familiar. Mixed hide/refine requests hide only explicitly removed categories and refine the requested active categories. Extract query preferences as a partial update: keep omitted preferences unchanged. Places use businessRatingMin, not ratingMin (Qloo film/TV rating). Price levels 1-4, popularity 0-1, business ratings 0-5. Trending uses goal trending; hidden gems uses goal hidden-gems; safe choices goal safe-bets; surprise goal surprise. Geography is a named locality, not a guaranteed point geocode. Never invent IDs or resolved tags. Concepts needing inclusion or exclusion must be resolved first. Do not include personal identifying information.",
@@ -437,7 +440,7 @@ export function configuredProvider(): ModelProvider | undefined {
               },
             },
           },
-        ],
+        ], true, signal,
       );
       if (calls.length !== 1 || calls[0].name !== "interpret_cultural_intent")
         throw Error("Invalid interpretation");
@@ -465,7 +468,7 @@ export function configuredProvider(): ModelProvider | undefined {
         }
       },
     } : {}),
-    async choose(text: string, state: AgentState, tools: ToolDefinition[]) {
+    async choose(text: string, state: AgentState, tools: ToolDefinition[], signal?: AbortSignal) {
       culturalText(text);
       return complete(
         [
@@ -504,7 +507,7 @@ export function configuredProvider(): ModelProvider | undefined {
             parameters: t.inputSchema,
           },
         })),
-        false,
+        false, signal,
       );
     },
   };

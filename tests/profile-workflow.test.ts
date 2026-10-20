@@ -40,14 +40,15 @@ test("candidate ranking prioritizes exact title and requested year without losin
   assert.equal(suggestedMatch("2001: A Space Odyssey",[{...selected[0],name:"2001: A Space Odyssey"}]),selected[0].id);
   assert.deepEqual(rankCandidates("Crash (2004)",choices).map(c=>c.id),[selected[1].id,selected[0].id,selected[2].id]);
 });
-test("discovery styles differ for entity-only tastes while preserving hard filters",()=>{
+test("identical entity-only retrieval stays honest while preserving hard filters",()=>{
   const base={"filter.type":"urn:entity:place","filter.location.query":"London","filter.price_level.max":"2","filter.tags":"urn:tag:genre:place:museum","signal.interests.entities":selected[0].id};
   const familiar=discoveryQueries(base,state(),"Culture","familiar");
   const balanced=discoveryQueries(base,state(),"Culture","balanced");
   const explore=discoveryQueries(base,state(),"Culture","explore");
-  assert.equal(familiar[0].params["bias.content_based"],"0.8");
-  assert.equal(explore[0].params["bias.content_based"],"0.3");
-  assert.equal(balanced.length,2);
+  assert.equal(familiar[0].params["bias.content_based"],undefined);
+  assert.equal(explore[0].params["bias.content_based"],undefined);
+  assert.equal(balanced.length,1);
+  assert.match(balanced[0].note!, /do not support a distinct broader query/);
   for (const query of [...familiar,...balanced,...explore]) {
     assert.equal(query.params["filter.tags"],base["filter.tags"]);
     assert.equal(query.params["filter.price_level.max"],"2");

@@ -144,7 +144,7 @@ export interface ConversationContext {
 }
 export interface ModelProvider {
   explain?(facts: string[]): Promise<number[]>;
-  interpret(text: string, context?: ConversationContext): Promise<Intent>;
+  interpret(text: string, context?: ConversationContext, signal?: AbortSignal): Promise<Intent>;
   baseline?(
     destination: string,
     tastes: string[],
@@ -168,6 +168,7 @@ export interface ModelProvider {
     text: string,
     state: AgentState,
     tools: ToolDefinition[],
+    signal?: AbortSignal,
   ): Promise<ToolChoice[]>;
 }
 export interface ToolResult {
@@ -203,6 +204,7 @@ export interface AgentInput {
   tagChoice?: string;
 }
 export interface AgentReply {
+  execution?: import("./request-policy.ts").RequestExecution;
   state: TastePassportSession;
   changed: Section[];
   events: AgentEvent[];

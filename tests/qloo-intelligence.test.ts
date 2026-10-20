@@ -72,7 +72,8 @@ test("entity-aware plans separate film ratings from place/business ratings and r
   });
   assert.equal(place.params["filter.properties.business_rating.min"], "4.5");
   assert.equal(place.params["filter.price_level.max"], "2");
-  assert.equal(place.params["bias.content_based"], "0.5");
+  assert.equal(place.params["bias.content_based"], undefined);
+  assert.ok(place.diagnostics.dropped.some(item=>item.parameter === "bias.content_based"));
   assert.equal(place.params["filter.exists"], "properties.image");
   for (const name of [
     "filter.rating.min",

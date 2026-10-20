@@ -99,3 +99,11 @@ test("an explicit budget overrides the legacy cheap flag, including clearing to 
  `],{cwd:process.cwd(),encoding:"utf8",timeout:30000});
  assert.match(output,/Budget override PASS/);
 });
+test("splitting identical activity queries cannot multiply a retrieval family's influence",()=>{
+ const direct=[card("direct","direct",0.1)];
+ const adjacent=[card("adjacent","adjacent",0.9)];
+ const baseline=mixPools([direct,adjacent]);
+ const split=mixPools([direct,direct,adjacent]);
+ assert.equal(split.find(c=>c.id==="direct")?.evidence?.fusion?.score,baseline.find(c=>c.id==="direct")?.evidence?.fusion?.score);
+ assert.equal(split[0].id,"direct");
+});

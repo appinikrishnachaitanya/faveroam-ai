@@ -429,3 +429,14 @@
 .missing-discoveries p { margin: 0; max-width: 65ch; color: var(--ui-muted); line-height: 1.6; }
 .missing-discoveries > div { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
 .missing-discoveries button { min-height: 44px; white-space: normal; }
+
+.passport-recovery { display: flex; align-items: center; gap: 16px; padding: 20px 24px; margin: 18px 0; border: 1px solid #c8d3b5; border-radius: 18px; background: #f0f3e4; color: #284b36; }
+.passport-recovery > svg { flex-shrink: 0; }
+.passport-recovery > div { flex: 1; min-width: 0; }
+.passport-recovery strong { font-size: 16px; }
+.passport-recovery p { margin: 5px 0 0; font-size: 13px; line-height: 1.55; color: #4a5e47; }
+.passport-recovery button { flex-shrink: 0; min-height: 44px; }
+.progressive-app .discovery-concierge { border: 1px solid #d0d7bf; border-radius: 24px; background: radial-gradient(ellipse at 0 0, #efdda477, transparent 55%), #faf9f0; box-shadow: 0 12px 32px #173c300b; }
+.progressive-app .discovery-next-steps > button { border: 1px solid #d3dac3; border-radius: 16px; background: #fffef8; box-shadow: 0 5px 15px #173c3008; }
+.progressive-app .discovery-next-steps > button:hover { background: #edf2e3; border-color: #8a9d79; }
+@media (max-width: 700px) { .passport-recovery { flex-wrap: wrap; padding: 18px; } .passport-recovery button { width: 100%; } }

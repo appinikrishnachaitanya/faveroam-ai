@@ -44,6 +44,7 @@ export function Icon({ name, size = 18 }: { name: string; size?: number }) {
         <path d="m11 14 10-11" />
       </>
     ),
+    refresh: <><path d="M20 7v5h-5M4 17v-5h5"/><path d="M6 7a7 7 0 0 1 12-1l2 3M4 15l2 3a7 7 0 0 0 12-1"/></>,
     check: <path d="m5 12 4 4L19 6" />,
     close: <path d="m6 6 12 12M6 18 18 6" />,
     plus: <path d="M12 5v14M5 12h14" />,
@@ -317,7 +318,7 @@ export function DiscoveryCard({
           <Icon name={card.section} size={14} />
           {sectionLabel(card.section)}
         </span>
-        {card.evidence && <span className="helper">{card.evidence.params?.["filter.goal"] === "hidden-gems" || card.evidence.params?.["goal"] === "hidden-gems" || card.evidence.mode === "explore" ? "Hidden gem · Connected to your taste" : card.evidence.pool === "adjacent" ? "Broader discovery" : card.evidence.pool === "direct" ? "Familiar starting point" : "Your taste profile"}</span>}
+        {card.evidence && <span className="helper">{card.evidence.params?.["filter.goal"] === "hidden-gems" || card.evidence.params?.["goal"] === "hidden-gems" || card.evidence.mode === "explore" ? "Explore choice" : card.evidence.pool === "adjacent" ? "Broader discovery" : card.evidence.pool === "direct" ? "Familiar starting point" : "Your taste profile"}</span>}
       </div>
       <div className="discovery-title">
         <span className="card-cultural-mark" aria-hidden="true">

@@ -18,9 +18,9 @@ export async function loadActiveSession(id: string): Promise<AgentState | undefi
     const { data, error } = await storageWriter()
       .from("active_passport_sessions").select("state")
       .eq("id", id).gt("expires_at", new Date().toISOString()).maybeSingle();
-    if (error) { report("read", error); return; }
+    if (error) throw error;
     return parseActiveSession(data?.state, id);
-  } catch (error) { report("read", error); return; }
+  } catch (error) { report("read", error); throw Error("Passport storage is temporarily unavailable."); }
 }
 /** Returns false on unavailable storage, throws only for a real revision conflict. */
 export async function persistActiveSession(state: AgentState, expectedRevision?: number): Promise<boolean> {
