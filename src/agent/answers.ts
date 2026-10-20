@@ -101,7 +101,7 @@ export function listPassportResults(state: AgentState, request: string): string 
     const rating=m?.quality.businessRating!==undefined ? ` · ★ ${formatReturnedRating(m.quality.businessRating)}/5 (Qloo-reported)`
       : m?.externalProof?.tripadvisorRating!==undefined ? ` · ★ ${formatReturnedRating(m.externalProof!.tripadvisorRating)}/5 (Tripadvisor)` : "";
     const location=card.address ?? m?.location.address;
-    return `${i+1}. **${card.name}** (${card.section === "Eat" ? "Dining" : card.section})${location ? ` — ${location}` : ""}${rating}`;
+    return `${i+1}. ${card.name} (${card.section === "Eat" ? "Dining" : card.section})${location ? ` — ${location}` : ""}${rating}`;
   });
   const sectionLabel = section === "Eat" ? "dining" : section?.toLowerCase() ?? "Passport";
   const countNote = visible.length>rows.length ? ` Showing ${rows.length} of ${visible.length}.` : "";
@@ -110,4 +110,21 @@ export function listPassportResults(state: AgentState, request: string): string 
 ${rows.join("\n")}
 
 These are the recommendations already in your Passport, not new searches.${countNote} Ask me about any place or tell me which ones to refine.`;
+}
+
+/** Evidence-only preview: an agent update should show what changed, not only a counter. */
+export function previewRefinedResults(state: AgentState, sections: readonly import("../passport/model.ts").Section[]): string {
+  const lines=sections.slice(0,3).flatMap(section=>{
+    const cards=state.cards.filter(c=>c.section===section && !(state.hiddenCategories??[]).includes(section));
+    if (!cards.length) return [];
+    const label=section==="Eat"?"Dining":section;
+    const examples=cards.slice(0,3).map((c,i)=>{
+      const rating=c.intelligence?.quality.businessRating;
+      const rated=rating!==undefined && formatReturnedRating(rating)!==undefined
+        ? ` · ★ ${formatReturnedRating(rating)}/5 (Qloo-reported)` : "";
+      return `${i+1}. ${c.name}${c.address ? ` — ${c.address}` : ""}${rated}`;
+    });
+    return [`Here are some of your ${label.toLowerCase()} results:\n${examples.join("\n")}`];
+  });
+  return lines.length ? `\n\n${lines.join("\n\n")}\n\nSay "list them here" to see the complete returned list, or tell me what to change next.` : "";
 }

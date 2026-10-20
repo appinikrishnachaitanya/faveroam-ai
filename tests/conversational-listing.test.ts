@@ -57,3 +57,20 @@ test("asking to list Coffee only includes Coffee and preserves other categories"
  assert.match(output,/Returned venue 19/);
  assert.doesNotMatch(output,/Returned venue 1 \(/);
 });
+
+test("a refinement reply previews returned venues instead of only saying suggestions were updated",async()=>{
+ const original=fixture();
+ const result=await runTurn(original,{message:"show me Indian restaurants"},{
+   tools:async()=>[],
+   workflow:async()=>({status:"ok",results:[]}),
+   discover:async(_state,section)=>[
+     {id:"real-result-1",name:"Verified Indian Venue",types:["urn:entity:place"],detail:"",section,address:"London street"},
+     {id:"real-result-2",name:"Second Indian Venue",types:["urn:entity:place"],detail:"",section},
+   ],
+ });
+ assert.deepEqual(result.changed,["Eat"]);
+ assert.match(result.message,/Verified Indian Venue/);
+ assert.match(result.message,/Second Indian Venue/);
+ assert.match(result.message,/list them here/);
+ assert.doesNotMatch(result.message,/Returned venue 19/);
+});
