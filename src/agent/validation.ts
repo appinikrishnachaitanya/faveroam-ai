@@ -22,8 +22,12 @@ export function tagCandidates(result: ToolResult, query: string): Candidate[] {
       // Qloo may return the same user-visible concept through several tag
       // namespaces. A dialog with five identical labels is not actionable.
       const label = String(t.name).toLowerCase().replace(/[^a-z0-9]+/g," ").trim().replace(/s\b/g,"");
-      if (!label || seen.has(label)) return false;
-      seen.add(label);
+      // Dietary requirements must remain distinguishable from audience and
+      // cuisine tags that happen to carry the same display name.
+      const family = String(t.id).split(":")[2];
+      const key = /^(?:vegetarian|vegan|gluten free)$/.test(label) ? label + ":" + family : label;
+      if (!label || seen.has(key)) return false;
+      seen.add(key);
       return true;
     })
     .slice(0, 5)

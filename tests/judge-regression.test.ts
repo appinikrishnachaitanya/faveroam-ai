@@ -55,7 +55,9 @@ test("tool-catalog failure does not incorrectly mark a working model unavailable
  const reply=await runTurn(original,{message},{provider:{interpret:async()=>({...interpret(message),concepts:["museum"]}),choose:async()=>{throw Error("must not choose without tools");}},tools:async()=>{throw Error("Fixture MCP outage");},workflow:async()=>({status:"ok",results:[{id:"urn:tag:genre:place:museum",name:"Museum",type:"urn:tag:genre:place"}]}),discover:async(_s,section)=>[{id:"new",name:"Museum",section,types:["urn:entity:place"],detail:""}]});
  assert.deepEqual(reply.changed,["Culture"]);
  assert.equal(reply.state.providerHealth,"healthy");
- assert.match(reply.message,/tool connection is unavailable/);
+ // No taxonomy tool is needed for the generic venue request, so don't
+ // falsely report a provider or catalog outage.
+ assert.doesNotMatch(reply.message,/tool connection is unavailable/);
  assert.doesNotMatch(reply.message,/Taste Concierge is temporarily unavailable/);
 });
 test("a pending confirmation from an older session still honors protected sections",async()=>{
