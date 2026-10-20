@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { isReadOnlyFollowUp, readOnlyFollowUp } from "../src/agent/read-only.ts";
 import { runTurn } from "../src/agent/orchestrator.ts";
 import { normalizeSession } from "../src/agent/session.ts";
-import type { AgentState,AgentInput } from "../src/agent/types.ts";
+import type { AgentState } from "../src/agent/types.ts";
 import type { Card } from "../src/passport/model.ts";
 
 const card=(id:string,name:string,section:"Eat"|"Culture",rating?:number,price?:number):Card=>({
@@ -26,7 +26,7 @@ const forbidden={
  provider:{interpret:async()=>{throw Error("Gemini should not be called for read-only question");},choose:async()=>[]}
 };
 test("multi-turn ordinal references and comparisons never modify existing cards or filters",async()=>{
- const queries=[
+ const queries: Array<[string,RegExp]> = [
  ["Why did you recommend this?",/Which culture result do you mean|Rivoli Ballroom/],
  ["What about the second one?",/Venue MOT Unit 18/],
  ["Compare the first two venues and help me choose",/Rivoli Ballroom[\s\S]*Venue MOT Unit 18/],

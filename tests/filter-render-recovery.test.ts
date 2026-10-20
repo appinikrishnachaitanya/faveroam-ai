@@ -16,7 +16,7 @@ const sparse=(id:string,rating?:number):Card=>({
  intelligence: { id,name:`Returned restaurant ${id}`,type:"place",
   quality:rating===undefined?undefined:{businessRating:rating},
   taste:undefined,externalProof:undefined,commercial:undefined,location:undefined
- } as Card["intelligence"],
+ } as unknown as Card["intelligence"],
 } as Card);
 test("sparse Qloo metadata never throws during card or Passport rendering",()=>{
  const cards=[sparse("one"),sparse("two",4.5),sparse("three",4.6),sparse("four")];
