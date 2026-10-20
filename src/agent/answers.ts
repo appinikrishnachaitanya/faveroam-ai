@@ -5,15 +5,15 @@ import { sectionOrder } from "../workspace/state.ts";
 
 export function cardSpecificAnswer(card: Card, query?: string): string {
   const m = card.intelligence;
-  const rating = m?.quality.businessRating;
-  const price = priceLabel(m?.commercial.priceLevel);
+  const rating = m?.quality?.businessRating;
+  const price = priceLabel(m?.commercial?.priceLevel);
   const tags = displayTags(card.evidence?.result.tags ?? []).map(t => t.name);
   const lines: string[] = [
     `${card.name} (${card.section === "Eat" ? "Dining" : card.section}):`
   ];
   if (card.address) lines.push(`• **Location:** ${card.address}`);
   if (rating !== undefined) lines.push(`• **Qloo-reported business rating:** ${formatReturnedRating(rating)} / 5`);
-  if (price) lines.push(`• **Price Category:** ${price} (${m?.commercial.priceLevel ?? 1}/4)`);
+  if (price) lines.push(`• **Price Category:** ${price} (${m?.commercial?.priceLevel ?? 1}/4)`);
   if (tags.length) lines.push(`• **Returned Tags:** ${[...new Set(tags)].slice(0, 4).join(", ")}`);
 
   if (query && /quiet|calm|noise|atmosphere/i.test(query)) {
@@ -105,7 +105,7 @@ export function listPassportResults(state: AgentState, request: string): string 
   if (!visible.length) return "I don't have any current recommendations for that category yet. Ask me to discover them first—your existing Passport hasn't changed.";
   const rows=visible.slice(0,40).map((card,i)=>{
     const m=card.intelligence;
-    const rating=m?.quality.businessRating!==undefined ? ` · ★ ${formatReturnedRating(m.quality.businessRating)}/5 (Qloo-reported)`
+    const rating=m?.quality?.businessRating!==undefined ? ` · ★ ${formatReturnedRating(m.quality.businessRating)}/5 (Qloo-reported)`
       : m?.externalProof?.tripadvisorRating!==undefined ? ` · ★ ${formatReturnedRating(m.externalProof!.tripadvisorRating)}/5 (Tripadvisor)` : "";
     const location=card.address ?? m?.location.address;
     return `${i+1}. ${card.name} (${card.section === "Eat" ? "Dining" : card.section})${location ? ` — ${location}` : ""}${rating}`;

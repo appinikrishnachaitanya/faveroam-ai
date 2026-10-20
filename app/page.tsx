@@ -46,6 +46,7 @@ import {
 } from "./components/passport-overview";
 import { sectionOrder } from "../src/workspace/state";
 import TasteAnalysis from "./components/taste-analysis";
+import { rememberGuestPassport, restoreGuestPassport, clearGuestPassport } from "../src/workspace/guest-recovery";
 import type { Familiarity } from "../src/passport/evidence";
 interface Message {
   role: "agent" | "user";
@@ -90,6 +91,27 @@ export default function Home() {
     "discover" | "plan" | "preferences" | "together" | "connections"
   >("discover");
   const [accountSignedIn, setAccountSignedIn] = useState(false);
+
+  // Browser-tab fallback for unexpected React view failures. This is NOT a
+  // substitute for shared Supabase session persistence; the server still
+  // checks the session revision before any subsequent edit or save.
+  useEffect(() => {
+    const recovered=restoreGuestPassport(window.sessionStorage);
+    if (!recovered) return;
+    setResult(current => current ?? recovered);
+    setCity(current => current || recovered.city);
+    setPhase("ready");
+    setAdaptation("Your last Passport view was restored in this tab. Refreshing recommendations or saving still requires an active server session.");
+  }, []);
+  // Effects run only after a successful commit. If new results crash a render,
+  // the last successfully rendered guest Passport remains recoverable.
+  useEffect(() => {
+    if (accountSignedIn) {
+      clearGuestPassport(window.sessionStorage);
+      return;
+    }
+    if (result) rememberGuestPassport(window.sessionStorage, result);
+  }, [result, accountSignedIn]);
 
   const [error, setError] = useState("");
   const [dialog, setDialog] = useState<number>();
@@ -490,6 +512,7 @@ export default function Home() {
     else fresh();
   }
   function fresh() {
+    clearGuestPassport(window.sessionStorage);
     setSaveTastePrompt(false);
     setTasteDraftVersion(value=>value+1);
     activeTurn.current?.abort();

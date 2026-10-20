@@ -19,22 +19,22 @@ export function displayTags<T extends {id:string;name:string}>(tags: readonly T[
 /** Contributions are audience associations, not inferred plot/genre similarity. */
 export function screenTasteConnection(card: Card): string | undefined {
   if (!["Movies","Shows","Music"].includes(card.section)) return;
-  const names = (card.intelligence?.taste.contributingSignals ?? [])
+  const names = (card.intelligence?.taste?.contributingSignals ?? [])
     .filter(signal => signal.contribution > 0)
     .sort((a,b) => b.contribution - a.contribution)
     .flatMap(signal => {
-      const input = card.evidence?.inputs.find(input => input.id.toLowerCase() === signal.id.toLowerCase() && input.role === "entity-signal");
+      const input = card.evidence?.inputs?.find(input => input.id.toLowerCase() === signal.id.toLowerCase() && input.role === "entity-signal");
       if (!input || input.name === input.id) return [];
       const domain = input.types?.includes("urn:entity:artist") ? "music" : input.types?.includes("urn:entity:movie") ? "film" : undefined;
       return [`${input.name}${domain ? ` (${domain})` : ""}`];
     });
   if (card.section === "Music") {
-    const genres = displayTags(card.evidence?.result.tags ?? []).filter(tag=>/genre|style/.test(tag.id)).slice(0,3).map(tag=>tag.name);
+    const genres = displayTags(card.evidence?.result?.tags ?? []).filter(tag=>/genre|style/.test(tag.id)).slice(0,3).map(tag=>tag.name);
     if (names.length) return `Listeners associated with ${[...new Set(names)].slice(0,2).join(" and ")} also connect to this artist${genres.length ? `; returned styles: ${genres.join(", ")}` : ""}. This is audience discovery, not a claim of the same sound.`;
     return "This artist was found using your tastes; no individual audience connection was returned. Preview their music to judge the fit.";
   }
   if (names.length) return `Audience-taste association with ${[...new Set(names)].slice(0,2).join(" and ")}; this does not establish a shared story or genre.`;
-  if (card.evidence?.inputs.some(input => input.role === "entity-signal"))
+  if (card.evidence?.inputs?.some(input => input.role === "entity-signal"))
     return "No individual supporting interest was identified in the response; this search association does not establish a shared story or genre.";
 }
 /** These are the only sentences the model may select. It never authors recommendation facts. */
@@ -42,13 +42,13 @@ export function evidenceFacts(card: Card): string[] {
   const m = card.intelligence,
     params = card.evidence?.params ?? {},
     facts: string[] = [];
-  const signals = card.evidence?.inputs.filter(input => input.role === "entity-signal") ?? [];
+  const signals = card.evidence?.inputs?.filter(input => input.role === "entity-signal") ?? [];
   if (card.evidence?.pool === "direct" && signals.length)
     facts.push(`This search used ${signals.map(input => input.name).join(", ")}.${screenTasteConnection(card) ? "" : " Search inputs are not proof of an individual connection."}`);
   else if (card.evidence?.pool === "adjacent")
     facts.push("This is a broader discovery from your cultural profile, rather than a promise of similarity to one interest.");
-  const returnedTags = displayTags(card.evidence?.result.tags ?? []);
-  const matched = returnedTags.filter(tag => card.evidence?.inputs.some(input => input.id === tag.id));
+  const returnedTags = displayTags(card.evidence?.result?.tags ?? []);
+  const matched = returnedTags.filter(tag => card.evidence?.inputs?.some(input => input.id === tag.id));
   if (matched.length)
     facts.push(`Its returned tags include ${matched.slice(0,3).map(tag => tag.name).join(", ")}, matching requirements or interests used in this search.`);
   const categories = returnedTags.filter(tag => /urn:tag:(?:genre|category):place/.test(tag.type ?? tag.id));
@@ -59,7 +59,7 @@ export function evidenceFacts(card: Card): string[] {
       "This is a broader local suggestion; your venue requirements were kept.",
     );
   else if (
-    !signals.length && card.evidence?.inputs.some(
+    !signals.length && card.evidence?.inputs?.some(
       (i) => i.role === "entity-signal" || i.role === "tag-signal",
     )
   )
@@ -70,7 +70,7 @@ export function evidenceFacts(card: Card): string[] {
   if (screenConnection) facts.push(screenConnection);
   for (const signal of screenConnection ? [] : m?.taste?.contributingSignals ?? []) {
     if (signal.contribution <= 0) continue;
-    const name = card.evidence?.inputs.find(
+    const name = card.evidence?.inputs?.find(
       (i) => i.id.toLowerCase() === signal.id.toLowerCase(),
     )?.name;
     if (name) {
@@ -81,11 +81,11 @@ export function evidenceFacts(card: Card): string[] {
       }
     }
   }
-  if (m?.quality.businessRating !== undefined)
+  if (m?.quality?.businessRating !== undefined)
     facts.push(`It has a rating of ${formatReturnedRating(m.quality.businessRating)} out of 5.`);
-  if (priceLabel(m?.commercial.priceLevel))
+  if (priceLabel(m?.commercial?.priceLevel))
     facts.push(
-      `Its typical budget is ${priceLabel(m?.commercial.priceLevel)?.toLowerCase()}. Check current prices before going.`,
+      `Its typical budget is ${priceLabel(m?.commercial?.priceLevel)?.toLowerCase()}. Check current prices before going.`,
     );
   if (card.address) facts.push(`Located at ${card.address}. Check opening hours before going.`);
   else if (params["filter.location.query"])
@@ -100,13 +100,13 @@ export function evidenceFacts(card: Card): string[] {
 /** Short customer-facing copy uses specific returned evidence, never generic search membership. */
 export function recommendationSummary(card: Card): string | undefined {
   const inputs=card.evidence?.inputs ?? [];
-  const contributors=card.intelligence?.taste.contributingSignals ?? [];
+  const contributors=card.intelligence?.taste?.contributingSignals ?? [];
   const connected=contributors.filter(signal=>signal.contribution>0).flatMap(signal=>{
     const input=inputs.find(input=>input.id.toLowerCase()===signal.id.toLowerCase());
     return input?[input.name]:[];
   });
 
-  const tags=displayTags(card.evidence?.result.tags ?? []).filter(tag=>!/urn:tag:(?:genre|category):place/.test(tag.type ?? tag.id));
+  const tags=displayTags(card.evidence?.result?.tags ?? []).filter(tag=>!/urn:tag:(?:genre|category):place/.test(tag.type ?? tag.id));
   const matches=tags.filter(tag=>inputs.some(input=>input.id===tag.id));
   const screenConnection = screenTasteConnection(card);
   if (screenConnection) return `${tags.slice(0,2).map(tag=>tag.name).join(" · ")}${tags.length ? ". " : ""}${screenConnection}`;

@@ -216,7 +216,7 @@ export default function TasteIntelligence({
               </button>
             ))}
           </div>
-          <p className="helper">{modes.find((m) => m.id === goal)?.detail}</p>
+          <p className="helper">{modes.find((m) => m.id === goal)?.detail} Changes apply only after you choose Update suggestions.</p>
           {isPlaceSection(section) && (
             <div className="intelligence-filters">
               <label>
@@ -227,13 +227,8 @@ export default function TasteIntelligence({
                   onChange={(e) => {
                     const value = e.target.value;
                     setPrice(value);
-                    if (value)
-                      onRefine({
-                        discovery: {
-                          section,
-                          preferences: { priceMax: Number(value) },
-                        },
-                      });
+                    // This form has one explicit Apply action. Changing a select
+                    // must never launch an unseen overlapping refinement.
                   }}
                   disabled={busy || loading}
                 >
@@ -327,7 +322,10 @@ export default function TasteIntelligence({
               {prefs.businessRatingMin
                 ? ` · business rating ≥ ${prefs.businessRatingMin}`
                 : ""}
-              {prefs.locationQuery ? ` · ${prefs.locationQuery}` : ""}. Your
+              {prefs.locationQuery ? ` · in ${prefs.locationQuery}` : ""}
+              {prefs.excludeLocation ? ` · excluding ${prefs.excludeLocation}` : ""}
+              {prefs.requiredExternalSources?.length ? ` · requested listing: ${prefs.requiredExternalSources.join(", ")} (availability not verified)` : ""}
+              {prefs.tripAdvisorReviewCountMin !== undefined ? ` · at least ${prefs.tripAdvisorReviewCountMin} Tripadvisor reviews requested` : ""}. Your
               other chapter settings stay unchanged.
             </p>
           )}

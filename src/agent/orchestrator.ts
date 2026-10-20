@@ -3,6 +3,7 @@ import { groundedModelIntent, isGreetingOrTypo } from "./conversation-grounding.
 import { conversationContext } from "./context.ts";
 import { decisionSummary } from "./decision-summary.ts";
 import { passportAnswer, cardSpecificAnswer, isListRequest, listPassportResults, previewRefinedResults } from "./answers.ts";
+import { isReadOnlyFollowUp, readOnlyFollowUp } from "./read-only.ts";
 import { debugEvent } from "./debug.ts";
 import {
   normalizeSession,
@@ -178,6 +179,13 @@ export async function runTurn(
     if (isListRequest(input.message)) {
       delete state.pending; // A read-only listing supersedes an unrelated choice.
       return reply(listPassportResults(state,input.message));
+    }
+    // Questions about an existing result must be handled BEFORE Gemini intent
+    // classification. Otherwise "rating for second" can become a filter and
+    // destroy the original shortlist or unrelated category state.
+    if (isReadOnlyFollowUp(input.message)) {
+      delete state.pending;
+      return reply(readOnlyFollowUp(state,input.message));
     }
     const activeCards = [...state.cards, ...state.savedCards];
     const mentioned = findMentionedCard(input.message, activeCards);
