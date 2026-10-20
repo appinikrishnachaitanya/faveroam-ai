@@ -80,7 +80,7 @@ export function isListRequest(text: string): boolean {
   const request=text.trim().toLowerCase();
   const verb = /^(?:(?:please|can you|could you|bro|hey)\s+)*(?:list|show|display|give me|tell me|name|what are|which are|what did you find|what have you found)\b/.test(request);
   if (!verb || /\b(?:new|more|different|fresh|another|find me)\b/.test(request)) return false;
-  return /\b(?:here|them|these|those|results|suggestions|recommendations|your list|already|current|existing|you found|found)\b/.test(request) ||
+  return /\b(?:here|them|these|those|results|suggestions|recommendations|your list|already|current|existing|you found|found)\b/.test(request) || /\bwhat did you find\b/.test(request) ||
     /^(?:(?:please|can you|could you|bro|hey)\s+)*list\b/.test(request) &&
       /\b(?:restaurants?|dining|places|venues|coffee|cafes?|movies|films|books|music)\b/.test(request);
 }
@@ -99,7 +99,7 @@ export function listPassportResults(state: AgentState, request: string): string 
   const rows=visible.slice(0,40).map((card,i)=>{
     const m=card.intelligence;
     const rating=m?.quality.businessRating!==undefined ? ` · ★ ${formatReturnedRating(m.quality.businessRating)}/5 (Qloo-reported)`
-      : m?.externalProof.tripadvisorRating!==undefined ? ` · ★ ${formatReturnedRating(m.externalProof.tripadvisorRating)}/5 (Tripadvisor)` : "";
+      : m?.externalProof?.tripadvisorRating!==undefined ? ` · ★ ${formatReturnedRating(m.externalProof!.tripadvisorRating)}/5 (Tripadvisor)` : "";
     const location=card.address ?? m?.location.address;
     return `${i+1}. **${card.name}** (${card.section === "Eat" ? "Dining" : card.section})${location ? ` — ${location}` : ""}${rating}`;
   });

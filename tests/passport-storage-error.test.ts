@@ -27,7 +27,7 @@ test("passport storage distinguishes missing schema, privileges, expired session
   const permission = passportStorageFailure("save-upsert", { code: "42501" });
   assert.equal(permission.status, 503);
   assert.match(permission.message, /permissions/);
-  const staleSession = passportStorageFailure("save-session", Error("sensitive session id"));
+  const staleSession = passportStorageFailure("save-session", Error("refinement session expired"));
   assert.equal(staleSession.status, 410);
   assert.doesNotMatch(staleSession.message, /sensitive session id/);
   const malformed = passportStorageFailure("save-snapshot", Error("internal contents"));
