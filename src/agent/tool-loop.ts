@@ -100,7 +100,11 @@ export async function boundedToolLoop(
         args.query.length > 100 || JSON.stringify(args).length > 500)
       throw Error("Invalid model taxonomy arguments");
     const signature = call.name + ":" + args.query.trim().toLowerCase();
-    if (seen.has(signature)) throw Error("Repeated model tool selection");
+    if (seen.has(signature)) {
+      // A repeated proposal must not re-execute a tool or erase earlier verified results.
+      if (observations.length) return partial();
+      throw Error("Repeated model tool selection");
+    }
     seen.add(signature);
     const choice: ToolChoice = { name: call.name, arguments: args };
     let result: ToolResult;
