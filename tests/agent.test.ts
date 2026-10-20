@@ -233,7 +233,7 @@ test("acceptance records an anchor without making Qloo calls", async () => {
   assert.equal(r.state.feedback[0].accepted, true);
   assert.deepEqual(r.changed, []);
 });
-test("dynamic MCP concept selection requires returned tag confirmation", async () => {
+test("unambiguous Indian restaurant cuisine resolves without extra clicks", async () => {
   const d = dependencies();
   d.provider = model;
   let transport = "";
@@ -256,9 +256,21 @@ test("dynamic MCP concept selection requires returned tag confirmation", async (
   );
   assert.equal(transport, "mcp");
   assert.equal(r.mode, "model-mcp");
+  assert.equal(r.state.pending, undefined);
+  assert.deepEqual(r.changed, ["Eat"]);
+  assert.ok(r.state.categoryTags?.Eat?.includes("urn:tag:category:place:indian_restaurant"));
+  assert.equal(r.state.cards.find(c=>c.section==="Music")?.name,"Protocol music");
+});
+test("ambiguous cuisine taxonomy keeps user confirmation",async()=>{
+  const d=dependencies();
+  d.workflow=async()=>({status:"ok",results:[
+    {id:"urn:tag:cuisine:qloo:indian",name:"Indian Cuisine"},
+    {id:"urn:tag:cuisine:place:indian",name:"Indian Cuisine"},
+  ]});
+  const r=await runTurn(state(),{message:"Show me Indian restaurants"},d);
   assert.ok(r.state.pending);
-  assert.deepEqual(r.state.cards, state().cards);
-  assert.deepEqual(r.changed, []);
+  assert.deepEqual(r.changed,[]);
+  assert.deepEqual(r.state.cards,state().cards);
 });
 test("confirmed concept is a real tag filter and updates only its requested section", async () => {
   const s = state();
