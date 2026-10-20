@@ -67,7 +67,7 @@ export function evidenceFacts(card: Card): string[] {
     );
   const screenConnection = screenTasteConnection(card);
   if (screenConnection) facts.push(screenConnection);
-  for (const signal of screenConnection ? [] : m?.taste.contributingSignals ?? []) {
+  for (const signal of screenConnection ? [] : m?.taste?.contributingSignals ?? []) {
     if (signal.contribution <= 0) continue;
     const name = card.evidence?.inputs.find(
       (i) => i.id.toLowerCase() === signal.id.toLowerCase(),

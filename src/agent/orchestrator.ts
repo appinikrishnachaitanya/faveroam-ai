@@ -18,6 +18,7 @@ import {
   interpret,
   reasonConstraint,
   validateIntent,
+  findMentionedCard,
 } from "./intent.ts";
 import { tagCandidates } from "./validation.ts";
 import { sectionOrder } from "../workspace/state.ts";
