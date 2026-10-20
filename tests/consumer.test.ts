@@ -205,7 +205,8 @@ test("consumer cover and connection reveal use real query relationships rather t
   assert.doesNotMatch(html, /private-guest-token/);
   passport.cards[0].intelligence=normalizeEntity({entity_id:passport.cards[0].id,name:'Fixture result',query:{explainability:{'signal.interests.entities':[{entity_id:signal.id,score:.6}]}}});
   const grounded=renderToStaticMarkup(createElement(ConnectionExplorer,{passport}));
-  assert.match(grounded,/Real-shaped protocol taste helped shape this suggestion/);
+  assert.match(grounded,/Associated via cross-domain audience affinity with Real-shaped protocol taste/);
+  assert.match(grounded,/rather than a direct culinary link/);
 });
 
 test("account writes require the actual browser origin, including local Next Host routing", async () => {
