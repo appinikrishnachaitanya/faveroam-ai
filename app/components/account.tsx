@@ -5,6 +5,7 @@ import type { Passport } from "../../src/workspace/state";
 import { Icon } from "./passport";
 import UpcomingPlans from "./plans";
 import type { SavedPlan } from "../../src/account/plans";
+import { passwordRequirements, passwordValidationMessage } from "../../src/account/password-policy";
 import {
   accountRequest as request,
   accountChanged,
@@ -209,6 +210,13 @@ export default function AccountControl({
   }
   async function submit(event: React.FormEvent) {
     event.preventDefault();
+    if (tab === "register" || tab === "password") {
+      const passwordIssue = passwordValidationMessage(password);
+      if (passwordIssue) {
+        setMessage(passwordIssue);
+        return;
+      }
+    }
     if (tab === "password" && password !== confirmPassword) {
       setMessage("The new passwords don't match.");
       return;
@@ -695,14 +703,24 @@ export default function AccountControl({
                       maxLength={128}
                       required
                       disabled={busy}
+                      aria-describedby={tab === "register" || tab === "password" ? "account-password-requirements" : undefined}
                       onChange={(e) => setPassword(e.target.value)}
                     />
                   </label>
                 )}
                 {(tab === "register" || tab === "password") && (
-                  <p className="helper">
-                    Use at least 12 characters and a unique password.
-                  </p>
+                  <div id="account-password-requirements" className="account-password-guidance">
+                    <p className="helper">Your password must contain all of the following:</p>
+                    <ul className="account-password-checklist" aria-label="Password requirements">
+                      {passwordRequirements(password).map((rule) => (
+                        <li key={rule.id} className={rule.satisfied ? "met" : "missing"}>
+                          <span aria-hidden="true">{rule.satisfied ? "✓" : "○"}</span>
+                          {rule.label}
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="helper">Use a unique password that has not appeared in a data breach.</p>
+                  </div>
                 )}
                 {tab === "password" && <label>Confirm new password<input type="password" value={confirmPassword} onChange={e=>setConfirmPassword(e.target.value)} autoComplete="new-password" minLength={12} maxLength={128} required disabled={busy} /></label>}
                 <button
