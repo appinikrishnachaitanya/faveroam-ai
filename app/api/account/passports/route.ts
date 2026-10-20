@@ -83,9 +83,11 @@ async function handlePOST(request: Request) {
         .eq("id", b.id)
         .eq("user_id", user.id)
         .single();
-      if (error?.code === "PGRST116" || !data)
+      if (error?.code === "PGRST116")
         return privateJson({ error: "Saved Passport not found." }, 404);
       if (error) return failedPassportOperation(stage, error);
+      if (!data)
+        return privateJson({ error: "Saved Passport not found." }, 404);
       stage = "restore-snapshot";
       const state = restoreSnapshot(data.snapshot);
       stage = "restore-session";
