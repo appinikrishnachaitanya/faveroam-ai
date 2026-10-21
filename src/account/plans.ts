@@ -40,16 +40,22 @@ export function nextWeekend(city: string, now = new Date()) {
   date.setUTCDate(date.getUTCDate() + (days || 7));
   return date.toISOString().slice(0, 10);
 }
+/** Shared by browser download and server persistence; HTML min alone is insufficient. */
+export function planDateError(city:string,value:unknown,now=new Date()):string|undefined {
+  if(typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value))return "Choose a valid date.";
+  const parsed=new Date(`${value}T12:00:00Z`);
+  if(!Number.isFinite(parsed.getTime()) || parsed.toISOString().slice(0,10)!==value)return "Choose a valid date.";
+  if(value<cityDate(city,now))return "Choose today or a future date in your destination.";
+}
 /** Client submits IDs only; names/addresses/evidence always come from trusted session state. */
 export function planFromSession(state: AgentState, input: unknown, now = new Date()) {
   const b = input as { revision?: unknown; ids?: unknown; date?: unknown; stopTimes?: unknown } | null;
   if (!b || b.revision !== state.revision) throw Error("Your Passport changed. Try saving the latest plan.");
   if (!Array.isArray(b.ids) || !b.ids.length || b.ids.length > 5 || b.ids.some((id) => typeof id !== "string") || new Set(b.ids).size !== b.ids.length)
     throw Error("Choose between one and five different stops.");
-  if (typeof b.date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(b.date)) throw Error("Choose a valid date.");
-  const parsed = new Date(`${b.date}T12:00:00Z`);
-  if (!Number.isFinite(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== b.date || b.date < cityDate(state.city, now))
-    throw Error("Choose today or a future date in your destination.");
+  const dateError=planDateError(state.city,b.date,now);
+  if(dateError)throw Error(dateError);
+  const scheduledDate=b.date as string;
   const available = dayOutOptions(state.cards.filter((c) => !state.hiddenCategories?.includes(c.section)), state.city);
   const stops = b.ids.map((id) => available.find((card) => card.id === id));
   if (stops.some((card) => !card) || new Set(stops.map(card => card && (activityMatches(card, "Cinema") ? "Cinema" : activityMatches(card, "Nightlife") ? "Nightlife" : card.section))).size !== stops.length)
@@ -59,7 +65,7 @@ export function planFromSession(state: AgentState, input: unknown, now = new Dat
   const stopTimes = b.stopTimes as string[];
   if (stopTimes.some((time, index) => index > 0 && time <= stopTimes[index - 1]))
     throw Error("Put your stops in time order. Change their times or move a stop.");
-  const plan = { city: state.city, scheduled_date: b.date, time_zone: cityTimeZone(state.city), stop_times: stopTimes, stops: structuredClone(stops as Card[]) };
+  const plan = { city: state.city, scheduled_date: scheduledDate, time_zone: cityTimeZone(state.city), stop_times: stopTimes, stops: structuredClone(stops as Card[]) };
   if (new TextEncoder().encode(JSON.stringify(plan.stops)).length > 120000) throw Error("This plan is too large to save.");
   return plan;
 }

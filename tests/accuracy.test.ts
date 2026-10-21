@@ -83,7 +83,8 @@ test('an exact dish applies during an outing and preserves activity genres acros
   const deps:AgentDependencies={tools:async()=>[],workflow:async()=>({status:'ok',results:[{id:'urn:tag:specialty_dish:place:chicken_biryani',name:'Chicken biryani',type:'urn:tag:specialty_dish:place'}]}),discover:async(s,section)=>{
     visited.push(section);
     if(section==='Culture')assert.equal(s.categoryTags?.Culture?.includes('urn:tag:specialty_dish:place:chicken_biryani'),false);
-    return [{...candidate('place'),id:section==='Eat'?'dining':'cinema',section}];
+    const resultId=section==='Eat'?'dining':'cinema';
+    return [{...candidate('place'),id:resultId,section,...(section==='Eat'?{evidence:{source:'Qloo',operation:'/v2/insights/',queryId:'fixture',recordedAt:'2026-10-21',destination:s.city,locality:'physical-city',mode:'familiar',pool:'direct',inputs:[],params:{},result:{id:resultId,type:'urn:entity:place',tags:[{id:'urn:tag:specialty_dish:place:chicken_biryani',name:'Chicken biryani'}]}}}:{})}] as Card[];
   }};
   const reply=await runTurn(state,{message:'I want movie then party and chicken biryani dinner'},deps);
   assert.equal(reply.state.pending,undefined);

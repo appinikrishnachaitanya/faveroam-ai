@@ -5,8 +5,8 @@ import { fetchWithRetry, retryDelay } from '../src/qloo/transport.ts';
 import type { Entity } from '../src/qloo/types.ts';
 // Synthetic protocol inputs; no fake recommendation fixtures or live credentials.
 const entity:Entity={name:'Protocol sample',entity_id:'00000000-0000-0000-0000-000000000000',types:['urn:entity:movie'],properties:{release_year:2014}};
-test('resolution retains distinct candidates and never silently selects ambiguity',()=>{
- const options=candidates([entity,{...entity,entity_id:'00000000-0000-0000-0000-000000000001'},entity]);assert.equal(options.length,2);assert.equal(options[0].detail,'2014');assert.deepEqual(options[0].types,['urn:entity:movie']);
+test('resolution collapses duplicate display identities while preserving distinct years',()=>{
+ const options=candidates([entity,{...entity,entity_id:'00000000-0000-0000-0000-000000000001'},entity,{...entity,entity_id:'00000000-0000-0000-0000-000000000002',properties:{release_year:2024}}]);assert.equal(options.length,2);assert.equal(options[0].detail,'movie · 2014');assert.deepEqual(options[0].types,['urn:entity:movie']);
 });
 test('conservative category filtering omits services and unknown landmarks',()=>{
  assert.equal(classify({...entity,tags:[{name:'Restaurant'}]}),'Eat');

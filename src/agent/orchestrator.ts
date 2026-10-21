@@ -1,3 +1,6 @@
+import { matchesDishRequirements } from "../passport/dish-evidence.ts";
+import { responseContext, responseReceipt, validateResponse } from "./response.ts";
+import { refinementSettings, restoreRefinementSettings } from "./refinement-settings.ts";
 import { conversationFocus, updateConversationMemory } from "./memory.ts";
 import { chooseExisting, isExistingChoiceRequest } from "./existing-choice.ts";
 import { RequestMachine, routeRequest, checkTurnCommit } from "./request-policy.ts";
@@ -15,6 +18,7 @@ import {
   resetConversation,
   guidedIntent,
   relaxationSteps,
+  sectionTags,
 } from "./session.ts";
 import { captureComparison } from "./comparison.ts";
 import { recordProviderHealth } from "./health.ts";
@@ -146,6 +150,15 @@ export async function runTurn(
   let needsInput = false;
   try {
     const result = await executeTurn(original, input, wrapped, emit, guard, () => { needsInput = true; });
+    // Unconfirmed edits are a draft, never active preference state.
+    if (result.state.pending && JSON.stringify(result.state.pending) !== JSON.stringify(original.pending)) {
+      result.state.pending.settings ??= {};
+      for (const section of result.state.pending.sections) {
+        if(result.changed.includes(section)) continue;
+        result.state.pending.settings[section] ??= refinementSettings(result.state,section);
+        restoreRefinementSettings(result.state,section,refinementSettings(original,section));
+      }
+    }
     // Cancellation must never commit a partial in-flight mutation.
     guard.signal.throwIfAborted();
     request.move("checking");
@@ -158,6 +171,27 @@ export async function runTurn(
         message: "I couldn't safely apply that update. Your Passport is unchanged. Please try changing one category at a time.",
       };
     }
+    if (input.message && provider?.compose && input.reset !== "conversation") {
+      try {
+        const context=responseContext(result,input);
+        const drafted=await guard.respond(signal=>provider.compose!(structuredClone(context),signal));
+        const composed=validateResponse(drafted,context);
+        guard.signal.throwIfAborted();
+        const receipt=responseReceipt(result,input);
+        const completeList=(result.state.history?.at(-1)?.referenceIds?.length ?? 0)>3 ? result.message : "";
+        result.message=[composed.message,completeList,receipt].filter(Boolean).join("\n\n");
+        const presentation=result.state.history?.at(-1);
+        if(presentation?.role === "agent") {
+          presentation.text=result.message;
+          if(context.choices.length) presentation.recommendationIds=composed.recommendationIds;
+        }
+        debugEvent("agent.response",{action:"completed",count:composed.recommendationIds.length});
+      } catch {
+        // Composition is optional. Never roll back validated retrieval or retry tools.
+        debugEvent("agent.response",{action:"fallback"});
+      }
+    }
+    guard.signal.throwIfAborted();
     request.move(needsInput || result.state.pending || request.route === "clarification" ? "needs-input" :
       result.state.recovery?.length ? (result.changed.length ? "partial" : "blocked") : "completed");
     debugEvent("agent.completed", { action: request.snapshot().phase, count: result.changed.length, elapsedMs: request.snapshot().elapsedMs });
@@ -248,7 +282,10 @@ async function executeTurn(
   if (input.message) {
     culturalText(input.message);
     if(route === "clarification")return reply("I didn’t catch that. You can say ‘list restaurants’, ask for three starting choices, or tell me what to change. Your Passport and current context are unchanged.");
-    if (state.pending && /^(?:cancel(?: that| the)?(?: concept| choice)?|skip(?: this| the)?(?: concept| choice)?|never ?mind|start over)[!,.\s]*$/i.test(input.message.trim())) {
+    if (state.pending && /^(?:cancel(?: that| the)?(?: concept| choice)?|skip(?: this| the)?(?: concept| choice)?|none of (?:these|those)(?: matches| options)?|never ?mind|start over)[!,.\s]*$/i.test(input.message.trim())) {
+      const abandoned=new Set([state.pending.query,...(state.pending.remainingConcepts ?? [])].map(conceptKey));
+      for(const section of state.pending.sections)
+        state.categoryConcepts[section]=(state.categoryConcepts[section] ?? []).filter(concept=>!abandoned.has(conceptKey(concept)));
       delete state.pending;
       return reply("Okay, I've skipped that concept choice. Your Passport hasn't changed. What would you like to explore next?");
     }
@@ -297,13 +334,20 @@ async function executeTurn(
       return reply(
         `I found matches for “${state.pending.query}”. Choose one of the options below to continue; you don't need to send the request again.`,
       );
+    // Legacy sessions may contain concepts stored before their choice was
+    // confirmed. A new request must not inherit those abandoned draft concepts.
+    if (original.pending) {
+      const abandoned=new Set([original.pending.query,...(original.pending.remainingConcepts ?? [])].map(conceptKey));
+      for(const section of original.pending.sections)
+        state.categoryConcepts[section]=(state.categoryConcepts[section] ?? []).filter(concept=>!abandoned.has(conceptKey(concept)));
+    }
     delete state.pending;
   }
   if (input.message && isGreetingOrTypo(input.message))
     return reply(`Hi! What would you like to explore in ${state.city}? I can help you choose from your current discoveries, compare a couple, or refine what isn’t working. Want three starting choices or do you have something in mind?`);
   let intent = interpret(input.message ?? "", state.city);
   if (input.message && intent.question) {
-    state.pending = original.pending;
+    state.pending = original.pending; // A genuine read-only question may pause, not confirm, a choice.
     return reply(passportAnswer(state, intent));
   }
   if (input.familiarity) {
@@ -327,6 +371,8 @@ async function executeTurn(
     };
   if (input.recovery) {
     const { section, action } = input.recovery;
+    const failedSearch = state.failedSearches?.[section];
+    if (failedSearch) restoreRefinementSettings(state, section, failedSearch);
     let constraints = [...(state.categoryConstraints[section] ?? [])];
     if (action === "relax-quiet")
       constraints = constraints.filter(
@@ -406,6 +452,10 @@ async function executeTurn(
       if(!state.pending.sections.length){delete state.pending;return reply("Your protected categories are unchanged. Name the category you want to update.");}
     }
     const pending = state.pending;
+    if(pending?.settings) for(const section of pending.sections) {
+      const settings=pending.settings[section];
+      if(settings)restoreRefinementSettings(state,section,settings);
+    }
     comparedRequest = pending?.request;
     const tag = pending?.candidates.find((t) => t.id === input.tagChoice);
     if (!pending || !tag) throw Error("Choose a returned concept match.");
@@ -497,6 +547,7 @@ async function executeTurn(
     }
     if (explicit.kind === "refine" && (explicit.constraints.length || explicit.excludeConcepts?.length || explicit.concepts.length)) {
       intent.kind = "refine";
+      delete intent.question;
       intent.constraints = [...new Set([...intent.constraints, ...explicit.constraints])];
       if (!intent.sections.length) intent.sections = explicit.sections;
       if (explicit.concepts.length) intent.concepts = [...new Set([...explicit.concepts,...intent.concepts.filter(concept=>
@@ -536,7 +587,6 @@ async function executeTurn(
     mode,
   });
   if (intent.kind === "unknown" && intent.question) {
-    state.pending = original.pending;
     return reply(passportAnswer(state, intent));
   }
   if (intent.kind === "unknown" || intent.kind === "onboard")
@@ -553,7 +603,12 @@ async function executeTurn(
     return reply(
       "Save My vibe on a card first, or name a category, so I can use a real cultural anchor.",
     );
-  const previousSections = conversationFocus(original).filter(section => !state.hiddenCategories.includes(section));
+  // A modifier can continue the category of an unresolved task without
+  // inheriting its abandoned concept (e.g. chicken -> peaceful Food).
+  const pendingScope = input.message && !intent.sections.length && original.pending &&
+    (intent.constraints.length > 0 || intent.query || intent.familiarity)
+    ? original.pending.sections : [];
+  const previousSections = (pendingScope.length ? pendingScope : conversationFocus(original)).filter(section => !state.hiddenCategories.includes(section));
   // An unresolved pronoun is not permission to update the first of several sections.
   if (input.message && !intent.sections.length && previousSections.length > 1)
     return clarify(`Which section should I change: ${previousSections.join(", ")}? Your Passport is unchanged.`);
@@ -1158,7 +1213,8 @@ async function executeTurn(
         (c) =>
           c.section === section &&
           !excluded.includes(c.id) &&
-          !existingIds.has(c.id),
+          !existingIds.has(c.id) &&
+          matchesDishRequirements(c,section === "Eat" ? sectionTags(state,section) : []),
       );
       if (!cards.length) {
         state.recovery!.push(section);
@@ -1217,7 +1273,8 @@ async function executeTurn(
             (c) =>
               c.section === section &&
               !excluded.includes(c.id) &&
-              !state.selected.some((s) => s.id === c.id),
+              !state.selected.some((s) => s.id === c.id) &&
+              matchesDishRequirements(c,section === "Eat" ? sectionTags(state,section) : []),
           );
           if (safeCards.length) {
             state.cards = [
@@ -1236,6 +1293,14 @@ async function executeTurn(
       );
     }
   }
+  for (const section of state.recovery ?? []) {
+    if (changed.includes(section)) continue;
+    state.failedSearches ??= {};
+    state.failedSearches[section] = refinementSettings(state, section);
+    restoreRefinementSettings(state, section, refinementSettings(original, section));
+  }
+  for (const section of changed) if (state.failedSearches) delete state.failedSearches[section];
+  state.relaxed = state.relaxed?.filter(item => changed.includes(item.section));
   if (intent.constraints.includes("crowded"))
     state.notices = [
       ...state.notices,
@@ -1257,7 +1322,7 @@ async function executeTurn(
   return reply(
     changed.length
       ? `Updated ${changed.map(section => sectionLabel(section)).join(", ")} suggestions. ${decisionSummary(original, state, changed)} ${state.relaxed!.length ? "I couldn't find a strong match satisfying every preference, so these results prioritize your confirmed cultural tastes. Optional preferences relaxed: " + [...new Set(state.relaxed!.flatMap((r) => r.constraints))].map((c) => (c === "crowded" ? "quiet atmosphere" : c)).join(", ") + ". " : ""}${state.pending ? "You can also confirm the atmosphere concept to refine further. " : ""}Your other categories and confirmed interests are unchanged.${previewRefinedResults(state, changed)}`
-      : "I couldn’t find a verified match with the current preferences. Your existing discoveries are still here. Review the active requirements below, or adjust your preferences to try again.",
+      : "I couldn’t apply that search because no verified match was returned. Your previous discoveries and their active preferences are unchanged. The attempted search is kept separately so you can adjust it or retry.",
     changed.length ? chatShortlist(state,changed) : undefined,
   );
 }

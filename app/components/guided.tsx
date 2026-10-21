@@ -111,11 +111,19 @@ export function RefinementRecovery({
         <section className="refinement-recovery" key={section} role="status">
           <h3>Let’s adjust your {sectionLabel(section).toLowerCase()} search</h3>
           <p>
-            Current requirements: {[
-              ...session.tags.filter(tag=>[...(session.categoryTags?.[section] ?? []),...(session.queryPreferences?.[section]?.includeTags ?? [])].includes(tag.id)).map(tag=>tag.name),
-              ...(session.queryPreferences?.[section]?.priceMax ? [`budget up to ${session.queryPreferences[section]!.priceMax}/4`] : []),
-              ...(session.queryPreferences?.[section]?.businessRatingMin ? [`rating ${session.queryPreferences[section]!.businessRatingMin}+`] : []),
-            ].join(", ") || "your confirmed tastes"}. Your existing discoveries remain available. Broader taste matching keeps these requirements; it does not guarantee availability.
+            The last search was not applied. These cards still use your previous active preferences. Adjust Preferences to try a different search.
+          </p>
+          {session.failedSearches?.[section] && <p>Last attempted search (not applied): {[
+            ...(session.failedSearches[section]?.queryPreferences?.locationQuery ? [`in ${session.failedSearches[section]?.queryPreferences?.locationQuery}`] : []),
+            ...(session.failedSearches[section]?.queryPreferences?.excludeLocation ? [`excluding ${session.failedSearches[section]?.queryPreferences?.excludeLocation}`] : []),
+            ...(session.failedSearches[section]?.queryPreferences?.priceMax ? [`budget up to ${session.failedSearches[section]?.queryPreferences?.priceMax}/4`] : []),
+            ...(session.failedSearches[section]?.queryPreferences?.businessRatingMin ? [`rating ${session.failedSearches[section]?.queryPreferences?.businessRatingMin}+`] : []),
+            ...(session.failedSearches[section]?.queryPreferences?.requiredExternalSources ?? []),
+            ...(session.failedSearches[section]?.queryPreferences?.tripAdvisorReviewCountMin !== undefined ? [`at least ${session.failedSearches[section]?.queryPreferences?.tripAdvisorReviewCountMin} Tripadvisor reviews`] : []),
+            ...session.tags.filter(tag=>(session.failedSearches?.[section]?.categoryTags ?? []).includes(tag.id)).map(tag=>tag.name),
+          ].join(', ') || 'your requested category preferences'}.
+          </p>}
+          <p>Broader taste matching does not verify opening hours or availability.
           </p>
           <div>
             {(
@@ -132,7 +140,7 @@ export function RefinementRecovery({
 
               ] as const
             ).filter(({action}) => {
-              const constraints=session.categoryConstraints[section] ?? [];
+              const constraints=session.failedSearches?.[section]?.categoryConstraints ?? session.categoryConstraints[section] ?? [];
               return action==="relax-quiet" ? constraints.some(value=>value==="crowded"||value==="atmosphere")
                 : action==="allow-popular" ? constraints.some(value=>value==="mainstream"||value==="touristy") : constraints.length>0;
             }).map(({ action, label }) => (
@@ -145,7 +153,7 @@ export function RefinementRecovery({
                 {label}
               </button>
             ))}
-            {(session.categoryModes?.[section] ?? session.discoveryMode) !== "explore" && <button className="quiet-button" disabled={disabled} onClick={()=>onApply({familiarity:{section,mode:"explore"}})}>Explore broader taste matches</button>}
+            <button className="quiet-button" disabled={disabled} onClick={()=>onApply({recovery:{section,action:"retry"}})}>Retry the attempted search</button>
           </div>
         </section>
       ))}

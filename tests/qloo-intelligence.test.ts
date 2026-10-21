@@ -308,7 +308,8 @@ test("follow-ups patch the current chapter query while preserving other chapters
   const r = await runTurn(state, { message: "What's trending for me?" }, deps);
   assert.equal(r.state.queryPreferences?.Eat?.priceMax, 2);
   assert.equal(r.state.queryPreferences?.Eat?.locationQuery, "Toronto");
-  assert.equal(r.state.queryPreferences?.Eat?.goal, "trending");
+  assert.equal(r.state.queryPreferences?.Eat?.goal, undefined);
+  assert.equal(r.state.failedSearches?.Eat?.queryPreferences?.goal, "trending");
   assert.deepEqual(r.state.queryPreferences?.Coffee, { priceMax: 1 });
   assert.deepEqual(resetConversation(r.state).queryPreferences, {});
 });
@@ -345,7 +346,8 @@ test("an exclusion confirmation applies a negative tag rather than adding a posi
       discover: async () => [],
     },
   );
-  assert.deepEqual(r.state.queryPreferences?.Eat?.excludeTags, [other]);
+  assert.equal(r.state.queryPreferences?.Eat?.excludeTags, undefined);
+  assert.deepEqual(r.state.failedSearches?.Eat?.queryPreferences?.excludeTags, [other]);
   assert.ok(!r.state.categoryTags?.Eat?.includes(other));
 });
 test("explanation facts only use returned evidence and never convert affinity into taste probability", () => {

@@ -25,3 +25,24 @@ export function curatedThemes(tags:TasteTag[],limit=6):TasteTag[] {
     for(const group of grouped.values())if(group[rank]){result.push(group[rank]);if(result.length===limit)break;}
   return result;
 }
+
+/** Stay within the selected interests' returned taxonomy. Audience association
+ * alone does not make an unrelated dish or venue a useful film theme. */
+export function relevantThemes(tags:TasteTag[], interests:readonly {id:string;types:string[]}[]):TasteTag[] {
+  const domains = new Set(interests.flatMap(interest => interest.id.startsWith('urn:tag:')
+    ? [/^urn:tag:(?:cuisine|specialty_dish|dietary_option|dietary_attribute):/.test(interest.id) ? 'place' : interest.id.split(':')[3]] : interest.types.map(type=>type.replace('urn:entity:',''))));
+  const allowed = new Set<string>();
+  for (const domain of domains) {
+    if (['movie','tv_show','media'].includes(domain)) ['media','movie','film','tv_show'].forEach(value=>allowed.add(value));
+    else if (['artist','music'].includes(domain)) ['artist','music'].forEach(value=>allowed.add(value));
+    else if (['book','literature'].includes(domain)) ['book','literature'].forEach(value=>allowed.add(value));
+    else if (domain) allowed.add(domain);
+  }
+  const seen = new Set<string>();
+  return displayTags(tags).filter(tag => {
+    const domain = /^urn:tag:(?:cuisine|specialty_dish|dietary_option|dietary_attribute):/.test(tag.id) ? 'place' : tag.id.split(':')[3];
+    const label = tag.name.toLowerCase().replace(/[^\p{L}\p{N}]+/gu,' ').trim();
+    if (!allowed.has(domain) || /^(?:classics?|entertainment|ambitious|indie|popular|general|other|place|restaurant|bar)$/.test(label) || seen.has(label)) return false;
+    seen.add(label); return true;
+  });
+}

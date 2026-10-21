@@ -85,7 +85,7 @@ export default function TasteIntelligence({
     setAvoidArea(current.excludeLocation ?? "");
     setSource(current.requiredExternalSources?.[0] ?? "");
     setReviews(current.tripAdvisorReviewCountMin?.toString() ?? "");
-  }, [section, preferenceSnapshot]);
+  }, [section, preferenceSnapshot, passport.agent?.revision]);
   const [partner, setPartner] = useState([""]);
   const [expandedMatch, setExpandedMatch] = useState<number>();
   const [resolution, setResolution] = useState<Resolution>();

@@ -17,7 +17,15 @@ export function activityMatches(card: Card, activity: string) {
   const item = outingActivities.find(a => a.id === activity);
   if (!item || card.section !== item.section) return false;
   const tags = (card.evidence?.result.tags ?? []).map(t => t.name).join(" ");
-  if (activity === "Cinema") return /cinema|movie theater|movie theatre/i.test(tags);
+  if (activity === "Cinema") {
+    if (!/cinema|movie theater|movie theatre/i.test(tags)) return false;
+    // A broad place listing can inherit a cinema tag. Require a venue identity,
+    // not merely an area where cinemas happen to exist.
+    const namedCinema = /\b(?:cinema(?:s)?|cineplex|odeon|vue|picturehouse|curzon|everyman|cineworld|movie (?:theater|theatre))\b/i.test(card.name);
+    const areaName = /\b(?:square|district|neighbou?rhood|quarter|park|plaza|area)\b/i.test(card.name);
+    const venueDescription = /\b(?:cinema|movie (?:theater|theatre)|multiplex)\b/i.test(card.description ?? "");
+    return Boolean(card.address?.trim() && (namedCinema || (!areaName && venueDescription)));
+  }
   if (activity === "Nightlife") return /nightclub|night club/i.test(tags);
   return true;
 }

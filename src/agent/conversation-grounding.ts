@@ -12,7 +12,7 @@ function words(value: string): string[] {
  * blocking Qloo concept unrelated to that request. */
 export function groundedModelIntent(request: string, model: Intent, explicit: Intent): Intent {
   const currentRequest = categoryLanguage(request).replace(
-    /\b(?:i\s+)?(?:don['’]t|do not|no longer)\s+need\s+[^.!?;]*?(?=\b(?:all i want|instead|just|but)\b)/gi, " ");
+    /\b(?:i\s+)?(?:don['’]t|do not|no longer)\s+need\s+[^.!?;]*?(?=\b(?:all i want|instead|just|but)\b|[.!?;]|$)/gi, " ");
   const spoken = new Set(words(currentRequest));
   const explicitConcepts = new Set(explicit.concepts.map(x=>words(x).join(" ")));
   const grounded = (concept: string) => {

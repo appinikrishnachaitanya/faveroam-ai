@@ -89,11 +89,13 @@ export interface AgentState {
     Record<Section, import("../qloo/query-plan.ts").QueryPreferences>
   >;
   history?: ConversationMessage[];
+  failedSearches?: Partial<Record<Section, import("./refinement-settings.ts").RefinementSettings>>;
   conversationMemory?: import("./memory.ts").ConversationMemory;
   providerHealth?: "unconfigured" | "configured" | "healthy" | "unavailable";
   recovery?: Section[];
   relaxed?: { section: Section; constraints: Constraint[] }[];
   pending?: {
+    settings?: Partial<Record<Section, import("./refinement-settings.ts").RefinementSettings>>;
     query: string;
     candidates: Candidate[];
     sections: Section[];
@@ -145,7 +147,21 @@ export interface ConversationContext {
   activeRecommendations?: ConversationCardSummary[];
   categories?: {section: Section; preferences: Record<string, string | number>; constraints: Constraint[]; concepts: string[]; requirements: string[]; exclusions: string[]; resultCount: number}[];
 }
+export interface GroundedResponseContext {
+  request: string;
+  passport: ConversationContext;
+  outcome: { changed: Section[]; failed: Section[]; pending: boolean; fallback: string };
+  facts: {id:string; text:string}[];
+  choices: {id:string; name:string; section:Section}[];
+  limitations: string[];
+}
+export interface GroundedResponse {
+  message: string;
+  evidenceIds: string[];
+  recommendationIds: string[];
+}
 export interface ModelProvider {
+  compose?(context:GroundedResponseContext, signal?:AbortSignal):Promise<GroundedResponse>;
   explain?(facts: string[]): Promise<number[]>;
   interpret(text: string, context?: ConversationContext, signal?: AbortSignal): Promise<Intent>;
   baseline?(
@@ -194,7 +210,7 @@ export interface AgentInput {
   guided?: { section: Section; constraints: Constraint[] };
   recovery?: {
     section: Section;
-    action: "keep-concept" | "relax-quiet" | "allow-popular" | "closest";
+    action: "keep-concept" | "relax-quiet" | "allow-popular" | "closest" | "retry";
   };
   message?: string;
   feedback?: {

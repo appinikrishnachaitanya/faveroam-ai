@@ -80,3 +80,32 @@ The updated customer flows passed the production build, type checking and the fi
 - [ ] Capture real app screenshots with demonstration data. No invented results, misleading successful-agent screens or fabricated baseline.
 
 Current readiness is conditional until these deployed/access checks are complete. Passing local tests does not justify an “all production flows verified” claim.
+
+## First-level customer regression fixes — 21 October 2026
+
+- Candidate labels include returned entity type/year and remove missing-value placeholders. Duplicate display identities collapse; different types/years remain separate choices requiring confirmation.
+- Taste themes are restricted to the selected interests’ taxonomy domains; generic labels and unrelated food/place themes are omitted for film-only inputs. Empty filtered results offer another selection rather than invented themes. This is a conservative relevance guard, not proof of individual causal affinity.
+- Cinema eligibility requires a cinema tag, an address and a venue-specific name or description. Tagged squares do not automatically qualify. Explicit cinema retrieval and planner selection share this guard. Sparse metadata may exclude a real cinema; opening times and screenings remain unverified.
+- Regression fixtures reproduce the reported Toy Story placeholders, Interstellar theme noise and Leicester Square selection. Full suite: 354 passed. These are local checks; fresh hosted Together/Insights/planner acceptance remains pending. No theme or database changes.
+
+## Restrictive-filter state consistency
+
+Failed or empty category retrieval now retains the previous active settings with the previous cards. The attempted settings are stored separately in `failedSearches` and are labelled unapplied; an explicit retry restores that draft only for retrieval. Successful replacement commits the new settings and clears the draft. Other categories remain independent. The preferences form resynchronizes on the committed session revision. No database migration is required. Availability and booking limitation answers are read-only safeguards, not a general conversational engine.
+
+Local suite: 359 passed, including the restrictive Soho/Mayfair/Michelin/budget/rating/review-count case, provider failure and exact retry preservation. Hosted regression remains pending. The model currently interprets intent and selects tools; many final responses are still templates. The grounded response-generation stage below supersedes the earlier template-only final-response path for native Gemini.
+
+## Native grounded response stage
+
+Native Gemini now composes a tool-free reply after validation, using current preferences, compact conversation context, the actual outcome and returned choice facts. A separate single-call response budget caps this stage at eight seconds without retry; failure preserves the original outcome. Dynamic prose is checked for supplied references, unsupported metrics and several forbidden availability/mutation claims, with deterministic category receipts retained. Compatible-provider and guided paths remain available.
+
+The local suite passed 367 tests and type checking. A real configured Vertex request for “Are these open now?” completed the native composition and response checks in approximately 1.4 seconds, with no tool calls or Passport changes. This verifies one read-only response, not the entire deployed refinement journey. Public Railway acceptance remains pending. No theme or database changes.
+
+## Follow-up blockers reproduced and corrected
+
+- Reproduced the noodles → misspelled chicken biryani → peaceful sequence with a deliberately stale model question. Removed restoration of a superseded pending choice, kept unconfirmed category settings in a draft, and prevented the next request from inheriting abandoned dish concepts. Genuine read-only questions can pause a choice; they do not confirm it. Repeated identical requests retain the existing choices without duplicate lookups. “None of these” clears legacy unconfirmed concepts.
+- Expanded bounded dish typo normalization to food contexts such as chicken, without requiring the literal word “eat”. An explicit edit takes precedence over a contradictory read-only model guess.
+- Explicit resolved specialty-dish requirements require matching returned listing tags. Generic restaurants do not become verified chicken-biryani choices merely because a query returned them. This deliberately favors precision and may return no verified matches where metadata is sparse; it does not verify today's menu.
+- Download and save share destination-local calendar-date validation; both reject past/invalid dates and invalid stop-time order. The browser handlers check these rules in addition to disabling buttons.
+- Full local suite: 376 passed; production build and hosted/browser acceptance are recorded separately. Remaining broad relevance concerns (for example campus stores or generic podcasts) need profile-specific live evaluation rather than claims of a universal accuracy score.
+
+Final verification for this batch: 376 regression tests passed; final production build and documentation checks passed. The fixture-backed Chromium contract passed, including past-date download/save rejection, planner ordering, theme category scoping, accounts and responsive containment. The final targeted memory/clarification/dish/date rerun passed 17 tests. These do not certify all hosted providers or real Supabase accounts. Retest with a fresh Passport after deployment because earlier inconsistent sessions cannot reliably reconstruct their original filter history.

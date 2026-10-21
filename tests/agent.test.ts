@@ -149,7 +149,7 @@ test("exact explicit dish applies once without another confirmation", async () =
   let applied = false;
   deps.discover = async (s, section) => {
     applied = Boolean(s.categoryTags?.Eat?.includes("urn:tag:specialty_dish:place:chicken_biryani"));
-    return [{ id: replacement, name: "Returned restaurant", types: ["urn:entity:place"], section, detail: "" }];
+    return [{ id: replacement, name: "Returned restaurant", types: ["urn:entity:place"], section, detail: "", evidence:{source:"Qloo",operation:"/v2/insights/",queryId:"fixture",recordedAt:"2026-10-21",destination:s.city,locality:"physical-city",mode:"familiar",pool:"direct",inputs:[],params:{},result:{id:replacement,type:"urn:entity:place",tags:[{id:"urn:tag:specialty_dish:place:chicken_biryani",name:"Chicken biryani"}]}} }];
   };
   const reply = await runTurn(state(), { message: "find chicken biryani" }, deps);
   assert.equal(applied, true);
@@ -388,7 +388,7 @@ test("429-like discovery failure preserves unrelated results and honors the reje
   );
   assert.deepEqual(r.changed, []);
   assert.deepEqual(r.state.cards, state().cards.filter(c => c.id !== id));
-  assert.match(r.message, /existing discoveries are still here/);
+  assert.match(r.message, /previous discoveries and their active preferences are unchanged/);
 });
 test("rank workflow cannot introduce a generated entity or address", async () => {
   const d = dependencies();

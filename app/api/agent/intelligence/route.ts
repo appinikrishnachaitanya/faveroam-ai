@@ -1,3 +1,4 @@
+import { relevantThemes } from "../../../../src/passport/taste-themes";
 import { trending } from "../../../../src/qloo/trending";
 import { loadSession } from "../../../../src/agent/store";
 import { unseal } from "../../../../src/passport/service";
@@ -71,6 +72,7 @@ async function handlePOST(request: Request) {
       try { interests=selectAnalysisSignals(state.selected,b.interestIds); }
       catch { return json({error:"Choose one to five confirmed interests to explore."},400); }
       const analysis = await analyze(b.kind as AnalysisKind, interests, state.city, signal);
+      if (analysis.kind === "taste") analysis.tags = relevantThemes(analysis.tags, state.selected.filter(interest => b.interestIds.includes(interest.id)));
       return json({analysis});
     }
     if (b.action === "trends") {

@@ -1,3 +1,4 @@
+import { RESPONSE_POLICY } from "./response.ts";
 import { CONVERSATION_POLICY } from "./prompts.ts";
 import "server-only";
 import { generationSettings } from "./generation-policy.ts";
@@ -174,6 +175,30 @@ export function configuredProvider(): ModelProvider | undefined {
     });
   }
   return {
+    ...(gemini ? {
+      async compose(context: import("./types.ts").GroundedResponseContext, signal?: AbortSignal): Promise<import("./types.ts").GroundedResponse> {
+        const trace=crypto.randomUUID();
+        debugEvent("gemini.request", {trace,operation:"compose"});
+        try {
+          // One tool-free, structured response. No retry and no new actions.
+          const response=await gemini.models.generateContent({
+            model:model!, contents:[{role:"user",parts:[{text:JSON.stringify(context)}]}],
+            config:{...generationSettings("response"),abortSignal:signal,systemInstruction:RESPONSE_POLICY,
+              responseMimeType:"application/json",responseJsonSchema:{type:"object",properties:{
+                message:{type:"string"},evidenceIds:{type:"array",items:{type:"string"}},recommendationIds:{type:"array",items:{type:"string"}},
+              },required:["message","evidenceIds","recommendationIds"],additionalProperties:false}},
+          });
+          if (response.functionCalls?.length || !response.text) throw Error("Invalid response protocol");
+          const result=JSON.parse(response.text);
+          if(!isObject(result))throw Error("Invalid response payload");
+          debugEvent("gemini.result",{trace,operation:"compose",count:1});
+          return result as unknown as import("./types.ts").GroundedResponse;
+        } catch(error) {
+          debugEvent("gemini.failed",{trace,operation:"compose",status:safeStatus(error)});
+          throw Error("Grounded response unavailable");
+        }
+      },
+    } : {}),
     async explain(facts) {
       const calls = await complete(
         [

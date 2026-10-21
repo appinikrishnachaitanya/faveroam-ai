@@ -53,7 +53,8 @@ flowchart TD
 5. Patch only requested preferences. Calculate relative budget changes from server state; “cheaper” cannot raise an existing cap. Ordinary edits do not silently change discovery mode.
 6. Resolve genuinely new concepts through actual Qloo taxonomy. Recognized dietary options and unique supported dish matches can apply directly; unresolved identity remains a confirmation step.
 7. Run the smallest supported operation under execution limits. Validate actual returned results before replacing affected sections.
-8. Return the outcome, applied price/rating changes, retained requirements and a supported before/after listing example. No fabricated discovery or model-authored data enters cards.
+8. After commit validation, native Gemini gets one tool-free structured response pass with the latest message, bounded cultural context, validated outcome and up to three returned choices/facts. It writes the customer reply and cites supplied fact IDs. Application checks reject unknown references, unsupported numeric values and several unsafe state/availability claims. A deterministic receipt preserves applied/failed/protected category status. No model-authored data enters cards.
+9. Composition has its own single-call budget, no retry and at most eight seconds within the existing turn deadline. Failure uses the original grounded response and retains successful retrieval. Guided actions and compatible providers preserve their previous behaviour.
 
 ## What is model-driven and what is deterministic?
 
@@ -62,7 +63,7 @@ flowchart TD
 | Semantic intent and reference interpretation | Which changes are permitted |
 | Requested domain, constraints and partial query intent | Validation of IDs, fields, scope and explicit requirements |
 | Supported dynamic `qloo_find_tags` / `qloo_rank` selection | Executable tool allowlist, query arguments, budgets and result acceptance |
-| Selection among supplied explanation facts where used | Factual source material, local read-only answers and decision receipts |
+| Grounded customer-facing response and selection among supplied explanation facts | Factual source material, response reference checks, local fallback answers and decision receipts |
 
 Known queries do not require a model-selected tool on every turn. The application does not implement an unrestricted autonomous loop in which the model repeatedly replans against every tool response until an arbitrary goal is achieved. MCP is a tool transport, not evidence of multiple agents.
 
@@ -106,6 +107,16 @@ This is a safe incremental, feature-switchable experiment, not an unrestricted s
 
 Gemini 3 sequential function responses include the **unmodified original model Content parts**, preserving the function-call thought signature. We do not synthesize/strip function calls or return raw MCP metadata to the model. The Gemini-visible taxonomy schema is the minimal valid Qloo lookup contract instead of forwarding arbitrary JSON Schema keywords from MCP discovery. A model-selected tool runs only after server-side intent validation.
 
-Each Gemini generateContent operation (interpretation, optional tool steps, baseline and final response) uses at most two retries **only on HTTP 502**: three total attempts, exponential delays of roughly one and two seconds with jitter. HTTP 400 and other client errors are not retried. Google SDK automatic retries are configured to one total attempt to avoid nested retry multiplication. MCP executions are never retried by the Gemini retry helper. Tool-call budgets reset per chatbot message; final no-tools Gemini generation is in addition to the three permitted executions. A failure in final generation retains already-validated tool observations; backend-generated Qloo recommendations remain the source of truth. The text of a final model acknowledgement is not itself trusted as Qloo evidence.
+Interpretation, optional tool steps, baseline and taxonomy-loop acknowledgement operations use at most two retries **only on HTTP 502**: three total attempts, exponential delays of roughly one and two seconds with jitter. HTTP 400 and other client errors are not retried. Google SDK automatic retries are configured to one total attempt to avoid nested retry multiplication. MCP executions are never retried by the Gemini retry helper. Tool-call budgets reset per chatbot message; final no-tools Gemini generation is in addition to the three permitted executions. A failure in final generation retains already-validated tool observations; backend-generated Qloo recommendations remain the source of truth. The text of a final model acknowledgement is not itself trusted as Qloo evidence.
 
 The Passport Connections view groups cards by **section**, not Qloo query/pool ID. Each category appears once with distinct discovery counts and merged query-input names. Each card retains its own individual provenance, and interest filtering still checks the selected interest against the particular card's recorded query inputs; those inputs do not establish individual causal contributions.
+
+## Grounded conversational response
+
+`src/agent/response.ts` builds a whitelist response envelope and defines the versioned response policy. `ModelProvider.compose` is implemented only by native Vertex Gemini; it uses JSON structured output with no tool declarations. It does not reuse the taxonomy loop’s untrusted acknowledgement. Server-approved cards and evidence remain separate from model prose. The composer receives a clone, so it cannot mutate the committed result. A full read-only list remains rendered when requested rather than disappearing behind a three-card summary.
+
+Prompt grounding plus deterministic reference/metric checks reduces specific failures; it is not a semantic proof that every paraphrase is correct. Hosted multi-turn acceptance and recommendation-quality evaluation remain necessary. No fine-tuning or vector database is added. Safe logs show `gemini.request` with operation `compose`, `gemini.result` and `agent.response` completed/fallback, without prompt text or secrets.
+
+## Pending clarification is a draft
+
+Unconfirmed settings live under `pending.settings`, separately from active category preferences and cards. Confirmation restores that draft for validated retrieval; successful replacement commits it. A new request discards the old pending concept, and a model-generated question cannot resurrect it. A category-only modifier can continue the pending task's category without inheriting its abandoned dish. Failed retrieval keeps active settings paired with their original cards and stores the attempted settings separately for explicit retry.

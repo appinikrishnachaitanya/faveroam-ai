@@ -51,6 +51,7 @@ type DebugEvent =
   | "discovery.failed"
   | "agent.route"
   | "agent.check_failed"
+  | "agent.response"
   | "agent.started"
   | "agent.intent"
   | "agent.completed"
@@ -67,7 +68,7 @@ type DebugEvent =
 interface DebugMeta {
   service?: "supabase-auth" | "supabase-storage";
   trace?: string;
-  operation?: "interpret" | "choose" | "baseline" | "explain" | "observe-tools";
+  operation?: "interpret" | "choose" | "baseline" | "explain" | "observe-tools" | "compose";
   tool?: string;
   transport?: "exec" | "mcp";
   count?: number;
@@ -132,7 +133,7 @@ export function debugEvent(event: DebugEvent, meta: DebugMeta = {}) {
       operation: allowed(meta.operation, [
         "interpret",
         "choose",
-        "observe-tools",
+        "observe-tools", "compose",
         "baseline",
         "explain",
       ]),

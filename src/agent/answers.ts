@@ -138,3 +138,13 @@ export function previewRefinedResults(state: AgentState, sections: readonly impo
   });
   return `\n\nHere are ${cards.length} choices to consider:\n${lines.join("\n\n")}\n\nAsk why one fits, compare two, or say "list them here" for the complete returned list.`;
 }
+
+/** Availability and bookings are not supported by cultural-retrieval tools. */
+export function serviceLimitationAnswer(input:string):string|undefined {
+  if (/\b(?:book|reserve)\s+(?:(?:me|us)\s+)?(?:a\s+|the\s+)?(?:table|tickets?|reservation)\b|\bmake\s+(?:a\s+)?reservation\b/i.test(input))
+    return 'I can help you choose a place, but I cannot make reservations or buy tickets. Use the place’s official website or contact it directly to check availability and book. No booking has been made, and your Passport is unchanged.';
+  if (/\b(?:open(?:ing)?|clos(?:e|es|ing))\b.*\b(?:now|today|tonight|time|hours|when)\b|\b(?:hours|opening times|closing times)\b|\bwhen\b.*\b(?:open|close)\b/i.test(input)
+      && !/\b(?:find|search|filter|update|change|refine)\b/i.test(input))
+    return 'I can’t verify live opening hours or whether these places are open now. Check the place’s official website, map listing or contact it before going. Your discoveries and preferences are unchanged.';
+  return;
+}

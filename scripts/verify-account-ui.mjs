@@ -213,8 +213,8 @@ ws.addEventListener("message", async (event) => {
         return;
       }
       if (body.input.discovery.preferences.includeTags) {
-        assert.equal(body.input.discovery.section, "Movies");
-        assert.deepEqual(body.input.discovery.preferences.includeTags,["urn:tag:genre:media:fixture"]);
+        assert.equal(body.input.discovery.section, "Music");
+        assert.deepEqual(body.input.discovery.preferences.includeTags,["urn:tag:genre:music:fixture"]);
         assert.equal(session.queryPreferences.Eat.priceMax,2,"Theme request keeps dining budget");
         themeUpdates++;
       } else {
@@ -333,7 +333,7 @@ ws.addEventListener("message", async (event) => {
       };
     } else if (path === "/api/agent/intelligence") {
       if (body.action === "analysis") {
-        value={analysis:body.kind === "taste" ? {kind:"taste",tags:[{id:"urn:tag:genre:media:fixture",name:"Fixture cultural theme"}],recordedAt:new Date().toISOString()}
+        value={analysis:body.kind === "taste" ? {kind:"taste",tags:[{id:"urn:tag:genre:music:fixture",name:"Fixture cultural theme"}],recordedAt:new Date().toISOString()}
           : body.kind === "heatmap" ? {kind:"heatmap",points:[{latitude:43.65,longitude:-79.38,affinity:.9},{latitude:43.69,longitude:-79.42,affinity:.5},{latitude:43.61,longitude:-79.35,affinity:.7}],recordedAt:new Date().toISOString()}
           : {kind:"demographics",records:[{id:session.selected[0].id,age:{'25_to_29':.2},gender:{female:-.1}}],recordedAt:new Date().toISOString()}};
       } else {
@@ -579,6 +579,10 @@ for (const width of [320, 390, 640, 768, 1024, 1440]) {
   );
 }
 await textClick("Plan a day");
+await input("#plan-date", "2000-01-01");
+assert.equal(await evaluate("document.querySelector('.download-plan').disabled"),true,"Past dates cannot be downloaded");
+assert.equal(await evaluate("document.querySelector('.plan-save-actions .primary-button').disabled"),true,"Past dates cannot be saved");
+assert.ok(await evaluate("[...document.querySelectorAll('.day-out-plan [role=alert]')].some(element=>element.textContent.includes('future date'))"),"Invalid plan date has actionable feedback");
 await input("#plan-date", "2099-01-01");
 await textClick("Next weekend");
 assert.equal(
@@ -645,7 +649,7 @@ assert.ok(await evaluate("document.querySelector('.taste-theme-list').textConten
 
 assert.equal(await evaluate("document.querySelector('.theme-next-step button').disabled"),true);
 await click('.taste-theme-list button');
-await textClick("Find movies with this theme");
+await textClick("Find music with this theme");
 for (let attempt=0; themeUpdates===0 && attempt<100; attempt++) await new Promise(resolve=>setTimeout(resolve,50));
 assert.equal(themeUpdates,1,"Returned theme produces a structured scoped refinement");
 await textClick("Taste insights");

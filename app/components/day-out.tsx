@@ -12,7 +12,7 @@ import {
   activityMatches,
 } from "../../src/passport/day-out";
 import { evidenceFacts } from "../../src/qloo/explanation";
-import { cityDate, cityTimeZone, nextWeekend } from "../../src/account/plans";
+import { cityDate, cityTimeZone, nextWeekend, planDateError } from "../../src/account/plans";
 import { accountRequest, showNotice } from "../../src/account/browser";
 
 export default function DayOutPlan({
@@ -95,7 +95,13 @@ export default function DayOutPlan({
     setStatus("Venues reselected for this order from your current discoveries. Check travel times and availability.");
   }
 
+  const dateError=planDateError(passport.city,date);
+  function exportError():string|undefined {
+    return planDateError(passport.city,date) ?? (!timesInOrder ? "Put your stops in time order." : duplicateStops ? "Choose different venues for each activity." : !selected.length ? "Choose at least one stop." : undefined);
+  }
   function download() {
+    const error=exportError();
+    if(error){setStatus(error);showNotice(error,"error");return;}
     const schedule = stops.filter(stop=>stop.selected).map(stop=>`${timeFor(stop.id,stops.indexOf(stop))} · ${stop.selected!.name}`);
     const blob = new Blob([`${dayOutText(passport.city, selected, date)}\nSuggested times (${cityTimeZone(passport.city)}):\n${schedule.join("\n")}\nCheck hours and travel time before going.\n`], {
       type: "text/plain;charset=utf-8",
@@ -110,6 +116,8 @@ export default function DayOutPlan({
     showNotice("Your plan is downloaded.");
   }
   async function savePlan() {
+    const error=exportError();
+    if(error){setStatus(error);showNotice(error,"error");return;}
     if (!signedIn) {
       setStatus(
         "Sign in to save this plan. Your chosen date and stops will stay here.",
@@ -276,12 +284,13 @@ export default function DayOutPlan({
           </p>
         )}
         <details className="outing-checklist"><summary>Before you go</summary><p>Your chosen times are suggestions, not verified opening hours or reservations. Check hours, travel times, current prices and availability. Saving again for the same city and date updates that plan.</p></details>
+        {dateError && <p role="alert">{dateError}</p>}
         <div className="plan-save-actions">
           {duplicateStops && <p role="alert">Choose different venues for each activity, or leave a repeated stop open.</p>}
           <button
             className="quiet-button download-plan"
             onClick={download}
-            disabled={disabled || !selected.length || duplicateStops}
+            disabled={disabled || !selected.length || duplicateStops || Boolean(dateError) || !timesInOrder}
           >
             {selected.length === activities.length
               ? "Download my plan"
@@ -289,7 +298,7 @@ export default function DayOutPlan({
           </button>
           <button
             className="primary-button"
-            disabled={disabled || saving || !selected.length || !date || duplicateStops || !timesInOrder}
+            disabled={disabled || saving || !selected.length || !date || Boolean(dateError) || duplicateStops || !timesInOrder}
             onClick={() => void savePlan()}
           >
             {saving

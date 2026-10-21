@@ -6,7 +6,7 @@ import { lastPresentedIds } from "./chat-shortlist.ts";
 import type { Card, Section } from "../passport/model.ts";
 import type { AgentState } from "./types.ts";
 import { sectionOrder } from "../workspace/state.ts";
-import { cardSpecificAnswer } from "./answers.ts";
+import { cardSpecificAnswer, serviceLimitationAnswer } from "./answers.ts";
 import { formatReturnedRating } from "../passport/rating-display.ts";
 import { priceLabel } from "../passport/pricing.ts";
 
@@ -14,6 +14,7 @@ import { priceLabel } from "../passport/pricing.ts";
  * An information request never grants permission to run Qloo or change filters.
  */
 export function isReadOnlyFollowUp(input: string): boolean {
+  if (serviceLimitationAnswer(input)) return true;
   const q=input.trim().toLowerCase();
   // An information request cannot silently change results; equally, a real
   // refinement must not be misclassified as read-only.
@@ -67,6 +68,8 @@ function compact(card:Card):string {
   return `${card.name}${card.address?` — ${card.address}`:""}${rating!==undefined?` · ★ ${rating}/5 (Qloo-reported)`:" · Business rating unavailable"}${budget?` · Typical price: ${budget} (${card.intelligence?.commercial?.priceLevel}/4)`:" · Price category unavailable"}`;
 }
 export function readOnlyFollowUp(state:AgentState,query:string):string {
+  const limitation = serviceLimitationAnswer(query);
+  if (limitation) return limitation;
   const presented=lastPresentedIds(state);
   const requestedIndex=ordinal(query);
   const comparing=/\b(?:compare|comparison|differences?|versus|vs\.?)\b/i.test(query);

@@ -66,7 +66,7 @@ export function updateConversationMemory(original: AgentState, reply: AgentReply
   const presented = presentation?.referenceIds ?? presentation?.recommendationIds;
   if (presented !== undefined) memory.lastPresentedIds = ids(presented, 40);
   const selected = Boolean(input.message && isExistingChoiceRequest(input.message) && presentation?.recommendationIds?.length);
-  const dismissed = Boolean(original.pending && !state.pending && input.message && /^(?:skip|cancel|never\s?mind|start over)/i.test(input.message));
+  const dismissed = Boolean(original.pending && !state.pending && input.message && /^(?:skip|cancel|none of (?:these|those)|never\s?mind|start over)/i.test(input.message));
   const lastSections = reply.changed.length ? reply.changed : presented?.length
     ? [...new Set(presented.flatMap(id => state.cards.find(card => card.id === id)?.section ?? []))]
     : conversationFocus(original);

@@ -1,11 +1,10 @@
 "use client";
 import { sectionLabel } from "../../src/passport/labels";
 import { Icon } from "./passport";
-import { displayTags } from "../../src/qloo/explanation";
 import { useEffect, useRef, useState } from 'react';
 import type { Passport } from '../../src/workspace/state';
 import { activeCategories } from "../../src/passport/active-categories";
-import { curatedThemes, themeCategories } from "../../src/passport/taste-themes";
+import { curatedThemes, themeCategories, relevantThemes } from "../../src/passport/taste-themes";
 import type { Section } from '../../src/passport/model';
 import type { AgentInput } from '../../src/agent/types';
 import { buildAreaGuide } from '../../src/passport/area-guide';
@@ -48,7 +47,7 @@ export default function TasteAnalysis({passport,busy,onRefine}:{passport:Passpor
   }
   const visible: Partial<Record<AnalysisKind,AnalysisResult>> = scope === resultScope ? results : {};
   const taste=visible.taste?.kind==='taste'?visible.taste:undefined;
-  const themes=taste ? displayTags(taste.tags) : [];
+  const themes=taste ? relevantThemes(taste.tags, passport.selected.filter(interest=>interestIds.includes(interest.id))) : [];
   const selectedTheme=themes.find(theme=>theme.id===themeId);
   const themeOptions=themeCategories(selectedTheme,categories);
   const effectiveThemeSection=themeOptions.includes(themeSection)?themeSection:themeOptions[0] ?? 'Eat';
@@ -88,7 +87,7 @@ export default function TasteAnalysis({passport,busy,onRefine}:{passport:Passpor
     {error&&<p role="alert">{error}</p>}
     {loading&&<p role="status">Looking for patterns in your confirmed tastes…</p>}
     {taste&&<div className="analysis-result"><span className="micro-label">THE THREADS BETWEEN YOUR FAVORITES</span><h3>Your taste themes</h3><p>Based on {passport.selected.filter(interest=>interestIds.includes(interest.id)).map(interest=>interest.name).join(" + ")}. These are cultural associations, not personality predictions.</p>
-      {displayTags(taste.tags).length ? <>
+      {themes.length ? <>
         <div className="taste-theme-list" role="group" aria-label="Choose a taste theme">
           {primaryThemes.map(tag => <button key={tag.id} type="button"
             aria-pressed={themeId === tag.id} disabled={busy} onClick={() => setThemeId(tag.id)}>
@@ -107,7 +106,7 @@ export default function TasteAnalysis({passport,busy,onRefine}:{passport:Passpor
           </button>
         </div>
         <p className="helper">Choose a returned theme and a category. We’ll search using that theme while keeping this category’s current preferences. A theme may have no local matches.</p>
-      </> : <p>No taste themes were returned for this combination. You can still browse your discoveries or explore an area.</p>}
+      </> : <p>No useful themes in the selected interests’ categories were returned. Try another interest or combination, or explore an area. Your discoveries are unchanged.</p>}
 
     </div>}
     {heat&&<div className="analysis-result area-guide"><span className="micro-label">TURN A PLACE INTO AN OUTING</span>
