@@ -488,7 +488,7 @@ await wait(
 );
 await input(".account-dialog input[type=password]", "Protocol-only-1234");
 await evaluate(
-  "window.__libraryFlashes=0;window.__libraryObserver=new MutationObserver(()=>{if(document.querySelector('.account-library-dialog[open]'))window.__libraryFlashes++});window.__libraryObserver.observe(document.body,{subtree:true,childList:true,attributes:true})",
+  "window.__libraryFlashes=0;window.__profileFlashes=0;window.__libraryObserver=new MutationObserver(()=>{if(document.querySelector('.account-library-dialog[open]'))window.__libraryFlashes++;if(document.querySelector('.reusable-tastes'))window.__profileFlashes++});window.__libraryObserver.observe(document.body,{subtree:true,childList:true,attributes:true})",
 );
 await evaluate(
   "document.querySelector('.account-dialog form').requestSubmit()",
@@ -502,6 +502,8 @@ assert.equal(
   0,
   "Sign in never flashes the library modal",
 );
+await new Promise(resolve=>setTimeout(resolve,300));
+assert.equal(await evaluate("window.__profileFlashes"),0,"Empty saved-profile lookup never flashes an onboarding panel");
 await evaluate("window.__libraryObserver.disconnect()");
 assert.equal(
   await evaluate(
@@ -942,5 +944,5 @@ await call("Fetch.disable");
 ws.close();
 if (failure) throw failure;
 console.log(
-  "UI contract PASS (mocked APIs): one existing nightclub choice without taxonomy/discovery calls, reduced-motion support, automatic guest reconnection, stale-version recovery, storage retry and lost-session refresh, duplicate registration recovery, registration names, password change, named profiles/auto-filled tastes/export link, reusable tastes across cities, no sign-in library flash, budget updates, planner reordering, compact Together, saved plans/calendar, provider failure/cancellation/retry and responsive containment. Live providers remain separate acceptance.",
+  "UI contract PASS (mocked APIs): signed-in refresh restores My Vibe and category preferences; saved edits update the snapshot; deletion uses in-app confirmation; empty profile loading does not flash; existing account, agent, planner, Together, responsive and recovery contracts pass. Live providers remain separate acceptance.",
 );

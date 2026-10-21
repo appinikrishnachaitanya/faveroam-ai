@@ -9,7 +9,7 @@ async function markdownFiles(directory) {
     : entry.name.endsWith(".md") ? [path.join(directory, entry.name)] : []));
   return nested.flat();
 }
-const files = [path.join(root,"README.md"), path.join(root,"app/styles/README.md"), path.join(root,"supabase/README.md"), ...await markdownFiles(path.join(root,"docs"))];
+const files = [path.join(root,"README.md"), path.join(root,"app/styles/README.md"), ...await markdownFiles(path.join(root,"docs"))];
 const failures = [];
 for (const file of files) {
   const text = await readFile(file,"utf8");

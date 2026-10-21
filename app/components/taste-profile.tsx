@@ -84,13 +84,13 @@ export default function ReusableTastes({signedIn,passport,city,draft,disabled,on
   }
   const existingName=profiles.some(row=>row.name===name.trim());
   return <>
-    {signedIn&&!passport&&(profiles.length>0||libraryLoading||error) && <section className="reusable-tastes" aria-label="Reusable taste profile">
+    {signedIn&&!passport&&(profiles.length>0||error) && <section className="reusable-tastes" aria-label="Reusable taste profile">
       <div className="profile-heading"><div><span className="micro-label">YOUR TASTES. YOUR NEXT CITY.</span><h2>Pick up where you left off.</h2></div><span>{profiles.length} saved</span></div>
       <p>Choose a saved profile to load its tastes into the form below. Add or change tastes, then select Find my taste matches to confirm them. You can also discover immediately with the saved preferences.</p>
-      {libraryLoading&&!profiles.length?<p role="status">Finding your saved tastes…</p>:<div className="profile-fields"><label>Saved taste profile<select value={selectedId} disabled={disabled||loading} onChange={event=>{
+      <div className="profile-fields"><label>Saved taste profile<select value={selectedId} disabled={disabled||loading} onChange={event=>{
         const selected=profiles.find(row=>row.id===event.target.value);setSelectedId(event.target.value);setError("");
         if(selected){onSelect(selected.profile);setStatus(`Loaded “${selected.name}” into your taste draft. Add another taste or confirm below.`);}
-      }}><option value="">Choose a saved profile</option>{profiles.map(row=><option key={row.id} value={row.id}>{row.name}</option>)}</select></label></div>}
+      }}><option value="">Choose a saved profile</option>{profiles.map(row=><option key={row.id} value={row.id}>{row.name}</option>)}</select></label></div>
       {libraryLoading&&profiles.length>0&&<p className="helper" role="status">Refreshing your saved tastes…</p>}
       {profile&&<p className="profile-interest-preview">{profile.profile.selected.map(t=>t.name).join(" · ")}</p>}
       <div className="plan-actions">

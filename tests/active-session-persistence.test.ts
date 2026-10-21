@@ -67,7 +67,7 @@ test("both account save endpoints restore trusted active state, never use a brow
   assert.match(turns,/await persistActiveSession\(next\.state, revision\)/);
 });
 test("fresh schema creates active sessions with server-only access and keeps destinations",()=>{
-  const sql=readFileSync(new URL("../supabase/setup.sql",import.meta.url),"utf8");
+  const sql=readFileSync(new URL("../db-scripts/setup.sql",import.meta.url),"utf8");
   assert.match(sql,/create table public\.active_passport_sessions/i);
   assert.match(sql,/enable row level security/i);
   assert.match(sql,/revoke all on public\.active_passport_sessions from anon, authenticated/i);
