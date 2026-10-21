@@ -12,7 +12,7 @@ import {
   activityMatches,
 } from "../../src/passport/day-out";
 import { evidenceFacts } from "../../src/qloo/explanation";
-import { cityDate, cityTimeZone, nextWeekend, planDateError } from "../../src/account/plans";
+import { cityDate, cityTimeZone, nextWeekend, planDateError, savedStopActivity, type SavedPlan } from "../../src/account/plans";
 import { accountRequest, showNotice } from "../../src/account/browser";
 
 export default function DayOutPlan({
@@ -20,12 +20,14 @@ export default function DayOutPlan({
   disabled,
   signedIn = false,
   expanded,
+  editPlan,
   onFindActivity,
 }: {
   passport: Passport;
   disabled: boolean;
   signedIn?: boolean;
   expanded?: boolean;
+  editPlan?: {plan:SavedPlan;nonce:number};
   onFindActivity?: (id:string)=>void;
 }) {
   const [choices, setChoices] = useState<Record<string, string>>({});
@@ -39,6 +41,25 @@ export default function DayOutPlan({
   const orderKey=requestOrder?.join(',') ?? '';
   useEffect(()=>{if(orderKey)setActivities(orderKey.split(','));},[orderKey]);
   const options = dayOutOptions(passport.cards, passport.city);
+  useEffect(()=>{
+    if(!editPlan || editPlan.plan.city!==passport.city)return;
+    const plan=editPlan.plan;
+    const pairs=plan.stops.map((card,index)=>({
+      activity:savedStopActivity(card),
+      card,time:plan.stop_times?.[index],
+    })).filter((row):row is typeof row & {activity:typeof outingActivities[number]["id"]}=>Boolean(row.activity));
+    const activities=[...new Set(pairs.map(row=>row.activity))];
+    const available=new Set(options.map(card=>card.id));
+    setActivities(activities);
+    setDate(plan.scheduled_date);
+    setChoices(Object.fromEntries(pairs.filter(row=>available.has(row.card.id)).map(row=>[row.activity,row.card.id])));
+    setOmitted(Object.fromEntries(pairs.filter(row=>!available.has(row.card.id)).map(row=>[row.activity,true])));
+    setStopTimes(Object.fromEntries(pairs.filter(row=>row.time).map(row=>[row.activity,row.time!])));
+    setStatus(pairs.some(row=>!available.has(row.card.id))
+      ? "Your saved plan is open. Some places are no longer in this Passport; choose current discoveries before updating it."
+      : "Your saved plan is open. Change its stops or times, then update it for this date.");
+  },[editPlan?.nonce]);
+  const editingSameDate=editPlan?.plan.city===passport.city && editPlan.plan.scheduled_date===date;
   let previousStop:Card | undefined;
   const stops = activities.map(id => ({ ...outingActivities.find(a => a.id === id)!, id })).map((stop) => {
     const pool = nearbyOutingOptions(options.filter((card) => activityMatches(card, stop.id)),previousStop);
@@ -102,8 +123,8 @@ export default function DayOutPlan({
   function download() {
     const error=exportError();
     if(error){setStatus(error);showNotice(error,"error");return;}
-    const schedule = stops.filter(stop=>stop.selected).map(stop=>`${timeFor(stop.id,stops.indexOf(stop))} · ${stop.selected!.name}`);
-    const blob = new Blob([`${dayOutText(passport.city, selected, date)}\nSuggested times (${cityTimeZone(passport.city)}):\n${schedule.join("\n")}\nCheck hours and travel time before going.\n`], {
+    const itinerary=stops.map((stop,index)=>({activity:stop.id as typeof outingActivities[number]["id"],time:timeFor(stop.id,index),card:stop.selected}));
+    const blob = new Blob([dayOutText(passport.city,itinerary,date,cityTimeZone(passport.city))], {
       type: "text/plain;charset=utf-8",
     });
     const url = URL.createObjectURL(blob);
@@ -112,8 +133,9 @@ export default function DayOutPlan({
     link.download = "tastepassport-day-out.txt";
     link.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
-    setStatus("Your day-out plan is downloaded. Keep it for your visit.");
-    showNotice("Your plan is downloaded.");
+    const message=selected.length === activities.length ? "Your plan is downloaded." : "Your partial plan is downloaded, including stops that still need a place.";
+    setStatus(message);
+    showNotice(message);
   }
   async function savePlan() {
     const error=exportError();
@@ -128,7 +150,7 @@ export default function DayOutPlan({
     if (!passport.agent) return;
     setSaving(true);
     try {
-      await accountRequest("/api/account/plans", {
+      const saved = await accountRequest("/api/account/plans", {
         sessionId: passport.agent.sessionId,
         revision: passport.agent.revision,
         ids: selected.map((s) => s.id),
@@ -138,8 +160,8 @@ export default function DayOutPlan({
       setStatus(
         "Saved! Open My plans & Passports in the navigation, then choose Upcoming plans.",
       );
-      showNotice("Your plan is saved to Upcoming plans.");
-      window.dispatchEvent(new Event("tastepassport:plans-updated"));
+      showNotice(editingSameDate ? "Your saved plan was updated." : "Your plan is saved to Upcoming plans.");
+      window.dispatchEvent(new CustomEvent<{plan:SavedPlan}>("tastepassport:plans-updated",{detail:{plan:saved.plan}}));
     } catch (error) {
       const text =
         error instanceof Error ? error.message : "Could not save your plan.";
@@ -304,7 +326,7 @@ export default function DayOutPlan({
             {saving
               ? "Saving your plan…"
               : signedIn
-                ? "Save to Upcoming plans"
+                ? editingSameDate ? "Update saved plan" : "Save to Upcoming plans"
                 : "Sign in to save plan"}
           </button>
         </div>

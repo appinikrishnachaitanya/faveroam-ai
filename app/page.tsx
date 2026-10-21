@@ -50,7 +50,9 @@ import {
 import { sectionOrder } from "../src/workspace/state";
 import TasteAnalysis from "./components/taste-analysis";
 import { rememberGuestPassport, restoreGuestPassport, clearGuestPassport } from "../src/workspace/guest-recovery";
+import { saveOnboardingDraft, restoreOnboardingDraft, clearOnboardingDraft } from "../src/workspace/draft-recovery";
 import type { Familiarity } from "../src/passport/evidence";
+import type { SavedPlan } from "../src/account/plans";
 interface Message {
   role: "agent" | "user";
   text: string;
@@ -87,6 +89,8 @@ export default function Home() {
   const [composer, setComposer] = useState("");
   const [messages, setMessages] = useState<Message[]>([welcome]);
   const [draft, setDraft] = useState<string[]>([]);
+  const [draftHydrated, setDraftHydrated] = useState(false);
+  const [editingPlan, setEditingPlan] = useState<{plan:SavedPlan;nonce:number}>();
   const [phase, setPhase] = useState<Phase>("idle");
   const [resolution, setResolution] = useState<Resolution>();
   const [chosen, setChosen] = useState<Record<number, string>>({});
@@ -98,6 +102,24 @@ export default function Home() {
   const [accountSignedIn, setAccountSignedIn] = useState(false);
 
   const recoveryRequest = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    if (!restoreGuestPassport(window.sessionStorage)) {
+      const saved = restoreOnboardingDraft(window.sessionStorage);
+      if (saved) {
+        setCity(saved.city);
+        setOrigin(saved.origin);
+        setDraft(saved.tastes);
+        setRequestedActivities(saved.activities);
+        setAdaptation("Your unfinished taste draft was restored in this tab. Check it before finding matches.");
+      }
+    }
+    setDraftHydrated(true);
+  }, []);
+  useEffect(() => {
+    if (!draftHydrated || result) return;
+    saveOnboardingDraft(window.sessionStorage, {city,origin,tastes:draft,activities:requestedActivities});
+  }, [draftHydrated,result,city,origin,draft,requestedActivities]);
 
   // Browser-tab fallback for unexpected React view failures. This is NOT a
   // substitute for shared Supabase session persistence; the server still
@@ -549,6 +571,7 @@ export default function Home() {
   function fresh() {
     recoveryRequest.current?.abort();
     clearGuestPassport(window.sessionStorage);
+    clearOnboardingDraft(window.sessionStorage);
     setSaveTastePrompt(false);
     setTasteDraftVersion(value=>value+1);
     activeTurn.current?.abort();
@@ -563,6 +586,7 @@ export default function Home() {
     setRecoveryStatus(undefined);
     setShowSaved(false);
     setWorkspaceView("discover");
+    setEditingPlan(undefined);
     setAdaptation("");
     setCity("");
     setOrigin("");
@@ -612,6 +636,7 @@ export default function Home() {
         <nav className="header-controls" aria-label="Passport actions">
           <AccountControl
             onAccountChange={setAccountSignedIn}
+            onEditPlan={plan=>{setEditingPlan(current=>({plan,nonce:(current?.nonce??0)+1}));setWorkspaceView("plan");}}
             passport={result}
             disabled={busy}
             onSignOut={fresh}
@@ -654,9 +679,9 @@ export default function Home() {
         </nav>
       </header>
       <div className="progressive-content" id="passport-content" tabIndex={-1}>
-        {<ReusableTastes signedIn={accountSignedIn} passport={result} city={city} disabled={busy} draftVersion={tasteDraftVersion}
+        {<ReusableTastes signedIn={accountSignedIn} passport={result} city={city} draft={draft} disabled={busy} draftVersion={tasteDraftVersion}
           saveRequested={saveTastePrompt} onContinue={fresh} onCancel={()=>setSaveTastePrompt(false)}
-          onSelect={profile=>{resetMatches("review");setDraft(profile.selected.map(s=>s.name));setConceptSeeds(profile.selected.filter(s=>s.id.startsWith("urn:tag:")).map(s=>s.name));setInitialMode(profile.discoveryMode);setConstraints(profile.constraints);setRequestedActivities(profile.activeCategories.filter(s=>!profile.hiddenCategories.includes(s)).slice(0,5));setEditing(true);}}
+          onSelect={profile=>{resetMatches("idle");setDraft(profile.selected.map(s=>s.name));setConceptSeeds(profile.selected.filter(s=>s.id.startsWith("urn:tag:")).map(s=>s.name));setInitialMode(profile.discoveryMode);setConstraints(profile.constraints);setRequestedActivities(profile.activeCategories.filter(s=>!profile.hiddenCategories.includes(s)).slice(0,5));setEditing(true);}}
           onBusy={value=>{if(value)setPhase("exploring");else setPhase(current=>current==="exploring"?"idle":current);}}
           onApply={passport=>{setResult(passport);setCity(passport.city);setDraft(passport.selected.map(s=>s.name));setPhase("ready");setAdaptation("Fresh discoveries using your saved tastes.");}}
         />}
@@ -673,7 +698,6 @@ export default function Home() {
             }}
             onOrigin={setOrigin}
             onDraft={(values) => {
-              setTasteDraftVersion(value=>value+1);
               setDraft(values);
               setConceptSeeds(
                 values.filter((v) =>
@@ -855,6 +879,7 @@ export default function Home() {
             >
               <DayOutPlan
                 key={`day-out:${result.session?.id ?? result.city}`}
+                editPlan={editingPlan}
                 expanded={workspaceView === "plan"}
                 onFindActivity={id=>{const target=id==="Cinema"?"cinemas":id==="Nightlife"?"nightclubs":id==="Coffee"?"coffee shops":id==="Eat"?"restaurants":"museums";const kept=id==="Coffee"?"dining, music and movies":id==="Eat"?"coffee, music and movies":"dining, coffee, music and movies";void refine({message:`Find local ${target} for this outing. Keep my ${kept} unchanged.`});}}
                 passport={result}

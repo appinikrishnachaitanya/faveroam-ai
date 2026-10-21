@@ -77,7 +77,7 @@ export function candidate(e: Entity): Candidate {
     id: e.entity_id,
     name: clean(e.name).replace(/\s+(?:None|null|undefined)$/i, ""),
     types,
-    detail: [...new Set([...types.map(type => type.replace(/^urn:entity:/, "").replace(/_/g, " ")),
+    detail: [...new Set([...types.map(type => type.replace(/^urn:entity:/, "").replace(/_/g, " ").toLowerCase()),
       clean(p.release_year), clean(p.address), clean(p.short_description)].filter(Boolean))].join(" · ").slice(0, 250),
   };
 }

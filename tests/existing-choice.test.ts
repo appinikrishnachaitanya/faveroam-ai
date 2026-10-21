@@ -56,6 +56,21 @@ test("highest-rated is an explicit criterion, while best retains the existing ta
  assert.deepEqual(result.state.history.at(-1)?.recommendationIds,["second-club"]);
  assert.match(result.message,/highest returned business rating.*4.69|highest returned business rating.*4.7/);
 });
+test("which has the highest rating selects the highest rated shown place",async()=>{
+ const result=await runTurn(initial(),{message:"Which has the highest rating?"},noTools);
+ assert.equal(result.execution?.route,"current-results");
+ assert.deepEqual(result.state.history.at(-1)?.recommendationIds,["museum"]);
+ assert.match(result.message,/Returned museum/);
+ assert.match(result.message,/4\.9\/5/);
+});
+test("an implicit highest-rating follow-up compares the last displayed choices",async()=>{
+ const state=initial();
+ state.cards.push({...club("music","Another discovery","Museum",5),section:"Music"});
+ state.history=[{role:"agent",text:"Two places to compare",recommendationIds:["first-club","second-club"]}];
+ const result=await runTurn(state,{message:"Which has the highest rating?"},noTools);
+ assert.deepEqual(result.state.history.at(-1)?.recommendationIds,["second-club"]);
+ assert.match(result.message,/4\.7\/5/);
+});
 test("unknown or unverified requirements cannot be silently ignored",async()=>{
  for(const message of ["Pick one wheelchair accessible nightclub from above","Pick one nightclub with jazz from above"]){
  const result=await runTurn(initial(),{message},noTools);

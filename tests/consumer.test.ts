@@ -81,7 +81,7 @@ test("day-out excludes nonlocal, mismatched, ungrounded and duplicate discoverie
   assert.deepEqual(dayOutOptions([local, local, audience, otherCity, mismatched, music, { ...card("missing"), evidence: undefined }], "Toronto"), [local]);
 });
 test("day-out export contains real selections and explicit availability limits", () => {
-  const text = dayOutText("Toronto", [{ ...card("chosen"), address: "Fixture address" }]);
+  const text = dayOutText("Toronto", [{activity:"Culture",time:"11:00",card:{ ...card("chosen"), address: "Fixture address" }}]);
   assert.match(text, /Protocol discovery chosen/);
   assert.match(text, /Fixture address/);
   assert.match(text, /Check opening hours, travel times and availability/);

@@ -16,6 +16,7 @@ export function isExistingChoiceRequest(text: string): boolean {
   const q = selectionLanguage(refinementScope(text).positive);
   if (/\b(?:new|different|elsewhere|replace|refresh|update|refine|remove|hide|change|adjust)\b/.test(q)) return false;
   if (/\b(?:pick|choose|select|recommend)\b[\s\S]*\b(?:one|1|single)\b/.test(q)) return true;
+  if (/^which (?:one |of (?:these|those) )?has the (?:highest|best) rating\??$/.test(q.trim())) return true;
   if (/\bwhich\b[\s\S]*\b(?:should|would)\b[\s\S]*\b(?:pick|choose|recommend|try|visit|go)\b/.test(q)) return true;
   return reference.test(q) && /\b(?:pick|choose|select|recommend|best|top|highest[ -]rated|best[ -]rated|cheapest|most affordable|lowest price)\b/.test(q);
 }
@@ -39,9 +40,10 @@ export function chooseExisting(state: AgentState, text: string): ExistingChoice 
   const genre = requestedGenre(q);
   const ids = lastReferencedIds(state);
   const above = reference.test(q);
+  const implicitShown = /^which (?:one |of (?:these|those) )?has the (?:highest|best) rating\??$/.test(q.trim());
   const available = state.cards.filter(card => !state.hiddenCategories?.includes(card.section) &&
     !state.feedback.some(feedback => feedback.id === card.id && !feedback.accepted));
-  const source = above && ids !== undefined
+  const source = (above || implicitShown) && ids !== undefined
     ? ids.flatMap(id => available.find(card => card.id === id) ?? [])
     : available;
   let eligible = source.filter(card => (!sections?.length || sections.includes(card.section)) && (!genre || hasGenre(card, genre)));
@@ -61,7 +63,7 @@ export function chooseExisting(state: AgentState, text: string): ExistingChoice 
   if (named.length) eligible = named;
   let qualifiers = q.replace(state.city.toLowerCase(), " ");
   for (const card of named) qualifiers = qualifiers.replace(card.name.toLowerCase(), " ");
-  const descriptors = qualifiers.replace(/[^\p{L}\p{N} ]/gu, " ").split(/\s+/).filter(word => word && !commandWords.has(word));
+  const descriptors = qualifiers.replace(/[^\p{L}\p{N} ]/gu, " ").split(/\s+/).filter(word => word && !commandWords.has(word) && word !== "has");
   if (descriptors.length) eligible = eligible.filter(card => {
     const returned = (card.evidence?.result.tags ?? []).map(tag => tag.name.toLowerCase()).join(" ");
     const words = new Set(returned.replace(/[^\p{L}\p{N} ]/gu, " ").split(/\s+/));

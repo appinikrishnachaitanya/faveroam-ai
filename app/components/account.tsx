@@ -4,7 +4,7 @@ import { createPortal } from "react-dom";
 import type { Passport } from "../../src/workspace/state";
 import { Icon } from "./passport";
 import UpcomingPlans from "./plans";
-import type { SavedPlan } from "../../src/account/plans";
+import { mergeSavedPlan, type SavedPlan } from "../../src/account/plans";
 import { passwordRequirements, passwordValidationMessage } from "../../src/account/password-policy";
 import {
   accountRequest as request,
@@ -24,12 +24,14 @@ export default function AccountControl({
   onRestore,
   onSignOut,
   onAccountChange,
+  onEditPlan,
 }: {
   passport?: Passport;
   disabled: boolean;
   onRestore: (passport: Passport) => void;
   onSignOut: () => void;
   onAccountChange?: (signedIn: boolean) => void;
+  onEditPlan?: (plan: SavedPlan) => void;
 }) {
   const [account, setAccount] = useState<Account>();
   const authEpoch = useRef(0);
@@ -55,16 +57,19 @@ export default function AccountControl({
   );
   const [plans, setPlans] = useState<SavedPlan[]>([]);
   const [plansError, setPlansError] = useState("");
+  const savedCurrentPassport=Boolean(passport && entries.some(entry=>entry.city===passport.city));
+  const plansVersion = useRef(0);
   async function refreshPlans() {
     const epoch = authEpoch.current;
+    const version = ++plansVersion.current;
     try {
       const data = await request("/api/account/plans");
-      if (epoch === authEpoch.current) {
+      if (epoch === authEpoch.current && version === plansVersion.current) {
         setPlans(data.plans);
         setPlansError("");
       }
     } catch (error) {
-      if (epoch === authEpoch.current)
+      if (epoch === authEpoch.current && version === plansVersion.current)
         setPlansError(
           error instanceof Error ? error.message : "Could not load your plans.",
         );
@@ -137,7 +142,13 @@ export default function AccountControl({
       setMessage("");
       setOpen(true);
     };
-    const plansUpdated = () => void refreshPlans();
+    const plansUpdated = (event: Event) => {
+      const plan = (event as CustomEvent<{plan?:SavedPlan}>).detail?.plan;
+      if (!plan?.id) { void refreshPlans(); return; }
+      ++plansVersion.current; // Older GET responses cannot overwrite the just-saved row.
+      setPlans(current => mergeSavedPlan(current,plan));
+      setPlansError("");
+    };
     window.addEventListener("tastepassport:open-account", openAccount);
     window.addEventListener("tastepassport:plans-updated", plansUpdated);
     const notice = new URLSearchParams(window.location.search).get("account");
@@ -200,7 +211,7 @@ export default function AccountControl({
         `Your latest ${passport.city} Passport is saved. It includes your My Vibe shortlist.`,
       );
       await refresh(true);
-      showNotice("Your Passport is saved.");
+      showNotice(savedCurrentPassport ? "Your saved Passport was updated." : "Your Passport is saved.");
     } catch (e) {
       setMessage(e instanceof Error ? e.message : "Could not save.");
     } finally {
@@ -329,7 +340,7 @@ export default function AccountControl({
             setOpen(true);
           }}
         >
-          Save Passport
+          {savedCurrentPassport ? "Update Passport" : "Save Passport"}
         </button>
       )}
       <button
@@ -494,7 +505,7 @@ export default function AccountControl({
                     disabled={busy || !account.storage}
                     onClick={() => void save()}
                   >
-                    Save latest {passport.city} Passport
+                    {savedCurrentPassport ? "Update" : "Save"} {passport.city} Passport
                   </button>
                 )}
                 {!account.storage && (
@@ -508,6 +519,8 @@ export default function AccountControl({
                     plans={plans}
                     busy={busy}
                     error={plansError}
+                    editableCity={passport?.city}
+                    onEdit={plan=>{setOpen(false);onEditPlan?.(plan);}}
                     onDelete={(id) => void removePlan(id)}
                     onRetry={() => void refreshPlans()}
                   />
@@ -557,7 +570,7 @@ export default function AccountControl({
               </>
             ) : (
               <form onSubmit={submit}>
-                {tab !== "password" && <div className="account-tabs" role="group" aria-label="Account access">
+                {(tab === "login" || tab === "register") && <div className="account-tabs" role="group" aria-label="Account access">
                   {(["login", "register"] as const).map((value) => (
                     <button
                       type="button"
@@ -575,6 +588,7 @@ export default function AccountControl({
                     </button>
                   ))}
                 </div>}
+                {tab === "recover" && <div className="account-recovery-heading"><strong>Reset your password</strong><button type="button" className="text-button" disabled={busy} onClick={()=>{setTab("login");setMessage("");}}>Back to sign in</button></div>}
                 {tab === "register" && <>
                   <label>First name<input value={firstName} onChange={e=>setFirstName(e.target.value)} autoComplete="given-name" maxLength={80} required disabled={busy} /></label>
                   <label>Last name<input value={lastName} onChange={e=>setLastName(e.target.value)} autoComplete="family-name" maxLength={80} required disabled={busy} /></label>

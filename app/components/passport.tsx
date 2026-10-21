@@ -491,9 +491,16 @@ export function PassportSections({
             </div>
           )}
           <div className="discovery-grid">
-            {(expanded[s] || previewLimit !== 3
-              ? result.cards.filter(c => c.section === s).slice(0, expanded[s] ? undefined : previewLimit).map(card => ({card,label:"",reason:""}))
-              : threeChoices(result.cards.filter(c => c.section === s)))
+            {(previewLimit === 3
+              ? (() => {
+                  const cards = result.cards.filter(c => c.section === s);
+                  const preview = threeChoices(cards);
+                  const shown = new Set(preview.map(choice => choice.card.id));
+                  return expanded[s]
+                    ? [...preview, ...cards.filter(card => !shown.has(card.id)).map(card => ({card,label:"",reason:""}))]
+                    : preview;
+                })()
+              : result.cards.filter(c => c.section === s).slice(0, expanded[s] ? undefined : previewLimit).map(card => ({card,label:"",reason:""})))
               .map(({card: c, label, reason}) => (
                 <div className="shortlist-choice" key={c.id}>
                 {label && <p className="shortlist-label" title={reason}>{label}<small>{reason}</small></p>}

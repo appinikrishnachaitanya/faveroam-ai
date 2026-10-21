@@ -56,15 +56,25 @@ export function dayOutOptions(cards: Card[], city: string): Card[] {
   ];
 }
 
-export function dayOutText(city: string, cards: Card[], date?: string): string {
+export interface OutingExportStop {
+  activity: typeof outingActivities[number]["id"];
+  time: string;
+  card?: Card;
+}
+/** Export the itinerary, including unfilled activities, rather than flattening
+ * selected venues into their broader recommendation categories. */
+export function dayOutText(city: string, stops: OutingExportStop[], date?: string, timeZone?: string): string {
+  const chosen=stops.filter(stop=>stop.card).length;
   return [
     `My day out in ${city} · TastePassport AI`,
     ...(date ? [`Planned for ${date}`] : []),
+    ...(timeZone ? [`Suggested times (${timeZone})`] : []),
+    `${chosen === stops.length ? "Complete plan" : "Partial plan"} · ${chosen}/${stops.length} stops chosen`,
     "Suggested sequence. Check opening hours, travel times and availability before going.",
-    ...cards.map(
-      (card, i) =>
-        `${i + 1}. ${card.name} (${card.section})${card.address ? `\n   ${card.address}` : ""}\n   Suggestion recorded: ${card.evidence?.recordedAt ?? "unknown"}`,
-    ),
+    ...stops.map((stop,index)=>{
+      const label=outingActivities.find(activity=>activity.id===stop.activity)!.label;
+      return `${index+1}. ${stop.time} · ${label} — ${stop.card?.name ?? "Place not chosen (open stop)"}${stop.card?.address ? `\n   ${stop.card.address}` : ""}`;
+    }),
     "Built from my confirmed tastes and personalized suggestions. No booking has been made.",
   ].join("\n\n");
 }

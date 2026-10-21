@@ -1,6 +1,6 @@
 import type { Card } from "../passport/model.ts";
 import type { AgentState } from "../agent/types.ts";
-import { dayOutOptions, activityMatches } from "../passport/day-out.ts";
+import { dayOutOptions, activityMatches, outingActivities } from "../passport/day-out.ts";
 
 export interface SavedPlan {
   id: string;
@@ -10,6 +10,14 @@ export interface SavedPlan {
   stop_times: string[] | null;
   stops: Card[];
   created_at: string;
+}
+/** Replace the same dated outing immediately with the row returned by the write. */
+export function mergeSavedPlan(current: SavedPlan[], saved: SavedPlan): SavedPlan[] {
+  return [...current.filter(item => item.id !== saved.id && !(item.city === saved.city && item.scheduled_date === saved.scheduled_date)),saved];
+}
+/** Saved cards have a broad discovery section; recover the specific planner activity first. */
+export function savedStopActivity(card: Card): typeof outingActivities[number]["id"] | undefined {
+  return (["Cinema","Nightlife","Coffee","Eat","Culture"] as const).find(activity=>activityMatches(card,activity));
 }
 const zones: Record<string, string> = {
   Toronto: "America/Toronto",

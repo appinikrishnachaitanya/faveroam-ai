@@ -311,7 +311,7 @@ ws.addEventListener("message", async (event) => {
             created_at: new Date().toISOString(),
           },
         ];
-        value = { saved: true, id: uuid };
+        value = { saved: true, plan: plans[0] };
       } else if (request.method === "DELETE") {
         plans = [];
         value = { deleted: true };
@@ -726,6 +726,14 @@ assert.match(
   /DTSTART;TZID=America\/Toronto:20991018T110000/,
 );
 await evaluate("URL.createObjectURL=window.__realObjectURL");
+await textClick("Edit");
+await wait("document.querySelector('#plan-date')?.value==='2099-10-18' && document.querySelector('.plan-save-actions .primary-button')?.textContent.includes('Update saved plan')");
+await input('.day-out-stops input[type=time]',"12:00");
+await click('.plan-save-actions .primary-button');
+await click('.account-launch');
+await click('.account-library-tabs button:last-child');
+await wait("document.querySelector('.saved-plan')?.textContent.includes('12:00')");
+assert.equal(await evaluate("document.querySelector('.saved-plan').textContent.includes('11:00')"),false,"Updating a plan replaces its old time in Upcoming plans");
 for (const width of [320, 390, 768, 1440]) {
   await call("Emulation.setDeviceMetricsOverride", {
     width,
@@ -852,7 +860,13 @@ await input('.profile-fields select',uuid,'HTMLSelectElement');
 await wait("document.querySelectorAll('.taste-chip').length===3");
 assert.ok(await evaluate("document.querySelector('.profile-status').textContent.includes('Loaded')"),"Selecting a named profile populates tastes");
 assert.ok(await evaluate("document.querySelector('.reusable-tastes a[download]').href.includes('/api/account/preferences/export?id=')"));
-await textClick("Use this profile in London");
+await input('#taste-input','Miles Davis');
+await click('[aria-label="Add taste"]');
+assert.equal(await evaluate("document.querySelectorAll('.taste-chip').length"),4,"A saved profile remains editable in onboarding");
+assert.equal(await evaluate("document.querySelector('.reusable-tastes .primary-button').disabled"),true,"Direct reuse cannot discard an added taste");
+await click('[aria-label="Remove Miles Davis"]');
+assert.equal(await evaluate("document.querySelector('.reusable-tastes .primary-button').disabled"),false);
+await textClick("Discover in London with saved preferences");
 await wait("Boolean(document.querySelector('.passport-cover')) && document.querySelector('.passport-cover').textContent.includes('London')");
 assert.ok(await evaluate("document.querySelector('#passport-content').textContent.includes('Fresh discoveries using your saved tastes')"),"Saved tastes apply to a different city without retyping preferences");
 turnScenario="session-missing";

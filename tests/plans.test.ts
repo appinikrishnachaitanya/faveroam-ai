@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { cityDate, nextWeekend, planFromSession, calendarFile } from "../src/account/plans.ts";
+import { cityDate, nextWeekend, planFromSession, calendarFile, mergeSavedPlan, savedStopActivity, type SavedPlan } from "../src/account/plans.ts";
 import { normalizeSession } from "../src/agent/session.ts";
 import type { Card, Section } from "../src/passport/model.ts";
 import UpcomingPlans from "../app/components/plans.tsx";
@@ -16,6 +16,25 @@ function state() {
   return normalizeSession({ id: "private-session", city: "Toronto", revision: 3, expires: Date.now() + 10000, selected: [], tags: [], constraints: [], categoryConstraints: {}, cards: [card("coffee", "Coffee"), card("culture", "Culture"), card("eat", "Eat"), card("eat2", "Eat")], previous: [], feedback: [], notices: [] });
 }
 const input = { revision: 3, ids: ["coffee", "culture", "eat"], date: "2026-10-18", stopTimes: ["10:00", "12:00", "19:00"] };
+test("saving a changed time replaces the same dated outing in Upcoming plans",()=>{
+  const prior:SavedPlan={id:"same",city:"Toronto",scheduled_date:"2099-10-18",time_zone:"America/Toronto",stop_times:["11:00"],stops:[card("coffee","Coffee")],created_at:"2026-10-17"};
+  const updated={...prior,stop_times:["12:00"]};
+  const plans=mergeSavedPlan([prior],updated);
+  assert.equal(plans.length,1);
+  assert.equal(plans[0].stop_times?.[0],"12:00");
+  const html=renderToStaticMarkup(createElement(UpcomingPlans,{plans,busy:false,error:"",onDelete:()=>{},onRetry:()=>{}}));
+  assert.match(html,/12:00/);
+  assert.doesNotMatch(html,/11:00/);
+});
+test("saved cinema and nightlife keep their specific planner activity when reopened",()=>{
+  const cinema=card("cinema","Culture"); cinema.name="Prince Charles Cinema";
+  cinema.evidence!.result.tags=[{id:"urn:tag:category:place:movie_theater",name:"Movie theater",type:"urn:tag:category:place"}];
+  const club=card("club","Culture"); club.name="Evening club";
+  club.evidence!.result.tags=[{id:"urn:tag:category:place:night_club",name:"Night club",type:"urn:tag:category:place"}];
+  assert.equal(savedStopActivity(cinema),"Cinema");
+  assert.equal(savedStopActivity(club),"Nightlife");
+  assert.equal(savedStopActivity(card("culture","Culture")),"Culture");
+});
 test("plans copy only server-held current stop data and never client snapshots", () => {
   const original = state();
   const plan = planFromSession(original, { ...input, stops: [{ name: "Fabricated" }], user_id: "someone-else" }, now);

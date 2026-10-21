@@ -1220,6 +1220,8 @@ body {
 .account-tabs [aria-pressed="true"] {
   text-decoration: underline;
 }
+.account-recovery-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:18px 0;color:#264437}
+.account-recovery-heading strong{font-size:14px}
 .account-message,
 .account-unavailable {
   background: #e9eedf;

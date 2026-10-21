@@ -104,14 +104,14 @@ async function handlePOST(request: Request) {
         { user_id: user.id, ...plan },
         { onConflict: "user_id,city,scheduled_date" },
       )
-      .select("id")
+      .select("id,city,scheduled_date,time_zone,stop_times,stops,created_at")
       .single();
     if (error) {
       if (error.code === "23514" || error.code === "PGRST204" || error.code === "42703")
         return privateJson({ error: "We couldn't save this plan because the database rules haven't been updated. You can still download it, and your selections remain available." }, 503);
       throw Error();
     }
-    return privateJson({ saved: true, id: data.id });
+    return privateJson({ saved: true, plan: data });
   } catch {
     return privateJson(
       {
