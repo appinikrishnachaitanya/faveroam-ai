@@ -1,3 +1,4 @@
+import { isExistingChoiceRequest } from "./existing-choice.ts";
 import { incompleteUtterance } from "./category-language.ts";
 import { isGreetingOrTypo } from "./conversation-grounding.ts";
 import { isShortlistRequest } from "./chat-shortlist.ts";
@@ -23,7 +24,7 @@ export function routeRequest(input: AgentInput): RequestRoute {
   const text = input.message;
   if (isGreetingOrTypo(text) || /^(?:thanks(?: bro)?|thank you(?: bro)?|cheers)[!,.\s]*$/i.test(text.trim())) return "conversation";
   if (incompleteUtterance(text)) return "clarification";
-  if (isShortlistRequest(text) || isListRequest(text) || isReadOnlyFollowUp(text) || interpret(text).question) return "current-results";
+  if (isExistingChoiceRequest(text) || isShortlistRequest(text) || isListRequest(text) || isReadOnlyFollowUp(text) || interpret(text).question) return "current-results";
   return "interpret";
 }
 

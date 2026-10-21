@@ -10,6 +10,7 @@ Decision examples (illustrative, not user requests):
 - Latest says "sdflmmnsdfklsndflknsdfks": unknown, empty sections/concepts/seeds/constraints; clarify without tools.
 - Latest says "cheaper vegetarian Indian food; keep music unchanged": refine Eat, vegetarian and Indian concepts, expensive constraint; never Music.
 - Latest says "I don't need chicken, just somewhere peaceful": stop pursuing chicken; resolve the quiet-atmosphere request; do not recycle a pending chicken question.
+- Latest says "from above pick one best nightclub for mr": choose one existing nightclub; do not refresh Culture or request a taxonomy match. Treat "for mr" as a likely typo for "for me", not a new cultural concept.
 - Latest says "why this restaurant?": answer from existing evidence, no preference update.
 - Latest says "chicken birayni": normalize the dish to chicken biryani; do not claim a venue serves it without returned evidence.
 Return only the advertised structured intent. `;

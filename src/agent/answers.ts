@@ -89,7 +89,7 @@ export function isListRequest(text: string): boolean {
     /^(?:(?:please|can you|could you|bro|hey)\s+)*list\b/.test(request) &&
       /\b(?:restaurants?|dining|food|eat|places|venues|coffee|cafes?|movies|films|books|music)\b/.test(request);
 }
-export function listPassportResults(state: AgentState, request: string): string {
+export function listPassportCards(state: AgentState, request: string): Card[] {
   const q=categoryLanguage(request).toLowerCase();
   const section = /\b(?:restaurants?|dining|food|eat)\b/.test(q) ? "Eat"
     : /\b(?:coffee|cafes?)\b/.test(q) ? "Coffee"
@@ -106,7 +106,11 @@ export function listPassportResults(state: AgentState, request: string): string 
     : /\b(?:destinations?|cities)\b/.test(q) ? "Destinations"
     : state.intent?.sections?.length === 1 ? state.intent.sections[0] : undefined;
   const requested = section ? [section] : sectionOrder.filter(s => state.cards.some(c=>c.section===s) && !(state.hiddenCategories ?? []).includes(s));
-  const visible = state.cards.filter(c=>requested.includes(c.section) && !(state.hiddenCategories??[]).includes(c.section));
+  return state.cards.filter(c=>requested.includes(c.section) && !(state.hiddenCategories??[]).includes(c.section));
+}
+export function listPassportResults(state: AgentState, request: string): string {
+  const visible = listPassportCards(state, request);
+  const section = [...new Set(visible.map(card=>card.section))].length === 1 ? visible[0]?.section : undefined;
   if (!visible.length) return "I don't have any current recommendations for that category yet. Ask me to discover them first—your existing Passport hasn't changed.";
   const rows=visible.slice(0,40).map((card,i)=>{
     const m=card.intelligence;

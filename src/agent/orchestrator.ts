@@ -1,3 +1,4 @@
+import { chooseExisting, isExistingChoiceRequest } from "./existing-choice.ts";
 import { RequestMachine, routeRequest, checkTurnCommit } from "./request-policy.ts";
 import { sectionLabel } from "../passport/labels.ts";
 import { chatShortlist, chatShortlistText, isShortlistRequest, requestedShortlistSections } from "./chat-shortlist.ts";
@@ -5,7 +6,7 @@ import { refinementScope } from "./scope.ts";
 import { groundedModelIntent, isGreetingOrTypo } from "./conversation-grounding.ts";
 import { conversationContext } from "./context.ts";
 import { decisionSummary } from "./decision-summary.ts";
-import { passportAnswer, cardSpecificAnswer, isListRequest, listPassportResults, previewRefinedResults } from "./answers.ts";
+import { passportAnswer, cardSpecificAnswer, isListRequest, listPassportCards, listPassportResults, previewRefinedResults } from "./answers.ts";
 import { isReadOnlyFollowUp, readOnlyFollowUp } from "./read-only.ts";
 import { debugEvent } from "./debug.ts";
 import {
@@ -205,14 +206,14 @@ async function executeTurn(
     events.push(e);
     emit(e);
   };
-  const reply = (message: string, recommendations?: Card[]): AgentReply => {
+  const reply = (message: string, recommendations?: Card[], referenceIds?: string[]): AgentReply => {
     const text = fallback + message;
     state.history = [
       ...state.history!,
       ...(input.message
         ? [{ role: "user" as const, text: input.message }]
         : []),
-      { role: "agent" as const, text, ...(recommendations ? {recommendationIds:recommendations.slice(0,3).map(card=>card.id)} : {}) },
+      { role: "agent" as const, text, ...(referenceIds ? {referenceIds:referenceIds.slice(0,40)} : {}), ...(recommendations ? {recommendationIds:recommendations.slice(0,3).map(card=>card.id)} : {}) },
     ].slice(-100);
     return { state, changed, events, mode, message: text };
   };
@@ -248,9 +249,16 @@ async function executeTurn(
       delete state.pending;
       return reply("Okay, I've skipped that concept choice. Your Passport hasn't changed. What would you like to explore next?");
     }
+    if (route === "current-results" && isExistingChoiceRequest(input.message)) {
+      delete state.pending;
+      const choice = chooseExisting(state, input.message);
+      if (!choice.cards.length) markNeedsInput();
+      return reply(choice.message, choice.cards);
+    }
     // Handle presentation requests before intent classification. A model may
     // otherwise interpret "list here" as another discovery/refinement request.
     if (route === "current-results" && isShortlistRequest(input.message)) {
+      delete state.pending;
       const cards=chatShortlist(state,requestedShortlistSections(input.message));
       return reply(chatShortlistText(state,cards),cards);
     }
@@ -258,7 +266,7 @@ async function executeTurn(
       return reply("You’re welcome. Want to compare a couple of choices, find a different vibe, or put an outing together?");
     if (route === "current-results" && isListRequest(input.message)) {
       delete state.pending; // A read-only listing supersedes an unrelated choice.
-      return reply(listPassportResults(state,input.message),[]);
+      return reply(listPassportResults(state,input.message),[],listPassportCards(state,input.message).slice(0,40).map(card=>card.id));
     }
     // Questions about an existing result must be handled BEFORE Gemini intent
     // classification. Otherwise "rating for second" can become a filter and

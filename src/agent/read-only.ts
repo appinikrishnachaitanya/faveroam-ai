@@ -1,3 +1,4 @@
+import { findMentionedCard } from "./intent.ts";
 import { sectionLabel } from "../passport/labels.ts";
 import { categoryLanguage } from "./category-language.ts";
 import { lastPresentedIds } from "./chat-shortlist.ts";
@@ -77,7 +78,8 @@ export function readOnlyFollowUp(state:AgentState,query:string):string {
   if(comparing && !categoryInText(query) && presented.some(id=>!state.cards.some(card=>card.id===id && !state.hiddenCategories?.includes(card.section))))
     return "One of those choices is no longer in your current discoveries. Ask for a new shortlist before comparing. Your Passport is unchanged.";
   const focused=presented.flatMap(id=>state.cards.find(card=>card.id===id) ?? []);
-  const section=contextSection(state,query);
+  const explicitlyNamed = findMentionedCard(query, state.cards.filter(card => !state.hiddenCategories?.includes(card.section)));
+  const section=explicitlyNamed?.section ?? contextSection(state,query);
 
   const cards=comparing && focused.length && !categoryInText(query) ? focused : section?state.cards.filter(c=>c.section===section && !(state.hiddenCategories??[]).includes(c.section)):[];
   if(!section && !(comparing && focused.length))

@@ -55,6 +55,7 @@ export interface ConversationMessage {
   role: "user" | "agent";
   text: string;
   recommendationIds?: string[];
+  referenceIds?: string[];
 }
 export interface AgentState {
   id: string;

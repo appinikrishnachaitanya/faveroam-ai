@@ -18,7 +18,7 @@ export function isShortlistRequest(text: string): boolean {
 
 export function requestedShortlistSections(request:string):Section[]|undefined {
   if(/across|all (?:my )?(?:interests|categories)|mix|starting choices|where should i start|not sure/i.test(request))return;
-  const names:[Section,RegExp][]=[["Eat",/restaurants?|dining|dinner|food/i],["Coffee",/coffee|caf[eé]/i],["Music",/music|artists?/i],["Movies",/movies?|films?/i],["Culture",/culture|museum|cinema|nightlife/i],["Books",/\bbooks?\b/i],["Shows",/shows?|series/i],["Podcasts",/podcasts?/i],["Games",/games?/i],["Lifestyle",/shops?|bookstores?/i],["Brands",/brands?/i],["People",/people|authors?/i]];
+  const names:[Section,RegExp][]=[["Eat",/restaurants?|dining|dinner|food/i],["Coffee",/coffee|caf[eé]/i],["Music",/music|artists?/i],["Movies",/movies?|films?/i],["Culture",/culture|museum|cinema|nightlife|night\s*clubs?/i],["Books",/\bbooks?\b/i],["Shows",/shows?|series/i],["Podcasts",/podcasts?/i],["Games",/games?/i],["Lifestyle",/shops?|bookstores?/i],["Brands",/brands?/i],["People",/people|authors?/i]];
   const result=names.filter(([,pattern])=>pattern.test(request)).map(([section])=>section);
   return result.length ? result : undefined;
 }
@@ -64,4 +64,13 @@ export function chatShortlistText(state:AgentState,cards:Card[]):string {
 export function lastPresentedIds(state:AgentState):string[] {
   const presentation=state.history?.slice().reverse().find(turn=>turn.role==="agent" && turn.recommendationIds!==undefined);
   return Array.isArray(presentation?.recommendationIds) ? presentation.recommendationIds.filter((id):id is string=>typeof id==='string').slice(0,3) : [];
+}
+
+/** Full textual lists and rich shortlists both establish references for choosing.
+ * Undefined means no prior presentation; an empty array deliberately clears it. */
+export function lastReferencedIds(state: AgentState): string[] | undefined {
+  const presentation = state.history?.slice().reverse().find(turn => turn.role === "agent" &&
+    (turn.referenceIds !== undefined || turn.recommendationIds !== undefined));
+  const ids = presentation?.referenceIds ?? presentation?.recommendationIds;
+  return Array.isArray(ids) ? ids.filter((id): id is string => typeof id === "string").slice(0, 40) : undefined;
 }

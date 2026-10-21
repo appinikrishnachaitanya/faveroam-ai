@@ -14,6 +14,12 @@ Help someone choose what to try in a new city using tastes they already know. A 
 - Chat renders returned names, known ratings/addresses, evidence-based reasons and save/explore actions. Refinement replies include the existing decision summary plus up to three returned choices. Ordinal references use the presented card IDs; missing choices trigger recovery rather than silently pointing to another card.
 - The approved model context remains a whitelisted last-eight-message cultural conversation and Passport preferences. UI presentation IDs are not extra model context; account details and secrets are excluded.
 
+### Choosing from existing results
+
+“From the above, pick one best nightclub” is a read-only decision request, including the common “for mr” typo. It bypasses model/tool discovery, clears an unrelated pending concept, scopes the choice to the last displayed IDs and returns one existing card. Full textual lists also record their displayed IDs so later choices refer to the actual list, including after a skipped concept. Choosing nightlife requires returned place genre/category evidence; a museum is not a substitute. Missing evidence or unsupported extra requirements lead to an honest follow-up, not silent filter changes.
+
+“Best” uses the existing taste order. An explicit highest-rated or cheapest request uses available, comparable rating or price metadata instead; it does not compare business ratings to content ratings or invent missing details. A named-venue follow-up takes precedence over an older category context. See `tests/existing-choice.test.ts` for the reported multi-turn regression and related cases.
+
 ### Matching and controls
 
 Onboarding proposes a unique returned exact name, an explicit cuisine match, a unique containing name or a conservative single-edit spelling match for **review**. Conflicting exact names remain unselected. Users still confirm the final choices. Lexical matching resolves identity; it is not a cultural relevance score and does not change the existing Qloo ranking/fusion algorithm.

@@ -1,6 +1,7 @@
 /** Browser contracts with explicitly mocked account/intelligence APIs. Not live provider acceptance. */
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
+import { runTurn } from "../src/agent/orchestrator.ts";
 import { normalizeSession } from "../src/agent/session.ts";
 import { nextWeekend } from "../src/account/plans.ts";
 const base = process.env.PASSPORT_TEST_URL || "http://127.0.0.1:3001";
@@ -154,6 +155,20 @@ ws.addEventListener("message", async (event) => {
       value = reconnectExpired ? {error:"Refresh with your tastes to continue."} : {passport:{...passport,session,agent:{...passport.agent,revision:session.revision}}};
     } else if (path === "/api/agent/turn") {
       if (body.input.message) {
+        if (turnScenario === "existing-choice") {
+          session.cards=session.cards.map(card=>card.section==="Culture" ? {...card,evidence:{...card.evidence,result:{...card.evidence.result,tags:[{id:"urn:tag:genre:place:night_club",name:"Night club",type:"urn:tag:genre:place"}]}}} : card);
+          session.history=[{role:"agent",text:"Previously shown choices",recommendationIds:session.cards.slice(0,3).map(card=>card.id)}];
+          session.pending={query:"night club",sections:["Culture"],constraints:[],candidates:[{id:"urn:tag:genre:place:night_club",name:"Night club",types:["urn:tag"],detail:"Fixture"}]};
+          const forbidden=async()=>{throw Error("No new tools are authorized when choosing an existing option");};
+          const reply=await runTurn(session,body.input,{tools:forbidden,workflow:forbidden,discover:forbidden,provider:{interpret:forbidden,choose:forbidden}});
+          assert.deepEqual(reply.changed,[]);
+          assert.equal(reply.state.pending,undefined);
+          assert.match(reply.message,/My pick/);
+          reply.state.revision=body.revision+1;
+          Object.assign(session,reply.state);
+          await call("Fetch.fulfillRequest",{requestId,responseCode:200,responseHeaders:[{name:"Content-Type",value:"application/x-ndjson"}],body:Buffer.from(JSON.stringify({type:"result",reply})+"\n").toString("base64")});
+          return;
+        }
         if (turnScenario === "stall") return; // Cancelled by browser AbortSignal, never reaches the backend.
         const payload =
           turnScenario === "malformed"
@@ -404,6 +419,13 @@ await evaluate("sessionStorage.removeItem('tastepassport.guest.recovery.v1')");
 reconnectExpired=false;
 await call("Page.reload");
 await wait("Boolean(document.querySelector('.account-launch')) && !document.querySelector('.passport-cover')");
+// Motion is optional and never required to reveal or operate the page.
+await call("Emulation.setEmulatedMedia",{features:[{name:"prefers-reduced-motion",value:"no-preference"}]});
+assert.equal(await evaluate("getComputedStyle(document.querySelector('.move-form')).animationName"),"passport-arrive");
+await call("Emulation.setEmulatedMedia",{features:[{name:"prefers-reduced-motion",value:"reduce"}]});
+assert.equal(await evaluate("getComputedStyle(document.querySelector('.move-form')).animationName"),"none");
+assert.equal(await evaluate("getComputedStyle(document.querySelector('.move-form')).opacity"),"1","Reduced motion must keep the form visible");
+await call("Emulation.setEmulatedMedia",{features:[{name:"prefers-reduced-motion",value:"no-preference"}]});
 await click(".account-launch");
 await wait(
   "Boolean(document.querySelector('.account-dialog[open] input[type=email]'))",
@@ -775,6 +797,14 @@ for (const width of [320,390,1440]) {
   assert.equal(await evaluate("document.documentElement.scrollWidth>innerWidth"),false,`Chat choices overflow at ${width}`);
   assert.ok(await evaluate("[...document.querySelectorAll('.chat-choice-actions button,.chat-choice-actions a')].every(button=>button.getBoundingClientRect().height>=44)"),"Chat actions meet the 44px target size");
 }
+turnScenario="existing-choice";
+await input("#conversation-input","From the above pick one best night club for mr","HTMLTextAreaElement");
+await click('[aria-label="Send message"]');
+await wait("[...document.querySelectorAll('.message.agent')].at(-1)?.textContent.includes('My pick')");
+assert.equal(await evaluate("[...document.querySelectorAll('.message.agent')].at(-1).querySelectorAll('.chat-recommendations article').length"),1,"A one-choice request renders exactly one existing venue");
+assert.equal(await evaluate("Boolean(document.querySelector('.pending-concept'))"),false,"Choosing an existing nightclub must not open taxonomy confirmation");
+assert.equal(await evaluate("[...document.querySelectorAll('.message.agent')].at(-1).textContent.includes('Updated Culture')"),false);
+turnScenario="success";
 await click('[aria-label="Close Taste Concierge"]');
 await textClick("Discover");
 assert.ok(await evaluate("document.querySelector('#section-Eat').textContent.includes('Food')"),"Food heading uses the customer-facing label");
@@ -857,5 +887,5 @@ await call("Fetch.disable");
 ws.close();
 if (failure) throw failure;
 console.log(
-  "UI contract PASS (mocked APIs): automatic guest reconnection, stale-version recovery, storage retry and lost-session refresh, duplicate registration recovery, registration names, password change, named profiles/auto-filled tastes/export link, reusable tastes across cities, no sign-in library flash, budget updates, planner reordering, compact Together, saved plans/calendar, provider failure/cancellation/retry and responsive containment. Live providers remain separate acceptance.",
+  "UI contract PASS (mocked APIs): one existing nightclub choice without taxonomy/discovery calls, reduced-motion support, automatic guest reconnection, stale-version recovery, storage retry and lost-session refresh, duplicate registration recovery, registration names, password change, named profiles/auto-filled tastes/export link, reusable tastes across cities, no sign-in library flash, budget updates, planner reordering, compact Together, saved plans/calendar, provider failure/cancellation/retry and responsive containment. Live providers remain separate acceptance.",
 );
