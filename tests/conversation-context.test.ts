@@ -11,7 +11,7 @@ function fixture():AgentState {
 test("context is bounded and excludes session/account/raw metadata",()=>{
  const state=fixture();(state as unknown as Record<string,unknown>).account={email:"private@example.com",accessToken:"private-token"};
  const context=conversationContext(state);const text=JSON.stringify(context);
- assert.equal(context.history!.length,8);assert.equal(context.history![0].text,"Cultural turn 4");assert.deepEqual(context.lastSections,["Eat"]);
+ assert.equal(context.history!.length,4);assert.equal(context.history![0].text,"Cultural turn 8");assert.deepEqual(context.lastSections,["Eat"]);
  assert.equal(context.categories![0].preferences.businessRatingMin,4.5);assert.deepEqual(context.categories![0].requirements,["Vegetarian"]);
  assert.ok(!text.includes("private-session-id"));assert.ok(!text.includes("private@example.com"));assert.ok(!text.includes("private-token"));assert.ok(!text.includes("not context"));
 });
@@ -25,7 +25,7 @@ test("contact information, credentials and oversized history are omitted",()=>{
 test("orchestrator passes recent conversation and current preferences to the model",async()=>{
  const state=fixture();let captured=false;
  const reply=await runTurn(state,{message:"Raise that minimum to 4.7"},{provider:{interpret:async(text,context)=>{
-  assert.equal(text,"Raise that minimum to 4.7");assert.equal(context!.history!.length,8);assert.equal(context!.categories![0].preferences.businessRatingMin,4.5);captured=true;
+  assert.equal(text,"Raise that minimum to 4.7");assert.equal(context!.history!.length,4);assert.equal(context!.categories![0].preferences.businessRatingMin,4.5);captured=true;
   return {kind:"refine",sections:["Eat"],seeds:[],concepts:[],constraints:[],strategy:"discover",query:{businessRatingMin:4.7}};
  },choose:async()=>[]},tools:async()=>[],workflow:async()=>({status:"ok",results:[]}),discover:async(s,section)=>{assert.equal(s.queryPreferences!.Eat!.priceMax,2);assert.equal(s.queryPreferences!.Eat!.businessRatingMin,4.7);return [{id:"new",name:"Eligible",section,types:["urn:entity:place"],detail:""}];}});
  assert.ok(captured);assert.deepEqual(reply.changed,["Eat"]);assert.equal(state.queryPreferences!.Eat!.businessRatingMin,4.5);

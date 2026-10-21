@@ -1,3 +1,4 @@
+import { conversationFocus, updateConversationMemory } from "./memory.ts";
 import { chooseExisting, isExistingChoiceRequest } from "./existing-choice.ts";
 import { RequestMachine, routeRequest, checkTurnCommit } from "./request-policy.ts";
 import { sectionLabel } from "../passport/labels.ts";
@@ -160,7 +161,9 @@ export async function runTurn(
     request.move(needsInput || result.state.pending || request.route === "clarification" ? "needs-input" :
       result.state.recovery?.length ? (result.changed.length ? "partial" : "blocked") : "completed");
     debugEvent("agent.completed", { action: request.snapshot().phase, count: result.changed.length, elapsedMs: request.snapshot().elapsedMs });
-    return { ...result, execution: request.snapshot() };
+    const completed = { ...result, execution: request.snapshot() };
+    updateConversationMemory(original, completed, input);
+    return completed;
   } catch (error) {
     request.move(guard.signal.aborted ? "cancelled" : "failed");
     debugEvent("agent.check_failed", { action: request.snapshot().phase });
@@ -482,9 +485,9 @@ async function executeTurn(
     if (explicit.question) intent = { ...explicit, sections: explicit.sections };
     if(explicit.kind === "refine" && explicit.sections.length)
       intent.sections = explicit.sections;
-    if (explicit.kind === "refine" && !explicit.sections.length && original.intent?.kind === "refine" &&
+    if (explicit.kind === "refine" && !explicit.sections.length && conversationFocus(original).length > 0 &&
         /\b(?:it|those|them|these|same|rest)\b|^(?:cheaper|quieter|more familiar|more adventurous)\b/i.test(input.message.trim())) {
-      const previous = original.intent.sections.filter(section => !state.hiddenCategories.includes(section));
+      const previous = conversationFocus(original).filter(section => !state.hiddenCategories.includes(section));
       intent.sections = previous.length === 1 ? previous : [];
       // A relative modifier does not introduce a new cuisine or taxonomy concept.
       if (!explicit.concepts.length && explicit.constraints.length) {
@@ -550,8 +553,7 @@ async function executeTurn(
     return reply(
       "Save My vibe on a card first, or name a category, so I can use a real cultural anchor.",
     );
-  const previousSections = original.intent?.kind === "refine"
-    ? original.intent.sections.filter(section => !state.hiddenCategories.includes(section)) : [];
+  const previousSections = conversationFocus(original).filter(section => !state.hiddenCategories.includes(section));
   // An unresolved pronoun is not permission to update the first of several sections.
   if (input.message && !intent.sections.length && previousSections.length > 1)
     return clarify(`Which section should I change: ${previousSections.join(", ")}? Your Passport is unchanged.`);

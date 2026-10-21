@@ -1,6 +1,10 @@
+import { conversationFocus, conversationSummary } from "./memory.ts";
 import { chatShortlist } from "./chat-shortlist.ts";
 import { culturalText } from "./intent.ts";
 import type { AgentState, ConversationContext } from "./types.ts";
+
+export const RECENT_CONTEXT_MESSAGES = 4;
+export const RECENT_CONTEXT_CHARACTERS = 2400;
 
 /** Approved cultural context only: whitelist fields rather than serializing the session. */
 export function conversationContext(state: AgentState): ConversationContext {
@@ -13,19 +17,22 @@ export function conversationContext(state: AgentState): ConversationContext {
     const checked = name && safe(name, 100);
     return checked ? [checked] : [];
   }))].slice(0, 12);
-  const recent = (state.history ?? []).slice(-8).flatMap(turn => {
+  const recent = (state.history ?? []).slice(-RECENT_CONTEXT_MESSAGES).flatMap(turn => {
     const text = safe(turn.text);
     return text ? [{ role: turn.role, text }] : [];
   });
+  // Keep complete messages; never crop away a negation to meet the budget.
+  while (recent.reduce((sum, turn) => sum + turn.text.length, 0) > RECENT_CONTEXT_CHARACTERS) recent.shift();
   const firstUser = recent.findIndex(turn => turn.role === "user");
   return {
     city: safe(state.city, 100) ?? "",
+    summary: conversationSummary(state),
     history: firstUser < 0 ? [] : recent.slice(firstUser),
     tastes: state.selected.slice(0, 10).flatMap(taste => {
       const name = safe(taste.name, 100);
       return name ? [name] : [];
     }),
-    lastSections: state.intent?.sections ?? [],
+    lastSections: conversationFocus(state),
     activeRecommendations: [...new Map([...chatShortlist(state),...state.cards].map(card=>[card.id,card])).values()].slice(0,15).flatMap(card => {
       const name = safe(card.name, 100);
       if (!name) return [];

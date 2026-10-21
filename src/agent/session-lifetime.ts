@@ -1,3 +1,4 @@
+import { compactConversationMemory } from "./memory.ts";
 import type { AgentState } from "./types.ts";
 export const ACTIVE_SESSION_LIFETIME_MS = 24 * 60 * 60_000;
 /** Once a session has entered shared storage, fail closed rather than silently lose later edits. */
@@ -17,6 +18,7 @@ export function compactActiveSession(state: AgentState): AgentState {
     savedCards: state.savedCards?.slice(-100),
     previous: state.previous.slice(-50),
     history: state.history?.slice(-30),
+    conversationMemory: compactConversationMemory(state.conversationMemory),
     notices: state.notices.slice(-30),
   };
 }

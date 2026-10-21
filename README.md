@@ -63,7 +63,7 @@ flowchart TD
 
 The important boundary is between **understanding a request** and **authorizing a change**:
 
-- **Conversation context:** up to eight recent cultural messages plus a restricted projection of Passport preferences help resolve follow-ups. Account records and secrets are excluded.
+- **Conversation context:** a compact summary of validated conversation decisions, up to four recent cultural messages (2,400 characters), and current Passport preferences help resolve follow-ups. Account records and secrets are excluded.
 - **Tool execution:** dynamic tag lookup and shortlist ranking can use MCP; established workflows also use validated direct API or harness operations. Every action does not require a new model-selected tool call.
 - **State preservation:** explicit cuisine, dietary, budget, rating and category constraints survive supported refinements. Changing discovery style does not erase hard requirements.
 - **Result validation:** entity identity, output type, exclusions and applicable numeric requirements are checked before updating the Passport. Missing numeric metadata cannot satisfy a strict numeric requirement.

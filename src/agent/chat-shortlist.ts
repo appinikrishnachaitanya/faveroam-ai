@@ -63,7 +63,7 @@ export function chatShortlistText(state:AgentState,cards:Card[]):string {
 
 export function lastPresentedIds(state:AgentState):string[] {
   const presentation=state.history?.slice().reverse().find(turn=>turn.role==="agent" && turn.recommendationIds!==undefined);
-  return Array.isArray(presentation?.recommendationIds) ? presentation.recommendationIds.filter((id):id is string=>typeof id==='string').slice(0,3) : [];
+  return Array.isArray(presentation?.recommendationIds) ? presentation.recommendationIds.filter((id):id is string=>typeof id==='string').slice(0,3) : state.conversationMemory?.lastPresentedIds?.slice(0,3) ?? [];
 }
 
 /** Full textual lists and rich shortlists both establish references for choosing.
@@ -71,6 +71,6 @@ export function lastPresentedIds(state:AgentState):string[] {
 export function lastReferencedIds(state: AgentState): string[] | undefined {
   const presentation = state.history?.slice().reverse().find(turn => turn.role === "agent" &&
     (turn.referenceIds !== undefined || turn.recommendationIds !== undefined));
-  const ids = presentation?.referenceIds ?? presentation?.recommendationIds;
+  const ids = presentation?.referenceIds ?? presentation?.recommendationIds ?? state.conversationMemory?.lastPresentedIds;
   return Array.isArray(ids) ? ids.filter((id): id is string => typeof id === "string").slice(0, 40) : undefined;
 }

@@ -89,6 +89,7 @@ export interface AgentState {
     Record<Section, import("../qloo/query-plan.ts").QueryPreferences>
   >;
   history?: ConversationMessage[];
+  conversationMemory?: import("./memory.ts").ConversationMemory;
   providerHealth?: "unconfigured" | "configured" | "healthy" | "unavailable";
   recovery?: Section[];
   relaxed?: { section: Section; constraints: Constraint[] }[];
@@ -136,6 +137,7 @@ export interface ToolChoice {
   arguments: Record<string, unknown>;
 }
 export interface ConversationContext {
+  summary?: ReturnType<typeof import("./memory.ts").conversationSummary>;
   city: string;
   history?: {role: "user" | "agent"; text: string}[];
   tastes?: string[];

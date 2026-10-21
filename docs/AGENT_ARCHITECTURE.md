@@ -48,7 +48,7 @@ flowchart TD
 
 1. Validate a single typed action and obtain the current session revision.
 2. Answer recognized read-only questions from existing evidence without regenerating recommendations. Guided controls bypass model interpretation.
-3. For conversational edits, give native Gemini the latest message, up to eight recent cultural messages and a whitelist of current Passport preferences. Prior requests are context, not instructions to replay.
+3. For conversational edits, give native Gemini the latest message, a compact structured decision summary, up to four complete recent cultural messages (2,400 characters total), and a whitelist of current Passport preferences. Prior requests are context, not instructions to replay.
 4. Validate the returned intent. Explicit preservation instructions, typed scope and server state take precedence over unsupported model guesses. Ambiguous multi-section follow-ups ask for a target.
 5. Patch only requested preferences. Calculate relative budget changes from server state; “cheaper” cannot raise an existing cap. Ordinary edits do not silently change discovery mode.
 6. Resolve genuinely new concepts through actual Qloo taxonomy. Recognized dietary options and unique supported dish matches can apply directly; unresolved identity remains a confirmation step.
@@ -69,6 +69,8 @@ Known queries do not require a model-selected tool on every turn. The applicatio
 ## State, memory and persistence
 
 Canonical session state includes confirmed interests, city, category tags/concepts, numeric preferences, discovery modes, feedback, cards, pending resolution and bounded history. Conversation and guided controls share it.
+
+A rolling event reducer records validated refinements, focus, selected/displayed result IDs, dismissed clarifications and the last outcome. It updates only after commit validation, without another model call. Failed requests never become successful tasks; skipping a clarification never becomes a permanent dietary exclusion. Current preferences and the latest message override historical memory. The summary survives active-session persistence, is excluded from saved account snapshots, and is cleared by conversation reset. The UI retains its existing transcript; only model context is compacted. This improves continuity but does not replace intent validation or tool-result grounding.
 
 Guest sessions are process-local, revision-checked and expire after inactivity. Requests for the same session are locked to prevent overlap. Restarting the service loses active guest sessions. Saved Supabase snapshots can restore persisted work; they do not make an expired active session valid. Use a single replica for the current deployment unless shared session storage or affinity is added.
 

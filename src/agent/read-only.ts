@@ -1,3 +1,4 @@
+import { conversationFocus } from "./memory.ts";
 import { findMentionedCard } from "./intent.ts";
 import { sectionLabel } from "../passport/labels.ts";
 import { categoryLanguage } from "./category-language.ts";
@@ -41,6 +42,10 @@ function categoryInText(text:string): Section|undefined {
 function contextSection(state: AgentState, input:string): Section|undefined {
   const explicit=categoryInText(input);
   if(explicit)return explicit;
+  if (state.conversationMemory) {
+    const focus = conversationFocus(state);
+    return focus.length === 1 ? focus[0] : undefined;
+  }
   // A list in the previous assistant turn scopes ordinal references.
   const recent=(state.history??[]).slice(-12).reverse();
   for(const entry of recent) {
