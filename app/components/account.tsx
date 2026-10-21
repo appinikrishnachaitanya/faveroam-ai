@@ -4,6 +4,7 @@ import { createPortal } from "react-dom";
 import type { Passport } from "../../src/workspace/state";
 import { Icon } from "./passport";
 import UpcomingPlans from "./plans";
+import ConfirmDelete from "./confirm-delete";
 import { mergeSavedPlan, type SavedPlan } from "../../src/account/plans";
 import { passwordRequirements, passwordValidationMessage } from "../../src/account/password-policy";
 import {
@@ -24,6 +25,7 @@ export default function AccountControl({
   onRestore,
   onSignOut,
   onAccountChange,
+  onPassportSaved,
   onEditPlan,
 }: {
   passport?: Passport;
@@ -31,6 +33,7 @@ export default function AccountControl({
   onRestore: (passport: Passport) => void;
   onSignOut: () => void;
   onAccountChange?: (signedIn: boolean) => void;
+  onPassportSaved?: (sessionId?: string) => void;
   onEditPlan?: (plan: SavedPlan) => void;
 }) {
   const [account, setAccount] = useState<Account>();
@@ -57,6 +60,7 @@ export default function AccountControl({
   );
   const [plans, setPlans] = useState<SavedPlan[]>([]);
   const [plansError, setPlansError] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<{kind:"passport"|"plan";id:string;name:string}>();
   const savedCurrentPassport=Boolean(passport && entries.some(entry=>entry.city===passport.city));
   const plansVersion = useRef(0);
   async function refreshPlans() {
@@ -206,6 +210,7 @@ export default function AccountControl({
         sessionId: passport.agent.sessionId,
         revision: passport.agent.revision,
       });
+      onPassportSaved?.(passport.agent.sessionId);
       setPendingSave(false);
       setMessage(
         `Your latest ${passport.city} Passport is saved. It includes your My Vibe shortlist.`,
@@ -283,6 +288,7 @@ export default function AccountControl({
         id,
       });
       onRestore(data.passport);
+      onPassportSaved?.(data.passport.agent.sessionId);
       setOpen(false);
       setMessage("");
     } catch (e) {
@@ -295,6 +301,7 @@ export default function AccountControl({
     setBusy(true);
     try {
       await request("/api/account/passports", { id }, "DELETE");
+      if (entries.find(entry=>entry.id===id)?.city===passport?.city) onPassportSaved?.(undefined);
       await refresh(true);
       setMessage("Saved Passport deleted.");
     } catch (e) {
@@ -521,7 +528,7 @@ export default function AccountControl({
                     error={plansError}
                     editableCity={passport?.city}
                     onEdit={plan=>{setOpen(false);onEditPlan?.(plan);}}
-                    onDelete={(id) => void removePlan(id)}
+                    onDelete={(id) => setDeleteTarget({kind:"plan",id,name:"this saved outing"})}
                     onRetry={() => void refreshPlans()}
                   />
                 ) : (
@@ -547,14 +554,7 @@ export default function AccountControl({
                             className="icon-button"
                             disabled={busy}
                             aria-label={`Delete saved ${entry.city} Passport`}
-                            onClick={() => {
-                              if (
-                                window.confirm(
-                                  `Delete your saved ${entry.city} Passport?`,
-                                )
-                              )
-                                void remove(entry.id);
-                            }}
+                            onClick={() => setDeleteTarget({kind:"passport",id:entry.id,name:`your saved ${entry.city} Passport`})}
                           >
                             <Icon name="close" size={14} />
                           </button>
@@ -689,6 +689,8 @@ export default function AccountControl({
           </dialog>,
           document.body,
         )}
+      {deleteTarget && <ConfirmDelete title={`Delete ${deleteTarget.name}?`} description="This cannot be undone. Your current Passport stays on screen." busy={busy}
+        onCancel={() => setDeleteTarget(undefined)} onConfirm={() => { const target=deleteTarget; setDeleteTarget(undefined); void (target.kind==="plan"?removePlan(target.id):remove(target.id)); }} />}
     </div>
   );
 }

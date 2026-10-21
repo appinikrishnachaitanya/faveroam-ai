@@ -145,6 +145,20 @@ test("account snapshot strips sessions, history and comparisons; restore uses a 
   restored.cards.length = 0;
   assert.equal(snap.cards.length, 4);
 });
+test("saved Passport restores three My Vibe choices and section preferences after a later update", () => {
+  const session = state();
+  session.savedCards = [card("one"), card("two"), card("three")];
+  session.feedback = session.savedCards.map(({ id }) => ({ id, section: "Eat" as const, accepted: true }));
+  session.queryPreferences = { Eat: { priceMax: 2, businessRatingMin: 4.5 }, Coffee: { priceMax: 1 } };
+  session.categoryConstraints = { Eat: ["crowded"] };
+  const earlier = passportSnapshot({ ...session, savedCards: session.savedCards.slice(0, 1) });
+  const latest = passportSnapshot(session);
+  assert.equal(restoreSnapshot(earlier).savedCards.length, 1);
+  const restored = restoreSnapshot(latest);
+  assert.deepEqual(restored.savedCards.map(({ id }) => id), ["one", "two", "three"]);
+  assert.deepEqual(restored.queryPreferences, session.queryPreferences);
+  assert.deepEqual(restored.categoryConstraints, session.categoryConstraints);
+});
 test("restore rejects fabricated or incompatible account snapshots", () => {
   const snap = passportSnapshot(state());
   assert.throws(() => restoreSnapshot({ ...snap, version: 88 }));

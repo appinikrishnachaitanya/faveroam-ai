@@ -50,6 +50,8 @@ import {
 import { sectionOrder } from "../src/workspace/state";
 import TasteAnalysis from "./components/taste-analysis";
 import { rememberGuestPassport, restoreGuestPassport, clearGuestPassport } from "../src/workspace/guest-recovery";
+import { rememberActiveSession, restoreActiveSession, clearActiveSession, rememberSavedSession, restoreSavedSession, clearSavedSession } from "../src/workspace/active-session";
+import { showNotice } from "../src/account/browser";
 import { saveOnboardingDraft, restoreOnboardingDraft, clearOnboardingDraft } from "../src/workspace/draft-recovery";
 import type { Familiarity } from "../src/passport/evidence";
 import type { SavedPlan } from "../src/account/plans";
@@ -100,10 +102,13 @@ export default function Home() {
     "discover" | "plan" | "preferences" | "together" | "connections"
   >("discover");
   const [accountSignedIn, setAccountSignedIn] = useState(false);
+  const [savedSessionId, setSavedSessionId] = useState<string>();
+  const saveQueue = useRef<Promise<void>>(Promise.resolve());
 
   const recoveryRequest = useRef<AbortController | null>(null);
 
   useEffect(() => {
+    setSavedSessionId(restoreSavedSession(window.sessionStorage));
     if (!restoreGuestPassport(window.sessionStorage)) {
       const saved = restoreOnboardingDraft(window.sessionStorage);
       if (saved) {
@@ -126,7 +131,24 @@ export default function Home() {
   // checks the session revision before any subsequent edit or save.
   useEffect(() => {
     const recovered=restoreGuestPassport(window.sessionStorage);
-    if (!recovered) return;
+    if (!recovered) {
+      const sessionId=restoreActiveSession(window.sessionStorage);
+      if (!sessionId) return;
+      const controller=new AbortController();
+      void fetch("/api/agent/session", {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId}),signal:controller.signal})
+        .then(async response=>{
+          if (!response.ok) { if(response.status===410)clearActiveSession(window.sessionStorage); return; }
+          const data=await response.json();
+          if (!controller.signal.aborted && data.passport?.agent?.sessionId===sessionId) {
+            setResult(data.passport);setCity(data.passport.city);setDraft(data.passport.selected.map((taste:{name:string})=>taste.name));
+            setRequestedActivities((data.passport.session?.activeCategories ?? []).filter((section:Section)=>!data.passport.session?.hiddenCategories.includes(section)));
+            setInitialMode(data.passport.session?.discoveryMode ?? "familiar");
+            setConstraints(data.passport.session?.constraints ?? []);
+            setPhase("ready");setRecoveryStatus(undefined);
+          }
+        }).catch(()=>{});
+      return ()=>controller.abort();
+    }
     setResult(current => current ?? recovered);
     setCity(current => current || recovered.city);
     setDraft(recovered.selected.map(taste => taste.name));
@@ -164,11 +186,23 @@ export default function Home() {
   // the last successfully rendered guest Passport remains recoverable.
   useEffect(() => {
     if (accountSignedIn) {
+      if (result?.agent) rememberActiveSession(window.sessionStorage, result.agent.sessionId);
       clearGuestPassport(window.sessionStorage);
       return;
     }
     if (result) rememberGuestPassport(window.sessionStorage, result);
   }, [result, accountSignedIn]);
+  useEffect(() => {
+    if (!accountSignedIn || !result?.agent || savedSessionId !== result.agent.sessionId) return;
+    const { sessionId, revision } = result.agent;
+    const timer = window.setTimeout(() => {
+      saveQueue.current = saveQueue.current.catch(()=>{}).then(async () => {
+        const response = await fetch("/api/account/passports", {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"save",sessionId,revision})});
+        if (!response.ok && response.status !== 409) showNotice("Your latest Passport changes could not be saved. Use Save Passport to try again.","error");
+      });
+    }, 700);
+    return () => window.clearTimeout(timer);
+  }, [accountSignedIn, result, savedSessionId]);
 
   const [error, setError] = useState("");
   const [dialog, setDialog] = useState<number>();
@@ -571,6 +605,8 @@ export default function Home() {
   function fresh() {
     recoveryRequest.current?.abort();
     clearGuestPassport(window.sessionStorage);
+    clearActiveSession(window.sessionStorage);
+    setSavedSessionId(undefined);
     clearOnboardingDraft(window.sessionStorage);
     setSaveTastePrompt(false);
     setTasteDraftVersion(value=>value+1);
@@ -636,6 +672,7 @@ export default function Home() {
         <nav className="header-controls" aria-label="Passport actions">
           <AccountControl
             onAccountChange={setAccountSignedIn}
+            onPassportSaved={sessionId=>{if(sessionId)rememberSavedSession(window.sessionStorage,sessionId);else clearSavedSession(window.sessionStorage);setSavedSessionId(sessionId);}}
             onEditPlan={plan=>{setEditingPlan(current=>({plan,nonce:(current?.nonce??0)+1}));setWorkspaceView("plan");}}
             passport={result}
             disabled={busy}
@@ -645,6 +682,9 @@ export default function Home() {
               setResult(passport);
               setCity(passport.city);
               setDraft(passport.selected.map((s) => s.name));
+              setRequestedActivities((passport.session?.activeCategories ?? []).filter(section=>!passport.session?.hiddenCategories.includes(section)));
+              setInitialMode(passport.session?.discoveryMode ?? "familiar");
+              setConstraints(passport.session?.constraints ?? []);
               setPhase("ready");
               setProviderHealth("unconfigured");
               void fetch("/api/agent/capabilities")

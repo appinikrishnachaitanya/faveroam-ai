@@ -5,6 +5,7 @@ import type { TasteProfile } from "../../src/account/taste-profile";
 import type { SavedTasteProfile } from "../../src/account/profile-record";
 import { accountRequest, showNotice } from "../../src/account/browser";
 import { Icon } from "./passport";
+import ConfirmDelete from "./confirm-delete";
 
 export default function ReusableTastes({signedIn,passport,city,draft,disabled,onApply,onBusy,onSelect,draftVersion,saveRequested,onContinue,onCancel}:{
   signedIn:boolean;passport?:Passport;city:string;draft:string[];disabled:boolean;draftVersion:number;
@@ -18,6 +19,7 @@ export default function ReusableTastes({signedIn,passport,city,draft,disabled,on
   const [libraryLoading,setLibraryLoading]=useState(false);
   const [error,setError]=useState("");
   const [status,setStatus]=useState("");
+  const [confirmProfile,setConfirmProfile]=useState(false);
   const dialog=useRef<HTMLDialogElement>(null);
   const epoch=useRef(0);
   const profile=profiles.find(p=>p.id===selectedId);
@@ -94,11 +96,12 @@ export default function ReusableTastes({signedIn,passport,city,draft,disabled,on
       <div className="plan-actions">
         {profile&&<button type="button" className="primary-button" disabled={disabled||loading||!city||!profileMatchesDraft} onClick={()=>void run("apply")}>{loading?"Finding fresh matches…":!profileMatchesDraft?"Confirm edited tastes below":city?`Discover in ${city} with saved preferences`:"Choose a city below"}</button>}
         {profile&&<a className="quiet-button" href={`/api/account/preferences/export${selectedId!=="legacy"?`?id=${encodeURIComponent(selectedId)}`:""}`} download>Export JSON</a>}
-        {profile&&<button type="button" className="text-button" disabled={disabled||loading||selectedId==="legacy"} onClick={()=>{if(window.confirm(`Delete “${profile.name}” taste profile?`))void run("delete");}}>Delete profile</button>}
+        {profile&&<button type="button" className="text-button" disabled={disabled||loading||selectedId==="legacy"} onClick={()=>setConfirmProfile(true)}>Delete profile</button>}
       </div>
       {status&&<p className="profile-status" role="status">{status}</p>}
       {error&&<p role="alert">{error}</p>}
     </section>}
+    {confirmProfile&&profile&&<ConfirmDelete title={`Delete “${profile.name}”?`} description="This saved taste profile will be removed. Your current draft stays here." busy={loading} onCancel={()=>setConfirmProfile(false)} onConfirm={()=>{setConfirmProfile(false);void run("delete");}}/>}
     {saveRequested&&<dialog ref={dialog} className="account-dialog taste-profile-dialog" aria-labelledby="save-taste-title" onCancel={event=>{event.preventDefault();if(!loading)onCancel();}}>
       <div className="dialog-header"><span className="micro-label">BEFORE YOUR NEXT CITY</span><button type="button" className="icon-button" aria-label="Keep exploring this Passport" disabled={loading} onClick={onCancel}><Icon name="close" size={20}/></button></div>
       <h2 id="save-taste-title">Take your tastes with you?</h2>

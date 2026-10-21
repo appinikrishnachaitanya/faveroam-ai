@@ -25,7 +25,7 @@ export default function UpcomingPlans({ plans, busy, error, editableCity, onEdit
           <p>{new Date(`${plan.scheduled_date}T12:00:00Z`).toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric", timeZone: "UTC" })} · {plan.time_zone === "UTC" ? "UTC" : `Local time in ${plan.city}`}</p>
           <ol>{plan.stops.map((stop,index) => <li key={stop.id}><strong>{plan.stop_times?.[index] ? `${plan.stop_times[index]} · ` : ""}{stop.name}</strong><span>{outingActivities.find(activity=>activity.id===savedStopActivity(stop))?.label??stop.section}{stop.address ? ` · ${stop.address}` : ""}</span></li>)}</ol>
           <div className="plan-actions">{onEdit&&editableCity===plan.city&&<button className="quiet-button" disabled={busy} onClick={()=>onEdit(plan)}>Edit</button>}<button className="quiet-button" onClick={() => downloadCalendar(plan)}>Add to calendar</button>
-            <button className="text-button" disabled={busy} onClick={() => { if (window.confirm("Delete this saved plan?")) onDelete(plan.id); }}>Delete plan</button></div>
+            <button className="text-button" disabled={busy} onClick={() => onDelete(plan.id)}>Delete plan</button></div>
         </div>
       </article>)}
   </section>;

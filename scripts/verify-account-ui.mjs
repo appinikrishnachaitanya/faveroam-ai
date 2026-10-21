@@ -130,6 +130,7 @@ let reusableName = "My tastes";
 const profileRecord=()=>({id:uuid,name:reusableName,updated_at:"2026-10-18T00:00:00Z",profile:reusableProfile});
 let libraryReads = 0,
   budgetUpdates = 0;
+const passportSaves=[];
 let themeUpdates = 0;
 let plans = [];
 let failure;
@@ -279,6 +280,10 @@ ws.addEventListener("message", async (event) => {
       } else { reusableProfile=null;value={deleted:true}; }
     } else if (path === "/api/account/passports") {
       if (request.method === "GET") libraryReads++;
+      if (request.method === "POST" && body.action === "save") {
+        assert.equal(body.sessionId,uuid);
+        passportSaves.push(body.revision);
+      }
       value =
         request.method === "GET"
           ? {
@@ -521,10 +526,31 @@ await evaluate("document.querySelector('.account-dialog form').requestSubmit()")
 await wait("!document.querySelector('.account-dialog[open]')");
 await click(".account-launch");
 await wait("Boolean(document.querySelector('.saved-passport-list article'))");
+await click('[aria-label="Delete saved Toronto Passport"]');
+await wait("Boolean(document.querySelector('.confirm-delete-dialog[open]'))");
+assert.ok(await evaluate("document.querySelector('.confirm-delete-dialog').textContent.includes('Delete your saved Toronto Passport?')"), "Passport deletion uses an in-app dialog");
+await textClick("Keep it");
+assert.equal(await evaluate("Boolean(document.querySelector('.confirm-delete-dialog'))"), false);
 await textClick("Open");
 await wait(
   "Boolean(document.querySelector('.passport-cover')) && !document.querySelector('.account-dialog[open]')",
 );
+session.savedCards=[...cards];
+session.queryPreferences={Eat:{priceMax:2},Coffee:{priceMax:1}};
+await call("Page.reload");
+await wait("Boolean(document.querySelector('.passport-cover')) && Boolean(document.querySelector('.signout-button'))");
+await textClick("My Vibe");
+await wait("document.querySelector('.vibe-summary')?.textContent.includes('3 saved discoveries')");
+assert.ok(await evaluate("document.querySelector('.my-vibe').textContent.includes('Protocol Eat stop')"), "Signed-in refresh restores the current My Vibe from server state");
+await textClick("Preferences");
+await wait("Boolean(document.querySelector('.intelligence-preferences'))");
+await input('.intelligence-section select',"Eat",'HTMLSelectElement');
+await wait(`document.querySelector('[aria-label="Maximum price"]')?.value==='2'`);
+await input('.intelligence-section select',"Coffee",'HTMLSelectElement');
+await wait(`document.querySelector('[aria-label="Maximum price"]')?.value==='1'`);
+await input('.intelligence-section select',"Eat",'HTMLSelectElement');
+assert.equal(await evaluate(`document.querySelector('[aria-label="Maximum price"]').value`),"2","Preferences survive section switches and page refresh");
+await textClick("Discover");
 await wait(
   "document.querySelector('.plan-save-actions .primary-button').textContent.includes('Save to')",
 );
@@ -606,6 +632,8 @@ await wait(
 );
 for (let attempt=0; budgetUpdates===0 && attempt<100; attempt++) await new Promise(resolve=>setTimeout(resolve,50));
 assert.equal(budgetUpdates, 1, "Explicit Update applies the chosen budget");
+for (let attempt=0; !passportSaves.includes(session.revision) && attempt<100; attempt++) await new Promise(resolve=>setTimeout(resolve,50));
+assert.ok(passportSaves.includes(session.revision),"Changing an already-saved Passport updates its server snapshot");
 await textClick("Together");
 assert.equal(await evaluate("document.querySelector('.intelligence-preferences').hidden"),true,"Together must not expose personal preference controls");
 assert.equal(await evaluate("document.querySelectorAll('.partner-interests input').length"),1,"One partner interest is enough to begin");
@@ -712,6 +740,11 @@ await wait(
 await click(".account-launch");
 await click(".account-library-tabs button:last-child");
 await wait("Boolean(document.querySelector('.saved-plan'))");
+await textClick("Delete plan");
+await wait("Boolean(document.querySelector('.confirm-delete-dialog[open]'))");
+assert.ok(await evaluate("document.querySelector('.confirm-delete-dialog').textContent.includes('saved outing')"),"Plan deletion uses an in-app dialog");
+await textClick("Keep it");
+assert.ok(await evaluate("Boolean(document.querySelector('.saved-plan'))"),"Cancel keeps the saved plan");
 assert.ok(
   await evaluate(
     "document.querySelector('.upcoming-plans').textContent.includes('Protocol Coffee stop')",
@@ -857,6 +890,10 @@ await wait("document.querySelector('#destination')?.disabled===false && Array.fr
 await input("#destination","London","HTMLSelectElement");
 assert.equal(await evaluate("document.querySelector('.profile-fields select').value"),'','New Passport clears the active profile selection');
 await input('.profile-fields select',uuid,'HTMLSelectElement');
+await textClick("Delete profile");
+await wait("Boolean(document.querySelector('.confirm-delete-dialog[open]'))");
+assert.ok(await evaluate("document.querySelector('.confirm-delete-dialog').textContent.includes('Weekend culture')"),"Taste profile deletion uses an in-app dialog");
+await textClick("Keep it");
 await wait("document.querySelectorAll('.taste-chip').length===3");
 assert.ok(await evaluate("document.querySelector('.profile-status').textContent.includes('Loaded')"),"Selecting a named profile populates tastes");
 assert.ok(await evaluate("document.querySelector('.reusable-tastes a[download]').href.includes('/api/account/preferences/export?id=')"));
