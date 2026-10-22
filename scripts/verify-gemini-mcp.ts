@@ -10,7 +10,7 @@ process.env.AGENT_DEBUG ??= "1";
 const provider = configuredProvider();
 if (!provider) {
   console.error(
-    "Live model/MCP acceptance UNRUN: configure a Vertex Express Mode key as GEMINI_API_KEY or GOOGLE_API_KEY, and set GEMINI_MODEL.",
+    "Live model/MCP acceptance UNRUN: configure GEMINI_AUTH_MODE=vertex-iam with a project, location and service identity, or provide a Vertex Express Mode key; set GEMINI_MODEL.",
   );
   process.exit(2);
 }

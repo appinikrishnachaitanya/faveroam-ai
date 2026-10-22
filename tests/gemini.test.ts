@@ -2,11 +2,35 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 
+test("Cloud Run IAM mode requires project and location and cannot downgrade to a present API key", () => {
+  const output = execFileSync(process.execPath, ["--conditions=react-server", "--import", "tsx", "--input-type=module", "-e", `
+import assert from 'node:assert/strict';
+import { configuredProvider } from './src/agent/provider.ts';
+process.env.GEMINI_AUTH_MODE='vertex-iam';
+delete process.env.GOOGLE_API_KEY;
+process.env.GEMINI_API_KEY='unused-test-key';
+process.env.AGENT_MODEL_API_KEY='unused-compatible-key';
+process.env.AGENT_MODEL_BASE_URL='https://example.com/v1';
+process.env.AGENT_MODEL_NAME='unused-compatible-model';
+process.env.GOOGLE_CLOUD_PROJECT='test-project';
+process.env.GOOGLE_CLOUD_LOCATION='global';
+assert.ok(configuredProvider()?.compose);
+delete process.env.GOOGLE_CLOUD_LOCATION;
+assert.equal(configuredProvider(),undefined);
+process.env.GOOGLE_CLOUD_LOCATION='global';
+process.env.GEMINI_AUTH_MODE='unrecognized';
+assert.throws(()=>configuredProvider(),/Invalid Gemini authentication mode/);
+console.log('Vertex IAM configuration PASS');
+`], { cwd: process.cwd(), encoding: "utf8", timeout: 30000 });
+  assert.match(output, /Vertex IAM configuration PASS/);
+});
+
 test("native Gemini SDK uses function declarations, validates selections, provides tool-free baseline and safe logs", () => {
   const output = execFileSync(process.execPath, ["--conditions=react-server", "--import", "tsx", "--input-type=module", "-e", `
 import assert from 'node:assert/strict';
 import { configuredProvider } from './src/agent/provider.ts';
 import { debugEvent } from './src/agent/debug.ts';
+delete process.env.GEMINI_AUTH_MODE;
 delete process.env.GOOGLE_API_KEY;process.env.GEMINI_API_KEY='native-test-secret';process.env.GEMINI_MODEL='gemini-2.5-flash';process.env.AGENT_MODEL_BASE_URL='invalid-unused-base';process.env.QLOO_API_KEY='qloo-test-secret';process.env.AGENT_DEBUG='1';
 const logs=[];console.info=console.error=(line)=>logs.push(JSON.parse(line));const requests=[];let bad=false,fail=false;
 globalThis.fetch=async (url,options)=>{

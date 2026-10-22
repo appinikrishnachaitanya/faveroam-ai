@@ -5,6 +5,7 @@ test('native response uses configured Vertex model, structured output and no act
  const output=execFileSync(process.execPath,['--conditions=react-server','--import','tsx','--input-type=module','-e',`
  import assert from 'node:assert/strict';
  import { configuredProvider } from './src/agent/provider.ts';
+ delete process.env.GEMINI_AUTH_MODE;
  delete process.env.GEMINI_API_KEY;process.env.GOOGLE_API_KEY='test-key-not-real';process.env.GEMINI_MODEL='configured-test-model';
  let calls=0;let fail=false;
  globalThis.fetch=async(url,options)=>{

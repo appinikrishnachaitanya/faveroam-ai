@@ -4,7 +4,7 @@
 
 TastePassport is a cultural discovery agent for people settling into a new city. It starts with the music, films, food, and other culture someone already loves, then uses Qloo to find real places and cultural discoveries, Gemini to understand requests, and server-side policy to preserve preferences as the user explores.
 
-[Try the public app](https://tastepassport-ai-production.up.railway.app/) · [Project guide and demo](docs/PROJECT_GUIDE.md) · [MIT license](LICENSE)
+[Try the public app](https://tastepassport-ai-500824374153.us-central1.run.app/) · [Project guide and demo](docs/PROJECT_GUIDE.md) · [MIT license](LICENSE)
 
 ## Why it exists
 
@@ -60,7 +60,7 @@ cp .env.example .env.local
 npm run dev -- --port 3000
 ```
 
-Required for live discovery: `QLOO_API_KEY` and `QLOO_API_BASE_URL=https://hackathon.api.qloo.com`. Native Gemini uses `GEMINI_API_KEY` (or `GOOGLE_API_KEY`) and configurable `GEMINI_MODEL`; the default is `gemini-3.1-flash-lite`. Vertex AI Express Mode needs no Gemini base URL, project, or location. Optional account persistence uses `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, and `APP_ORIGIN`. Never commit credentials or put server keys in `NEXT_PUBLIC_` variables.
+Required for live discovery: `QLOO_API_KEY` and `QLOO_API_BASE_URL=https://hackathon.api.qloo.com`. On Cloud Run, set `GEMINI_AUTH_MODE=vertex-iam`, `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION`, and `GEMINI_MODEL`; attach a service account with Vertex AI access. Local Express Mode can still use `GEMINI_API_KEY` (or `GOOGLE_API_KEY`) instead. The default model is `gemini-3.1-flash-lite`. Optional account persistence uses `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, and `APP_ORIGIN`. Never commit credentials or put server keys in `NEXT_PUBLIC_` variables.
 
 For a fresh/reset Supabase database, run the single [db-scripts/setup.sql](db-scripts/setup.sql) **manually** in the SQL Editor. It deletes app-owned saved data and active sessions while preserving Auth users and existing destination rows. Do not run it as part of deployment.
 

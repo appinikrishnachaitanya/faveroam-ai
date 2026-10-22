@@ -24,6 +24,7 @@ export function recordQuery(
   for (const key of [
     "QLOO_API_KEY",
     "GEMINI_API_KEY",
+    "GOOGLE_API_KEY",
     "AGENT_MODEL_API_KEY",
     "SUPABASE_SERVICE_ROLE_KEY",
   ])

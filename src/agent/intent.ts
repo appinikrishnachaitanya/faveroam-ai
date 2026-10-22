@@ -26,6 +26,7 @@ export function culturalText(value: string, max = 1000): string {
     [
       process.env.QLOO_API_KEY,
       process.env.GEMINI_API_KEY,
+      process.env.GOOGLE_API_KEY,
       process.env.AGENT_MODEL_API_KEY,
     ].some(
       (secret) => secret && value.includes(secret),

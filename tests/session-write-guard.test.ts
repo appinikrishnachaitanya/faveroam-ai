@@ -26,7 +26,7 @@ test("session store checks revisioned write before changing in-memory state", ()
   assert.match(store,/durableIds\.delete\(id\)/);
 });
 
-test("shared-session writes protect against stale revisions across Railway workers",()=>{
+test("shared-session writes protect against stale revisions across Cloud Run instances",()=>{
   const sourceFile=source("src/agent/active-session-db.ts");
   assert.match(sourceFile,/\.eq\("revision", expectedRevision\)/);
   assert.match(sourceFile,/\.gt\("expires_at", new Date\(\)\.toISOString\(\)\)/);

@@ -17,23 +17,26 @@ import type {
   ToolChoice,
   ToolDefinition,
 } from "./types.ts";
-/** Vertex Express Mode uses a server-only API key; compatible providers remain optional. */
+/** Cloud Run can use its service identity; Express keys remain available for local use. */
 export function configuredProvider(): ModelProvider | undefined {
+  const authMode = process.env.GEMINI_AUTH_MODE?.trim();
+  if (authMode && authMode !== "vertex-iam" && authMode !== "express-key")
+    throw Error("Invalid Gemini authentication mode");
+  const useIam = authMode === "vertex-iam";
   const vertexKey = process.env.GOOGLE_API_KEY?.trim() || process.env.GEMINI_API_KEY?.trim();
-  const native = Boolean(vertexKey);
-  const key = native
-      ? vertexKey
-      : process.env.AGENT_MODEL_API_KEY,
+  const native = useIam || Boolean(vertexKey) || authMode === "express-key";
+  const key = useIam ? undefined : native ? vertexKey : process.env.AGENT_MODEL_API_KEY,
     base = process.env.AGENT_MODEL_BASE_URL,
     model = native
       ? process.env.GEMINI_MODEL?.trim() || "gemini-3.1-flash-lite"
       : process.env.AGENT_MODEL_NAME;
-  if (!key || !model || (!native && !base)) return;
+  const project = process.env.GOOGLE_CLOUD_PROJECT?.trim();
+  const location = process.env.GOOGLE_CLOUD_LOCATION?.trim();
+  if (useIam ? !project || !location : !key || !model || (!native && !base)) return;
   const gemini = native
     ? new GoogleGenAI({
         vertexai: true,
-        apiKey: key,
-        // Express Mode intentionally omits project/location and uses the global endpoint.
+        ...(useIam ? { project, location } : { apiKey: key! }),
         httpOptions: { apiVersion: "v1", timeout: 20_000, retryOptions: { attempts: 1 } },
       })
     : undefined;
