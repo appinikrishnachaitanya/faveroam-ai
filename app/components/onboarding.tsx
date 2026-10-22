@@ -368,6 +368,7 @@ export function TasteConfirmation({
                       </option>
                     ))}
                   </select>
+                  <small>{item.candidates.length === 1 ? "One match returned. Replace this taste to search another name." : `${item.candidates.length} matches available — choose a different one if we guessed wrong.`}</small>
                 </label>
               ) : (
                 <p className="helper">

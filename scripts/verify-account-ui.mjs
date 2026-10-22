@@ -898,7 +898,7 @@ assert.ok(await evaluate("document.querySelector('.confirm-delete-dialog').textC
 await textClick("Keep it");
 await wait("document.querySelectorAll('.taste-chip').length===3");
 assert.ok(await evaluate("document.querySelector('.profile-status').textContent.includes('Loaded')"),"Selecting a named profile populates tastes");
-assert.ok(await evaluate("document.querySelector('.reusable-tastes a[download]').href.includes('/api/account/preferences/export?id=')"));
+assert.equal(await evaluate("document.querySelector('.reusable-tastes a[download]') === null"),true,"Taste profile export is hidden");
 await input('#taste-input','Miles Davis');
 await click('[aria-label="Add taste"]');
 assert.equal(await evaluate("document.querySelectorAll('.taste-chip').length"),4,"A saved profile remains editable in onboarding");

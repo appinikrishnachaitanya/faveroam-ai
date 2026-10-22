@@ -87,7 +87,7 @@ export function candidates(entities: Entity[]): Candidate[] {
     const label = `${item.name}|${item.detail}`.toLowerCase();
     if (!item.name || ids.has(item.id) || labels.has(label)) return false;
     ids.add(item.id); labels.add(label); return true;
-  }).slice(0, 5);
+  }).slice(0, 10);
 }
 /** Conservative local classification uses returned tag NAMES only, never invented
  * filter parameters. Unknown types are omitted, and non-leisure services excluded.

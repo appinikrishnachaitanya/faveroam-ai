@@ -116,7 +116,7 @@ export function endpointName(path: QlooEndpoint) {
 }
 export async function search(query: string, signal?: AbortSignal): Promise<Entity[]> {
   const entities = parseEntities(
-    await request("/search", { query, take: "5" }, signal),
+    await request("/search", { query, take: "10" }, signal),
     "search",
   );
   debugEvent("qloo.entities", { endpoint: "search", count: entities.length });
