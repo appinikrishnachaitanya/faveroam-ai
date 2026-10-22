@@ -21,8 +21,8 @@ test("session store checks revisioned write before changing in-memory state", ()
   const guard=store.indexOf("assertSessionWriteCommitted(gcsSessionConfigured() || durableIds.has(id), committed)");
   const memoryCommit=store.indexOf("sessions.set(id, next.state)");
   assert.ok(update>=0 && guard>update && memoryCommit>guard);
-  assert.match(store,/if \(persisted\) durableIds\.add\(id\)/);
-  assert.match(store,/if \(persisted && validLocal && validLocal\.revision > persisted\.revision\)/);
+  assert.match(store,/const persisted = await loadActiveSession\(id\)/);
+  assert.match(store,/if \(!persisted\) throw Error\("Your Passport session is no longer available/);
   assert.match(store,/durableIds\.delete\(id\)/);
 });
 
@@ -34,10 +34,10 @@ test("shared-session writes protect against stale revisions across Cloud Run ins
   assert.match(objectStore,/current\?\.state\.revision !== expectedRevision/);
 });
 
-test("new Passport warns if shared state is not durable; saved restore never silently succeeds",()=>{
+test("new Passport fails if shared state is not durable; saved restore never silently succeeds",()=>{
   const create=source("app/api/passport/route.ts");
-  assert.match(create,/if \(storageConfigured\(\) && !persisted\)/);
-  assert.match(create,/Temporary Passport storage is unavailable/);
+  assert.match(create,/if \(gcsSessionConfigured\(\) && !persisted\)/);
+  assert.match(create,/throw Error\("Passport storage is temporarily unavailable/);
   for (const file of ["app/api/account/passports/route.ts","app/api/account/preferences/route.ts"]) {
     const code=source(file);
     assert.match(code,/assertSessionWriteCommitted\(true, await syncSession\(state\)\)/);

@@ -27,5 +27,5 @@ export async function persistActiveSession(state: AgentState, expectedRevision?:
 export async function removeActiveSession(id: string): Promise<void> {
   if (!gcsSessionConfigured()) return;
   try { await deleteGcsSession(id); }
-  catch { report("remove"); }
+  catch { report("remove"); throw Error("Passport storage is temporarily unavailable."); }
 }

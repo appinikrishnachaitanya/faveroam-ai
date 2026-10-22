@@ -69,25 +69,16 @@ export function getSession(id: string): AgentState {
  * No browser-submitted recommendation data is accepted as a replacement.
  */
 export async function loadSession(id: string): Promise<AgentState> {
-  let persisted: AgentState | undefined;
-  let storageUnavailable = false;
-  try { persisted = await loadActiveSession(id); }
-  catch { storageUnavailable = true; }
-  if (persisted) durableIds.add(id);
-  const local = sessions.get(id);
-  const now = Date.now();
-  const validLocal = local && local.expires > now ? local : undefined;
-  // A higher local revision than the shared row means a prior DB update was
-  // missed. Never treat that uncommitted state as authoritative for saving.
-  if (persisted && validLocal && validLocal.revision > persisted.revision)
-    throw Error("Your Passport could not be synchronized safely. Please retry the refinement.");
-  const chosen = persisted && (!validLocal || persisted.revision >= validLocal.revision)
-    ? normalizeSession(persisted) : validLocal;
-  if (chosen) {
-    sessions.set(id, chosen);
-    return chosen;
+  // Cloud Storage is canonical across Cloud Run instances. A local copy can
+  // be stale after a concurrent edit, deletion, or storage outage.
+  if (gcsSessionConfigured()) {
+    const persisted = await loadActiveSession(id);
+    if (!persisted) throw Error("Your Passport session is no longer available. Refresh with your tastes to continue.");
+    const state = normalizeSession(persisted);
+    sessions.set(id, state);
+    durableIds.add(id);
+    return state;
   }
-  if (storageUnavailable) throw Error("Passport storage is temporarily unavailable.");
   return getSession(id);
 }
 /** Persist newly constructed trusted server state before returning it to the browser. */
@@ -144,11 +135,11 @@ export async function inSession<T>(
 }
 
 export async function discardSession(id: string) {
+  await removeActiveSession(id);
   const old = sessions.get(id);
   if (old) clearPassport(old);
   sessions.delete(id);
   durableIds.delete(id);
-  await removeActiveSession(id);
 }
 
 /** Rehydrate trusted account data with a fresh, bounded guest-session token. */

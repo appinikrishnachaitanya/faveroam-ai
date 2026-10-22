@@ -6,11 +6,12 @@ import { sameOrigin, privateJson } from "../../../../src/account/server";
 import { loadSession, discardSession } from "../../../../src/agent/store";
 export const runtime = "nodejs";
 async function handleDELETE(request: Request) {
+  if (!sameOrigin(request)) return privateJson({ error: "Please use this app." }, 403);
   try {
     const raw = await request.text();
     if (raw.length > 200) throw Error();
     const body = JSON.parse(raw);
-    if (typeof body.sessionId !== "string") throw Error();
+    if (!validSessionId(body.sessionId)) throw Error();
     await discardSession(body.sessionId);
     debugEvent("session.reset", { action: "new-passport" });
     return Response.json(
