@@ -127,7 +127,7 @@ export default function Home() {
   }, [draftHydrated,result,city,origin,draft,requestedActivities]);
 
   // Browser-tab fallback for unexpected React view failures. This is NOT a
-  // substitute for shared Supabase session persistence; the server still
+  // substitute for shared Cloud Storage session persistence; the server still
   // checks the session revision before any subsequent edit or save.
   useEffect(() => {
     const recovered=restoreGuestPassport(window.sessionStorage);

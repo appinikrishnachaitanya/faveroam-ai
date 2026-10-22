@@ -54,7 +54,7 @@ test("safe info and error logs work without debug mode and honor error-only filt
   };
   try {
     await debugRequest("account.plans", async () => {
-      debugEvent("service.invoked", { service: "supabase-storage" });
+      debugEvent("service.invoked", { service: "cloud-storage" });
       return Response.json({ secret: "never-log-body" });
     });
     await debugRequest("account", async () =>

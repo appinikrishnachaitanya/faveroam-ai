@@ -22,7 +22,7 @@ export function passportStorageFailure(stage: PassportStorageStage, error: unkno
   const code = safePassportStorageCode(error);
   const retained = "Your current Passport is still here.";
   if (stage === "save-session") {
-    // An unavailable Supabase request is not proof that the user session expired.
+    // An unavailable storage request is not proof that the user session expired.
     if (error instanceof Error && /(?:session expired|refinement session expired)/i.test(error.message))
       return {status:410,message:`Your editing session ended. Open a saved Passport or create a new one before saving. ${retained}`,code};
     if (error instanceof Error && /Passport changed|synchronized safely/.test(error.message))

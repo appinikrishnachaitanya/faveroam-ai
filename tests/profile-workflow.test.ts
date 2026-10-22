@@ -4,7 +4,6 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { portableTasteProfile } from "../src/account/taste-profile.ts";
 import { profileName, validProfileId, exportTasteProfile } from "../src/account/profile-record.ts";
-import { existingRegistration } from "../src/account/registration.ts";
 import { rankCandidates, suggestedMatch } from "../src/passport/matching.ts";
 import { discoveryQueries } from "../src/agent/strategy.ts";
 import { normalizeSession } from "../src/agent/session.ts";
@@ -25,12 +24,6 @@ test("profile export is versioned and excludes identity, session, geography and 
   assert.equal(value.name,"Film weekends");
   assert.equal(value.preferences.selected.length,3);
   assert.doesNotMatch(JSON.stringify(value),/secret-session|London|user_id|email|history|sessionId/);
-});
-test("duplicate registration handles both explicit and obfuscated provider responses",()=>{
-  assert.equal(existingRegistration({error:null,data:{session:null,user:{identities:[]}}}),true);
-  assert.equal(existingRegistration({error:{code:"user_already_exists"},data:{session:null,user:null}}),true);
-  assert.equal(existingRegistration({error:null,data:{session:null,user:{identities:[{}]}}}),false);
-  assert.equal(existingRegistration({error:{code:"over_email_send_rate_limit"},data:{session:null,user:null}}),false);
 });
 test("candidate ranking prioritizes exact title and requested year without losing ambiguity",()=>{
   const choices=[{...selected[0],name:"Crash",detail:"1996"},{...selected[1],name:"Crash",detail:"2004"},{...selected[2],name:"Crash Course",detail:"2004"}];

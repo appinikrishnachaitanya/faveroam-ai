@@ -26,7 +26,6 @@ export function recordQuery(
     "GEMINI_API_KEY",
     "GOOGLE_API_KEY",
     "AGENT_MODEL_API_KEY",
-    "SUPABASE_SERVICE_ROLE_KEY",
   ])
     if (process.env[key])
       json = json.replaceAll(process.env[key]!, "[REDACTED]");

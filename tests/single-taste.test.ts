@@ -14,7 +14,7 @@ test("one confirmed taste completes resolution, discovery and saved-profile/snap
  import {passportSnapshot,restoreSnapshot} from './src/account/snapshot.ts';
  import {portableTasteProfile,readTasteProfile} from './src/account/taste-profile.ts';
  import {getSession} from './src/agent/store.ts';
- process.env.QLOO_API_KEY='single-taste-fixture';process.env.LOG_LEVEL='error';delete process.env.SUPABASE_URL;
+ process.env.QLOO_API_KEY='single-taste-fixture';process.env.LOG_LEVEL='error';delete process.env.GCP_STORAGE_BUCKET;
  const id='00000000-0000-4000-8000-000000000001', match='00000000-0000-4000-8000-000000000002';
  globalThis.fetch=async(url)=>Response.json({results:{entities:new URL(url).pathname==='/search'?[{entity_id:id,name:'Interstellar',types:['urn:entity:movie'],properties:{release_year:2014}}]:[{entity_id:match,name:'Returned film',types:['urn:entity:movie'],query:{affinity:0.7}}]}});
  const resolved=await resolve(new Request('http://localhost/api/agent/resolve',{method:'POST',body:JSON.stringify({seeds:['Interstellar']})}));

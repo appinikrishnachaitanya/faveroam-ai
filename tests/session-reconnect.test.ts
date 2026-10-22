@@ -7,7 +7,7 @@ test("reconnection reads trusted state, rejects bad/cross-site requests and repo
  import assert from 'node:assert/strict';
  import { POST } from './app/api/agent/session/route.ts';
  import { createSession } from './src/agent/store.ts';
- delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+ delete process.env.GCP_STORAGE_BUCKET;
  const session=createSession({city:'London',selected:[],cards:[],notices:[],explanation:''});
  const request=(body,origin='http://localhost')=>new Request('http://localhost/api/agent/session',{method:'POST',headers:{'Content-Type':'application/json',Origin:origin},body:JSON.stringify(body)});
  const response=await POST(request({sessionId:session.id}));

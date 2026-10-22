@@ -3,6 +3,7 @@ import { debugEvent } from "./debug.ts";
 import { normalizeSession, clearPassport } from "./session.ts";
 import { randomUUID } from "node:crypto";
 import { loadActiveSession, persistActiveSession, removeActiveSession } from "./active-session-db.ts";
+import { gcsSessionConfigured } from "./active-session-gcs.ts";
 import { activeSessionExpiry, assertSessionWriteCommitted } from "./session-lifetime.ts";
 import type { Candidate } from "../passport/model.ts";
 import type { AgentState, Constraint, TastePassportSession } from "./types.ts";
@@ -132,7 +133,7 @@ export async function inSession<T>(
     // CAS protects the revision when a second Cloud Run instance processes a
     // concurrent edit. An unavailable shared table retains the legacy map.
     const committed = await persistActiveSession(next.state, revision);
-    assertSessionWriteCommitted(durableIds.has(id), committed);
+    assertSessionWriteCommitted(gcsSessionConfigured() || durableIds.has(id), committed);
     if (committed) durableIds.add(id);
     sessions.set(id, next.state);
     debugEvent("session.updated", { count: next.state.cards.length });

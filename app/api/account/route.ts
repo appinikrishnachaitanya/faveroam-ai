@@ -1,227 +1,112 @@
-import { existingRegistration } from "../../../src/account/registration";
-import { passwordValidationMessage, passwordProviderMessage } from "../../../src/account/password-policy";
+import { cookies } from "next/headers";
 import { debugRequest } from "../../../src/agent/debug";
-import {
-  accountClient,
-  accountConfigured,
-  storageConfigured,
-  storageWriter,
-  sameOrigin,
-  requestOrigin,
-  privateJson,
-} from "../../../src/account/server";
-export const runtime = "nodejs";
 import { accountName } from "../../../src/account/identity";
+import { passwordValidationMessage } from "../../../src/account/password-policy";
+import { sameOrigin, requestOrigin } from "../../../src/account/policy";
+import { auth, clearUserSession, currentUser, firebaseRequest, FirebaseAuthError, gcpAccountConfigured, setUserSession, accountRows, removeJsonObject } from "../../../src/account/gcp";
+import { privateJson } from "../../../src/account/server";
+
+export const runtime = "nodejs";
+
 async function handleGET() {
-  if (!accountConfigured())
-    return privateJson({ configured: false, storage: false, user: null });
+  if (!gcpAccountConfigured()) return privateJson({ configured: false, storage: false, user: null });
   try {
-    const client = await accountClient();
-    const { data, error } = await client.auth.getUser();
-    return privateJson({
-      configured: true,
-      storage: storageConfigured(),
-      user: error ? null : data.user ? {
-        email: data.user.email,
-        firstName: typeof data.user.user_metadata?.first_name === "string" ? data.user.user_metadata.first_name.slice(0,80) : "",
-        lastName: typeof data.user.user_metadata?.last_name === "string" ? data.user.user_metadata.last_name.slice(0,80) : "",
-      } : null,
-    });
-  } catch {
-    return privateJson(
-      {
-        configured: true,
-        storage: false,
-        user: null,
-        error: "Accounts are temporarily unavailable.",
-      },
-      503,
-    );
-  }
+    const user = await currentUser();
+    const [firstName = "", ...lastParts] = (user?.displayName ?? "").split(" ");
+    const lastName = lastParts.join(" ");
+    return privateJson({ configured: true, storage: true, user: user ? { email: user.email, firstName, lastName } : null });
+  } catch { return privateJson({ configured: true, storage: false, user: null, error: "Accounts are temporarily unavailable." }, 503); }
 }
+
 async function handlePOST(request: Request) {
-  if (!sameOrigin(request))
-    return privateJson(
-      { error: "Please use this app to manage your account." },
-      403,
-    );
-  if (!accountConfigured())
-    return privateJson(
-      {
-        error:
-          "Accounts are not configured yet. Your guest Passport still works.",
-      },
-      503,
-    );
+  if (!sameOrigin(request)) return privateJson({ error: "Please use this app to manage your account." }, 403);
+  if (!gcpAccountConfigured()) return privateJson({ error: "Accounts are not configured yet. Guest discovery still works." }, 503);
   try {
     const raw = await request.text();
-    if (raw.length > 4096)
-      return privateJson({ error: "Invalid account request." }, 400);
-    const b = JSON.parse(raw);
-    const client = await accountClient();
-    if (b.action === "logout") {
-      const { error } = await client.auth.signOut();
-      if (error)
-        return privateJson({ error: "Could not sign out. Please retry." }, 502);
-      return privateJson({ signedOut: true });
-    }
-    if (b.action === "recover") {
-      if (
-        typeof b.email !== "string" ||
-        b.email.length > 254 ||
-        !/^\S+@\S+\.\S+$/.test(b.email)
-      )
-        return privateJson({ error: "Use a valid email." }, 400);
-      await client.auth.resetPasswordForEmail(b.email.trim(), {
-        redirectTo: `${requestOrigin(request)}/auth/callback?recovery=1`,
-      });
+    if (raw.length > 4096) return privateJson({ error: "Invalid account request." }, 400);
+    const body = JSON.parse(raw) as Record<string, unknown>;
+    if (body.action === "logout") { await clearUserSession(); return privateJson({ signedOut: true }); }
+    if (body.action === "recover") {
+      if (typeof body.email !== "string" || !/^\S+@\S+\.\S+$/.test(body.email)) return privateJson({ error: "Use a valid email." }, 400);
+      try { await firebaseRequest("accounts:sendOobCode", { requestType: "PASSWORD_RESET", email: body.email.trim(), continueUrl: `${requestOrigin(request)}/auth/callback?recovery=1` }); }
+      catch { /* Do not reveal whether the address has an account. */ }
       return privateJson({ requested: true });
     }
-    if (b.action === "password" || b.action === "change-password") {
-      const passwordIssue = passwordValidationMessage(b.password);
-      if (passwordIssue)
-        return privateJson({ error: passwordIssue }, 400);
-      const {
-        data: { user },
-        error: authError,
-      } = await client.auth.getUser();
-      if (authError || !user)
-        return privateJson(
-          { error: "Open your email recovery link first." },
-          401,
-        );
-      if (b.action === "change-password") {
-        if (!user.email || typeof b.currentPassword !== "string" || !b.currentPassword || b.currentPassword.length > 128)
-          return privateJson({ error: "Enter your current password." },400);
-        const verified = await client.auth.signInWithPassword({ email:user.email, password:b.currentPassword });
-        if (verified.error || verified.data.user?.id !== user.id)
-          return privateJson({ error: "Your current password could not be confirmed." },400);
+    if (body.action === "password" || body.action === "change-password") {
+      const issue = passwordValidationMessage(body.password);
+      if (issue) return privateJson({ error: issue }, 400);
+      if (body.action === "password") {
+        const code = (await cookies()).get("tastepassport_recovery")?.value;
+        if (!code) return privateJson({ error: "Open a fresh recovery link first." }, 401);
+        await firebaseRequest("accounts:resetPassword", { oobCode: code, newPassword: body.password });
+        (await cookies()).delete("tastepassport_recovery");
+        return privateJson({ passwordUpdated: true });
       }
-      const { error } = await client.auth.updateUser({ password: b.password });
-      if (error) return privateJson({ error: passwordProviderMessage(error) ?? "Password update could not complete. Sign in again or request an email recovery link." }, 400);
-      return privateJson({ signedIn: true });
+      const user = await currentUser();
+      if (!user?.email || typeof body.currentPassword !== "string") return privateJson({ error: "Please sign in again." }, 401);
+      try { await firebaseRequest("accounts:signInWithPassword", { email: user.email, password: body.currentPassword, returnSecureToken: true }); }
+      catch { return privateJson({ error: "Your current password could not be confirmed." }, 400); }
+      await auth().updateUser(user.uid, { password: body.password as string });
+      const refreshed = await firebaseRequest("accounts:signInWithPassword", { email: user.email, password: body.password, returnSecureToken: true });
+      await setUserSession(String(refreshed.idToken));
+      return privateJson({ signedIn: true, passwordUpdated: true });
     }
-    if (
-      !["login", "register"].includes(b.action) ||
-      typeof b.email !== "string" ||
-      b.email.length > 254 ||
-      !/^\S+@\S+\.\S+$/.test(b.email) ||
-      typeof b.password !== "string" ||
-      (b.action === "login" && b.password.length > 128) ||
-      b.password.length < 1
-    )
-      return privateJson(
-        {
-          error:
-            "Use a valid email and a password of at least 12 characters for registration.",
-        },
-        400,
-      );
-    if (b.action === "register") {
-      const passwordIssue = passwordValidationMessage(b.password);
-      if (passwordIssue) return privateJson({ error: passwordIssue }, 400);
+    if (!["login", "register"].includes(String(body.action)) || typeof body.email !== "string" || body.email.length > 254 || !/^\S+@\S+\.\S+$/.test(body.email) || typeof body.password !== "string" || !body.password || body.password.length > 128)
+      return privateJson({ error: "Use a valid email and password." }, 400);
+    const email = body.email.trim();
+    if (body.action === "register") {
+      const issue = passwordValidationMessage(body.password);
+      if (issue) return privateJson({ error: issue }, 400);
+      let firstName: string, lastName: string;
+      try { firstName = accountName(body.firstName); lastName = accountName(body.lastName); }
+      catch { return privateJson({ error: "Enter your first and last name using up to 80 characters each." }, 400); }
+      let signup: Record<string, unknown>;
+      try { signup = await firebaseRequest("accounts:signUp", { email, password: body.password, returnSecureToken: true }); }
+      catch (error) {
+        if (error instanceof FirebaseAuthError && error.code === "EMAIL_EXISTS")
+          return privateJson({ error: "An account already exists for this email. Sign in or use Forgot password.", signInRequired: true }, 409);
+        return privateJson({ error: "Registration is temporarily unavailable. Please retry." }, 503);
+      }
+      await auth().updateUser(String(signup.localId), { displayName: `${firstName} ${lastName}` });
+      await firebaseRequest("accounts:sendOobCode", { requestType: "VERIFY_EMAIL", idToken: signup.idToken, continueUrl: `${requestOrigin(request)}/auth/callback?verified=1` });
+      return privateJson({ signedIn: false, confirmationRequired: true });
     }
-    let names: { first_name: string; last_name: string } | undefined;
-    if (b.action === "register") {
-      try { names = { first_name: accountName(b.firstName), last_name: accountName(b.lastName) }; }
-      catch { return privateJson({ error: "Enter your first and last name using up to 80 characters each." },400); }
+    let result: Record<string, unknown>;
+    try { result = await firebaseRequest("accounts:signInWithPassword", { email, password: body.password, returnSecureToken: true }); }
+    catch { return privateJson({ error: "We couldn’t sign you in. Check your details or confirm your email." }, 400); }
+    const user = await auth().getUser(String(result.localId));
+    if (!user.emailVerified) {
+      try { await firebaseRequest("accounts:sendOobCode", { requestType: "VERIFY_EMAIL", idToken: result.idToken, continueUrl: `${requestOrigin(request)}/auth/callback?verified=1` }); }
+      catch { /* A previous verification email may already have arrived. */ }
+      return privateJson({ error: "Check your email to confirm your account, then sign in. We sent another link if email delivery is available." }, 403);
     }
-    const result =
-      b.action === "register"
-        ? await client.auth.signUp({
-            email: b.email.trim(),
-            password: b.password,
-            options: {
-              data: names,
-              emailRedirectTo: `${requestOrigin(request)}/auth/callback`,
-            },
-          })
-        : await client.auth.signInWithPassword({
-            email: b.email.trim(),
-            password: b.password,
-          });
-    if (b.action === "register" && existingRegistration(result))
-      return privateJson({error:"An account already exists for this email. Sign in or use Forgot password.",signInRequired:true},409);
-    if (result.error)
-      return privateJson(
-        {
-          error:
-            b.action === "login"
-              ? "We couldn’t sign you in. Check your details or confirm your email."
-              : passwordProviderMessage(result.error) ?? "Registration could not complete. Please check your details or try again.",
-        },
-        400,
-      );
-    return privateJson({
-      signedIn: Boolean(result.data.session),
-      confirmationRequired: !result.data.session,
-    });
-  } catch {
-    return privateJson(
-      {
-        error:
-          "Account service is temporarily unavailable. Your Passport is preserved.",
-      },
-      502,
-    );
-  }
+    await setUserSession(String(result.idToken));
+    return privateJson({ signedIn: true, confirmationRequired: false });
+  } catch { return privateJson({ error: "Account service is temporarily unavailable. Your Passport is preserved." }, 502); }
 }
+
 async function handleDELETE(request: Request) {
-  if (!sameOrigin(request))
-    return privateJson({ error: "Please use this app." }, 403);
-  if (!storageConfigured())
-    return privateJson(
-      { error: "Account deletion is not configured yet." },
-      503,
-    );
+  if (!sameOrigin(request)) return privateJson({ error: "Please use this app." }, 403);
   try {
-    const raw = await request.text();
-    if (raw.length > 1000)
-      return privateJson({ error: "Invalid deletion request." }, 400);
-    const b = JSON.parse(raw);
-    if (
-      b.confirmation !== "DELETE" ||
-      typeof b.password !== "string" ||
-      !b.password ||
-      b.password.length > 128
-    )
-      return privateJson(
-        { error: "Re-enter your password and type DELETE to confirm." },
-        400,
-      );
-    const client = await accountClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await client.auth.getUser();
-    if (authError || !user?.email)
-      return privateJson({ error: "Please sign in again." }, 401);
-    const verified = await client.auth.signInWithPassword({
-      email: user.email,
-      password: b.password,
-    });
-    if (verified.error || verified.data.user?.id !== user.id)
-      return privateJson({ error: "Password confirmation failed." }, 400);
-    const { error } = await storageWriter().auth.admin.deleteUser(user.id);
-    if (error) throw Error();
-    await client.auth.signOut();
+    const body = JSON.parse(await request.text()) as Record<string, unknown>;
+    const user = await currentUser();
+    if (!user?.email) return privateJson({ error: "Please sign in again." }, 401);
+    if (body.confirmation !== "DELETE" || typeof body.password !== "string") return privateJson({ error: "Re-enter your password and type DELETE to confirm." }, 400);
+    try { await firebaseRequest("accounts:signInWithPassword", { email: user.email, password: body.password, returnSecureToken: true }); }
+    catch { return privateJson({ error: "Password confirmation failed." }, 400); }
+    for (const kind of ["passports", "plans", "profiles"] as const) {
+      const rows = await accountRows(user.uid, kind).get();
+      for (const row of rows.docs) {
+        if (kind === "passports") await removeJsonObject(user.uid, row.data().objectPath);
+        await row.ref.delete();
+      }
+    }
+    await auth().deleteUser(user.uid);
+    await clearUserSession();
     return privateJson({ deleted: true });
-  } catch {
-    return privateJson(
-      { error: "Could not delete the account. Please retry." },
-      502,
-    );
-  }
+  } catch { return privateJson({ error: "Could not delete the account. Please retry." }, 502); }
 }
 
-export function GET() {
-  return debugRequest("account", () => handleGET());
-}
-
-export function POST(request: Request) {
-  return debugRequest("account", () => handlePOST(request));
-}
-
-export function DELETE(request: Request) {
-  return debugRequest("account", () => handleDELETE(request));
-}
+export function GET() { return debugRequest("account", handleGET); }
+export function POST(request: Request) { return debugRequest("account", () => handlePOST(request)); }
+export function DELETE(request: Request) { return debugRequest("account", () => handleDELETE(request)); }

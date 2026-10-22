@@ -1,6 +1,8 @@
 import { debugRequest } from "../../../../src/agent/debug";
-import { getSession } from "../../../../src/agent/store";
+import { loadSession } from "../../../../src/agent/store";
 import { configuredProvider } from "../../../../src/agent/provider";
+import { readComparisonCache, writeComparisonCache } from "../../../../src/agent/shared-cache";
+import { sameOrigin } from "../../../../src/account/policy";
 export const runtime = "nodejs";
 const cache = new Map<
   string,
@@ -8,6 +10,7 @@ const cache = new Map<
 >();
 const running = new Set<string>();
 async function handlePOST(request: Request) {
+  if (!sameOrigin(request)) return Response.json({ error: "Please use this app." }, { status: 403 });
   let id = "",
     acquired = false;
   try {
@@ -16,7 +19,7 @@ async function handlePOST(request: Request) {
     const body = JSON.parse(raw);
     if (typeof body.sessionId !== "string") throw Error();
     id = body.sessionId;
-    const state = getSession(id);
+    const state = await loadSession(id);
     const comparison = structuredClone(state.comparison);
     if (!comparison)
       return Response.json(
@@ -39,6 +42,8 @@ async function handlePOST(request: Request) {
         { baseline: cached.baseline, comparison: cached.comparison },
         { headers: { "Cache-Control": "no-store" } },
       );
+    const shared = await readComparisonCache(cacheKey);
+    if (shared) return Response.json(shared, { headers: { "Cache-Control": "no-store" } });
     if (running.has(id))
       return Response.json(
         { error: "Comparison already in progress." },
@@ -53,6 +58,7 @@ async function handlePOST(request: Request) {
     );
     if (cache.size >= 100) cache.delete(cache.keys().next().value!);
     cache.set(cacheKey, { at: Date.now(), baseline, comparison });
+    await writeComparisonCache(cacheKey, baseline, comparison);
     return Response.json(
       { baseline, comparison },
       { headers: { "Cache-Control": "no-store" } },

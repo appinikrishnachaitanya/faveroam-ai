@@ -66,7 +66,7 @@ type DebugEvent =
   | "service.response"
   | "service.failed";
 interface DebugMeta {
-  service?: "supabase-auth" | "supabase-storage";
+  service?: "firebase-auth" | "firestore" | "cloud-storage";
   trace?: string;
   operation?: "interpret" | "choose" | "baseline" | "explain" | "observe-tools" | "compose";
   tool?: string;
@@ -124,7 +124,7 @@ export function debugEvent(event: DebugEvent, meta: DebugMeta = {}) {
       event,
       timestamp: new Date().toISOString(),
       level: error ? "error" : "info",
-      service: allowed(meta.service, ["supabase-auth", "supabase-storage"]),
+      service: allowed(meta.service, ["firebase-auth", "firestore", "cloud-storage"]),
       requestTrace: context.getStore(),
       trace:
         meta.trace && /^[a-f0-9-]{36}$/.test(meta.trace)

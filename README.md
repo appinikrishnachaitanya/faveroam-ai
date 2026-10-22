@@ -63,10 +63,12 @@ Discovery first checks identity and hard requirements, then ranks and diversifie
 | Qloo API and official harness/MCP | Resolve interests and concepts; retrieve cultural entities, places and shared associations |
 | Gemini via `@google/genai` | Interpret conversational requests and select permitted functions; compose responses from checked facts |
 | Server-side policy and session state | Validate requests, preserve unaffected preferences, reject unsupported results and coordinate revisions |
-| Supabase (optional) | Email/password accounts, saved Passports, plans, taste profiles, destinations and persisted editing sessions |
+| Firebase Authentication | Email/password accounts, verification, recovery and server-issued session cookies |
+| Firestore | Account-owned plan and profile records, saved Passport indexes and editable destinations |
+| Cloud Storage | Large Passport snapshots and revision-checked editing-session JSON shared across Cloud Run instances |
 | Google Cloud Run | Host the public Next.js application |
 
-Guest discovery needs Qloo but no account. If account storage is configured, the browser receives only an active-session pointer; canonical editing state stays on the server. Saved Passports hold bounded Qloo-backed discoveries and preferences, not chat history or provider credentials.
+Guest discovery needs Qloo but no account. The browser receives only an active-session pointer; canonical editing state stays on the server. Cloud Storage object generations reject competing edits from different Cloud Run instances; a short-lived shared cache avoids repeating model-only comparisons across replicas. Saved Passports hold bounded Qloo-backed discoveries and preferences, not chat history or provider credentials.
 
 ## Run it locally
 
@@ -84,14 +86,16 @@ Open `http://localhost:3000`. Set these **server-side** values in `.env.local` o
 |---|---|
 | `QLOO_API_KEY` | Required for live Qloo discovery. Obtain a hackathon-enabled key. |
 | `QLOO_API_BASE_URL` | Use `https://hackathon.api.qloo.com`. |
-| `GEMINI_API_KEY` or `GOOGLE_API_KEY` | Enables native Gemini conversation through Vertex AI Express Mode. `GOOGLE_API_KEY` takes precedence if both are set. |
+| `GEMINI_AUTH_MODE=vertex-iam`, `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION` | Cloud Run Gemini configuration through its attached service account. Use a supported model location such as `global`. |
+| `GEMINI_API_KEY` or `GOOGLE_API_KEY` | Optional local alternative with `GEMINI_AUTH_MODE=express-key`; `GOOGLE_API_KEY` takes precedence. |
 | `GEMINI_MODEL` | Configurable model; the code defaults to `gemini-3.1-flash-lite`. |
-| `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY` | Optional together for accounts and durable saved data. Keep the service-role key server-only. |
+| `FIREBASE_PROJECT_ID`, `FIREBASE_WEB_API_KEY` | Firebase Authentication and Firestore project. The web API key is an identifier; restrict it to the intended Firebase APIs in Google Cloud. |
+| `GCP_STORAGE_BUCKET` | Private Cloud Storage bucket for Passport JSON and active sessions. |
 | `APP_ORIGIN` | Canonical origin for account email redirects, for example `http://localhost:3000` locally or the deployed HTTPS origin. |
 
 The `AGENT_MODEL_*` compatibility adapter is optional for other providers; native Gemini does not need it. Do not put any provider or service-role secret in a `NEXT_PUBLIC_` variable, a commit, logs or screenshots.
 
-For account features, create a Supabase project, enable email/password authentication and the desired email-confirmation setting, configure the local and deployed `/auth/callback` redirect URLs, then run [db-scripts/setup.sql](db-scripts/setup.sql) **manually once** in its SQL Editor. **That script deletes existing app-owned Passports, plans, profiles and active sessions.** It preserves Auth users and existing destination rows. Do not run it in CI or on every deployment. Without Supabase configuration, use the guest discovery flow.
+For account features, enable Firebase Authentication's Email/Password provider and email templates, create a Firestore database and private Cloud Storage bucket in the project, and configure authorized domains plus email-action redirects for the local and deployed origins. Deploy [firestore.rules](firestore.rules) so browsers cannot access server-owned records directly. Attach a service account with Firestore, bucket-scoped Storage, Firebase Auth and Vertex AI permissions to Cloud Run. On a trusted machine with Application Default Credentials, run `npm run seed:destinations` once to add starter cities without overwriting existing catalogue entries. Set a short bucket lifecycle for `sessions/` objects; saved Passport objects should remain until deleted. See the [project guide](docs/PROJECT_GUIDE.md) for setup and verification details. No previous account data is migrated.
 
 ## Verify and deploy
 

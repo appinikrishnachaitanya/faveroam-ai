@@ -18,7 +18,7 @@ test("durable sessions fail closed when a later revision cannot be persisted", (
 test("session store checks revisioned write before changing in-memory state", () => {
   const store=source("src/agent/store.ts");
   const update=store.indexOf("const committed = await persistActiveSession(next.state, revision)");
-  const guard=store.indexOf("assertSessionWriteCommitted(durableIds.has(id), committed)");
+  const guard=store.indexOf("assertSessionWriteCommitted(gcsSessionConfigured() || durableIds.has(id), committed)");
   const memoryCommit=store.indexOf("sessions.set(id, next.state)");
   assert.ok(update>=0 && guard>update && memoryCommit>guard);
   assert.match(store,/if \(persisted\) durableIds\.add\(id\)/);
@@ -28,10 +28,10 @@ test("session store checks revisioned write before changing in-memory state", ()
 
 test("shared-session writes protect against stale revisions across Cloud Run instances",()=>{
   const sourceFile=source("src/agent/active-session-db.ts");
-  assert.match(sourceFile,/\.eq\("revision", expectedRevision\)/);
-  assert.match(sourceFile,/\.gt\("expires_at", new Date\(\)\.toISOString\(\)\)/);
-  assert.match(sourceFile,/if \(!data\)/);
-  assert.match(sourceFile,/throw Error\("Passport changed\. Use the latest state\."\)/);
+  assert.match(sourceFile,/writeGcsSession\(state, expectedRevision\)/);
+  const objectStore=source("src/agent/active-session-gcs.ts");
+  assert.match(objectStore,/ifGenerationMatch: current\?\.generation \?\? 0/);
+  assert.match(objectStore,/current\?\.state\.revision !== expectedRevision/);
 });
 
 test("new Passport warns if shared state is not durable; saved restore never silently succeeds",()=>{
@@ -40,6 +40,6 @@ test("new Passport warns if shared state is not durable; saved restore never sil
   assert.match(create,/Temporary Passport storage is unavailable/);
   for (const file of ["app/api/account/passports/route.ts","app/api/account/preferences/route.ts"]) {
     const code=source(file);
-    assert.match(code,/assertSessionWriteCommitted\(storageConfigured\(\), persisted\)/);
+    assert.match(code,/assertSessionWriteCommitted\(true, await syncSession\(state\)\)/);
   }
 });

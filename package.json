@@ -19,6 +19,7 @@
     "verify:accuracy": "node --use-env-proxy --env-file-if-exists=.env --env-file-if-exists=.env.local --conditions=react-server --import tsx scripts/verify-accuracy.ts",
     "smoke:production": "node scripts/smoke-production.mjs",
     "check:docs": "node scripts/check-doc-links.mjs",
+    "seed:destinations": "node --env-file-if-exists=.env.local --conditions=react-server --import tsx scripts/seed-gcp-destinations.ts",
     "verify:relevance": "node --use-env-proxy --env-file-if-exists=.env --env-file-if-exists=.env.local --conditions=react-server --import tsx scripts/verify-relevance.ts"
   },
   "devDependencies": {
@@ -31,11 +32,12 @@
     "typescript": "^5.9.0"
   },
   "dependencies": {
+    "@google-cloud/firestore": "^9.3.1",
+    "@google-cloud/storage": "^8.4.0",
     "@google/genai": "^2.29.1",
     "@modelcontextprotocol/sdk": "^1.32.1",
     "@qloo/qloo-harness": "0.1.26",
-    "@supabase/ssr": "^0.12.7",
-    "@supabase/supabase-js": "^2.118.0",
+    "firebase-admin": "^14.5.0",
     "next": "^16.4.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",

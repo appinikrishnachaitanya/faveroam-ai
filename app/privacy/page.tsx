@@ -5,8 +5,8 @@ export default function Privacy() {
       <Link href="/">← TastePassport</Link>
       <h1>Your tastes belong to you.</h1>
       <p>
-        You can explore without creating an account. Guest Passports live
-        temporarily in server memory and expire after inactivity or restart.
+        You can explore without creating an account. Active Passports are held
+        temporarily in private server storage and expire after a day.
       </p>
       <h2>When you choose to save</h2>
       <p>
@@ -15,7 +15,7 @@ export default function Privacy() {
         If you save an outing, we also store its date, destination and chosen
         stops. Plans can be deleted individually; account deletion also removes
         your saved plans and Passports. They do not represent bookings.
-        You can separately save a reusable taste profile containing confirmed interests and discovery preferences, without city-specific results or conversation history. First and last names are stored in your Supabase account metadata and are not included in Qloo or Gemini requests.
+        You can separately save a reusable taste profile containing confirmed interests and discovery preferences, without city-specific results or conversation history. First and last names are stored in your Firebase account and are not included in Qloo or Gemini requests.
         We do not save conversation history, model-only comparisons, provider
         credentials or guest-session tokens in account storage. Saved evidence
         is dated; it is not a guarantee of current venue availability.
@@ -25,8 +25,8 @@ export default function Privacy() {
         Qloo receives cultural IDs, concepts, bounded preferences and the
         selected destination—not your account email or password. Gemini may
         receive cultural messages, taste context and discovery metadata to
-        interpret requests and select tools. Supabase manages account
-        authentication and saved Passport storage. Do not enter personal
+        interpret requests and select tools. Firebase manages authentication;
+        Firestore and private Cloud Storage hold saved data. Do not enter personal
         identifiers into taste or conversation fields.
       </p>
       <h2>Your controls</h2>

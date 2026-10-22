@@ -164,6 +164,7 @@ export default function AccountControl({
         setMessage(
           "That confirmation link could not complete. Sign in or request a new recovery link.",
         );
+      if (notice === "reset-complete") { setTab("login"); setMessage("Password reset complete. Sign in with your new password."); }
       if (notice === "recovery") { setTab("password"); setRecoveringPassword(true); }
       window.history.replaceState(null, "", window.location.pathname);
     }
@@ -258,6 +259,11 @@ export default function AccountControl({
         );
       } else if (tab === "recover")
         setMessage("If an account exists, a recovery link is on its way.");
+      else if (passwordChanged && data.passwordUpdated && !data.signedIn) {
+        setRecoveringPassword(false);
+        setTab("login");
+        setMessage("Password updated. Sign in with your new password.");
+      }
       else {
         setTab("login");
         setOpen(false);
