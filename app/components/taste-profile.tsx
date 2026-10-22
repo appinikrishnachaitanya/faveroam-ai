@@ -95,7 +95,6 @@ export default function ReusableTastes({signedIn,passport,city,draft,disabled,on
       {profile&&<p className="profile-interest-preview">{profile.profile.selected.map(t=>t.name).join(" · ")}</p>}
       <div className="plan-actions">
         {profile&&<button type="button" className="primary-button" disabled={disabled||loading||!city||!profileMatchesDraft} onClick={()=>void run("apply")}>{loading?"Finding fresh matches…":!profileMatchesDraft?"Confirm edited tastes below":city?`Discover in ${city} with saved preferences`:"Choose a city below"}</button>}
-        {profile&&<a className="quiet-button" href={`/api/account/preferences/export${selectedId!=="legacy"?`?id=${encodeURIComponent(selectedId)}`:""}`} download>Export JSON</a>}
         {profile&&<button type="button" className="text-button" disabled={disabled||loading||selectedId==="legacy"} onClick={()=>setConfirmProfile(true)}>Delete profile</button>}
       </div>
       {status&&<p className="profile-status" role="status">{status}</p>}
