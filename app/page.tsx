@@ -1,7 +1,9 @@
 "use client";
+import { refinementErrorMessage } from "../src/agent/customer-error";
+import { sectionLabel } from "../src/passport/labels";
 import { useEffect, useRef, useState } from "react";
 import { validDestination } from "../src/workspace/location";
-import { sendAgentTurn } from "../src/agent/browser";
+import { AgentTurnError, sendAgentTurn } from "../src/agent/browser";
 import type { Intent } from "../src/agent/types";
 import type { AgentInput, Constraint } from "../src/agent/types";
 import { FamiliarityControl, ModelComparison } from "./components/cultural";
@@ -31,9 +33,11 @@ import {
   StepIndicator,
 } from "./components/onboarding";
 import ConciergeDrawer from "./components/concierge";
+import ChatRecommendations from "./components/chat-recommendations";
+import ConceptClarification from "./components/concept-clarification";
 import DiscoveryConcierge from "./components/discovery-concierge";
 import PassportNavigation from "./components/passport-navigation";
-import { suggestedMatches } from "../src/passport/matching";
+import { reviewMatches } from "../src/passport/matching";
 import AccountControl from "./components/account";
 import ReusableTastes from "./components/taste-profile";
 import DayOutPlan from "./components/day-out";
@@ -42,14 +46,19 @@ import { JourneyLoading, ToastNotice } from "./components/status";
 import {
   PassportCover,
   SavedDiscoveries,
-  ConnectionExplorer,
 } from "./components/passport-overview";
 import { sectionOrder } from "../src/workspace/state";
 import TasteAnalysis from "./components/taste-analysis";
+import { rememberGuestPassport, restoreGuestPassport, clearGuestPassport } from "../src/workspace/guest-recovery";
+import { rememberActiveSession, restoreActiveSession, clearActiveSession, rememberSavedSession, restoreSavedSession, clearSavedSession } from "../src/workspace/active-session";
+import { showNotice } from "../src/account/browser";
+import { saveOnboardingDraft, restoreOnboardingDraft, clearOnboardingDraft } from "../src/workspace/draft-recovery";
 import type { Familiarity } from "../src/passport/evidence";
+import type { SavedPlan } from "../src/account/plans";
 interface Message {
   role: "agent" | "user";
   text: string;
+  recommendationIds?: string[];
 }
 const welcome: Message = {
   role: "agent",
@@ -72,6 +81,7 @@ export default function Home() {
   const [saveTastePrompt,setSaveTastePrompt]=useState(false);
   const [showSaved, setShowSaved] = useState(false);
   const [adaptation, setAdaptation] = useState("");
+  const [recoveryStatus, setRecoveryStatus] = useState<"checking" | "expired" | "unavailable">();
   const [city, setCity] = useState("");
   const [origin, setOrigin] = useState("");
   const [initialMode, setInitialMode] = useState<Familiarity>("familiar");
@@ -81,6 +91,8 @@ export default function Home() {
   const [composer, setComposer] = useState("");
   const [messages, setMessages] = useState<Message[]>([welcome]);
   const [draft, setDraft] = useState<string[]>([]);
+  const [draftHydrated, setDraftHydrated] = useState(false);
+  const [editingPlan, setEditingPlan] = useState<{plan:SavedPlan;nonce:number}>();
   const [phase, setPhase] = useState<Phase>("idle");
   const [resolution, setResolution] = useState<Resolution>();
   const [chosen, setChosen] = useState<Record<number, string>>({});
@@ -90,6 +102,107 @@ export default function Home() {
     "discover" | "plan" | "preferences" | "together" | "connections"
   >("discover");
   const [accountSignedIn, setAccountSignedIn] = useState(false);
+  const [savedSessionId, setSavedSessionId] = useState<string>();
+  const saveQueue = useRef<Promise<void>>(Promise.resolve());
+
+  const recoveryRequest = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    setSavedSessionId(restoreSavedSession(window.sessionStorage));
+    if (!restoreGuestPassport(window.sessionStorage)) {
+      const saved = restoreOnboardingDraft(window.sessionStorage);
+      if (saved) {
+        setCity(saved.city);
+        setOrigin(saved.origin);
+        setDraft(saved.tastes);
+        setRequestedActivities(saved.activities);
+        setAdaptation("Your unfinished taste draft was restored in this tab. Check it before finding matches.");
+      }
+    }
+    setDraftHydrated(true);
+  }, []);
+  useEffect(() => {
+    if (!draftHydrated || result) return;
+    saveOnboardingDraft(window.sessionStorage, {city,origin,tastes:draft,activities:requestedActivities});
+  }, [draftHydrated,result,city,origin,draft,requestedActivities]);
+
+  // Browser-tab fallback for unexpected React view failures. This is NOT a
+  // substitute for shared Supabase session persistence; the server still
+  // checks the session revision before any subsequent edit or save.
+  useEffect(() => {
+    const recovered=restoreGuestPassport(window.sessionStorage);
+    if (!recovered) {
+      const sessionId=restoreActiveSession(window.sessionStorage);
+      if (!sessionId) return;
+      const controller=new AbortController();
+      void fetch("/api/agent/session", {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId}),signal:controller.signal})
+        .then(async response=>{
+          if (!response.ok) { if(response.status===410)clearActiveSession(window.sessionStorage); return; }
+          const data=await response.json();
+          if (!controller.signal.aborted && data.passport?.agent?.sessionId===sessionId) {
+            setResult(data.passport);setCity(data.passport.city);setDraft(data.passport.selected.map((taste:{name:string})=>taste.name));
+            setRequestedActivities((data.passport.session?.activeCategories ?? []).filter((section:Section)=>!data.passport.session?.hiddenCategories.includes(section)));
+            setInitialMode(data.passport.session?.discoveryMode ?? "familiar");
+            setConstraints(data.passport.session?.constraints ?? []);
+            setPhase("ready");setRecoveryStatus(undefined);
+          }
+        }).catch(()=>{});
+      return ()=>controller.abort();
+    }
+    setResult(current => current ?? recovered);
+    setCity(current => current || recovered.city);
+    setDraft(recovered.selected.map(taste => taste.name));
+    setConceptSeeds(recovered.selected.filter(taste => taste.id.startsWith("urn:tag:")).map(taste => taste.name));
+    setRequestedActivities((recovered.session?.activeCategories ?? []).filter(section=>!recovered.session?.hiddenCategories.includes(section)));
+    setInitialMode(recovered.session?.discoveryMode ?? "familiar");
+    setConstraints(recovered.session?.constraints ?? []);
+    setPhase("ready");
+    const controller = new AbortController();
+    void reconnectPassport(recovered, controller.signal);
+    return () => controller.abort();
+  }, []);
+  async function reconnectPassport(passport: Passport, signal?: AbortSignal) {
+    if (!passport.agent) return;
+    recoveryRequest.current?.abort();
+    const controller = new AbortController();
+    recoveryRequest.current = controller;
+    const requestSignal = AbortSignal.any([controller.signal, AbortSignal.timeout(12000), ...(signal ? [signal] : [])]);
+    setRecoveryStatus("checking");
+    try {
+      const response = await fetch("/api/agent/session", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId: passport.agent.sessionId }),
+        signal: requestSignal,
+      });
+      if (signal?.aborted || controller.signal.aborted || recoveryRequest.current !== controller) return;
+      if (!response.ok) { setRecoveryStatus(response.status === 410 ? "expired" : "unavailable"); return; }
+      const data = await response.json();
+      if (!data.passport?.agent || data.passport.agent.sessionId !== passport.agent.sessionId) throw Error();
+      setResult(current => current?.agent?.sessionId === passport.agent?.sessionId ? data.passport : current);
+      setRecoveryStatus(undefined);
+    } catch { if (!signal?.aborted && !controller.signal.aborted && recoveryRequest.current === controller) setRecoveryStatus("unavailable"); }
+  }
+  // Effects run only after a successful commit. If new results crash a render,
+  // the last successfully rendered guest Passport remains recoverable.
+  useEffect(() => {
+    if (accountSignedIn) {
+      if (result?.agent) rememberActiveSession(window.sessionStorage, result.agent.sessionId);
+      clearGuestPassport(window.sessionStorage);
+      return;
+    }
+    if (result) rememberGuestPassport(window.sessionStorage, result);
+  }, [result, accountSignedIn]);
+  useEffect(() => {
+    if (!accountSignedIn || !result?.agent || savedSessionId !== result.agent.sessionId) return;
+    const { sessionId, revision } = result.agent;
+    const timer = window.setTimeout(() => {
+      saveQueue.current = saveQueue.current.catch(()=>{}).then(async () => {
+        const response = await fetch("/api/account/passports", {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"save",sessionId,revision})});
+        if (!response.ok && response.status !== 409) showNotice("Your latest Passport changes could not be saved. Use Save Passport to try again.","error");
+      });
+    }, 700);
+    return () => window.clearTimeout(timer);
+  }, [accountSignedIn, result, savedSessionId]);
 
   const [error, setError] = useState("");
   const [dialog, setDialog] = useState<number>();
@@ -137,6 +250,8 @@ export default function Home() {
       ? []
       : sessionHistory.slice(conversationStart)
     : messages;
+  const missingSections = (result?.session?.activeCategories ?? []).filter(section =>
+    !result?.session?.hiddenCategories?.includes(section) && !result?.cards.some(card => card.section === section));
   const visibleMessages = retryInput?.message
     ? [
         ...committedMessages,
@@ -157,7 +272,7 @@ export default function Home() {
     const body = agentScroll.current;
     if (!assistantOpen || !body) return;
     body.scrollTop =
-      assistantTab === "ask" && !result?.agent?.pending ? body.scrollHeight : 0;
+      assistantTab === "ask" ? body.scrollHeight : 0;
   }, [
     assistantOpen,
     assistantTab,
@@ -179,7 +294,7 @@ export default function Home() {
   }
   async function submitConversation(event: React.FormEvent) {
     event.preventDefault();
-    if (!composer.trim() || busy) return;
+    if (!composer.trim() || busy || recoveryStatus === "checking") return;
     const text = composer.trim();
     setComposer("");
     if (
@@ -231,7 +346,7 @@ export default function Home() {
     }
   }
   async function refine(input: AgentInput) {
-    if (!result?.agent || busy || activeTurn.current) return;
+    if (!result?.agent || busy || activeTurn.current || recoveryStatus === "checking") return;
     const controller = new AbortController();
     activeTurn.current = controller;
     setRetryInput(input);
@@ -315,18 +430,16 @@ export default function Home() {
         );
     } catch (e) {
       if (activeTurn.current !== controller) return;
-      setError(
-        controller.signal.aborted
-          ? "Refinement cancelled. Your discoveries are preserved. Retry when you’re ready."
-          : e instanceof Error && e.name === "TimeoutError"
-            ? "This search took too long. Your discoveries are preserved. Try again or adjust this category."
-            : e instanceof Error
-              ? e.message
-              : "Refinement is unavailable. Your passport is preserved.",
-      );
+      setError(refinementErrorMessage(e, controller.signal.aborted));
+      if ((e instanceof AgentTurnError && ["SESSION_EXPIRED", "SESSION_MISSING"].includes(e.code)) || (e instanceof Error && /session.*expired/i.test(e.message))) {
+        setRecoveryStatus("expired");
+        setRetryInput(undefined);
+      } else if (e instanceof AgentTurnError && e.code === "SESSION_CHANGED") {
+        void reconnectPassport(result);
+      }
       setPhase("ready");
       say(
-        "Refinement is temporarily unavailable. Your existing TastePassport is still available. Try the guided controls.",
+        "Your discoveries are still here. You can try your request again or keep exploring.",
       );
     } finally {
       if (activeTurn.current === controller) {
@@ -369,7 +482,7 @@ export default function Home() {
         concepts: conceptSeeds,
       });
       setResolution(r);
-      setChosen(suggestedMatches(r.items));
+      setChosen(reviewMatches(r.items));
       setPhase("confirming");
       say(
         r.items.some((i) => !i.candidates.length)
@@ -490,6 +603,11 @@ export default function Home() {
     else fresh();
   }
   function fresh() {
+    recoveryRequest.current?.abort();
+    clearGuestPassport(window.sessionStorage);
+    clearActiveSession(window.sessionStorage);
+    setSavedSessionId(undefined);
+    clearOnboardingDraft(window.sessionStorage);
     setSaveTastePrompt(false);
     setTasteDraftVersion(value=>value+1);
     activeTurn.current?.abort();
@@ -501,8 +619,10 @@ export default function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sessionId: result.agent.sessionId }),
       });
+    setRecoveryStatus(undefined);
     setShowSaved(false);
     setWorkspaceView("discover");
+    setEditingPlan(undefined);
     setAdaptation("");
     setCity("");
     setOrigin("");
@@ -552,6 +672,8 @@ export default function Home() {
         <nav className="header-controls" aria-label="Passport actions">
           <AccountControl
             onAccountChange={setAccountSignedIn}
+            onPassportSaved={sessionId=>{if(sessionId)rememberSavedSession(window.sessionStorage,sessionId);else clearSavedSession(window.sessionStorage);setSavedSessionId(sessionId);}}
+            onEditPlan={plan=>{setEditingPlan(current=>({plan,nonce:(current?.nonce??0)+1}));setWorkspaceView("plan");}}
             passport={result}
             disabled={busy}
             onSignOut={fresh}
@@ -560,6 +682,9 @@ export default function Home() {
               setResult(passport);
               setCity(passport.city);
               setDraft(passport.selected.map((s) => s.name));
+              setRequestedActivities((passport.session?.activeCategories ?? []).filter(section=>!passport.session?.hiddenCategories.includes(section)));
+              setInitialMode(passport.session?.discoveryMode ?? "familiar");
+              setConstraints(passport.session?.constraints ?? []);
               setPhase("ready");
               setProviderHealth("unconfigured");
               void fetch("/api/agent/capabilities")
@@ -594,9 +719,9 @@ export default function Home() {
         </nav>
       </header>
       <div className="progressive-content" id="passport-content" tabIndex={-1}>
-        {<ReusableTastes signedIn={accountSignedIn} passport={result} city={city} disabled={busy} draftVersion={tasteDraftVersion}
+        {<ReusableTastes signedIn={accountSignedIn} passport={result} city={city} draft={draft} disabled={busy} draftVersion={tasteDraftVersion}
           saveRequested={saveTastePrompt} onContinue={fresh} onCancel={()=>setSaveTastePrompt(false)}
-          onSelect={profile=>{resetMatches("review");setDraft(profile.selected.map(s=>s.name));setConceptSeeds(profile.selected.filter(s=>s.id.startsWith("urn:tag:")).map(s=>s.name));setInitialMode(profile.discoveryMode);setConstraints(profile.constraints);setRequestedActivities(profile.activeCategories.filter(s=>!profile.hiddenCategories.includes(s)).slice(0,5));setEditing(true);}}
+          onSelect={profile=>{resetMatches("idle");setDraft(profile.selected.map(s=>s.name));setConceptSeeds(profile.selected.filter(s=>s.id.startsWith("urn:tag:")).map(s=>s.name));setInitialMode(profile.discoveryMode);setConstraints(profile.constraints);setRequestedActivities(profile.activeCategories.filter(s=>!profile.hiddenCategories.includes(s)).slice(0,5));setEditing(true);}}
           onBusy={value=>{if(value)setPhase("exploring");else setPhase(current=>current==="exploring"?"idle":current);}}
           onApply={passport=>{setResult(passport);setCity(passport.city);setDraft(passport.selected.map(s=>s.name));setPhase("ready");setAdaptation("Fresh discoveries using your saved tastes.");}}
         />}
@@ -613,7 +738,6 @@ export default function Home() {
             }}
             onOrigin={setOrigin}
             onDraft={(values) => {
-              setTasteDraftVersion(value=>value+1);
               setDraft(values);
               setConceptSeeds(
                 values.filter((v) =>
@@ -698,6 +822,15 @@ export default function Home() {
                 <Icon name="star" size={18} />
                 Ask TastePassport
               </button>
+            {recoveryStatus && (
+              <section className="passport-recovery" aria-label="Continue your Passport" role="status">
+                <Icon name={recoveryStatus === "checking" ? "star" : "refresh"} size={22} />
+                <div><strong>{recoveryStatus === "checking" ? "Picking up where you left off…" : recoveryStatus === "expired" ? "Ready for fresh discoveries?" : "Your discoveries are still here."}</strong>
+                <p>{recoveryStatus === "checking" ? "You can browse while we reconnect." : recoveryStatus === "expired" ? "Use the same tastes to build a fresh Passport and make changes again, or keep browsing these discoveries." : "We couldn't reconnect right now. Try again to keep refining and saving."}</p></div>
+                {recoveryStatus === "expired" && <button className="primary-button" disabled={busy} onClick={()=>{setRecoveryStatus(undefined);void resolve();}}>Refresh with my tastes <Icon name="arrow" size={15}/></button>}
+                {recoveryStatus === "unavailable" && <button className="quiet-button" disabled={busy} onClick={()=>void reconnectPassport(result)}>Try reconnecting</button>}
+              </section>
+            )}
             {adaptation && (
               <div className="adaptation-notice" role="status">
                 <Icon name="check" size={16} />
@@ -725,27 +858,22 @@ export default function Home() {
                 />
               )}
             </div>
-            {workspaceView === "discover" && (result.session?.activeCategories ?? []).filter(section=>!result.session?.hiddenCategories.includes(section) && !result.cards.some(card=>card.section===section)).length > 0 && <section className="missing-discoveries" aria-label="Retry missing discoveries"><p>Some categories have no discoveries yet. Retry one without changing your other results.</p><div>{(result.session?.activeCategories ?? []).filter(section=>!result.session?.hiddenCategories.includes(section) && !result.cards.some(card=>card.section===section)).map(section=><button key={section} className="quiet-button" disabled={busy} onClick={()=>void refine({guided:{section,constraints:result.session?.categoryConstraints[section] ?? []}})}>Retry {section}</button>)}</div></section>}
-            {result.agent?.pending && (
-              <div className="pending-concept">
-                <strong>A little clarity for your next discovery</strong>
-                <p>
-                  Choose the meaning you had in mind for “
-                  {result.agent.pending.query}”.
-                </p>
-                <button
-                  className="quiet-button"
-                  disabled={busy}
-                  onClick={(e) => {
-                    matchOpener.current = e.currentTarget;
-                    setConceptDialog(true);
-                  }}
-                >
-                  Choose a match <Icon name="arrow" />
-                </button>
-              </div>
+            {workspaceView === "discover" && !showSaved && missingSections.length > 0 && (
+              <section className="missing-discoveries" aria-label="Find more discoveries">
+                <h3>Still looking for a few matches</h3>
+                <p>We haven’t found matches for {missingSections.map(sectionLabel).join(", ")} yet. Try again, or adjust your preferences. Your other discoveries stay as they are.</p>
+                <div>
+                  {missingSections.map(section => (
+                    <button key={section} className="quiet-button" disabled={busy}
+                      onClick={() => void refine({guided:{section,constraints:result.session?.categoryConstraints[section] ?? []}})}>
+                      {busy ? "Finding matches…" : `Try ${sectionLabel(section)} again`}
+                    </button>
+                  ))}
+                  <button className="quiet-button" disabled={busy} onClick={() => selectWorkspaceView("preferences")}>Adjust preferences</button>
+                </div>
+              </section>
             )}
-            {result.session && (
+             {result.session && (
               <RefinementRecovery
                 session={result.session}
                 disabled={busy}
@@ -754,7 +882,7 @@ export default function Home() {
             )}
             {result.session?.hiddenCategories.length ? (
               <p className="passport-mode">
-                Hidden chapters: {result.session.hiddenCategories.join(", ")}.
+                Hidden chapters: {result.session.hiddenCategories.map(sectionLabel).join(", ")}.
                 You can bring them back with manual refinement.
               </p>
             ) : null}
@@ -791,6 +919,7 @@ export default function Home() {
             >
               <DayOutPlan
                 key={`day-out:${result.session?.id ?? result.city}`}
+                editPlan={editingPlan}
                 expanded={workspaceView === "plan"}
                 onFindActivity={id=>{const target=id==="Cinema"?"cinemas":id==="Nightlife"?"nightclubs":id==="Coffee"?"coffee shops":id==="Eat"?"restaurants":"museums";const kept=id==="Coffee"?"dining, music and movies":id==="Eat"?"coffee, music and movies":"dining, coffee, music and movies";void refine({message:`Find local ${target} for this outing. Keep my ${kept} unchanged.`});}}
                 passport={result}
@@ -825,21 +954,6 @@ export default function Home() {
                 <summary>
                   Explore your taste patterns <Icon name="arrow" size={16} />
                 </summary>
-                <ConnectionExplorer
-                  passport={result}
-                  onExplore={(section) => {
-                    setWorkspaceView("discover");
-                    setShowSaved(false);
-                    requestAnimationFrame(() =>
-                      document
-                        .getElementById(`section-${section}`)
-                        ?.scrollIntoView({
-                          behavior: "smooth",
-                          block: "start",
-                        }),
-                    );
-                  }}
-                />
                 <TasteAnalysis key={`analysis:${result.session?.id ?? result.city}`} passport={result} busy={busy} onRefine={input=>{setWorkspaceView("discover");void refine(input);}}/>
                 {process.env.NODE_ENV === "development" && (
                   <details className="all-query-routes">
@@ -912,35 +1026,7 @@ export default function Home() {
             </button>
           </div>
           <div className="concierge-body" ref={agentScroll}>
-            {workspaceView === "discover" && (result.session?.activeCategories ?? []).filter(section=>!result.session?.hiddenCategories.includes(section) && !result.cards.some(card=>card.section===section)).length > 0 && <section className="missing-discoveries" aria-label="Retry missing discoveries"><p>Some categories have no discoveries yet. Retry one without changing your other results.</p><div>{(result.session?.activeCategories ?? []).filter(section=>!result.session?.hiddenCategories.includes(section) && !result.cards.some(card=>card.section===section)).map(section=><button key={section} className="quiet-button" disabled={busy} onClick={()=>void refine({guided:{section,constraints:result.session?.categoryConstraints[section] ?? []}})}>Retry {section}</button>)}</div></section>}
-            {result.agent?.pending && (
-              <div className="pending-concept">
-                <strong>Choose what you meant</strong>
-                <p>{result.agent.pending.query}</p>
-                <div className="pending-match-options" aria-label="Matching interests">
-                  {result.session?.pending?.candidates.map((candidate) => (
-                    <button
-                      key={candidate.id}
-                      type="button"
-                      disabled={busy}
-                      onClick={() => void refine({ tagChoice: candidate.id })}
-                    >
-                      {candidate.name}
-                    </button>
-                  ))}
-                </div>
-                <button
-                  className="quiet-button"
-                  disabled={busy}
-                  onClick={(e) => {
-                    matchOpener.current = e.currentTarget;
-                    setConceptDialog(true);
-                  }}
-                >
-                  Choose a match
-                </button>
-              </div>
-            )}
+
             {assistantTab === "ask" ? (
               <div id="ask-panel" role="tabpanel" aria-labelledby="ask-tab">
                 <p className="concierge-intro">
@@ -992,10 +1078,26 @@ export default function Home() {
                       <span className="message-label">
                         {m.role === "agent" ? "TASTEPASSPORT" : "YOU"}
                       </span>
-                      <p>{m.text}</p>
+                      <p>{m.role==='agent' && m.recommendationIds?.length ? m.text.split(/\n\nHere are \d+ choices to consider:|\n\n1\. /)[0] : m.text}</p>
+                      {m.role === "agent" && Array.isArray(m.recommendationIds) && m.recommendationIds.length ? <ChatRecommendations city={result.city}
+                        cards={m.recommendationIds.flatMap(id=>result.cards.find(card=>card.id===id && !result.session?.hiddenCategories?.includes(card.section)) ?? [])}
+                        busy={busy} savedIds={result.session?.savedCards?.map(card=>card.id) ?? []}
+                        onAsk={question=>void refine({message:question})}
+                        onSave={id=>recordFeedback(id,"like")}/> : null}
+                      {m.role === "agent" && i === visibleMessages.findLastIndex(message => message.role === "agent") && <>
+                        {result.session?.pending && <ConceptClarification pending={result.session.pending} disabled={busy}
+                          onChoose={id=>void refine({tagChoice:id})} onSkip={()=>void refine({message:"Skip this concept"})}/>}
+                        {!result.agent?.pending && Boolean(result.session?.recovery?.length) && result.session && <>
+                          <RefinementRecovery session={result.session} disabled={busy} onApply={input=>void refine(input)}/>
+                          <button className="quiet-button" disabled={busy} onClick={()=>{setAssistantOpen(false);selectWorkspaceView("preferences");}}>Adjust preferences</button>
+                        </>}
+                      </>}
                     </div>
                   ))}
                 </div>
+                {visibleMessages.length>0 && !busy && !result.agent?.pending && <div className="chat-next-actions" aria-label="Continue your conversation">
+                  {["Pick three things across my interests","Compare the first and second choices","What filters are saved?"].map(question=><button type="button" key={question} onClick={()=>{setComposer(question);document.querySelector<HTMLTextAreaElement>("#conversation-input")?.focus();}}>{question}</button>)}
+                </div>}
               </div>
             ) : (
               <div
@@ -1003,6 +1105,8 @@ export default function Home() {
                 role="tabpanel"
                 aria-labelledby="manual-tab"
               >
+                        {result.session?.pending && <ConceptClarification pending={result.session.pending} disabled={busy}
+                          onChoose={id=>void refine({tagChoice:id})} onSkip={()=>void refine({message:"Skip this concept"})}/>}
                 {result.session && (
                   <GuidedRefinement
                     session={result.session}
@@ -1024,16 +1128,14 @@ export default function Home() {
                   Cancel refinement
                 </button>
               )}
-              {error && <p role="alert">{error}</p>}
-              {retryInput && !busy && (
-                <button
-                  type="button"
-                  className="quiet-button"
-                  onClick={() => void refine(retryInput)}
-                >
-                  Retry last refinement
-                </button>
-              )}
+              {error && !busy && <div className="conversation-recovery" role="alert">
+                <p>{error}</p>
+                <div>
+                  {retryInput && <button type="button" className="primary-button" disabled={recoveryStatus === "checking"} onClick={()=>void refine(retryInput)}>{recoveryStatus === "checking" ? "Reconnecting…" : "Try my request again"}</button>}
+                  {recoveryStatus === "expired" && <button type="button" className="primary-button" onClick={()=>{setAssistantOpen(false);setRecoveryStatus(undefined);void resolve();}}>Refresh with my tastes</button>}
+                  <button type="button" className="quiet-button" onClick={()=>{setError("");setRetryInput(undefined);setAssistantOpen(false);}}>Keep exploring</button>
+                </div>
+              </div>}
               <form className="composer" onSubmit={submitConversation}>
                 <label htmlFor="conversation-input" className="sr-only">
                   Ask TastePassport
@@ -1052,7 +1154,7 @@ export default function Home() {
                   <button
                     type="submit"
                     aria-label="Send message"
-                    disabled={busy || !composer.trim()}
+                    disabled={busy || recoveryStatus === "checking" || !composer.trim()}
                   >
                     <Icon name="send" size={17} />
                     Send

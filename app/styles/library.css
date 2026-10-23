@@ -37,6 +37,8 @@
 .plan-schedule label { display: grid; gap: 8px; font-size: 14px; font-weight: 600; }
 .plan-schedule input { display: block; min-height: 48px; min-width: 190px; max-width: 100%; padding: 10px 12px; border: 1px solid var(--ui-border); border-radius: 12px; background: #fff; color: var(--ui-ink); font-size: 16px; }
 .plan-schedule .helper { flex-basis: 100%; font-weight: 400; }
+.stop-time-label { display: grid !important; gap: 6px; margin-bottom: 12px !important; color: var(--ui-ink); font-size: 14px; font-weight: 650; }
+.stop-time-label input { width: 100%; min-height: 44px; padding: 8px 12px; border: 1px solid var(--ui-border); border-radius: 10px; background: var(--ui-surface); color: var(--ui-ink); font: inherit; }
 .connection-interest-picker { display: flex; flex-wrap: wrap; gap: 8px; margin: 24px 0 12px; }
 .connection-interest-picker button { min-height: 44px; padding: 10px 16px; border: 1px solid var(--ui-border); border-radius: 24px; background: var(--ui-surface); color: var(--ui-ink); font-size: 14px; }
 .connection-interest-picker button[aria-pressed="true"] { border-color: var(--ui-action); background: var(--ui-action); color: #fff; }
@@ -88,3 +90,12 @@
 .profile-save-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 24px; }
 .profile-save-actions button { min-height: 48px; }
 @media (max-width: 480px) { .profile-save-actions { flex-direction: column; } .profile-save-actions button { width: 100%; } }
+
+/* Keep scheduling compact; detailed guidance is available on demand. */
+.progressive-app .plan-schedule { align-items: flex-end; gap: 16px; margin: 20px 0; border: 1px solid #d9d4b2; background: #f4edce; }
+.progressive-app .plan-schedule .quiet-button { min-height: 48px; padding: 12px 18px; border: 1px solid #c9cba9; border-radius: 12px; background: #fffdf5; }
+.plan-zone { margin-left: auto; align-self: center; max-width: 28ch; color: #516047; font-size: 12px; }
+.outing-checklist { padding: 15px 18px; margin: 18px 0; border: 1px solid #d8ddca; border-radius: 14px; background: #f0f3e7; }
+.outing-checklist summary { min-height: 24px; cursor: pointer; font-weight: 650; }
+.outing-checklist p { color: #4a5c46; font-size: 13px; line-height: 1.65; }
+@media (max-width: 500px) { .plan-zone { flex-basis: 100%; margin-left: 0; } }

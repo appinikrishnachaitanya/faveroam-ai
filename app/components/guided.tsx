@@ -1,4 +1,5 @@
 "use client";
+import { sectionLabel } from "../../src/passport/labels";
 import { useEffect, useState } from "react";
 import { sectionOrder } from "../../src/workspace/state";
 import type { AgentInput, AgentState, Constraint } from "../../src/agent/types";
@@ -38,7 +39,7 @@ export default function GuidedRefinement({
         onChange={(e) => setSection(e.target.value as Section)}
       >
         {sectionOrder.map((s) => (
-          <option key={s}>{s}</option>
+          <option key={s} value={s}>{sectionLabel(s)}</option>
         ))}
       </select>
       {session.hiddenCategories?.includes(section) && (
@@ -108,10 +109,21 @@ export function RefinementRecovery({
     <>
       {session.recovery?.map((section) => (
         <section className="refinement-recovery" key={section} role="status">
-          <h3>No strong {section} match yet.</h3>
+          <h3>Let’s adjust your {sectionLabel(section).toLowerCase()} search</h3>
           <p>
-            Your existing discoveries are still here. Keep your confirmed
-            cultural concept and try fewer preferences.
+            The last search was not applied. These cards still use your previous active preferences. Adjust Preferences to try a different search.
+          </p>
+          {session.failedSearches?.[section] && <p>Last attempted search (not applied): {[
+            ...(session.failedSearches[section]?.queryPreferences?.locationQuery ? [`in ${session.failedSearches[section]?.queryPreferences?.locationQuery}`] : []),
+            ...(session.failedSearches[section]?.queryPreferences?.excludeLocation ? [`excluding ${session.failedSearches[section]?.queryPreferences?.excludeLocation}`] : []),
+            ...(session.failedSearches[section]?.queryPreferences?.priceMax ? [`budget up to ${session.failedSearches[section]?.queryPreferences?.priceMax}/4`] : []),
+            ...(session.failedSearches[section]?.queryPreferences?.businessRatingMin ? [`rating ${session.failedSearches[section]?.queryPreferences?.businessRatingMin}+`] : []),
+            ...(session.failedSearches[section]?.queryPreferences?.requiredExternalSources ?? []),
+            ...(session.failedSearches[section]?.queryPreferences?.tripAdvisorReviewCountMin !== undefined ? [`at least ${session.failedSearches[section]?.queryPreferences?.tripAdvisorReviewCountMin} Tripadvisor reviews`] : []),
+            ...session.tags.filter(tag=>(session.failedSearches?.[section]?.categoryTags ?? []).includes(tag.id)).map(tag=>tag.name),
+          ].join(', ') || 'your requested category preferences'}.
+          </p>}
+          <p>Broader taste matching does not verify opening hours or availability.
           </p>
           <div>
             {(
@@ -123,11 +135,15 @@ export function RefinementRecovery({
                       ? `Keep ${session.tags.find((t) => session.categoryTags?.Eat?.includes(t.id) && /cuisine/i.test(t.id))?.name ?? "cuisine"}`
                       : "Keep cultural tastes",
                 },
-                { action: "relax-quiet", label: "Relax quiet" },
-                { action: "allow-popular", label: "Allow popular places" },
-                { action: "closest", label: "Show closest matches" },
+                { action: "relax-quiet", label: "Try without the quietness preference" },
+                { action: "allow-popular", label: "Include popular places" },
+
               ] as const
-            ).map(({ action, label }) => (
+            ).filter(({action}) => {
+              const constraints=session.failedSearches?.[section]?.categoryConstraints ?? session.categoryConstraints[section] ?? [];
+              return action==="relax-quiet" ? constraints.some(value=>value==="crowded"||value==="atmosphere")
+                : action==="allow-popular" ? constraints.some(value=>value==="mainstream"||value==="touristy") : constraints.length>0;
+            }).map(({ action, label }) => (
               <button
                 key={action}
                 className="quiet-button"
@@ -137,6 +153,7 @@ export function RefinementRecovery({
                 {label}
               </button>
             ))}
+            <button className="quiet-button" disabled={disabled} onClick={()=>onApply({recovery:{section,action:"retry"}})}>Retry the attempted search</button>
           </div>
         </section>
       ))}

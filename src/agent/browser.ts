@@ -1,3 +1,8 @@
+import { isTurnFailureCode, type TurnFailureCode } from "./turn-failure.ts";
+export class AgentTurnError extends Error {
+  readonly code: TurnFailureCode;
+  constructor(code: TurnFailureCode, message: string) { super(message); this.name = "AgentTurnError"; this.code = code; }
+}
 import type { AgentInput, AgentEvent, AgentReply } from "./types.ts";
 import type { AgentSession } from "../workspace/state.ts";
 export async function sendAgentTurn(
@@ -45,7 +50,9 @@ export async function sendAgentTurn(
         );
       reply = data.reply;
     }
-    if (data.type === "error") throw Error(data.message);
+    if (data.type === "error") {
+      throw new AgentTurnError(isTurnFailureCode(data.code) ? data.code : "TEMPORARILY_UNAVAILABLE", typeof data.message === "string" ? data.message : "Could not finish your request.");
+    }
   }
   try {
     while (true) {

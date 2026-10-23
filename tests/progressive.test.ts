@@ -115,6 +115,6 @@ test("feedback modal retains all seven adaptive reasons and requires an explicit
   assert.equal((html.match(/type="radio"/g) ?? []).length, 7);
   assert.match(html, /Too mainstream/);
   assert.match(html, /Wrong atmosphere/);
-  assert.match(html, /Update my Eat passport/);
+  assert.match(html, /Update my Food passport/);
   assert.doesNotMatch(html, /checked/);
 });

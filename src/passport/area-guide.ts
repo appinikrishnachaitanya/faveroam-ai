@@ -5,6 +5,7 @@ export interface AreaGuide {
   anchor: Card;
   point?: {latitude:number;longitude:number};
   nearby: Card[];
+  /** Geo proximity only, never proof the named venue shares audience affinity. */
   fromAreaSignal: boolean;
 }
 function point(card: Card) {
@@ -26,6 +27,8 @@ export function buildAreaGuide(points:HeatPoint[],cards:Card[]):AreaGuide[] {
     const matching=location ? points.filter(candidate=>distance(location,candidate)<=1500) : [];
     return {anchor,point:location,index,signal:matching.length ? Math.max(...matching.map(candidate=>candidate.affinity)) : undefined};
   });
+  // A venue near an affinity point is only geographically adjacent, not
+  // independently established to share an audience or personal preference.
   const connected=ranked.filter(row=>row.signal!==undefined).sort((a,b)=>b.signal!-a.signal! || a.index-b.index);
   const candidates=connected.length ? connected : ranked;
   const chosen:AreaGuide[]=[];

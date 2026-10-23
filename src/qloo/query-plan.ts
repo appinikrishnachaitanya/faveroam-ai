@@ -191,8 +191,7 @@ export function preferenceParams(
       "bias.quality": "high",
       "filter.properties.business_rating.min": "4",
     });
-  if (p.goal === "surprise")
-    params["bias.content_based"] = "0.3";
+  // Surprise uses the adjacent retrieval policy; no undocumented bias knob.
   const mapping: Record<string, string> = {
     priceMin: "filter.price_level.min",
     priceMax: "filter.price_level.max",
@@ -327,7 +326,6 @@ export function supportedParameterNames(type: string) {
   const allowed = new Set(entityParameters[type] ?? []);
   allowed.add("feature.explainability");
   allowed.add("signal.location.query");
-  allowed.add("bias.content_based");
   allowed.add("filter.exists");
   // General reference explicitly documents these, despite omissions in the type table.
   if (["place", "destination"].includes(type))

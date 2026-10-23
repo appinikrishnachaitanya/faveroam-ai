@@ -3,7 +3,7 @@
 import { Icon } from "./passport";
 
 const requests = [
-  "Find cheaper dining. Keep my music and movies unchanged.",
+  "Find cheaper food. Keep my music and movies unchanged.",
   "Help me plan dinner and a movie.",
 ];
 
@@ -18,7 +18,7 @@ export default function DiscoveryConcierge({
 }) {
   const actions = [
     { view: "preferences", icon: "sliders", title: "Refine my discoveries", detail: "Budget, rating and the mood for one category." },
-    { view: "connections", icon: "pin", title: "Find my next area", detail: "Explore taste connections and nearby dining." },
+    { view: "connections", icon: "pin", title: "Find my next area", detail: "Explore taste connections and nearby food." },
     { view: "together", icon: "star", title: "Find something for us both", detail: "A shared choice shaped by two taste profiles." },
   ] as const;
 

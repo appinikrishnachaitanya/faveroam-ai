@@ -1,13 +1,24 @@
+import { matchesDishRequirements } from "../passport/dish-evidence.ts";
+import { responseContext, responseReceipt, validateResponse } from "./response.ts";
+import { refinementSettings, restoreRefinementSettings } from "./refinement-settings.ts";
+import { conversationFocus, updateConversationMemory } from "./memory.ts";
+import { chooseExisting, isExistingChoiceRequest } from "./existing-choice.ts";
+import { RequestMachine, routeRequest, checkTurnCommit } from "./request-policy.ts";
+import { sectionLabel } from "../passport/labels.ts";
+import { chatShortlist, chatShortlistText, isShortlistRequest, requestedShortlistSections } from "./chat-shortlist.ts";
 import { refinementScope } from "./scope.ts";
+import { groundedModelIntent, isGreetingOrTypo } from "./conversation-grounding.ts";
 import { conversationContext } from "./context.ts";
 import { decisionSummary } from "./decision-summary.ts";
-import { passportAnswer } from "./answers.ts";
+import { passportAnswer, cardSpecificAnswer, isListRequest, listPassportCards, listPassportResults, previewRefinedResults } from "./answers.ts";
+import { isReadOnlyFollowUp, readOnlyFollowUp } from "./read-only.ts";
 import { debugEvent } from "./debug.ts";
 import {
   normalizeSession,
   resetConversation,
   guidedIntent,
   relaxationSteps,
+  sectionTags,
 } from "./session.ts";
 import { captureComparison } from "./comparison.ts";
 import { recordProviderHealth } from "./health.ts";
@@ -18,6 +29,7 @@ import {
   interpret,
   reasonConstraint,
   validateIntent,
+  findMentionedCard,
 } from "./intent.ts";
 import { tagCandidates } from "./validation.ts";
 import { sectionOrder } from "../workspace/state.ts";
@@ -104,6 +116,103 @@ export async function runTurn(
   emit: (event: AgentEvent) => void = () => {},
   guard = new TurnGuard(),
 ): Promise<AgentReply> {
+  const request = new RequestMachine(routeRequest(input));
+  debugEvent("agent.route", { action: request.route });
+  const provider = deps.provider;
+  const wrapped: AgentDependencies = {
+    ...deps,
+    ...(provider ? { provider: {
+      ...provider,
+      interpret: async (text, context) => {
+        request.move("interpreting");
+        return guard.model(() => provider.interpret(text, context, guard.signal));
+      },
+      choose: async (text, state, tools) => {
+        request.move("interpreting");
+        return guard.model(() => provider.choose(text, state, tools, guard.signal));
+      },
+      ...(provider.chooseWithObservation ? {
+        chooseWithObservation: async (...args: Parameters<NonNullable<ModelProvider["chooseWithObservation"]>>) => {
+          request.move("interpreting");
+          return guard.model(() => provider.chooseWithObservation!(...args));
+        },
+      } : {}),
+    } } : {}),
+    workflow: async (...args) => {
+      request.move("executing");
+      return deps.workflow(...args);
+    },
+    discover: async (...args) => {
+      request.move("executing");
+      return deps.discover(...args);
+    },
+  };
+  let needsInput = false;
+  try {
+    const result = await executeTurn(original, input, wrapped, emit, guard, () => { needsInput = true; });
+    // Unconfirmed edits are a draft, never active preference state.
+    if (result.state.pending && JSON.stringify(result.state.pending) !== JSON.stringify(original.pending)) {
+      result.state.pending.settings ??= {};
+      for (const section of result.state.pending.sections) {
+        if(result.changed.includes(section)) continue;
+        result.state.pending.settings[section] ??= refinementSettings(result.state,section);
+        restoreRefinementSettings(result.state,section,refinementSettings(original,section));
+      }
+    }
+    // Cancellation must never commit a partial in-flight mutation.
+    guard.signal.throwIfAborted();
+    request.move("checking");
+    if (!checkTurnCommit(normalizeSession(structuredClone(original)), result, input)) {
+      request.move("blocked");
+      debugEvent("agent.check_failed");
+      return {
+        state: normalizeSession(structuredClone(original)), changed: [], events: result.events,
+        mode: result.mode, execution: request.snapshot(),
+        message: "I couldn't safely apply that update. Your Passport is unchanged. Please try changing one category at a time.",
+      };
+    }
+    if (input.message && provider?.compose && input.reset !== "conversation") {
+      try {
+        const context=responseContext(result,input);
+        const drafted=await guard.respond(signal=>provider.compose!(structuredClone(context),signal));
+        const composed=validateResponse(drafted,context);
+        guard.signal.throwIfAborted();
+        const receipt=responseReceipt(result,input);
+        const completeList=(result.state.history?.at(-1)?.referenceIds?.length ?? 0)>3 ? result.message : "";
+        result.message=[composed.message,completeList,receipt].filter(Boolean).join("\n\n");
+        const presentation=result.state.history?.at(-1);
+        if(presentation?.role === "agent") {
+          presentation.text=result.message;
+          if(context.choices.length) presentation.recommendationIds=composed.recommendationIds;
+        }
+        debugEvent("agent.response",{action:"completed",count:composed.recommendationIds.length});
+      } catch {
+        // Composition is optional. Never roll back validated retrieval or retry tools.
+        debugEvent("agent.response",{action:"fallback"});
+      }
+    }
+    guard.signal.throwIfAborted();
+    request.move(needsInput || result.state.pending || request.route === "clarification" ? "needs-input" :
+      result.state.recovery?.length ? (result.changed.length ? "partial" : "blocked") : "completed");
+    debugEvent("agent.completed", { action: request.snapshot().phase, count: result.changed.length, elapsedMs: request.snapshot().elapsedMs });
+    const completed = { ...result, execution: request.snapshot() };
+    updateConversationMemory(original, completed, input);
+    return completed;
+  } catch (error) {
+    request.move(guard.signal.aborted ? "cancelled" : "failed");
+    debugEvent("agent.check_failed", { action: request.snapshot().phase });
+    throw error;
+  }
+}
+
+async function executeTurn(
+  original: AgentState,
+  input: AgentInput,
+  deps: AgentDependencies,
+  emit: (event: AgentEvent) => void = () => {},
+  guard = new TurnGuard(),
+  markNeedsInput: () => void = () => {},
+): Promise<AgentReply> {
   debugEvent("agent.started", {
     action: input.reset
       ? "conversation"
@@ -134,16 +243,20 @@ export async function runTurn(
     events.push(e);
     emit(e);
   };
-  const reply = (message: string): AgentReply => {
+  const reply = (message: string, recommendations?: Card[], referenceIds?: string[]): AgentReply => {
     const text = fallback + message;
     state.history = [
       ...state.history!,
       ...(input.message
         ? [{ role: "user" as const, text: input.message }]
         : []),
-      { role: "agent" as const, text },
+      { role: "agent" as const, text, ...(referenceIds ? {referenceIds:referenceIds.slice(0,40)} : {}), ...(recommendations ? {recommendationIds:recommendations.slice(0,3).map(card=>card.id)} : {}) },
     ].slice(-100);
     return { state, changed, events, mode, message: text };
+  };
+  const clarify = (message: string): AgentReply => {
+    markNeedsInput();
+    return reply(message);
   };
   if (input.reset === "conversation") {
     debugEvent("session.reset", {
@@ -165,8 +278,55 @@ export async function runTurn(
     delete state.pending;
   if (deps.provider && state.providerHealth === "unconfigured")
     state.providerHealth = "configured";
+  const route = routeRequest(input);
   if (input.message) {
     culturalText(input.message);
+    if(route === "clarification")return reply("I didn’t catch that. You can say ‘list restaurants’, ask for three starting choices, or tell me what to change. Your Passport and current context are unchanged.");
+    if (state.pending && /^(?:cancel(?: that| the)?(?: concept| choice)?|skip(?: this| the)?(?: concept| choice)?|none of (?:these|those)(?: matches| options)?|never ?mind|start over)[!,.\s]*$/i.test(input.message.trim())) {
+      const abandoned=new Set([state.pending.query,...(state.pending.remainingConcepts ?? [])].map(conceptKey));
+      for(const section of state.pending.sections)
+        state.categoryConcepts[section]=(state.categoryConcepts[section] ?? []).filter(concept=>!abandoned.has(conceptKey(concept)));
+      delete state.pending;
+      return reply("Okay, I've skipped that concept choice. Your Passport hasn't changed. What would you like to explore next?");
+    }
+    if (route === "current-results" && isExistingChoiceRequest(input.message)) {
+      delete state.pending;
+      const choice = chooseExisting(state, input.message);
+      if (!choice.cards.length) markNeedsInput();
+      return reply(choice.message, choice.cards);
+    }
+    // Handle presentation requests before intent classification. A model may
+    // otherwise interpret "list here" as another discovery/refinement request.
+    if (route === "current-results" && isShortlistRequest(input.message)) {
+      delete state.pending;
+      const cards=chatShortlist(state,requestedShortlistSections(input.message));
+      return reply(chatShortlistText(state,cards),cards);
+    }
+    if (/^(?:thanks(?: bro)?|thank you(?: bro)?|cheers)[!,.\s]*$/i.test(input.message.trim()))
+      return reply("You’re welcome. Want to compare a couple of choices, find a different vibe, or put an outing together?");
+    if (route === "current-results" && isListRequest(input.message)) {
+      delete state.pending; // A read-only listing supersedes an unrelated choice.
+      return reply(listPassportResults(state,input.message),[],listPassportCards(state,input.message).slice(0,40).map(card=>card.id));
+    }
+    // Questions about an existing result must be handled BEFORE Gemini intent
+    // classification. Otherwise "rating for second" can become a filter and
+    // destroy the original shortlist or unrelated category state.
+    if (route === "current-results" && isReadOnlyFollowUp(input.message)) {
+      delete state.pending;
+      return reply(readOnlyFollowUp(state,input.message));
+    }
+    const activeCards = [...state.cards, ...state.savedCards];
+    const mentioned = findMentionedCard(input.message, activeCards);
+    if (mentioned) {
+      const isCardInquiry =
+        /why|tell me|explain|what is|how is|is it|about|details|review|rating|price|location|quiet|where is|who is/i.test(input.message) ||
+        conceptKey(input.message) === conceptKey(mentioned.name) ||
+        input.message.trim().toLowerCase() === mentioned.name.trim().toLowerCase();
+      if (isCardInquiry) {
+        delete state.pending;
+        return reply(cardSpecificAnswer(mentioned, input.message));
+      }
+    }
     if (
       state.pending &&
       conceptKey(state.pending.request ?? "") === conceptKey(input.message)
@@ -174,13 +334,20 @@ export async function runTurn(
       return reply(
         `I found matches for “${state.pending.query}”. Choose one of the options below to continue; you don't need to send the request again.`,
       );
+    // Legacy sessions may contain concepts stored before their choice was
+    // confirmed. A new request must not inherit those abandoned draft concepts.
+    if (original.pending) {
+      const abandoned=new Set([original.pending.query,...(original.pending.remainingConcepts ?? [])].map(conceptKey));
+      for(const section of original.pending.sections)
+        state.categoryConcepts[section]=(state.categoryConcepts[section] ?? []).filter(concept=>!abandoned.has(conceptKey(concept)));
+    }
     delete state.pending;
   }
-  if (input.message && /^(?:hi|hello|hey|hi bro|hello bro)[!,.\s]*$/i.test(input.message.trim()))
-    return reply(`Hi! What would you like to do in ${state.city}? Try “find chicken biryani” or “find a cinema and dinner”.`);
+  if (input.message && isGreetingOrTypo(input.message))
+    return reply(`Hi! What would you like to explore in ${state.city}? I can help you choose from your current discoveries, compare a couple, or refine what isn’t working. Want three starting choices or do you have something in mind?`);
   let intent = interpret(input.message ?? "", state.city);
   if (input.message && intent.question) {
-    state.pending = original.pending;
+    state.pending = original.pending; // A genuine read-only question may pause, not confirm, a choice.
     return reply(passportAnswer(state, intent));
   }
   if (input.familiarity) {
@@ -204,6 +371,8 @@ export async function runTurn(
     };
   if (input.recovery) {
     const { section, action } = input.recovery;
+    const failedSearch = state.failedSearches?.[section];
+    if (failedSearch) restoreRefinementSettings(state, section, failedSearch);
     let constraints = [...(state.categoryConstraints[section] ?? [])];
     if (action === "relax-quiet")
       constraints = constraints.filter(
@@ -283,6 +452,10 @@ export async function runTurn(
       if(!state.pending.sections.length){delete state.pending;return reply("Your protected categories are unchanged. Name the category you want to update.");}
     }
     const pending = state.pending;
+    if(pending?.settings) for(const section of pending.sections) {
+      const settings=pending.settings[section];
+      if(settings)restoreRefinementSettings(state,section,settings);
+    }
     comparedRequest = pending?.request;
     const tag = pending?.candidates.find((t) => t.id === input.tagChoice);
     if (!pending || !tag) throw Error("Choose a returned concept match.");
@@ -338,9 +511,9 @@ export async function runTurn(
   } else if (deps.provider && input.message) {
     event("Interpreting your cultural request", "active");
     try {
-      intent = validateIntent(
+      intent = groundedModelIntent(input.message,validateIntent(
         await deps.provider.interpret(input.message ?? "", conversationContext(state)),
-      );
+      ),interpret(input.message,state.city));
       mode = "model-mcp";
       state.providerHealth = "healthy";
       event("Cultural intent recognized", "complete");
@@ -362,9 +535,9 @@ export async function runTurn(
     if (explicit.question) intent = { ...explicit, sections: explicit.sections };
     if(explicit.kind === "refine" && explicit.sections.length)
       intent.sections = explicit.sections;
-    if (explicit.kind === "refine" && !explicit.sections.length && original.intent?.kind === "refine" &&
+    if (explicit.kind === "refine" && !explicit.sections.length && conversationFocus(original).length > 0 &&
         /\b(?:it|those|them|these|same|rest)\b|^(?:cheaper|quieter|more familiar|more adventurous)\b/i.test(input.message.trim())) {
-      const previous = original.intent.sections.filter(section => !state.hiddenCategories.includes(section));
+      const previous = conversationFocus(original).filter(section => !state.hiddenCategories.includes(section));
       intent.sections = previous.length === 1 ? previous : [];
       // A relative modifier does not introduce a new cuisine or taxonomy concept.
       if (!explicit.concepts.length && explicit.constraints.length) {
@@ -374,6 +547,7 @@ export async function runTurn(
     }
     if (explicit.kind === "refine" && (explicit.constraints.length || explicit.excludeConcepts?.length || explicit.concepts.length)) {
       intent.kind = "refine";
+      delete intent.question;
       intent.constraints = [...new Set([...intent.constraints, ...explicit.constraints])];
       if (!intent.sections.length) intent.sections = explicit.sections;
       if (explicit.concepts.length) intent.concepts = [...new Set([...explicit.concepts,...intent.concepts.filter(concept=>
@@ -395,6 +569,9 @@ export async function runTurn(
     const preserved=refinementScope(input.message).preserved;
     intent.sections=intent.sections.filter(section=>!preserved.includes(section));
     intent.hide=intent.hide?.filter(section=>!preserved.includes(section));
+    // The current user message, not a remembered model guess, authorizes a
+    // new taxonomy filter or special discovery mode.
+    intent = groundedModelIntent(input.message, intent, explicit);
     if (explicit.activityGenres?.length) {
       intent.activityGenres = explicit.activityGenres;
       intent.concepts = explicit.concepts;
@@ -410,12 +587,11 @@ export async function runTurn(
     mode,
   });
   if (intent.kind === "unknown" && intent.question) {
-    state.pending = original.pending;
     return reply(passportAnswer(state, intent));
   }
   if (intent.kind === "unknown" || intent.kind === "onboard")
-    return reply(
-      "For this passport, name a section to refine, ask for cuisine or quietness, or select Not my vibe on a card. Start a new taste draft to change the destination or seeds.",
+    return clarify(
+      `I didn't catch a discovery request. You can ask naturally—for example, “Find a nightclub in ${state.city}”, “Show my restaurants here”, or “Make dining quieter”. Your Passport is unchanged.`,
     );
   const acceptedScope = state.feedback
     .filter((f) => f.accepted)
@@ -427,11 +603,15 @@ export async function runTurn(
     return reply(
       "Save My vibe on a card first, or name a category, so I can use a real cultural anchor.",
     );
-  const previousSections = original.intent?.kind === "refine"
-    ? original.intent.sections.filter(section => !state.hiddenCategories.includes(section)) : [];
+  // A modifier can continue the category of an unresolved task without
+  // inheriting its abandoned concept (e.g. chicken -> peaceful Food).
+  const pendingScope = input.message && !intent.sections.length && original.pending &&
+    (intent.constraints.length > 0 || intent.query || intent.familiarity)
+    ? original.pending.sections : [];
+  const previousSections = (pendingScope.length ? pendingScope : conversationFocus(original)).filter(section => !state.hiddenCategories.includes(section));
   // An unresolved pronoun is not permission to update the first of several sections.
   if (input.message && !intent.sections.length && previousSections.length > 1)
-    return reply(`Which section should I change: ${previousSections.join(", ")}? Your Passport is unchanged.`);
+    return clarify(`Which section should I change: ${previousSections.join(", ")}? Your Passport is unchanged.`);
   const currentScope = previousSections.length === 1 ? previousSections[0] : undefined;
   const visibleSections = state.activeCategories.filter(section => !state.hiddenCategories.includes(section));
   const venueOnly = intent.query?.priceMax !== undefined || intent.query?.priceMin !== undefined ||
@@ -439,7 +619,7 @@ export async function runTurn(
   const implicitSections = venueOnly ? visibleSections.filter(isPlaceSection) : visibleSections;
   const implicitScope = currentScope ?? (implicitSections.length === 1 ? implicitSections[0] : undefined);
   if (input.message && !intent.sections.length && !implicitScope && visibleSections.length && !(refersToLike && acceptedScope))
-    return reply(`Which section should I change: ${visibleSections.join(", ")}? Your Passport is unchanged.`);
+    return clarify(`Which section should I change: ${visibleSections.join(", ")}? Your Passport is unchanged.`);
   const modeScope =
     implicitScope ??
     state.activeCategories.find((s) => !state.hiddenCategories.includes(s)) ??
@@ -454,7 +634,7 @@ export async function runTurn(
             ? modeScope
             : (implicitScope ?? "Eat"),
       ]).filter(section=>!preserved.includes(section));
-  if (!targets.length) return reply("Your protected categories are unchanged. Name the category you want to update.");
+  if (!targets.length) return clarify("Your protected categories are unchanged. Name the category you want to update.");
   if (input.message && mode === "model-mcp") {
     const positive = refinementScope(input.message).positive;
     const asksBudget = /cheap|afford|budget|price|cost|expensive|economical|inexpensive|moderate|premium|luxury|spend|[$£€₹]/i.test(positive);
@@ -573,6 +753,7 @@ export async function runTurn(
   let tools: ToolDefinition[] = [];
   let modelChoices: Awaited<ReturnType<ModelProvider["choose"]>> =
     rememberedRank ? [{ name: "qloo_rank", arguments: {} }] : [];
+  const observedTags = new Map<string, ToolResult>();
   const neededConcepts = [
     ...intent.concepts,
     ...(intent.constraints.includes("crowded") ? ["quiet"] : []),
@@ -602,22 +783,43 @@ export async function runTurn(
         t.name === "qloo_find_tags" || (t.name === "qloo_rank" && intent.strategy === "rank" && state.cards.some(card=>targets.includes(card.section))),
       );
       choosingModelTool=true;
-      modelChoices = await deps.provider.choose(
-        input.message ?? "",
-        state,
-        tools,
-      );
-      if (modelChoices.length > 2) throw Error("Tool budget");
+      if (deps.provider.chooseWithObservation && intent.strategy !== "rank" &&
+          neededConcepts.some(concept=>conceptUnknown(concept))) {
+        const permitted = [...new Set(neededConcepts.map(concept =>
+          /quiet/i.test(concept) ? "quiet atmosphere" : concept
+        ))];
+        const observed = await deps.provider.chooseWithObservation(
+          input.message ?? "", state, tools.filter(t => t.name === "qloo_find_tags"),
+          async choice => {
+            const requested = choice.arguments.query;
+            if (choice.name !== "qloo_find_tags" || typeof requested !== "string")
+              throw Error("Invalid model-selected Qloo operation");
+            const canonical = permitted.find(c => c.toLowerCase() === requested.trim().toLowerCase());
+            if (!canonical) throw Error("Tool argument outside user request");
+            const args = { query: canonical, limit: 5 };
+            return guard.run("qloo_find_tags_model", args, () =>
+              deps.workflow("mcp", "qloo_find_tags", args, guard.signal));
+          }, guard.signal, permitted,
+        );
+        modelChoices = observed.choices;
+        for (const observation of observed.observations) {
+          const query = String(observation.choice.arguments.query).trim().toLowerCase();
+          observedTags.set(query, observation.result);
+        }
+      } else {
+        modelChoices = await deps.provider.choose(input.message ?? "", state, tools);
+      }
+      if (modelChoices.length > 3) throw Error("Tool budget");
       if (modelChoices.some((c) => !tools.some((t) => t.name === c.name)))
         throw Error("Unadvertised tool");
     } catch {
       mode = "deterministic";
-      if(choosingModelTool) {
-        state.providerHealth = "unavailable";
-        recordProviderHealth("unavailable");
-        fallback = "Taste Concierge is temporarily unavailable. You can still refine your Passport. ";
-      } else {
+      // Optional MCP planning can fail even when intent interpretation worked.
+      // Do not falsely report Gemini as unavailable or erase a successful
+      // observation; ordinary validated Qloo discovery can still proceed.
+      if (!choosingModelTool) {
         fallback = "The tool connection is unavailable. Using validated Qloo discovery. ";
+        event("Qloo tool catalog unavailable; using direct lookup", "attention");
       }
       debugEvent("agent.fallback", { mode: "deterministic" });
       event("Guided refinement is available", "attention");
@@ -703,7 +905,8 @@ export async function runTurn(
       const args = { query: /quiet/i.test(concept) ? "quiet atmosphere" : concept, limit: 5 };
       let result: ToolResult;
       try {
-        result = await guard.run("qloo_find_tags", args, () =>
+        const observed = observedTags.get(args.query.toLowerCase());
+        result = observed ?? await guard.run("qloo_find_tags", args, () =>
           deps.workflow(transport, "qloo_find_tags", args, guard.signal),
         );
         if (transport === "mcp" && result.status !== "ok")
@@ -715,11 +918,23 @@ export async function runTurn(
           deps.workflow("exec", "qloo_find_tags", args, guard.signal),
         );
       }
-      const choices = tagCandidates(result, concept).filter(
+      let choices = tagCandidates(result, concept).filter(
         (t) =>
           !/quiet/i.test(concept) ||
           (t.id.includes(":ambience:") && /quiet|calm|tranquil/i.test(t.name)),
       );
+      // If Qloo does not index the phrase “Indian cuisine”, try the shorter
+      // cultural term once. Never invent a tag or show unfiltered venues.
+      const cuisineName = !excluding && scopedTargets.includes("Eat")
+        ? concept.match(/^([\p{L}]+) cuisine$/iu)?.[1] : undefined;
+      if (cuisineName && !choices.length) {
+        const fallbackArgs = {query:cuisineName,limit:5};
+        try {
+          const fallbackTags=await guard.run("qloo_find_tags_cuisine",fallbackArgs,()=>
+            deps.workflow("exec","qloo_find_tags",fallbackArgs,guard.signal));
+          choices=tagCandidates(fallbackTags,cuisineName);
+        } catch { /* Keep original empty result and explain the limitation. */ }
+      }
       // A dietary option is a venue requirement, not a new cultural seed.
       // Prefer the returned options taxonomy over audience/cuisine homonyms.
       if (!excluding && /^vegetarian$/i.test(concept)) {
@@ -752,6 +967,27 @@ export async function runTurn(
         state.tags = [...state.tags.filter((old) => old.id !== tag.id), tag];
         state.categoryTags!.Eat = [...new Set([...(state.categoryTags!.Eat ?? []), tag.id])];
         continue;
+      }
+      // A clearly identified cuisine is already the user's explicit choice.
+      // Do not ask them to confirm an unambiguous Qloo taxonomy entry twice.
+      if (cuisineName) {
+        const canonical=cuisineName.toLowerCase();
+        const matches=choices.filter(tag =>
+          /urn:tag:(?:cuisine|category:place)/i.test(tag.id) &&
+          (tag.name.toLowerCase()===canonical || tag.name.toLowerCase()===canonical+" cuisine" ||
+           tag.name.toLowerCase()===canonical+" restaurant" || tag.name.toLowerCase()===canonical+" restaurants")
+        );
+        const preferred=matches.filter(tag=>tag.id.startsWith("urn:tag:cuisine:"));
+        const verified=choices.length===1 && matches.length > 0 ? choices[0]
+          : preferred.length===1?preferred[0]:matches.length===1?matches[0]:undefined;
+        if(verified) {
+          state.tags=[...state.tags.filter(tag=>tag.id!==verified.id),verified].slice(-50);
+          const old=state.categoryTags!.Eat??[];
+          // Switching cuisines replaces the old restrictive cuisine filter.
+          state.categoryTags!.Eat=[...new Set([...old.filter(id=>!state.tags.some(tag=>tag.id===id && /cuisine|restaurant/i.test(`${tag.id} ${tag.name}`))),verified.id])];
+          event(`${verified.name} dining filter confirmed by Qloo`,"complete");
+          continue;
+        }
       }
       // Generic venue genres describe the requested output, not a new personal taste.
       // Resolve their actual Qloo taxonomy without another taste-confirmation dialog.
@@ -843,7 +1079,9 @@ export async function runTurn(
       event("No matching concept returned", "attention");
       if (/quiet/i.test(concept)) return reply("I could not verify the requested quiet-atmosphere requirement. Your discoveries are unchanged; retry or explicitly relax quietness.");
       return reply(
-        "No matching interest was found. Your existing Passport is unchanged; try a more specific term.",
+        scopedTargets.includes("Eat")
+          ? `I can help find ${concept} restaurants in ${state.city}, but Qloo did not return a verified cuisine tag this time. I kept your current discoveries rather than showing unrelated places. Try a specific dish such as biryani, or try the cuisine again.`
+          : "I couldn’t verify that interest in Qloo. Your discoveries are safe; try a more specific phrase.",
       );
     } catch {
       event("Concept workflow unavailable", "attention");
@@ -975,7 +1213,8 @@ export async function runTurn(
         (c) =>
           c.section === section &&
           !excluded.includes(c.id) &&
-          !existingIds.has(c.id),
+          !existingIds.has(c.id) &&
+          matchesDishRequirements(c,section === "Eat" ? sectionTags(state,section) : []),
       );
       if (!cards.length) {
         state.recovery!.push(section);
@@ -1034,7 +1273,8 @@ export async function runTurn(
             (c) =>
               c.section === section &&
               !excluded.includes(c.id) &&
-              !state.selected.some((s) => s.id === c.id),
+              !state.selected.some((s) => s.id === c.id) &&
+              matchesDishRequirements(c,section === "Eat" ? sectionTags(state,section) : []),
           );
           if (safeCards.length) {
             state.cards = [
@@ -1053,6 +1293,14 @@ export async function runTurn(
       );
     }
   }
+  for (const section of state.recovery ?? []) {
+    if (changed.includes(section)) continue;
+    state.failedSearches ??= {};
+    state.failedSearches[section] = refinementSettings(state, section);
+    restoreRefinementSettings(state, section, refinementSettings(original, section));
+  }
+  for (const section of changed) if (state.failedSearches) delete state.failedSearches[section];
+  state.relaxed = state.relaxed?.filter(item => changed.includes(item.section));
   if (intent.constraints.includes("crowded"))
     state.notices = [
       ...state.notices,
@@ -1073,7 +1321,8 @@ export async function runTurn(
     );
   return reply(
     changed.length
-      ? `Updated ${changed.map(section => section === "Eat" ? "Dining" : section).join(", ")} suggestions. ${decisionSummary(original, state, changed)} ${state.relaxed!.length ? "I couldn't find a strong match satisfying every preference, so these results prioritize your confirmed cultural tastes. Optional preferences relaxed: " + [...new Set(state.relaxed!.flatMap((r) => r.constraints))].map((c) => (c === "crowded" ? "quiet atmosphere" : c)).join(", ") + ". " : ""}${state.pending ? "You can also confirm the atmosphere concept to refine further. " : ""}Your other categories and confirmed interests are unchanged.`
-      : "No strong match yet. Your Passport is preserved. Keep your cuisine, relax quiet, allow popular places, or show closest matches below.",
+      ? `Updated ${changed.map(section => sectionLabel(section)).join(", ")} suggestions. ${decisionSummary(original, state, changed)} ${state.relaxed!.length ? "I couldn't find a strong match satisfying every preference, so these results prioritize your confirmed cultural tastes. Optional preferences relaxed: " + [...new Set(state.relaxed!.flatMap((r) => r.constraints))].map((c) => (c === "crowded" ? "quiet atmosphere" : c)).join(", ") + ". " : ""}${state.pending ? "You can also confirm the atmosphere concept to refine further. " : ""}Your other categories and confirmed interests are unchanged.${previewRefinedResults(state, changed)}`
+      : "I couldn’t apply that search because no verified match was returned. Your previous discoveries and their active preferences are unchanged. The attempted search is kept separately so you can adjust it or retry.",
+    changed.length ? chatShortlist(state,changed) : undefined,
   );
 }

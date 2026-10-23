@@ -1,3 +1,6 @@
+import { matchesDishRequirements } from "../passport/dish-evidence.ts";
+import { activityMatches } from "../passport/day-out.ts";
+import { rankDiverseChoices } from "./ranking.ts";
 import "server-only";
 import { debugEvent } from "./debug.ts";
 import { discoveryQueries, mixPools } from "./strategy.ts";
@@ -401,12 +404,14 @@ export async function discoverSection(
       pools.push(local);
     }
   }
-  const mixed = mixPools(pools);
+  const requestedActivities = state.activityGenres?.[section] ?? [];
+  const dishRequirements=section === "Eat" ? sectionTags(state,section) : [];
+  const mixed = mixPools(pools).filter(card=>matchesDishRequirements(card,dishRequirements)).filter(card => !requestedActivities.length || requestedActivities.some(genre => activityMatches(card, genre === "cinema" ? "Cinema" : "Nightlife")));
   const avoidMainstream = constraints.includes("mainstream") && ["Eat","Coffee"].includes(section);
   const eligible = avoidMainstream ? mixed.filter(card=>!knownChain(card)) : mixed;
   if (avoidMainstream && eligible.length < mixed.length)
     state.notices.push(`Excluded ${mixed.length-eligible.length} known chain listings from ${section}. Independent ownership of remaining venues is not verified.`);
-  const cards = diversifyCards(eligible, section);
+  const cards = rankDiverseChoices(diversifyCards(eligible, section), section);
   debugEvent("discovery.completed", { section, mode, count: cards.length });
   return cards;
 }

@@ -1,5 +1,8 @@
+import { browserRequestError, readRequestText } from "../../../../src/http/request.ts";
+import { relevantThemes } from "../../../../src/passport/taste-themes";
+import { validSessionId } from "../../../../src/agent/session-lifetime.ts";
 import { trending } from "../../../../src/qloo/trending";
-import { getSession } from "../../../../src/agent/store";
+import { loadSession } from "../../../../src/agent/store";
 import { unseal } from "../../../../src/passport/service";
 import { compareProfiles } from "../../../../src/qloo/compare";
 import { entityDetails, tagTypes } from "../../../../src/qloo/lookups";
@@ -11,7 +14,7 @@ import { configuredProvider } from "../../../../src/agent/provider";
 import { evidenceFacts } from "../../../../src/qloo/explanation";
 import { debugRequest } from "../../../../src/agent/debug";
 import { discoverSection } from "../../../../src/agent/runtime";
-import { analyze, type AnalysisKind } from "../../../../src/qloo/analysis";
+import { analyze, selectAnalysisSignals, type AnalysisKind } from "../../../../src/qloo/analysis";
 export const runtime = "nodejs";
 const running = new Set<string>();
 const json = (value: unknown, status = 200) =>
@@ -20,16 +23,18 @@ const json = (value: unknown, status = 200) =>
     headers: { "Cache-Control": "private, no-store", Vary: "Cookie" },
   });
 async function handlePOST(request: Request) {
+  const rejected = browserRequestError(request);
+  if (rejected) return rejected;
   let id = "",
     acquired = false;
   try {
-    const raw = await request.text();
+    const raw = await readRequestText(request, 20000);
     if (raw.length > 20000)
       return json({ error: "Request is too large." }, 400);
     const b = JSON.parse(raw);
-    if (typeof b.sessionId !== "string")
+    if (!validSessionId(b.sessionId) || !Number.isSafeInteger(b.revision) || b.revision < 0)
       return json({ error: "Build a Passport first." }, 400);
-    const state = getSession(b.sessionId);
+    const state = await loadSession(b.sessionId);
     id = state.id;
     if (b.revision !== state.revision)
       return json(
@@ -67,10 +72,11 @@ async function handlePOST(request: Request) {
     acquired = true;
     if (b.action === "analysis") {
       if (!["taste","heatmap","demographics"].includes(b.kind)) return json({error:"Choose a supported analysis."},400);
-      const analysis = await analyze(b.kind as AnalysisKind, {
-        entities: state.selected.filter(s=>!s.id.startsWith("urn:tag:")).map(s=>s.id),
-        tags: state.selected.filter(s=>s.id.startsWith("urn:tag:")).map(s=>s.id),
-      }, state.city, signal);
+      let interests;
+      try { interests=selectAnalysisSignals(state.selected,b.interestIds); }
+      catch { return json({error:"Choose one to five confirmed interests to explore."},400); }
+      const analysis = await analyze(b.kind as AnalysisKind, interests, state.city, signal);
+      if (analysis.kind === "taste") analysis.tags = relevantThemes(analysis.tags, state.selected.filter(interest => b.interestIds.includes(interest.id)));
       return json({analysis});
     }
     if (b.action === "trends") {

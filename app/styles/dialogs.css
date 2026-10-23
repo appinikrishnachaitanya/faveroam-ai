@@ -79,6 +79,43 @@
   color: var(--ui-muted);
 }
 
+.account-dialog .account-password-guidance {
+  padding: 10px 12px;
+  border: 1px solid var(--ui-border);
+  border-radius: 10px;
+}
+
+.account-dialog .account-password-checklist {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 5px;
+  list-style: none;
+  padding: 0;
+  margin: 8px 0;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.account-dialog .account-password-checklist li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  overflow-wrap: anywhere;
+}
+
+.account-dialog .account-password-checklist li span {
+  flex: 0 0 14px;
+  font-weight: 700;
+}
+
+.account-dialog .account-password-checklist .met {
+  color: #2c6a45;
+}
+
+.account-dialog .account-password-checklist .missing {
+  color: var(--ui-muted);
+}
+
 @media (max-width: 640px) {
   .account-dialog, .match-dialog {
     padding: 20px;

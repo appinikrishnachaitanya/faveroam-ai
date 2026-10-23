@@ -1,3 +1,6 @@
+import { browserRequestError, readRequestText } from "../../../../src/http/request.ts";
+import { turnFailure } from "../../../../src/agent/turn-failure";
+import { validSessionId } from "../../../../src/agent/session-lifetime.ts";
 import { debugRequest, debugEvent } from "../../../../src/agent/debug";
 import { inSession } from "../../../../src/agent/store";
 import { TurnGuard } from "../../../../src/agent/guard";
@@ -10,14 +13,16 @@ import type { AgentInput } from "../../../../src/agent/types";
 import { validatePreferences } from "../../../../src/qloo/query-plan";
 export const runtime = "nodejs";
 async function handlePOST(request: Request) {
+  const rejected = browserRequestError(request);
+  if (rejected) return rejected;
   let body: Record<string, unknown>;
   try {
-    const raw = await request.text();
+    const raw = await readRequestText(request, 4000);
     if (raw.length > 4000) throw Error();
     body = JSON.parse(raw);
     if (
-      typeof body.sessionId !== "string" ||
-      !Number.isInteger(body.revision) ||
+      !validSessionId(body.sessionId) ||
+      !Number.isSafeInteger(body.revision) || Number(body.revision) < 0 ||
       typeof body.input !== "object" ||
       !body.input
     )
@@ -85,7 +90,7 @@ async function handlePOST(request: Request) {
     if (
       input.recovery &&
       (!sectionOrder.includes(input.recovery.section) ||
-        !["keep-concept", "relax-quiet", "allow-popular", "closest"].includes(
+        !["keep-concept", "relax-quiet", "allow-popular", "closest", "retry"].includes(
           input.recovery.action,
         ))
     )
@@ -137,13 +142,9 @@ async function handlePOST(request: Request) {
           count: reply.state.cards.length,
         });
         send({ type: "result", reply });
-      } catch {
+      } catch (error) {
         debugEvent("api.failed", { route: "agent.turn" });
-        send({
-          type: "error",
-          message:
-            "Refinement is temporarily unavailable or your Passport changed. Your discoveries are still here. Start a New Passport if your session expired.",
-        });
+        send({ type: "error", ...turnFailure(error, deadline.aborted) });
       }
       try {
         controller.close();

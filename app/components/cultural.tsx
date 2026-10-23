@@ -1,8 +1,10 @@
 "use client";
+import { sectionLabel } from "../../src/passport/labels";
 import { useEffect, useRef, useState } from "react";
 import type { AgentInput, TastePassportSession } from "../../src/agent/types";
 import type { Card, Section } from "../../src/passport/model";
 import { familiarities } from "../../src/passport/evidence";
+import { activeCategories } from "../../src/passport/active-categories";
 import { sectionOrder } from "../../src/workspace/state";
 export function FamiliarityControl({
   session,
@@ -14,27 +16,18 @@ export function FamiliarityControl({
   onChange: (input: AgentInput) => void;
 }) {
   const [section, setSection] = useState<Section>(()=>sectionOrder.find(s=>session.cards.some(c=>c.section===s)) ?? "Eat");
-  const applied = session.categoryModes[section] ?? session.discoveryMode;
+  const available=activeCategories(session,session.cards);
+  const effectiveSection=available.includes(section)?section:available[0] ?? "Eat";
+  const applied = session.categoryModes[effectiveSection] ?? session.discoveryMode;
   return (
     <section className="familiarity-panel" aria-labelledby="familiarity-title">
       <div className="panel-heading">
         <div>
           <span className="micro-label">YOUR KIND OF DISCOVERY</span>
-          <h2 id="familiarity-title">How should your {section === "Eat" ? "dining" : section.toLowerCase()} suggestions feel?</h2>
+          <h2 id="familiarity-title">How should your {sectionLabel(effectiveSection).toLowerCase()} suggestions feel?</h2>
         </div>
-        <label className="mode-category">
-          Category to update
-          <select
-            aria-label="Discovery style category"
-            disabled={disabled}
-            value={section}
-            onChange={(e) => setSection(e.target.value as Section)}
-          >
-            {sectionOrder.map((s) => (
-              <option key={s}>{s}</option>
-            ))}
-          </select>
-        </label>
+        {available.length>1 && <div className="mode-category-tabs" role="group" aria-label="Choose a Passport category">{available.map(category=><button type="button" key={category} disabled={disabled} aria-pressed={effectiveSection===category} onClick={()=>setSection(category)}>{sectionLabel(category)}</button>)}</div>}
+
       </div>
       <div className="familiarity-axis">
         <span>Feels Like Home</span>
@@ -50,7 +43,7 @@ export function FamiliarityControl({
             key={mode}
             aria-pressed={applied === mode}
             disabled={disabled}
-            onClick={() => onChange({ familiarity: { mode, section } })}
+            onClick={() => onChange({ familiarity: { mode, section:effectiveSection } })}
           >
             <span className="mode-orbit" aria-hidden="true" />
             <strong>
@@ -76,7 +69,7 @@ export function FamiliarityControl({
           : applied === "balanced"
             ? "Mix closer matches with broader cultural discoveries."
             : "Explore further while keeping a connection to your tastes."}{" "}
-        Changes refresh {section} in Discover. My Vibe keeps the specific discoveries you saved; results can overlap when coverage is limited.
+        Changes refresh {sectionLabel(effectiveSection)} in Discover. My Vibe keeps the specific discoveries you saved; results can overlap when coverage is limited.
       </p>
     </section>
   );

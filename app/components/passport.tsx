@@ -1,4 +1,5 @@
 "use client";
+import { sectionLabel } from "../../src/passport/labels";
 import { useState } from "react";
 import { ResultMetrics, WhyEvidence } from "./intelligence-evidence";
 import { evidenceFacts, recommendationSummary } from "../../src/qloo/explanation";
@@ -43,6 +44,7 @@ export function Icon({ name, size = 18 }: { name: string; size?: number }) {
         <path d="m11 14 10-11" />
       </>
     ),
+    refresh: <><path d="M20 7v5h-5M4 17v-5h5"/><path d="M6 7a7 7 0 0 1 12-1l2 3M4 15l2 3a7 7 0 0 0 12-1"/></>,
     check: <path d="m5 12 4 4L19 6" />,
     close: <path d="m6 6 12 12M6 18 18 6" />,
     plus: <path d="M12 5v14M5 12h14" />,
@@ -131,7 +133,7 @@ export function TasteDNA({
                 <summary aria-label={`Inspect ${s.name}`}>↗</summary>
                 <div className="signal-receipt">
                   <p>
-                    Resolution source: Qloo{" "}
+                    Matched as a{" "}
                     {s.id.startsWith("urn:tag:")
                       ? "tag workflow"
                       : "entity search"}
@@ -221,7 +223,7 @@ export function TranslationMap({
                 </svg>
                 <span>
                   <Icon name="star" size={23} />
-                  <b>Qloo</b>
+                  <b>Taste</b>
                 </span>
               </div>
               <div className="bridge-output">
@@ -230,7 +232,7 @@ export function TranslationMap({
                   <strong>
                     {route.destination}
                     <small>
-                      {route.section} · {route.count} returned{" "}
+                      {sectionLabel(route.section)} · {route.count} returned{" "}
                       {route.count === 1 ? "discovery" : "discoveries"}
                     </small>
                   </strong>
@@ -256,7 +258,7 @@ export function TranslationMap({
           <p>
             A bridge built from evidence.
             <span>
-              Connections appear only after a Qloo query returns a grounded
+              Connections appear only after a search returns a grounded
               discovery.
             </span>
           </p>
@@ -276,7 +278,7 @@ export function TranslationMap({
       <p className="provenance-note">
         These are collective query-input → returned-category connections.
         Individual taste-to-place links are not provided. Inspect each card’s
-        Qloo evidence for exact IDs and parameters.
+        the returned evidence for each suggestion.
       </p>
     </section>
   );
@@ -287,7 +289,7 @@ function EntityPhoto({url,name,section}:{url?:string;name:string;section:Section
   const [failed,setFailed]=useState(false);
   return <div className={`discovery-photo${!url || failed ? " photo-placeholder" : ""}`}>
     {url && !failed ? <img src={url} alt={name} loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={()=>setFailed(true)}/>
-      : <><Icon name={section} size={44}/><span>{section === "Eat" ? "Dining discovery" : `${section} discovery`}</span></>}
+      : <><Icon name={section} size={44}/><span>{`${sectionLabel(section)} discovery`}</span></>}
   </div>;
 }
 export function DiscoveryCard({
@@ -314,9 +316,9 @@ export function DiscoveryCard({
       <div className="card-header">
         <span className="category-token">
           <Icon name={card.section} size={14} />
-          {card.section}
+          {sectionLabel(card.section)}
         </span>
-        {card.evidence && <span className="helper">{card.evidence.pool === "adjacent" ? "Broader discovery" : card.evidence.pool === "direct" ? "Familiar starting point" : "Your taste profile"}</span>}
+        {card.evidence && <span className="helper">{card.evidence.params?.["filter.goal"] === "hidden-gems" || card.evidence.params?.["goal"] === "hidden-gems" || card.evidence.mode === "explore" ? "Explore choice" : card.evidence.pool === "adjacent" ? "Broader discovery" : card.evidence.pool === "direct" ? "Familiar starting point" : "Your taste profile"}</span>}
       </div>
       <div className="discovery-title">
         <span className="card-cultural-mark" aria-hidden="true">
@@ -461,7 +463,7 @@ export function PassportSections({
           <div className="result-heading">
             <h3 id={`section-${s}`} tabIndex={-1}>
               <Icon name={s} />
-              {s}
+              {sectionLabel(s)}
               <span>{result.cards.filter((c) => c.section === s).length}</span>
             </h3>
             <p>
@@ -478,14 +480,27 @@ export function PassportSections({
           </div>
           {updating.includes(s) && (
             <p className="section-progress" role="status">
-              Updating your {s} passport… Your current discoveries stay
+              Updating your {sectionLabel(s)} passport… Your current discoveries stay
               available.
             </p>
           )}
+          {s === "Eat" && result.session?.queryPreferences?.Eat?.locationPoint && (
+            <div className="active-area-banner" style={{ display: "flex", alignItems: "center", gap: "8px", padding: "10px 14px", background: "var(--surface-subtle, #f1f5f9)", borderRadius: "8px", marginBottom: "16px", fontSize: "13px" }}>
+              <Icon name="pin" size={16} />
+              <span><strong>Area filter:</strong> Discoveries within 1.5 km of {result.session.queryPreferences.Eat.locationQuery?.replace(/^Near\s+/i, "") || "selected cultural anchor"}.</span>
+            </div>
+          )}
           <div className="discovery-grid">
-            {(expanded[s] || previewLimit !== 3
-              ? result.cards.filter(c => c.section === s).slice(0, expanded[s] ? undefined : previewLimit).map(card => ({card,label:"",reason:""}))
-              : threeChoices(result.cards.filter(c => c.section === s)))
+            {(previewLimit === 3
+              ? (() => {
+                  const cards = result.cards.filter(c => c.section === s);
+                  const preview = threeChoices(cards);
+                  const shown = new Set(preview.map(choice => choice.card.id));
+                  return expanded[s]
+                    ? [...preview, ...cards.filter(card => !shown.has(card.id)).map(card => ({card,label:"",reason:""}))]
+                    : preview;
+                })()
+              : result.cards.filter(c => c.section === s).slice(0, expanded[s] ? undefined : previewLimit).map(card => ({card,label:"",reason:""})))
               .map(({card: c, label, reason}) => (
                 <div className="shortlist-choice" key={c.id}>
                 {label && <p className="shortlist-label" title={reason}>{label}<small>{reason}</small></p>}

@@ -1,8 +1,11 @@
 import type { AgentState } from "../agent/types.ts";
 import { normalizeSession } from "../agent/session.ts";
 import { randomUUID } from "node:crypto";
+import { activeSessionExpiry } from "../agent/session-lifetime.ts";
 import { validDestination } from "../workspace/location.ts";
 export const SNAPSHOT_VERSION = 1;
+// Leave room for JSONB serialization overhead under the 2 MB database limit.
+export const MAX_PASSPORT_SNAPSHOT_BYTES = 1_800_000;
 /** Snapshot only server-held state. Excludes bearer tokens, chat history and model-only output. */
 export function passportSnapshot(original: AgentState) {
   const s = normalizeSession(structuredClone(original));
@@ -17,8 +20,10 @@ export function passportSnapshot(original: AgentState) {
     city: s.city,
     selected: s.selected,
     tags: s.tags,
-    cards: s.cards,
-    savedCards: s.savedCards,
+    // Bound the persisted current results while retaining every My Vibe item.
+    // Large, frequently refined passports must remain restorable.
+    cards: s.cards.slice(-300),
+    savedCards: s.savedCards.slice(-100),
     constraints: s.constraints,
     categoryConstraints: s.categoryConstraints,
     categoryConcepts: s.categoryConcepts,
@@ -34,8 +39,8 @@ export function passportSnapshot(original: AgentState) {
     categoryTags: s.categoryTags,
     queryPreferences: s.queryPreferences,
   };
-  if (Buffer.byteLength(JSON.stringify(snapshot), "utf8") > 600_000)
-    throw Error("Passport is too large to save");
+  if (Buffer.byteLength(JSON.stringify(snapshot), "utf8") > MAX_PASSPORT_SNAPSHOT_BYTES)
+    throw Error("Passport is too large to save. Try a new Passport with fewer activities.");
   return snapshot;
 }
 export type PassportSnapshot = ReturnType<typeof passportSnapshot>;
@@ -67,7 +72,7 @@ export function restoreSnapshot(value: unknown) {
       ...structuredClone(v),
       id: randomUUID(),
       revision: 0,
-      expires: Date.now() + 30 * 60_000,
+      expires: activeSessionExpiry(),
       previous: [],
       notices: [],
     }),
@@ -76,7 +81,7 @@ export function restoreSnapshot(value: unknown) {
     ...clean,
     id: randomUUID(),
     revision: 0,
-    expires: Date.now() + 30 * 60_000,
+    expires: activeSessionExpiry(),
     previous: [],
     notices: [
       "Restored saved Qloo discoveries. Evidence shows when they were retrieved; refine a category for fresh results.",

@@ -101,8 +101,10 @@
   margin-block: 22px;
 }
 .partner-interests {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  max-width: 920px;
 }
+.partner-interests label { max-width: 360px; }
 .together-reveal {
   margin-top: 30px;
   padding-top: 20px;
@@ -146,7 +148,7 @@
   border-radius: 10px;
   font-size: 13px;
 }
-.result-metrics > span { color: #234b35; background: #edf3e4; border-color: #bdcdb1; font-weight: 650; font-size: 14px; }
+.result-metrics > span { color: #234b35; background: #edf3e4; border-color: #bdcdb1; font-weight: 650; font-size: 14px; white-space: nowrap; }
 .result-metrics .metric-unavailable { color: #59644a; background: transparent; border-style: dashed; font-weight: 500; font-size: 12px; }
 .result-metrics small { font-size: 11px; font-weight: 500; margin-left: 4px; }
 .together-cards {
@@ -232,6 +234,11 @@
 .together-reveal { padding:clamp(16px,3vw,28px); background:var(--ui-tint); border-radius:18px; }
 .together-reveal > h3 { margin:24px 0 12px; }
 .partner-matches { display:grid; gap:16px; margin:24px 0; }
+.partner-choice-list { display:grid; gap:8px; max-height:290px; overflow:auto; }
+.partner-choice-list button { display:grid; gap:4px; width:100%; min-height:44px; padding:10px 12px; border:1px solid var(--ui-border); border-radius:10px; background:var(--ui-surface); color:var(--ui-ink); text-align:left; cursor:pointer; }
+.partner-choice-list button[aria-pressed="true"] { border-color:var(--ui-action); background:var(--ui-tint); }
+.partner-choice-list small { color:var(--ui-muted); font-size:12px; }
+.shared-result-status { display:inline-block; padding:6px 10px; border-radius:99px; background:var(--ui-tint); color:var(--ui-action); font-size:12px; font-weight:700; }
 .partner-matches > section { min-width:0; padding:18px; border:1px solid var(--ui-border); border-radius:14px; background:var(--ui-surface); }
 .partner-matches h4 { font-size:16px; margin-bottom:12px; overflow-wrap:anywhere; }
 .partner-selection { display:flex; align-items:center; justify-content:space-between; gap:16px; }
@@ -248,7 +255,7 @@
 .together-loading { padding:16px; border-radius:12px; background:var(--ui-surface); }
 @media(max-width:480px) { .partner-selection { align-items:flex-start; flex-direction:column; } }
 @media(min-width:850px) {
-  .partner-matches { grid-template-columns:repeat(3,minmax(0,1fr)); }
+  .partner-matches { grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr)); }
   .partner-matches > p,.partner-matches > button { grid-column:1 / -1; }
   .partner-selection { flex-direction:column; align-items:flex-start; }
   .partner-selection small { display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
@@ -281,3 +288,33 @@
 .area-nearby li { margin:8px 0; }
 .area-nearby small { display:block; color:#51654f; margin-top:3px; }
 .area-guide .area-choices a { line-height:1.6; }
+
+.analysis-interest-picker { margin-top:24px; padding:18px; border:1px solid var(--ui-border); border-radius:16px; background:var(--ui-surface); min-width:0; }
+.analysis-interest-picker legend { padding:0 6px; font-size:16px; font-weight:700; }
+.analysis-interest-picker p { margin:6px 0 16px; font-size:14px; line-height:1.6; color:var(--ui-muted); }
+.analysis-interest-options { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
+.analysis-interest-options label { display:flex; gap:8px; align-items:center; min-height:44px; padding:9px 13px; border:1px solid var(--ui-border); border-radius:12px; cursor:pointer; font-size:14px; background:var(--ui-surface); overflow-wrap:anywhere; }
+.analysis-interest-options label.selected { border-color:var(--ui-action); background:var(--ui-tint); font-weight:650; }
+.analysis-interest-options input { width:17px; height:17px; accent-color:var(--ui-action); flex-shrink:0; }
+.analysis-interest-picker small { color:var(--ui-muted); }
+
+.analysis-selection-summary { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-top:14px; }
+.taste-analysis .analysis-selection-summary button { min-height:44px; padding:8px 12px; border:1px solid #c2cfb5; background:#eef2e5; color:#284932; }
+.additional-themes,.taste-evidence-explorer { border:1px solid #c5d0b9; border-radius:14px; background:#f7f6e9; padding:16px; margin-top:20px; }
+.additional-themes > summary,.taste-evidence-explorer > summary,.taste-map-panel > summary { min-height:44px; cursor:pointer; font-weight:600; color:#294b35; }
+.taste-evidence-explorer .connection-explorer { margin-top:16px; }
+
+/* Insights are a guided choice, with a visible path back to Discover. */
+.progressive-app .analysis-intro { padding: clamp(24px, 3vw, 36px); border: 1px solid #cad4ba; border-radius: 24px; background: radial-gradient(circle at 95% 0, #f0da9b77, transparent 45%), linear-gradient(125deg, #edf2e4, #f9f4e2); }
+.progressive-app .analysis-intro h2 { font-size: clamp(27px, 3vw, 38px); line-height: 1.15; color: #214a35; }
+.progressive-app .analysis-intro p { max-width: 52ch; margin-bottom: 0; color: #465a43; }
+.insight-steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; padding: 0; margin: 22px 0 28px; list-style: none; }
+.insight-steps li { display: flex; align-items: center; gap: 10px; padding: 15px; border: 1px solid #d9ddc8; border-radius: 14px; background: #fffdf5; color: #40563e; font-size: 13px; font-weight: 650; }
+.insight-steps li > span { font-size: 12px; color: #78622d; }
+.progressive-app .analysis-interest-picker { padding: 20px 24px; border: 1px solid #d3dac4; border-radius: 18px; background: #fffdf7; }
+.progressive-app .analysis-action { min-height: 132px; border-radius: 20px; box-shadow: 0 8px 23px #193e310b; }
+.progressive-app .analysis-action > svg:first-child { box-sizing: content-box; padding: 12px; border-radius: 14px; background: #e9efdd; color: #31543b; }
+.progressive-app .taste-theme-list button { border: 1px solid #b6c4a8; border-radius: 99px; background: #eff3e6; color: #2a4d34; }
+.progressive-app .taste-theme-list button[aria-pressed="true"] { border-color: #284e36; background: #284e36; color: #fff8e5; box-shadow: 0 6px 16px #173c3020; }
+.progressive-app .area-choices article { background: linear-gradient(145deg, #fcfaef, #eef3e4); box-shadow: 0 8px 20px #193e310a; }
+@media (max-width: 640px) { .insight-steps { grid-template-columns: 1fr; gap: 8px; } .insight-steps li { padding: 10px 14px; } .progressive-app .analysis-action { min-height: 112px; } .progressive-app .analysis-interest-picker { padding: 18px; } }

@@ -81,7 +81,7 @@ test("day-out excludes nonlocal, mismatched, ungrounded and duplicate discoverie
   assert.deepEqual(dayOutOptions([local, local, audience, otherCity, mismatched, music, { ...card("missing"), evidence: undefined }], "Toronto"), [local]);
 });
 test("day-out export contains real selections and explicit availability limits", () => {
-  const text = dayOutText("Toronto", [{ ...card("chosen"), address: "Fixture address" }]);
+  const text = dayOutText("Toronto", [{activity:"Culture",time:"11:00",card:{ ...card("chosen"), address: "Fixture address" }}]);
   assert.match(text, /Protocol discovery chosen/);
   assert.match(text, /Fixture address/);
   assert.match(text, /Check opening hours, travel times and availability/);
@@ -94,7 +94,7 @@ test("day-out starts with available local activities without forcing empty categ
   assert.match(markup, /day-out-Eat/);
   assert.doesNotMatch(markup, /id="day-out-Coffee"/);
   assert.match(markup, /What would you like to do/);
-  assert.match(markup, /not a timed route or a reservation/);
+  assert.match(markup, /chosen times are suggestions, not verified opening hours or reservations/);
   assert.match(markup, /Download my plan/);
 });
 const deps = {
@@ -144,6 +144,20 @@ test("account snapshot strips sessions, history and comparisons; restore uses a 
   assert.equal(restored.city, "Toronto");
   restored.cards.length = 0;
   assert.equal(snap.cards.length, 4);
+});
+test("saved Passport restores three My Vibe choices and section preferences after a later update", () => {
+  const session = state();
+  session.savedCards = [card("one"), card("two"), card("three")];
+  session.feedback = session.savedCards.map(({ id }) => ({ id, section: "Eat" as const, accepted: true }));
+  session.queryPreferences = { Eat: { priceMax: 2, businessRatingMin: 4.5 }, Coffee: { priceMax: 1 } };
+  session.categoryConstraints = { Eat: ["crowded"] };
+  const earlier = passportSnapshot({ ...session, savedCards: session.savedCards.slice(0, 1) });
+  const latest = passportSnapshot(session);
+  assert.equal(restoreSnapshot(earlier).savedCards.length, 1);
+  const restored = restoreSnapshot(latest);
+  assert.deepEqual(restored.savedCards.map(({ id }) => id), ["one", "two", "three"]);
+  assert.deepEqual(restored.queryPreferences, session.queryPreferences);
+  assert.deepEqual(restored.categoryConstraints, session.categoryConstraints);
 });
 test("restore rejects fabricated or incompatible account snapshots", () => {
   const snap = passportSnapshot(state());
@@ -205,7 +219,8 @@ test("consumer cover and connection reveal use real query relationships rather t
   assert.doesNotMatch(html, /private-guest-token/);
   passport.cards[0].intelligence=normalizeEntity({entity_id:passport.cards[0].id,name:'Fixture result',query:{explainability:{'signal.interests.entities':[{entity_id:signal.id,score:.6}]}}});
   const grounded=renderToStaticMarkup(createElement(ConnectionExplorer,{passport}));
-  assert.match(grounded,/Real-shaped protocol taste helped shape this suggestion/);
+  assert.match(grounded,/Associated via cross-domain audience affinity with Real-shaped protocol taste/);
+  assert.match(grounded,/rather than a direct culinary link/);
 });
 
 test("account writes require the actual browser origin, including local Next Host routing", async () => {

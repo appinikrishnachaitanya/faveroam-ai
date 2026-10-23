@@ -4,6 +4,8 @@ import type { Card } from "../../src/passport/model";
 import type { TasteResult } from "../../src/qloo/normalizer";
 import { screenTasteConnection } from "../../src/qloo/explanation";
 import { isPlaceSection } from "../../src/passport/model";
+import { formatReturnedRating } from "../../src/passport/rating-display";
+import { priceLabel } from "../../src/passport/pricing";
 export function ResultMetrics({ card }: { card: Card }) {
   const m = card.intelligence;
   return (
@@ -11,15 +13,16 @@ export function ResultMetrics({ card }: { card: Card }) {
       className="result-metrics"
       aria-label="Returned recommendation details"
     >
-      {m?.quality.businessRating !== undefined ? (
+      {m?.quality?.businessRating !== undefined ? (
         <span
-          aria-label={`Rated ${m.quality.businessRating.toFixed(1)} out of 5`}
+          aria-label={`Rated ${formatReturnedRating(m.quality.businessRating)} out of 5`}
         >
-          ★ {m.quality.businessRating.toFixed(1)} / 5
+          ★ {formatReturnedRating(m.quality.businessRating)} / 5
         </span>
-      ) : m?.externalProof.tripadvisorRating !== undefined ? (
-        <span aria-label={`Tripadvisor rating ${m.externalProof.tripadvisorRating.toFixed(1)} out of 5`}>★ {m.externalProof.tripadvisorRating.toFixed(1)} / 5 <small>Tripadvisor</small></span>
+      ) : m?.externalProof?.tripadvisorRating !== undefined ? (
+        <span aria-label={`Tripadvisor rating ${formatReturnedRating(m.externalProof?.tripadvisorRating)} out of 5`}>★ {formatReturnedRating(m.externalProof?.tripadvisorRating)} / 5 <small>Tripadvisor</small></span>
       ) : isPlaceSection(card.section) ? <span className="metric-unavailable">Rating unavailable</span> : null}
+      {isPlaceSection(card.section) && priceLabel(m?.commercial?.priceLevel) && <span aria-label={`Listed price category: ${priceLabel(m?.commercial?.priceLevel)}`}>{priceLabel(m?.commercial?.priceLevel)}</span>}
 
     </div>
   );
@@ -86,7 +89,7 @@ export function WhyEvidence({
     }
   }
   const connected =
-    m?.taste.contributingSignals
+    m?.taste?.contributingSignals
       .filter(signal => signal.contribution > 0)
       .flatMap((signal) => {
         const input = inputs.find(
@@ -114,25 +117,25 @@ export function WhyEvidence({
         <p>Connected to {connected.join(", ")} in your interests.</p>
       )}
       <dl className="evidence-metrics">
-        {m?.quality.businessRating !== undefined && (
+        {m?.quality?.businessRating !== undefined && (
           <>
-            <dt>Rating</dt>
-            <dd>{m.quality.businessRating.toFixed(1)} / 5</dd>
+            <dt>Listed rating</dt>
+            <dd>{formatReturnedRating(m.quality.businessRating)} / 5</dd>
           </>
         )}
-        {m?.externalProof.tripadvisorRating !== undefined && (
+        {m?.externalProof?.tripadvisorRating !== undefined && (
           <>
             <dt>Tripadvisor</dt>
             <dd>
-              {m.externalProof.tripadvisorRating.toFixed(1)} / 5
-              {m.externalProof.tripadvisorReviewCount !== undefined
-                ? ` · ${m.externalProof.tripadvisorReviewCount} reviews`
+              {formatReturnedRating(m.externalProof?.tripadvisorRating)} / 5
+              {m.externalProof?.tripadvisorReviewCount !== undefined
+                ? ` · ${m.externalProof?.tripadvisorReviewCount} reviews`
                 : ""}
             </dd>
           </>
         )}
       </dl>
-      {!!card.evidence?.diagnostics?.dropped.length && (
+      {!!card.evidence?.diagnostics?.dropped?.length && (
         <p className="helper">
           Some requested preferences are unavailable for this kind of
           suggestion. Your other preferences were kept.

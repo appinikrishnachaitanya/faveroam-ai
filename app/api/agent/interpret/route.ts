@@ -1,3 +1,4 @@
+import { browserRequestError, readRequestText } from "../../../../src/http/request.ts";
 import { debugRequest, debugEvent } from "../../../../src/agent/debug";
 import { conciergeUnavailable } from "../../../../src/agent/health";
 import { NextResponse } from "next/server";
@@ -8,8 +9,10 @@ import {
   validateIntent,
 } from "../../../../src/agent/intent";
 async function handlePOST(request: Request) {
+  const rejected = browserRequestError(request);
+  if (rejected) return rejected;
   try {
-    const raw = await request.text();
+    const raw = await readRequestText(request, 2000);
     if (raw.length > 2000) throw Error("Input is too long");
     const b = JSON.parse(raw);
     if (typeof b.message !== "string") throw Error("Invalid input");

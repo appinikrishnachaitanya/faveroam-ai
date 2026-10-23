@@ -2,6 +2,7 @@
 
 `app/layout.tsx` imports the existing Tailwind/global baseline and component baseline, followed by these shared styles. The former `consumer.css` override file has been removed and its rules organized and formatted by responsibility:
 
+- `motion.css`: short entrance animations, a limited card stagger, dialog/chat feedback and pointer interactions. Runs only when reduced motion is not requested; no JS animation dependency or hidden-content initialization. Loaded last and owns timing rather than layout.
 - `tokens.css`: shared colors, radii, shadows and timing values.
 - `foundation.css`: page typography, shared actions, spacing and motion preferences.
 - `navigation.css`: header grid, navbar insets, responsive actions and skip link.

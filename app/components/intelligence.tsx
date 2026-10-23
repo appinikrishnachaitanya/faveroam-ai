@@ -1,43 +1,49 @@
 "use client";
+import { sectionLabel } from "../../src/passport/labels";
 import { useEffect, useState } from "react";
 import type { Passport, Resolution } from "../../src/workspace/state";
+import { activeCategories } from "../../src/passport/active-categories";
 import { sectionOrder } from "../../src/workspace/state";
 import type { AgentInput } from "../../src/agent/types";
 import type { Card, Section } from "../../src/passport/model";
 import type { TasteComparison } from "../../src/qloo/compare";
 import type { DiscoveryGoal, QueryPreferences } from "../../src/qloo/query-plan";
-import { CandidateChoices } from "./disambiguation";
 import { ResultMetrics, WhyEvidence } from "./intelligence-evidence";
 import { priceLabel } from "../../src/passport/pricing";
 import { suggestedMatches } from "../../src/passport/matching";
 import { isPlaceSection } from "../../src/passport/model";
-const modes: { id: DiscoveryGoal; name: string; detail: string }[] = [
+import { Icon } from "./passport";
+const modes: { id: DiscoveryGoal; name: string; detail: string; icon: string }[] = [
   {
     id: "discover",
     name: "For you",
     detail: "Recommendations shaped by your confirmed interests.",
+    icon: "heart",
   },
   {
     id: "trending",
     name: "Trending for you",
     detail:
       "Taste-led suggestions with trend ranking; this does not show popularity history.",
+    icon: "star",
   },
   {
     id: "hidden-gems",
     name: "Hidden gems",
-    detail: "Find quality suggestions beyond the most popular choices.",
+    detail: "Favor quality signals and exclude the most popular results when data is available.",
+    icon: "globe",
   },
   {
     id: "safe-bets",
     name: "Safe bets",
-    detail: "Well-rated places that connect to your interests.",
+    detail: "For places, require a listed rating of at least 4/5 and favor quality signals.",
+    icon: "check",
   },
   {
     id: "surprise",
     name: "Surprise me",
-    detail:
-      "Try something a little different, with your interests as the starting point.",
+    detail: "Explore broader cultural connections while keeping your explicit requirements.",
+    icon: "arrow",
   },
 ];
 export default function TasteIntelligence({
@@ -54,6 +60,9 @@ export default function TasteIntelligence({
   onPreferences?: () => void;
 }) {
   const [section, setSection] = useState<Section>(()=>sectionOrder.find(s=>passport.cards.some(c=>c.section===s)) ?? "Eat");
+  const available=activeCategories(passport.session,passport.cards);
+  const availableKey=available.join(",");
+  useEffect(()=>{if(available.length&&!available.includes(section))setSection(available[0]);},[availableKey,section]);
   const prefs = passport.session?.queryPreferences?.[section];
   const [goal, setGoal] = useState<DiscoveryGoal>(
     () => prefs?.goal ?? "discover",
@@ -76,8 +85,8 @@ export default function TasteIntelligence({
     setAvoidArea(current.excludeLocation ?? "");
     setSource(current.requiredExternalSources?.[0] ?? "");
     setReviews(current.tripAdvisorReviewCountMin?.toString() ?? "");
-  }, [section, preferenceSnapshot]);
-  const [partner, setPartner] = useState(["", "", ""]);
+  }, [section, preferenceSnapshot, passport.agent?.revision]);
+  const [partner, setPartner] = useState([""]);
   const [expandedMatch, setExpandedMatch] = useState<number>();
   const [resolution, setResolution] = useState<Resolution>();
   const [ids, setIds] = useState<Record<number, string>>({});
@@ -106,13 +115,13 @@ export default function TasteIntelligence({
     setError("");
     setTogether(undefined);
     try {
-      const matches = await post("/api/agent/resolve", { seeds: partner });
+      const matches = await post("/api/agent/resolve", { seeds: partner.map(value=>value.trim()).filter(Boolean) });
       setResolution(matches);
       setExpandedMatch(undefined);
       setIds(suggestedMatches(matches.items.map((item: Resolution["items"][number]) => ({ ...item, candidates: item.candidates.filter(candidate => !candidate.id.startsWith("urn:tag:")) }))));
     } catch {
       setError(
-        "Could not find those interests. Use three different named films, artists, books or brands.",
+        "Could not find that interest. Try a specific artist, film, book or brand.",
       );
     } finally {
       setLoading(false);
@@ -145,9 +154,9 @@ export default function TasteIntelligence({
   return (
     <section className="taste-intelligence" aria-label={view === "together" ? "Together" : "Your discovery preferences"}>
       <div className="intelligence-content">
-        <div className="intelligence-intro"><span className="micro-label">{view === "together" ? "TWO TASTES. ONE SHARED PLAN." : "YOUR DISCOVERIES. YOUR CHOICE."}</span><h2>{view === "together" ? "Find something you can both enjoy." : "Make these discoveries fit your day."}</h2><p>{view === "together" ? "Bring their interests. Find common ground without changing your individual Passport." : "Choose a category, adjust what matters, and keep your other categories unchanged."}</p></div>
+        <div className="intelligence-intro"><div><span className="micro-label">{view === "together" ? "TOGETHER" : "MAKE IT YOURS"}</span><h2>{view === "together" ? "Find your next yes, together." : "Your city. Your kind of day."}</h2><p>{view === "together" ? "One thing they love is enough to find a shared starting point." : "Fine-tune one category in Discover. Your other discoveries stay put."}</p></div><span className="intelligence-intro-mark" aria-hidden="true"><Icon name={view === "together" ? "People" : "sliders"} size={44}/></span></div>
         <label className="intelligence-section">
-          Category
+          What are we looking for?
           <select
             value={section}
             disabled={busy || loading}
@@ -165,10 +174,9 @@ export default function TasteIntelligence({
               setTogether(undefined);
             }}
           >
-            {sectionOrder
-              .filter((s) => !passport.session?.hiddenCategories.includes(s))
+            {available
               .map((s) => (
-                <option key={s}>{s}</option>
+                <option key={s} value={s}>{sectionLabel(s)}</option>
               ))}
           </select>
         </label>
@@ -199,6 +207,7 @@ export default function TasteIntelligence({
             });
           }}
         >
+          <div className="preference-section-heading"><span className="micro-label">CHOOSE THE FEEL</span><strong>What sounds good today?</strong></div>
           <div
             className="intelligence-modes"
             role="group"
@@ -212,13 +221,13 @@ export default function TasteIntelligence({
                 aria-pressed={goal === m.id}
                 onClick={() => setGoal(m.id)}
               >
-                {m.name}
+                <Icon name={m.icon} size={21}/><strong>{m.name}</strong><small>{m.detail}</small>
               </button>
             ))}
           </div>
-          <p className="helper">{modes.find((m) => m.id === goal)?.detail}</p>
+          <p className="sr-only">{modes.find((m) => m.id === goal)?.detail} Choose Update suggestions to apply it.</p>
           {isPlaceSection(section) && (
-            <div className="intelligence-filters">
+            <div className="intelligence-filters"><div className="preference-section-heading"><span className="micro-label">MAKE IT PRACTICAL</span><strong>Set your limits</strong></div>
               <label>
                 Maximum budget
                 <select
@@ -227,13 +236,8 @@ export default function TasteIntelligence({
                   onChange={(e) => {
                     const value = e.target.value;
                     setPrice(value);
-                    if (value)
-                      onRefine({
-                        discovery: {
-                          section,
-                          preferences: { priceMax: Number(value) },
-                        },
-                      });
+                    // This form has one explicit Apply action. Changing a select
+                    // must never launch an unseen overlapping refinement.
                   }}
                   disabled={busy || loading}
                 >
@@ -320,33 +324,31 @@ export default function TasteIntelligence({
             </details>
           )}
           {prefs && (
-            <p className="helper">
-              Active settings: {prefs.goal ?? "For you"}
+            <p className="active-preferences">
+              <strong>Currently in Discover</strong><span>{modes.find(m=>m.id===(prefs.goal??"discover"))?.name ?? "For you"}</span>
               {prefs.priceMax && prefs.priceMax < 4 ? ` · ${priceLabel(prefs.priceMax)} or less` : " · No maximum budget"}
               {prefs.priceMin ? ` · minimum ${priceLabel(prefs.priceMin)}` : ""}
               {prefs.businessRatingMin
                 ? ` · business rating ≥ ${prefs.businessRatingMin}`
                 : ""}
-              {prefs.locationQuery ? ` · ${prefs.locationQuery}` : ""}. Your
-              other chapter settings stay unchanged.
+              {prefs.locationQuery ? ` · in ${prefs.locationQuery}` : ""}
+              {prefs.excludeLocation ? ` · excluding ${prefs.excludeLocation}` : ""}
+              {prefs.requiredExternalSources?.length ? ` · requested listing: ${prefs.requiredExternalSources.join(", ")} (availability not verified)` : ""}
+              {prefs.tripAdvisorReviewCountMin !== undefined ? ` · at least ${prefs.tripAdvisorReviewCountMin} Tripadvisor reviews requested` : ""}. Your
+              other categories stay unchanged.
             </p>
           )}
           <button
-            className="primary-button"
+            className="primary-button intelligence-apply"
             disabled={busy || loading || !passport.agent}
           >
-            {busy ? "Finding your next fit…" : "Update suggestions"}
+            {busy ? "Finding your next fit…" : <>Update suggestions <Icon name="arrow" size={17}/></>}
           </button>
         </form>
         <section className="together-reveal" hidden={view !== "together"} aria-label="Find common ground">
-          <div className="together-preference-summary"><div><strong>{section} in {passport.city}</strong><p className="helper">Your current preferences for this category carry into the shared search{prefs?.priceMax && prefs.priceMax < 4 ? ` · ${priceLabel(prefs.priceMax)} or less` : ""}{prefs?.businessRatingMin ? ` · rating ${prefs.businessRatingMin}+` : ""}.</p></div><button type="button" className="quiet-button" onClick={onPreferences}>Review preferences</button></div>
-          <div className="together-heading"><div><span className="micro-label">TWO TASTES. A SHARED DISCOVERY.</span><h3>1. Add what they love</h3></div><img src="/illustrations/together-passports.svg" width="440" height="260" alt="" aria-hidden="true" loading="lazy" /></div>
-          <p>
-            Add three named artists, films, books or brands they enjoy, then
-            confirm the matches. Cuisine and dietary concepts are supported in
-            your Passport preferences, but cannot be used as Together comparison inputs.
-            Your profile needs at least one named entity too. Avoid personal details.
-          </p>
+          <div className="together-preference-summary"><div><strong>{sectionLabel(section)} in {passport.city}</strong><p className="helper">Your current preferences for this category carry into the shared search{prefs?.priceMax && prefs.priceMax < 4 ? ` · ${priceLabel(prefs.priceMax)} or less` : ""}{prefs?.businessRatingMin ? ` · rating ${prefs.businessRatingMin}+` : ""}.</p></div><button type="button" className="quiet-button" onClick={onPreferences}>Review preferences</button></div>
+          <div className="together-heading"><div><span className="micro-label">A LITTLE OF YOU. A LITTLE OF THEM.</span><h3>What are they into?</h3><p>Pick an artist, film, book or brand they love. We’ll find cultural common ground and suggest {sectionLabel(section).toLowerCase()} in {passport.city}.</p></div><img src="/illustrations/together-passports.svg" width="440" height="260" alt="" aria-hidden="true" loading="lazy" /></div>
+          <p className="helper">Start with one. Add more if you like. Your Passport and preferences stay yours.</p>
           {!hasEntityProfile && <p role="status">Add a named artist, film, book or brand to your Passport to use Together.</p>}
           <form
             onSubmit={(e) => {
@@ -357,9 +359,9 @@ export default function TasteIntelligence({
             <div className="partner-interests">
               {partner.map((value, i) => (
                 <label key={i}>
-                  Their interest {i + 1}
+                  {i === 0 ? "Something they love" : `Another interest (optional) ${i + 1}`}
                   <input
-                    required
+                    required={i === 0}
                     maxLength={100}
                     value={value}
                     placeholder={["An artist", "A film", "A book or brand"][i]}
@@ -373,24 +375,27 @@ export default function TasteIntelligence({
                       setTogether(undefined);
                     }}
                   />
+                  {i > 0 && <button type="button" className="text-button" disabled={busy||loading} onClick={()=>{setPartner(current=>current.filter((_,index)=>index!==i));setResolution(undefined);setIds({});setTogether(undefined);}}>Remove</button>}
                 </label>
               ))}
             </div>
+            {partner.length < 3 && <button type="button" className="quiet-button" disabled={busy||loading} onClick={()=>setPartner(current=>[...current,""])}>Add another interest</button>}
             <button className={resolution ? "quiet-button" : "primary-button"} disabled={busy || loading || !hasEntityProfile}>
               {loading ? "Finding common ground…" : resolution ? "Look up interests again" : "Find their interests"}
             </button>
           </form>
           {resolution && !together && (
             <div className="partner-matches">
-              <h3>2. Confirm their interests</h3><p className="helper">Confirm three distinct interests. Exact matches are suggested; change any match below.</p>
+              <h3>Are these the interests they meant?</h3><p className="helper">We suggest a match when its name is clear. Tap Change to choose a different result.</p>
               {resolution.items.map((item, i) => (
                 <section key={i}>
                   <h4>{item.query}</h4>
                   {ids[i] && expandedMatch!==i ? <div className="partner-selection">
                     <div><strong>{item.candidates.find(c=>c.id===ids[i])?.name}</strong><small>{item.candidates.find(c=>c.id===ids[i])?.detail}</small></div>
                     <button type="button" className="quiet-button" disabled={loading||busy} onClick={()=>setExpandedMatch(i)}>Change match</button>
-                  </div> : <CandidateChoices disabled={busy||loading} query={item.query} candidates={item.candidates.filter(c=>!c.id.startsWith("urn:tag:"))} selected={ids[i]}
-                    onSelect={id=>{setIds(v=>({...v,[i]:id}));setExpandedMatch(undefined);}} />}
+                  </div> : <div className="partner-choice-list" role="group" aria-label={`Matches for ${item.query}`}>
+                    {item.candidates.filter(c=>!c.id.startsWith("urn:tag:")).map(candidate=><button key={candidate.id} type="button" disabled={busy||loading} aria-pressed={ids[i]===candidate.id} onClick={()=>{setIds(v=>({...v,[i]:candidate.id}));setExpandedMatch(undefined);}}><strong>{candidate.name}</strong><small>{candidate.detail}</small></button>)}
+                  </div>}
                   {!item.candidates.some(c => !c.id.startsWith("urn:tag:")) && (
                     <p>No named entity match. Use a specific artist, film, book or brand; cuisine concepts cannot be used as the other person's entity profile.</p>
                   )}
@@ -401,8 +406,8 @@ export default function TasteIntelligence({
                 disabled={
                   busy ||
                   loading ||
-                  Object.keys(ids).length !== 3 ||
-                  new Set(Object.values(ids)).size !== 3
+                  Object.keys(ids).length !== resolution.items.length ||
+                  new Set(Object.values(ids)).size !== resolution.items.length
                 }
                 onClick={() => void commonGround()}
               >
@@ -413,14 +418,14 @@ export default function TasteIntelligence({
           {together && (
             <section className="together-results" aria-label="Your common ground">
               <button type="button" className="text-button" onClick={()=>setTogether(undefined)}>Edit confirmed interests</button>
-              <h3>Your common ground</h3>
+              <div className="shared-story"><span className="micro-label">A SHARED STARTING POINT</span><h3>Here’s what connects you.</h3><p>These themes appeared in the comparison. Use the places below as ideas to explore together.</p></div>
               <div className="common-tags">
                 {together.comparison.shared.slice(0, 8).map((t) => (
                   <span key={t.id}>{t.name}</span>
                 ))}
               </div>
               <p role="status">{together.notice}</p>
-              <div className="together-differences">
+              <details className="together-differences"><summary>See each person’s distinct tastes</summary>
                 <p>
                   More your taste:{" "}
                   {together.comparison.aOnly.map((t) => t.name).join(", ") ||
@@ -431,10 +436,11 @@ export default function TasteIntelligence({
                   {together.comparison.bOnly.map((t) => t.name).join(", ") ||
                     "No separate themes available"}
                 </p>
-              </div>
+              </details>
               <div className="together-cards">
                 {together.cards.slice(0,6).map((card) => (
                   <article key={card.id}>
+                    <span className="shared-result-status">{card.evidence?.strategyNote?.startsWith("Broader local") ? "Broader local option" : card.evidence?.result.tags.some(tag=>together.comparison.shared.some(shared=>shared.id===tag.id)) ? "Shared theme on this result" : "From your shared-interest search"}</span>
                     <h4>{card.name}</h4>
                     <p>{card.address ?? card.section}</p>
                     <ResultMetrics card={card} />
@@ -449,11 +455,7 @@ export default function TasteIntelligence({
             </section>
           )}
           {loading && <p className="together-loading" role="status">Finding connections between both sets of interests…</p>}
-          <p className="helper">
-            Shared taste analysis considers both profiles. It does not measure
-            relationship compatibility. This comparison is temporary and is not
-            saved with your account.
-          </p>
+          <p className="helper">This is a temporary comparison, not a compatibility score. Check current venue details before going.</p>
         </section>
         {error && <p role="alert">{error}</p>}
         {process.env.NODE_ENV === "development" && (

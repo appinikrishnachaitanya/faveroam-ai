@@ -6,6 +6,7 @@ import type { Constraint, ToolResult } from "./types.ts";
 import { matchesDestination } from "../workspace/location.ts";
 export function tagCandidates(result: ToolResult, query: string): Candidate[] {
   if (result.status !== "ok" || !Array.isArray(result.results)) return [];
+  const seen = new Set<string>();
   return result.results
     .filter(isObject)
     .filter(
@@ -14,6 +15,21 @@ export function tagCandidates(result: ToolResult, query: string): Candidate[] {
         /^urn:tag:[\w:-]+$/.test(t.id) &&
         typeof t.name === "string",
     )
+    .sort((a,b) =>
+      Number(String(b.id).includes(":place:")) - Number(String(a.id).includes(":place:"))
+    )
+    .filter(t => {
+      // Qloo may return the same user-visible concept through several tag
+      // namespaces. A dialog with five identical labels is not actionable.
+      const label = String(t.name).toLowerCase().replace(/[^a-z0-9]+/g," ").trim().replace(/s\b/g,"");
+      // Dietary requirements must remain distinguishable from audience and
+      // cuisine tags that happen to carry the same display name.
+      const family = String(t.id).split(":")[2];
+      const key = /^(?:vegetarian|vegan|gluten free)$/.test(label) ? label + ":" + family : label;
+      if (!label || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
     .slice(0, 5)
     .map((t) => ({
       id: String(t.id),

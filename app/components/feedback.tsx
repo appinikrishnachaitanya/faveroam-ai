@@ -1,4 +1,5 @@
 "use client";
+import { sectionLabel } from "../../src/passport/labels";
 import { useEffect, useRef, useState } from "react";
 import { reasons } from "../../src/agent/types";
 import type { Reason } from "../../src/agent/types";
@@ -43,7 +44,7 @@ export default function FeedbackDialog({
       </div>
       <h2 id="feedback-title">What felt wrong?</h2>
       <p>
-        <strong>{card.name}</strong> · I’ll update the {card.section} section
+        <strong>{card.name}</strong> · I’ll update the {sectionLabel(card.section)} section
         while keeping your other discoveries.
       </p>
       <fieldset className="feedback-reasons">
@@ -80,7 +81,7 @@ export default function FeedbackDialog({
         disabled={!reason || (reason === "Other" && !detail.trim())}
         onClick={() => reason && onSubmit(reason, detail)}
       >
-        Update my {card.section} passport <Icon name="arrow" />
+        Update my {sectionLabel(card.section)} passport <Icon name="arrow" />
       </button>
     </dialog>
   );

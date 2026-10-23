@@ -1,3 +1,4 @@
+import { readRequestText } from "../../../../src/http/request.ts";
 import { debugRequest } from "../../../../src/agent/debug";
 import {
   accountClient,
@@ -6,7 +7,7 @@ import {
   sameOrigin,
   privateJson,
 } from "../../../../src/account/server";
-import { getSession } from "../../../../src/agent/store";
+import { loadSession } from "../../../../src/agent/store";
 import { planFromSession } from "../../../../src/account/plans";
 export const runtime = "nodejs";
 const uuid = (value: unknown): value is string =>
@@ -23,7 +24,7 @@ async function handleGET() {
       return privateJson({ error: "Please sign in." }, 401);
     const { data, error } = await client
       .from("saved_plans")
-      .select("id,city,scheduled_date,time_zone,stops,created_at")
+      .select("id,city,scheduled_date,time_zone,stop_times,stops,created_at")
       .eq("user_id", user.id)
       .gte(
         "scheduled_date",
@@ -31,6 +32,16 @@ async function handleGET() {
       )
       .order("scheduled_date", { ascending: true })
       .limit(100);
+    if (error?.code === "42703" || error?.code === "PGRST204") {
+      // Keep older dated plans readable until the one-time schema reset runs.
+      const older = await client.from("saved_plans")
+        .select("id,city,scheduled_date,time_zone,stops,created_at")
+        .eq("user_id", user.id)
+        .gte("scheduled_date", new Date(Date.now() - 86400000).toISOString().slice(0, 10))
+        .order("scheduled_date", { ascending: true }).limit(100);
+      if (older.error) throw Error();
+      return privateJson({ plans: older.data?.map(plan => ({ ...plan, stop_times: null })) ?? [] });
+    }
     if (error) throw Error();
     return privateJson({ plans: data });
   } catch {
@@ -62,7 +73,7 @@ async function handlePOST(request: Request) {
     } = await client.auth.getUser();
     if (authError || !user)
       return privateJson({ error: "Please sign in to save your plan." }, 401);
-    const raw = await request.text();
+    const raw = await readRequestText(request, 1500);
     if (raw.length > 1500)
       return privateJson({ error: "Invalid plan request." }, 400);
     let b;
@@ -78,7 +89,7 @@ async function handlePOST(request: Request) {
       );
     let plan;
     try {
-      plan = planFromSession(getSession(b.sessionId), b);
+      plan = planFromSession(await loadSession(b.sessionId), b);
     } catch (error) {
       return privateJson(
         {
@@ -94,14 +105,14 @@ async function handlePOST(request: Request) {
         { user_id: user.id, ...plan },
         { onConflict: "user_id,city,scheduled_date" },
       )
-      .select("id")
+      .select("id,city,scheduled_date,time_zone,stop_times,stops,created_at")
       .single();
     if (error) {
-      if (error.code === "23514")
-        return privateJson({ error: "Account storage needs a database update for this destination or number of stops. Your selections are preserved; you can still download the plan." }, 503);
+      if (error.code === "23514" || error.code === "PGRST204" || error.code === "42703")
+        return privateJson({ error: "We couldn't save this plan because the database rules haven't been updated. You can still download it, and your selections remain available." }, 503);
       throw Error();
     }
-    return privateJson({ saved: true, id: data.id });
+    return privateJson({ saved: true, plan: data });
   } catch {
     return privateJson(
       {
@@ -123,7 +134,7 @@ async function handleDELETE(request: Request) {
     } = await client.auth.getUser();
     if (authError || !user)
       return privateJson({ error: "Please sign in." }, 401);
-    const raw = await request.text();
+    const raw = await readRequestText(request, 200);
     if (raw.length > 200) return privateJson({ error: "Invalid plan." }, 400);
     const b = JSON.parse(raw);
     if (!b || !uuid(b.id)) return privateJson({ error: "Invalid plan." }, 400);

@@ -67,22 +67,27 @@ export function diversifyCards(cards: Card[], section: Section) {
     return true;
   });
 }
+/** Clean missing-value placeholders without inventing identifying metadata. */
 export function candidate(e: Entity): Candidate {
   const p = e.properties ?? {};
+  const clean = (value: unknown) => typeof value === "string" || typeof value === "number"
+    ? (/^(?:None|null|undefined|N\/A)$/i.test(String(value).trim()) ? "" : String(value).replace(/\s+/g, " ").trim()) : "";
+  const types = e.types?.length ? e.types : [e.subtype ?? e.type ?? "Unknown"];
   return {
     id: e.entity_id,
-    name: e.name,
-    types: e.types ?? [e.subtype ?? e.type ?? "Unknown"],
-    detail: [p.release_year, p.address, p.short_description]
-      .filter((v) => typeof v === "string" || typeof v === "number")
-      .join(" · ")
-      .slice(0, 250),
+    name: clean(e.name).replace(/\s+(?:None|null|undefined)$/i, ""),
+    types,
+    detail: [...new Set([...types.map(type => type.replace(/^urn:entity:/, "").replace(/_/g, " ").toLowerCase()),
+      clean(p.release_year), clean(p.address), clean(p.short_description)].filter(Boolean))].join(" · ").slice(0, 250),
   };
 }
 export function candidates(entities: Entity[]): Candidate[] {
-  return [
-    ...new Map(entities.map((e) => [e.entity_id, candidate(e)])).values(),
-  ].slice(0, 5);
+  const ids = new Set<string>(), labels = new Set<string>();
+  return entities.map(candidate).filter(item => {
+    const label = `${item.name}|${item.detail}`.toLowerCase();
+    if (!item.name || ids.has(item.id) || labels.has(label)) return false;
+    ids.add(item.id); labels.add(label); return true;
+  }).slice(0, 10);
 }
 /** Conservative local classification uses returned tag NAMES only, never invented
  * filter parameters. Unknown types are omitted, and non-leisure services excluded.

@@ -150,45 +150,53 @@ export function withEvidence(
     ];
   });
 }
+/** One visible route per category, never one row per underlying query/pool.
+ * Each card keeps its own unmodified Qloo evidence and provenance.
+ */
 export function bridgeRoutes(cards: Card[], signals: Candidate[]) {
-  const groups = new Map<
-    string,
-    {
-      id: string;
-      section: Section;
-      destination: string;
-      locality: QlooEvidence["locality"];
-      mode: Familiarity;
-      pool: QlooEvidence["pool"];
-      inputs: Candidate[];
-      count: number;
-    }
-  >();
+  const groups = new Map<string, {
+    id: string;
+    section: Section;
+    destination: string;
+    locality: QlooEvidence["locality"];
+    mode: Familiarity;
+    pool: QlooEvidence["pool"];
+    inputs: Candidate[];
+    count: number;
+  }>();
+  const counts = new Map<string, Set<string>>();
   for (const card of cards) {
-    const e = card.evidence;
-    if (!e || e.result.id !== card.id || e.source !== "Qloo") continue;
-    const inputs = signals.filter((signal) =>
-      e.inputs.some((i) => i.id === signal.id),
-    );
-    if (!inputs.length) continue;
-    const key = `${e.queryId}:${card.section}`;
-    const group = groups.get(key);
-    if (group) group.count++;
-    else
+    const evidence = card.evidence;
+    if (!evidence || evidence.source !== "Qloo" || evidence.result.id !== card.id) continue;
+    const relevant = signals.filter(signal =>
+      evidence.inputs.some(input => input.id === signal.id));
+    if (!relevant.length) continue;
+    const key = card.section; // The active Passport has one destination.
+    const existing = groups.get(key);
+    if (existing) {
+      const seen = new Set(existing.inputs.map(input => input.id));
+      existing.inputs.push(...relevant.filter(input => !seen.has(input.id)));
+      if (existing.mode !== evidence.mode) existing.mode = "balanced";
+      if (existing.pool !== evidence.pool) existing.pool = "profile";
+      if (evidence.locality === "physical-city") existing.locality = "physical-city";
+      counts.get(key)!.add(card.id);
+      existing.count = counts.get(key)!.size;
+    } else {
+      counts.set(key, new Set([card.id]));
       groups.set(key, {
         id: key,
         section: card.section,
-        destination: e.destination,
-        locality: e.locality,
-        mode: e.mode,
-        pool: e.pool,
-        inputs,
+        destination: evidence.destination,
+        locality: evidence.locality,
+        mode: evidence.mode,
+        pool: evidence.pool,
+        inputs: [...relevant],
         count: 1,
       });
+    }
   }
-  return [...groups.values()].sort(
-    (a, b) => sectionOrder.indexOf(a.section) - sectionOrder.indexOf(b.section),
-  );
+  return [...groups.values()].sort((a,b) =>
+    sectionOrder.indexOf(a.section) - sectionOrder.indexOf(b.section));
 }
 export function sparseSections(cards: Card[], sections: Section[]) {
   return sections.filter(

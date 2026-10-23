@@ -4,7 +4,9 @@ import { createPortal } from "react-dom";
 import type { Passport } from "../../src/workspace/state";
 import { Icon } from "./passport";
 import UpcomingPlans from "./plans";
-import type { SavedPlan } from "../../src/account/plans";
+import ConfirmDelete from "./confirm-delete";
+import { mergeSavedPlan, type SavedPlan } from "../../src/account/plans";
+import { passwordRequirements, passwordValidationMessage } from "../../src/account/password-policy";
 import {
   accountRequest as request,
   accountChanged,
@@ -23,12 +25,16 @@ export default function AccountControl({
   onRestore,
   onSignOut,
   onAccountChange,
+  onPassportSaved,
+  onEditPlan,
 }: {
   passport?: Passport;
   disabled: boolean;
   onRestore: (passport: Passport) => void;
   onSignOut: () => void;
   onAccountChange?: (signedIn: boolean) => void;
+  onPassportSaved?: (sessionId?: string) => void;
+  onEditPlan?: (plan: SavedPlan) => void;
 }) {
   const [account, setAccount] = useState<Account>();
   const authEpoch = useRef(0);
@@ -37,8 +43,6 @@ export default function AccountControl({
   const [tab, setTab] = useState<"login" | "register" | "recover" | "password">(
     "login",
   );
-  const [deleteConfirmation, setDeleteConfirmation] = useState("");
-  const [deletePassword, setDeletePassword] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
@@ -56,16 +60,20 @@ export default function AccountControl({
   );
   const [plans, setPlans] = useState<SavedPlan[]>([]);
   const [plansError, setPlansError] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<{kind:"passport"|"plan";id:string;name:string}>();
+  const savedCurrentPassport=Boolean(passport && entries.some(entry=>entry.city===passport.city));
+  const plansVersion = useRef(0);
   async function refreshPlans() {
     const epoch = authEpoch.current;
+    const version = ++plansVersion.current;
     try {
       const data = await request("/api/account/plans");
-      if (epoch === authEpoch.current) {
+      if (epoch === authEpoch.current && version === plansVersion.current) {
         setPlans(data.plans);
         setPlansError("");
       }
     } catch (error) {
-      if (epoch === authEpoch.current)
+      if (epoch === authEpoch.current && version === plansVersion.current)
         setPlansError(
           error instanceof Error ? error.message : "Could not load your plans.",
         );
@@ -94,14 +102,17 @@ export default function AccountControl({
       const data = await request("/api/account");
       if (epoch !== authEpoch.current) return;
       const identity = data.user?.email ?? null;
-      if (accountIdentity.current !== identity) {
+      const identityChanged = accountIdentity.current !== identity;
+      if (identityChanged) {
         setEntries([]);
         setPlans([]);
       }
       accountIdentity.current = identity;
       setAccount(data);
-      onAccountChange?.(Boolean(data.user));
-      accountChanged();
+      if (identityChanged) {
+        onAccountChange?.(Boolean(data.user));
+        accountChanged();
+      }
       if (data.user && loadLibrary) {
         try {
           const list = await request("/api/account/passports");
@@ -135,7 +146,13 @@ export default function AccountControl({
       setMessage("");
       setOpen(true);
     };
-    const plansUpdated = () => void refreshPlans();
+    const plansUpdated = (event: Event) => {
+      const plan = (event as CustomEvent<{plan?:SavedPlan}>).detail?.plan;
+      if (!plan?.id) { void refreshPlans(); return; }
+      ++plansVersion.current; // Older GET responses cannot overwrite the just-saved row.
+      setPlans(current => mergeSavedPlan(current,plan));
+      setPlansError("");
+    };
     window.addEventListener("tastepassport:open-account", openAccount);
     window.addEventListener("tastepassport:plans-updated", plansUpdated);
     const notice = new URLSearchParams(window.location.search).get("account");
@@ -174,8 +191,6 @@ export default function AccountControl({
       setPassword("");
       setCurrentPassword("");
       setConfirmPassword("");
-      setDeletePassword("");
-      setDeleteConfirmation("");
       opener.current?.focus();
     }
     return () => {
@@ -195,12 +210,13 @@ export default function AccountControl({
         sessionId: passport.agent.sessionId,
         revision: passport.agent.revision,
       });
+      onPassportSaved?.(passport.agent.sessionId);
       setPendingSave(false);
       setMessage(
         `Your latest ${passport.city} Passport is saved. It includes your My Vibe shortlist.`,
       );
       await refresh(true);
-      showNotice("Your Passport is saved.");
+      showNotice(savedCurrentPassport ? "Your saved Passport was updated." : "Your Passport is saved.");
     } catch (e) {
       setMessage(e instanceof Error ? e.message : "Could not save.");
     } finally {
@@ -209,6 +225,13 @@ export default function AccountControl({
   }
   async function submit(event: React.FormEvent) {
     event.preventDefault();
+    if (tab === "register" || tab === "password") {
+      const passwordIssue = passwordValidationMessage(password);
+      if (passwordIssue) {
+        setMessage(passwordIssue);
+        return;
+      }
+    }
     if (tab === "password" && password !== confirmPassword) {
       setMessage("The new passwords don't match.");
       return;
@@ -265,6 +288,7 @@ export default function AccountControl({
         id,
       });
       onRestore(data.passport);
+      onPassportSaved?.(data.passport.agent.sessionId);
       setOpen(false);
       setMessage("");
     } catch (e) {
@@ -277,6 +301,7 @@ export default function AccountControl({
     setBusy(true);
     try {
       await request("/api/account/passports", { id }, "DELETE");
+      if (entries.find(entry=>entry.id===id)?.city===passport?.city) onPassportSaved?.(undefined);
       await refresh(true);
       setMessage("Saved Passport deleted.");
     } catch (e) {
@@ -308,33 +333,6 @@ export default function AccountControl({
       setBusy(false);
     }
   }
-  async function deleteAccount() {
-    setBusy(true);
-    try {
-      await request(
-        "/api/account",
-        { password: deletePassword, confirmation: deleteConfirmation },
-        "DELETE",
-      );
-      setDeletePassword("");
-      setDeleteConfirmation("");
-      authEpoch.current++;
-      accountIdentity.current = null;
-      setEntries([]);
-      setAccount((a) => (a ? { ...a, user: null } : a));
-      onAccountChange?.(false);
-      setPlans([]);
-      setVerificationPending(false);
-      accountChanged();
-      onSignOut();
-      setOpen(false);
-      showNotice("You’re signed out.");
-    } catch (e) {
-      setMessage(e instanceof Error ? e.message : "Could not delete account.");
-    } finally {
-      setBusy(false);
-    }
-  }
   return (
     <div className="account-control">
       {passport && (
@@ -349,12 +347,12 @@ export default function AccountControl({
             setOpen(true);
           }}
         >
-          Save Passport
+          {savedCurrentPassport ? "Update Passport" : "Save Passport"}
         </button>
       )}
       <button
         className="quiet-button account-launch"
-        aria-label={account?.user ? "My Saved Passports" : "Sign in"}
+        aria-label={account?.user ? "My plans & Passports" : "Sign in"}
         disabled={disabled || busy}
         onClick={() => {
           setPendingSave(false);
@@ -368,8 +366,8 @@ export default function AccountControl({
       >
         {account?.user ? (
           <>
-            <span className="nav-label-long">My Saved Passports</span>
-            <span className="nav-label-short">Saved</span>
+            <span className="nav-label-long">My plans &amp; Passports</span>
+            <span className="nav-label-short">My stuff</span>
           </>
         ) : (
           "Sign in"
@@ -377,20 +375,9 @@ export default function AccountControl({
       </button>
       {account?.user && (
         <>
-          <button
-            className="quiet-button upcoming-launch"
-            aria-label="Upcoming plans"
-            disabled={disabled || busy}
-            onClick={() => {
-              setLibraryTab("plans");
-              setPendingSave(false);
-              setOpen(true);
-              void refreshPlans();
-            }}
-          >
-            <span className="nav-label-long">Upcoming plans</span>
-            <span className="nav-label-short">Plans</span>
-          </button>
+          <button className="quiet-button" disabled={disabled || busy} onClick={() => {
+            setRecoveringPassword(false); setTab("password"); setPassword(""); setCurrentPassword(""); setConfirmPassword(""); setMessage(""); setOpen(true);
+          }}><span className="nav-label-long">Account settings</span><span className="nav-label-short">Settings</span></button>
           <button
             className="quiet-button signout-button"
             disabled={disabled || busy}
@@ -525,7 +512,7 @@ export default function AccountControl({
                     disabled={busy || !account.storage}
                     onClick={() => void save()}
                   >
-                    Save latest {passport.city} Passport
+                    {savedCurrentPassport ? "Update" : "Save"} {passport.city} Passport
                   </button>
                 )}
                 {!account.storage && (
@@ -539,7 +526,9 @@ export default function AccountControl({
                     plans={plans}
                     busy={busy}
                     error={plansError}
-                    onDelete={(id) => void removePlan(id)}
+                    editableCity={passport?.city}
+                    onEdit={plan=>{setOpen(false);onEditPlan?.(plan);}}
+                    onDelete={(id) => setDeleteTarget({kind:"plan",id,name:"this saved outing"})}
                     onRetry={() => void refreshPlans()}
                   />
                 ) : (
@@ -565,14 +554,7 @@ export default function AccountControl({
                             className="icon-button"
                             disabled={busy}
                             aria-label={`Delete saved ${entry.city} Passport`}
-                            onClick={() => {
-                              if (
-                                window.confirm(
-                                  `Delete your saved ${entry.city} Passport?`,
-                                )
-                              )
-                                void remove(entry.id);
-                            }}
+                            onClick={() => setDeleteTarget({kind:"passport",id:entry.id,name:`your saved ${entry.city} Passport`})}
                           >
                             <Icon name="close" size={14} />
                           </button>
@@ -585,62 +567,10 @@ export default function AccountControl({
                     )}
                   </div>
                 )}
-                <button
-                  className="text-button"
-                  disabled={busy}
-                  onClick={() => { setRecoveringPassword(false); setTab("password"); setPassword(""); setCurrentPassword(""); setConfirmPassword(""); setMessage(""); }}
-                >
-                  Update password
-                </button>
-                <button
-                  className="text-button"
-                  disabled={busy}
-                  onClick={() => void logout()}
-                >
-                  Sign out and clear this screen
-                </button>
-                <details className="delete-account">
-                  <summary>Delete my account</summary>
-                  <p>
-                    This permanently deletes your account and all saved
-                    Passports.
-                  </p>
-                  <label>
-                    Confirm password
-                    <input
-                      type="password"
-                      autoComplete="current-password"
-                      value={deletePassword}
-                      maxLength={128}
-                      onChange={(e) => setDeletePassword(e.target.value)}
-                    />
-                  </label>
-                  <label>
-                    Type DELETE
-                    <input
-                      value={deleteConfirmation}
-                      maxLength={6}
-                      autoComplete="off"
-                      onChange={(e) => setDeleteConfirmation(e.target.value)}
-                    />
-                  </label>
-                  <button
-                    className="quiet-button"
-                    disabled={
-                      busy ||
-                      !account.storage ||
-                      !deletePassword ||
-                      deleteConfirmation !== "DELETE"
-                    }
-                    onClick={() => void deleteAccount()}
-                  >
-                    Permanently delete account
-                  </button>
-                </details>
               </>
             ) : (
               <form onSubmit={submit}>
-                {tab !== "password" && <div className="account-tabs" role="group" aria-label="Account access">
+                {(tab === "login" || tab === "register") && <div className="account-tabs" role="group" aria-label="Account access">
                   {(["login", "register"] as const).map((value) => (
                     <button
                       type="button"
@@ -658,6 +588,7 @@ export default function AccountControl({
                     </button>
                   ))}
                 </div>}
+                {tab === "recover" && <div className="account-recovery-heading"><strong>Reset your password</strong><button type="button" className="text-button" disabled={busy} onClick={()=>{setTab("login");setMessage("");}}>Back to sign in</button></div>}
                 {tab === "register" && <>
                   <label>First name<input value={firstName} onChange={e=>setFirstName(e.target.value)} autoComplete="given-name" maxLength={80} required disabled={busy} /></label>
                   <label>Last name<input value={lastName} onChange={e=>setLastName(e.target.value)} autoComplete="family-name" maxLength={80} required disabled={busy} /></label>
@@ -695,14 +626,24 @@ export default function AccountControl({
                       maxLength={128}
                       required
                       disabled={busy}
+                      aria-describedby={tab === "register" || tab === "password" ? "account-password-requirements" : undefined}
                       onChange={(e) => setPassword(e.target.value)}
                     />
                   </label>
                 )}
                 {(tab === "register" || tab === "password") && (
-                  <p className="helper">
-                    Use at least 12 characters and a unique password.
-                  </p>
+                  <div id="account-password-requirements" className="account-password-guidance">
+                    <p className="helper">Your password must contain all of the following:</p>
+                    <ul className="account-password-checklist" aria-label="Password requirements">
+                      {passwordRequirements(password).map((rule) => (
+                        <li key={rule.id} className={rule.satisfied ? "met" : "missing"}>
+                          <span aria-hidden="true">{rule.satisfied ? "✓" : "○"}</span>
+                          {rule.label}
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="helper">Use a unique password that has not appeared in a data breach.</p>
+                  </div>
                 )}
                 {tab === "password" && <label>Confirm new password<input type="password" value={confirmPassword} onChange={e=>setConfirmPassword(e.target.value)} autoComplete="new-password" minLength={12} maxLength={128} required disabled={busy} /></label>}
                 <button
@@ -748,6 +689,8 @@ export default function AccountControl({
           </dialog>,
           document.body,
         )}
+      {deleteTarget && <ConfirmDelete title={`Delete ${deleteTarget.name}?`} description="This cannot be undone. Your current Passport stays on screen." busy={busy}
+        onCancel={() => setDeleteTarget(undefined)} onConfirm={() => { const target=deleteTarget; setDeleteTarget(undefined); void (target.kind==="plan"?removePlan(target.id):remove(target.id)); }} />}
     </div>
   );
 }

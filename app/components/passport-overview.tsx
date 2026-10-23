@@ -1,9 +1,10 @@
 "use client";
+import { sectionLabel } from "../../src/passport/labels";
 import { useState } from "react";
 import type { Passport } from "../../src/workspace/state";
 import type { Candidate, Card, Section } from "../../src/passport/model";
 import { bridgeRoutes } from "../../src/passport/evidence";
-import { evidenceFacts, displayTags } from "../../src/qloo/explanation";
+import { evidenceFacts } from "../../src/qloo/explanation";
 import { DiscoveryCard, Icon } from "./passport";
 import type { Feedback } from "./passport";
 export function PassportCover({
@@ -69,13 +70,14 @@ export function SavedDiscoveries({
 }) {
   return (
     <section className="my-vibe" aria-labelledby="saved-title">
-      <div className="result-heading">
-        <h2 id="saved-title">Your kind of places. Your kind of culture.</h2>
-      </div>
-      <p className="helper">
-        My Vibe keeps discoveries you explicitly liked, even as other
-        recommendations change. Save your Passport to keep them across visits.
-      </p>
+      <header className="vibe-intro">
+        <span className="vibe-emblem" aria-hidden="true"><Icon name="heart" size={28}/></span>
+        <div><span className="micro-label">A COLLECTION THAT FEELS LIKE YOU</span>
+          <h2 id="saved-title">Your favorites, all in one place.</h2>
+          <p>The discoveries you love stay here as you explore. Save your Passport to keep them for your next visit.</p>
+          <div className="vibe-summary"><span>{cards.length} saved {cards.length === 1 ? "discovery" : "discoveries"}</span><span>{new Set(cards.map(card=>card.section)).size} categories</span></div>
+        </div>
+      </header>
       {cards.length ? (
         <div className="discovery-grid">
           {cards.map((card) => (
@@ -102,7 +104,7 @@ export function SavedDiscoveries({
     </section>
   );
 }
-export function ConnectionExplorer({ passport, onExplore }: { passport: Passport; onExplore?: (section: Section) => void }) {
+export function ConnectionExplorer({ passport, onExplore, onAsk }: { passport: Passport; onExplore?: (section: Section) => void; onAsk?: (question: string) => void }) {
   const allRoutes = bridgeRoutes(passport.cards, passport.selected);
   const [interest, setInterest] = useState<string>();
   const routes = allRoutes.filter((route) => !interest || route.inputs.some((input) => input.id === interest));
@@ -111,24 +113,24 @@ export function ConnectionExplorer({ passport, onExplore }: { passport: Passport
   if (!allRoutes.length) return null;
   if (!route) return <section className="connection-explorer"><h2>No current suggestions use this interest yet.</h2><button className="quiet-button" onClick={() => setInterest(undefined)}>Show all interests</button></section>;
   const cards = passport.cards
-    .filter((c) => `${c.evidence?.queryId}:${c.section}` === route.id)
+    .filter((c) => c.section === route.section && c.evidence?.source === "Qloo" && c.evidence.result.id === c.id)
+    .filter((c) => !interest || c.evidence?.inputs.some((input) => input.id === interest))
     .slice(0, 3);
   return (
     <section
       className="connection-explorer"
       aria-labelledby="connections-title"
     >
-      <span className="micro-label">BASED ON WHAT YOU LOVE</span>
-      <h2 id="connections-title">Your cultural connections</h2>
+      <span className="micro-label">YOUR TASTES, NEW POSSIBILITIES</span>
+      <h2 id="connections-title">Explore beyond your favorites</h2>
       <p>
-        Your confirmed interests helped shape these suggestions. Choose a category
-        to see which interests were used and what you could try.
+        Your selected interests shaped these possibilities. Choose a category to see suggestions, then explore the full list or ask about one place.
       </p>
       <div className="connection-interest-picker" role="group" aria-label="Explore connections from an interest">
         <button aria-pressed={!interest} onClick={() => setInterest(undefined)}>All interests</button>
         {passport.selected.filter((selected) => allRoutes.some((r) => r.inputs.some((input) => input.id === selected.id))).map((selected) => <button key={selected.id} aria-pressed={interest === selected.id} onClick={() => setInterest(selected.id)}>{selected.name}</button>)}
       </div>
-      <p className="helper">Follow a combination of interests into a category. Filtering by one interest shows groups that included it, rather than claiming it caused each suggestion.</p>
+      <p className="helper">Each category appears once. A search using an interest does not prove it caused every result.</p>
       <div
         className="connection-routes"
         role="group"
@@ -140,49 +142,40 @@ export function ConnectionExplorer({ passport, onExplore }: { passport: Passport
             aria-pressed={r.id === route.id}
             onClick={() => setActive(r.id)}
           >
-            {r.section}
+            {sectionLabel(r.section)}
             <small>
-              {r.mode === "familiar"
-                ? "Close to home"
-                : r.mode === "explore"
-                  ? "Further afield"
-                  : "A little of both"}{" "}
-              · {r.count} discoveries
+              {r.count} discoveries · {r.locality === "audience-context" ? "Cultural suggestions" : "Places to consider"}
             </small>
           </button>
         ))}
       </div>
       <div className="connection-path">
         <div>
-          {route.inputs.map((s: Candidate) => (
+          {route.inputs.filter((input) => !interest || input.id === interest).map((s: Candidate) => (
             <span key={s.id}>{s.name}</span>
           ))}
         </div>
         <Icon name="arrow" />
-        <strong>Matched together</strong>
+        <strong>Used to explore</strong>
         <Icon name="arrow" />
         <div>
-          <strong>{route.destination}</strong>
-          <small>
-            {route.locality === "audience-context"
-              ? "City audience tastes, not local events"
-              : route.section}
-          </small>
+          <strong>{route.locality === "audience-context" ? sectionLabel(route.section) : route.destination}</strong>
+           <small>{route.locality === "audience-context" ? "Cultural suggestions, not local events" : "Destination-based place discovery"}</small>
         </div>
       </div>
       <ul className="connected-results">
         {cards.map((card) => (
           <li key={card.id}>
             <strong>{card.name}</strong>
-            <span>{card.address || card.section}</span>
-            {!!card.evidence?.result.tags.length && <div className="connection-result-tags" aria-label="Place details">{displayTags(card.evidence.result.tags).slice(0, 3).map((tag) => <span key={tag.id}>{tag.name}</span>)}</div>}
+            <span>{card.address || sectionLabel(card.section)}</span>
+            <p className="helper">{card.evidence?.locality === "audience-context" ? "Cultural discovery · not a local event or verified individual taste match" : "Suggested venue · confirm current details"}</p>
             <details>
-              <summary>How this was suggested</summary>
+              <summary>Why did this appear?</summary>
               {(() => {
-                const facts=evidenceFacts(card).filter(f=>/helped shape|returned tags include/.test(f)).slice(0,2);
+                const facts=evidenceFacts(card).filter(f=>/helped shape|returned tags include|Associated via cross-domain audience affinity with/.test(f)).slice(0,2);
                 return facts.length ? facts.map(f=><p key={f}>{f}</p>) : <p>These interests were considered together. Individual contribution evidence was not returned for this suggestion.</p>;
               })()}
-              <small>Based on the interests shown above.</small>
+              <small>This search considered the interests above, but may not identify which one influenced the result.</small>
               <small>
                 Recorded{" "}
                 {card.evidence?.recordedAt
@@ -190,13 +183,15 @@ export function ConnectionExplorer({ passport, onExplore }: { passport: Passport
                   : "with this discovery"}
               </small>
             </details>
-          </li>
+          {onAsk && <button type="button" className="quiet-button" onClick={() => onAsk(`Tell me about ${card.name}. Why is it in my Passport?`)}>Ask concierge about this <Icon name="arrow" size={14}/></button>}
+           </li>
         ))}
       </ul>
-      {onExplore && <button className="quiet-button connection-explore" onClick={() => onExplore(route.section)}>Explore {route.section.toLowerCase()} suggestions in {route.destination} <Icon name="arrow" size={16} /></button>}
+      <div className="connection-actions">
+        {onExplore && <button type="button" className="quiet-button connection-explore" onClick={() => onExplore(route.section)}>See all {sectionLabel(route.section).toLowerCase()} results <Icon name="arrow" size={16}/></button>}
+       </div>
       <p className="connection-honesty">
-        These interests were considered together. Each suggestion may reflect
-        a different part of your taste; it does not have to match every interest.
+        These are returned suggestions, not predictions of what you will love. Ask the concierge to explain or refine a result.
       </p>
     </section>
   );

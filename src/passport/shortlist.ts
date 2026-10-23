@@ -18,11 +18,11 @@ export function threeChoices(cards: Card[]): Choice[] {
   // Preserve the validated/fused ranking; affinity from separate queries is
   // not calibrated and must not override the category's seed routing.
   take(remaining[0], "Start here", "A starting point chosen from your taste-led discoveries.");
-  const priced = distinct().filter(c => c.intelligence?.commercial.priceLevel !== undefined)
-    .sort((a,b)=>a.intelligence!.commercial.priceLevel!-b.intelligence!.commercial.priceLevel!);
+  const priced = distinct().filter(c => c.intelligence?.commercial?.priceLevel !== undefined)
+    .sort((a,b)=>a.intelligence!.commercial!.priceLevel!-b.intelligence!.commercial!.priceLevel!);
   if (priced.length) {
-    const firstPrice=choices[0].card.intelligence?.commercial.priceLevel;
-    const lower=firstPrice !== undefined && priced[0].intelligence!.commercial.priceLevel! < firstPrice;
+    const firstPrice=choices[0].card.intelligence?.commercial?.priceLevel;
+    const lower=firstPrice !== undefined && priced[0].intelligence!.commercial!.priceLevel! < firstPrice;
     take(priced[0], lower ? "Lower-price option" : "Known budget", lower ? "A lower typical cost than the first choice. Check current prices." : "Lowest known typical cost among these alternatives. Check current prices.");
   }
   const adjacent = distinct().find(c => c.evidence?.pool === "adjacent");

@@ -7,9 +7,9 @@ export const dayOutStops: { section: Section; label: string }[] = [
   { section: "Eat", label: "Make yourself at home" },
 ];
 export const outingActivities = [
-  { id: "Coffee", section: "Coffee", label: "Coffee" },
+  { id: "Coffee", section: "Coffee", label: "Coffee & cafés" },
   { id: "Culture", section: "Culture", label: "Culture" },
-  { id: "Eat", section: "Eat", label: "Dinner" },
+  { id: "Eat", section: "Eat", label: "Food" },
   { id: "Cinema", section: "Culture", label: "Cinema" },
   { id: "Nightlife", section: "Culture", label: "Nightlife" },
 ] as const;
@@ -17,7 +17,15 @@ export function activityMatches(card: Card, activity: string) {
   const item = outingActivities.find(a => a.id === activity);
   if (!item || card.section !== item.section) return false;
   const tags = (card.evidence?.result.tags ?? []).map(t => t.name).join(" ");
-  if (activity === "Cinema") return /cinema|movie theater|movie theatre/i.test(tags);
+  if (activity === "Cinema") {
+    if (!/cinema|movie theater|movie theatre/i.test(tags)) return false;
+    // A broad place listing can inherit a cinema tag. Require a venue identity,
+    // not merely an area where cinemas happen to exist.
+    const namedCinema = /\b(?:cinema(?:s)?|cineplex|odeon|vue|picturehouse|curzon|everyman|cineworld|movie (?:theater|theatre))\b/i.test(card.name);
+    const areaName = /\b(?:square|district|neighbou?rhood|quarter|park|plaza|area)\b/i.test(card.name);
+    const venueDescription = /\b(?:cinema|movie (?:theater|theatre)|multiplex)\b/i.test(card.description ?? "");
+    return Boolean(card.address?.trim() && (namedCinema || (!areaName && venueDescription)));
+  }
   if (activity === "Nightlife") return /nightclub|night club/i.test(tags);
   return true;
 }
@@ -48,15 +56,25 @@ export function dayOutOptions(cards: Card[], city: string): Card[] {
   ];
 }
 
-export function dayOutText(city: string, cards: Card[], date?: string): string {
+export interface OutingExportStop {
+  activity: typeof outingActivities[number]["id"];
+  time: string;
+  card?: Card;
+}
+/** Export the itinerary, including unfilled activities, rather than flattening
+ * selected venues into their broader recommendation categories. */
+export function dayOutText(city: string, stops: OutingExportStop[], date?: string, timeZone?: string): string {
+  const chosen=stops.filter(stop=>stop.card).length;
   return [
     `My day out in ${city} · TastePassport AI`,
     ...(date ? [`Planned for ${date}`] : []),
+    ...(timeZone ? [`Suggested times (${timeZone})`] : []),
+    `${chosen === stops.length ? "Complete plan" : "Partial plan"} · ${chosen}/${stops.length} stops chosen`,
     "Suggested sequence. Check opening hours, travel times and availability before going.",
-    ...cards.map(
-      (card, i) =>
-        `${i + 1}. ${card.name} (${card.section})${card.address ? `\n   ${card.address}` : ""}\n   Suggestion recorded: ${card.evidence?.recordedAt ?? "unknown"}`,
-    ),
+    ...stops.map((stop,index)=>{
+      const label=outingActivities.find(activity=>activity.id===stop.activity)!.label;
+      return `${index+1}. ${stop.time} · ${label} — ${stop.card?.name ?? "Place not chosen (open stop)"}${stop.card?.address ? `\n   ${stop.card.address}` : ""}`;
+    }),
     "Built from my confirmed tastes and personalized suggestions. No booking has been made.",
   ].join("\n\n");
 }

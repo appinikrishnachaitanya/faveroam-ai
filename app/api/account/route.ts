@@ -1,4 +1,6 @@
+import { readRequestText } from "../../../src/http/request.ts";
 import { existingRegistration } from "../../../src/account/registration";
+import { passwordValidationMessage, passwordProviderMessage } from "../../../src/account/password-policy";
 import { debugRequest } from "../../../src/agent/debug";
 import {
   accountClient,
@@ -53,7 +55,7 @@ async function handlePOST(request: Request) {
       503,
     );
   try {
-    const raw = await request.text();
+    const raw = await readRequestText(request, 4096);
     if (raw.length > 4096)
       return privateJson({ error: "Invalid account request." }, 400);
     const b = JSON.parse(raw);
@@ -77,12 +79,9 @@ async function handlePOST(request: Request) {
       return privateJson({ requested: true });
     }
     if (b.action === "password" || b.action === "change-password") {
-      if (
-        typeof b.password !== "string" ||
-        b.password.length < 12 ||
-        b.password.length > 128
-      )
-        return privateJson({ error: "Use 12–128 characters." }, 400);
+      const passwordIssue = passwordValidationMessage(b.password);
+      if (passwordIssue)
+        return privateJson({ error: passwordIssue }, 400);
       const {
         data: { user },
         error: authError,
@@ -100,7 +99,7 @@ async function handlePOST(request: Request) {
           return privateJson({ error: "Your current password could not be confirmed." },400);
       }
       const { error } = await client.auth.updateUser({ password: b.password });
-      if (error) return privateJson({error:"Password update could not complete. Sign in again or request an email recovery link."},400);
+      if (error) return privateJson({ error: passwordProviderMessage(error) ?? "Password update could not complete. Sign in again or request an email recovery link." }, 400);
       return privateJson({ signedIn: true });
     }
     if (
@@ -109,8 +108,8 @@ async function handlePOST(request: Request) {
       b.email.length > 254 ||
       !/^\S+@\S+\.\S+$/.test(b.email) ||
       typeof b.password !== "string" ||
-      b.password.length > 128 ||
-      b.password.length < (b.action === "register" ? 12 : 1)
+      (b.action === "login" && b.password.length > 128) ||
+      b.password.length < 1
     )
       return privateJson(
         {
@@ -119,6 +118,10 @@ async function handlePOST(request: Request) {
         },
         400,
       );
+    if (b.action === "register") {
+      const passwordIssue = passwordValidationMessage(b.password);
+      if (passwordIssue) return privateJson({ error: passwordIssue }, 400);
+    }
     let names: { first_name: string; last_name: string } | undefined;
     if (b.action === "register") {
       try { names = { first_name: accountName(b.firstName), last_name: accountName(b.lastName) }; }
@@ -146,7 +149,7 @@ async function handlePOST(request: Request) {
           error:
             b.action === "login"
               ? "We couldn’t sign you in. Check your details or confirm your email."
-              : "Registration could not complete. If you already have an account, try signing in.",
+              : passwordProviderMessage(result.error) ?? "Registration could not complete. Please check your details or try again.",
         },
         400,
       );
@@ -173,7 +176,7 @@ async function handleDELETE(request: Request) {
       503,
     );
   try {
-    const raw = await request.text();
+    const raw = await readRequestText(request, 1000);
     if (raw.length > 1000)
       return privateJson({ error: "Invalid deletion request." }, 400);
     const b = JSON.parse(raw);

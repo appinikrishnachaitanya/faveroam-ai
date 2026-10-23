@@ -149,7 +149,7 @@ test("exact explicit dish applies once without another confirmation", async () =
   let applied = false;
   deps.discover = async (s, section) => {
     applied = Boolean(s.categoryTags?.Eat?.includes("urn:tag:specialty_dish:place:chicken_biryani"));
-    return [{ id: replacement, name: "Returned restaurant", types: ["urn:entity:place"], section, detail: "" }];
+    return [{ id: replacement, name: "Returned restaurant", types: ["urn:entity:place"], section, detail: "", evidence:{source:"Qloo",operation:"/v2/insights/",queryId:"fixture",recordedAt:"2026-10-21",destination:s.city,locality:"physical-city",mode:"familiar",pool:"direct",inputs:[],params:{},result:{id:replacement,type:"urn:entity:place",tags:[{id:"urn:tag:specialty_dish:place:chicken_biryani",name:"Chicken biryani"}]}} }];
   };
   const reply = await runTurn(state(), { message: "find chicken biryani" }, deps);
   assert.equal(applied, true);
@@ -182,14 +182,16 @@ test("model interpretation cannot smuggle fabricated recommendation data into st
   assert.throws(() => culturalText("email me at sample@example.com"));
   assert.throws(() => culturalText("my name is User Name"));
 });
-test("cultural input rejects a pasted native Gemini credential", () => {
-  const previous = process.env.GEMINI_API_KEY;
-  process.env.GEMINI_API_KEY = "native-gemini-test-secret";
-  try {
-    assert.throws(() => culturalText("native-gemini-test-secret"));
-  } finally {
-    if (previous === undefined) delete process.env.GEMINI_API_KEY;
-    else process.env.GEMINI_API_KEY = previous;
+test("cultural input rejects configured provider and service credentials", () => {
+  for (const name of ["QLOO_API_KEY", "GEMINI_API_KEY", "GOOGLE_API_KEY", "AGENT_MODEL_API_KEY", "SUPABASE_SERVICE_ROLE_KEY"]) {
+    const previous = process.env[name];
+    process.env[name] = "security-regression-test-secret";
+    try {
+      assert.throws(() => culturalText("security-regression-test-secret"), /Credentials/);
+    } finally {
+      if (previous === undefined) delete process.env[name];
+      else process.env[name] = previous;
+    }
   }
 });
 test("Not My Vibe changes only the rejected category, records feedback and excludes rejected ID", async () => {
@@ -233,7 +235,7 @@ test("acceptance records an anchor without making Qloo calls", async () => {
   assert.equal(r.state.feedback[0].accepted, true);
   assert.deepEqual(r.changed, []);
 });
-test("dynamic MCP concept selection requires returned tag confirmation", async () => {
+test("unambiguous Indian restaurant cuisine resolves without extra clicks", async () => {
   const d = dependencies();
   d.provider = model;
   let transport = "";
@@ -256,9 +258,21 @@ test("dynamic MCP concept selection requires returned tag confirmation", async (
   );
   assert.equal(transport, "mcp");
   assert.equal(r.mode, "model-mcp");
-  assert.ok(r.state.pending);
-  assert.deepEqual(r.state.cards, state().cards);
-  assert.deepEqual(r.changed, []);
+  assert.equal(r.state.pending, undefined);
+  assert.deepEqual(r.changed, ["Eat"]);
+  assert.ok(r.state.categoryTags?.Eat?.includes("urn:tag:category:place:indian_restaurant"));
+  assert.equal(r.state.cards.find(c=>c.section==="Music")?.name,"Protocol music");
+});
+test("duplicate cuisine taxonomy labels resolve to the place tag without duplicate choices",async()=>{
+  const d=dependencies();
+  d.workflow=async()=>({status:"ok",results:[
+    {id:"urn:tag:cuisine:qloo:indian",name:"Indian Cuisine"},
+    {id:"urn:tag:cuisine:place:indian",name:"Indian Cuisine"},
+  ]});
+  const r=await runTurn(state(),{message:"Show me Indian restaurants"},d);
+  assert.equal(r.state.pending,undefined);
+  assert.deepEqual(r.changed,["Eat"]);
+  assert.ok(r.state.categoryTags?.Eat?.includes("urn:tag:cuisine:place:indian"));
 });
 test("confirmed concept is a real tag filter and updates only its requested section", async () => {
   const s = state();
@@ -376,7 +390,7 @@ test("429-like discovery failure preserves unrelated results and honors the reje
   );
   assert.deepEqual(r.changed, []);
   assert.deepEqual(r.state.cards, state().cards.filter(c => c.id !== id));
-  assert.match(r.message, /preserved/);
+  assert.match(r.message, /previous discoveries and their active preferences are unchanged/);
 });
 test("rank workflow cannot introduce a generated entity or address", async () => {
   const d = dependencies();

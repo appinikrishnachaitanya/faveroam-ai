@@ -32,6 +32,8 @@ export function normalizeSession(state: AgentState): TastePassportSession {
 export function resetConversation(original: AgentState): TastePassportSession {
   const state = normalizeSession(structuredClone(original));
   state.history = [];
+  delete state.conversationMemory;
+  delete state.failedSearches;
   state.constraints = [];
   state.categoryConstraints = {};
   state.categoryConcepts = {};

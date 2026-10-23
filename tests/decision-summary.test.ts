@@ -26,7 +26,7 @@ test("the same listing cannot be presented as a replacement at a lower price",()
 });
 test("successful agent replies include the decision receipt",async()=>{
  const reply=await runTurn(state([dining("old","Old listing",3)],3),{message:"cheaper"},{tools:async()=>[],workflow:async()=>({status:"ok",results:[]}),discover:async()=>[dining("new","New listing",1)]});
- assert.match(reply.message,/Updated Dining suggestions/);assert.match(reply.message,/3\/4 → 2\/4/);assert.match(reply.message,/Old listing/);assert.match(reply.message,/New listing/);
+ assert.match(reply.message,/Updated Food suggestions/);assert.match(reply.message,/3\/4 → 2\/4/);assert.match(reply.message,/Old listing/);assert.match(reply.message,/New listing/);
 });
 test("movie explanations distinguish contributing artist taste from unsupported film similarity",()=>{
  const card={section:"Movies",evidence:{inputs:[{id:"artist",name:"A.R. Rahman",role:"entity-signal"},{id:"film",name:"Interstellar",role:"entity-signal"}],result:{tags:[{id:"urn:tag:genre:media:drama",name:"Drama"}]}},intelligence:{taste:{contributingSignals:[{id:"film",contribution:0},{id:"artist",contribution:0.4}]}}} as unknown as Card;

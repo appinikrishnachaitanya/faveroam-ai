@@ -1,8 +1,9 @@
+import { sectionLabel } from "../passport/labels.ts";
 import type { AgentState } from "./types.ts";
 import type { Card, Section } from "../passport/model.ts";
 import { priceLabel } from "../passport/pricing.ts";
-const label = (section: Section) => section === "Eat" ? "Dining" : section;
-const price = (card: Card) => card.intelligence?.commercial.priceLevel;
+const label = (section: Section) => sectionLabel(section);
+const price = (card: Card) => card.intelligence?.commercial?.priceLevel;
 const knownPrice = (card: Card) => Boolean(priceLabel(price(card)));
 
 /** A receipt of applied state changes and actual returned listings, not model-authored reasoning. */
@@ -33,6 +34,13 @@ export function decisionSummary(before: AgentState, after: AgentState, changed: 
       return tag && /urn:tag:(?:cuisine|dietary_option|specialty_dish):/.test(tag.id) ? [tag.name] : [];
     });
     if (retained.length) sentences.push(`Kept: ${[...new Set(retained)].slice(0, 4).join(", ")}${retained.some(name => /vegetarian|vegan/i.test(name)) ? " options" : ""}.`);
+    const quietApplied = (after.categoryTags?.[section] ?? []).some(id => {
+      const tag = after.tags.find(t => t.id === id);
+      return tag && /quiet|calm|tranquil|atmosphere/i.test(tag.name);
+    });
+    if (quietApplied) {
+      sentences.push("Atmosphere: quiet filter applied via Qloo venue metadata (real-time noise levels not measured).");
+    }
     if (sentences.length) sentences.unshift(`${cards.length} ${label(section).toLowerCase()} ${cards.length === 1 ? "suggestion" : "suggestions"} returned.`);
     return sentences;
   }).join(" ");

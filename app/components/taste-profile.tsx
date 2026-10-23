@@ -5,9 +5,10 @@ import type { TasteProfile } from "../../src/account/taste-profile";
 import type { SavedTasteProfile } from "../../src/account/profile-record";
 import { accountRequest, showNotice } from "../../src/account/browser";
 import { Icon } from "./passport";
+import ConfirmDelete from "./confirm-delete";
 
-export default function ReusableTastes({signedIn,passport,city,disabled,onApply,onBusy,onSelect,draftVersion,saveRequested,onContinue,onCancel}:{
-  signedIn:boolean;passport?:Passport;city:string;disabled:boolean;draftVersion:number;
+export default function ReusableTastes({signedIn,passport,city,draft,disabled,onApply,onBusy,onSelect,draftVersion,saveRequested,onContinue,onCancel}:{
+  signedIn:boolean;passport?:Passport;city:string;draft:string[];disabled:boolean;draftVersion:number;
   onApply:(passport:Passport)=>void;onBusy:(busy:boolean)=>void;onSelect:(profile:TasteProfile)=>void;
   saveRequested:boolean;onContinue:()=>void;onCancel:()=>void;
 }) {
@@ -18,25 +19,31 @@ export default function ReusableTastes({signedIn,passport,city,disabled,onApply,
   const [libraryLoading,setLibraryLoading]=useState(false);
   const [error,setError]=useState("");
   const [status,setStatus]=useState("");
+  const [confirmProfile,setConfirmProfile]=useState(false);
   const dialog=useRef<HTMLDialogElement>(null);
   const epoch=useRef(0);
   const profile=profiles.find(p=>p.id===selectedId);
+  const profileMatchesDraft=Boolean(profile && profile.profile.selected.length===draft.length && profile.profile.selected.every((taste,index)=>taste.name.toLocaleLowerCase()===draft[index]?.toLocaleLowerCase()));
   useEffect(()=>{
     let active=true;
     async function load() {
       const current=++epoch.current;
-      setProfiles([]);setSelectedId("");setError("");setStatus("");
-      if(!signedIn){setLibraryLoading(false);return;}
+      if(!signedIn){setProfiles([]);setSelectedId("");setError("");setStatus("");setLibraryLoading(false);return;}
+      setError("");
       setLibraryLoading(true);
       try {
         const data=await accountRequest("/api/account/preferences");
-        if(active&&current===epoch.current) setProfiles(data.profiles ?? (data.profile?[{id:"legacy",name:"My tastes",updated_at:"",profile:data.profile}]:[]));
+        if(active&&current===epoch.current) {
+          const rows:SavedTasteProfile[]=data.profiles ?? (data.profile?[{id:"legacy",name:"My tastes",updated_at:"",profile:data.profile}]:[]);
+          setProfiles(rows);
+          setSelectedId(id=>rows.some(row=>row.id===id)?id:"");
+        }
       } catch(e){if(active&&current===epoch.current)setError(e instanceof Error?e.message:"Saved tastes are unavailable.");}
       finally{if(active&&current===epoch.current)setLibraryLoading(false);}
     }
     void load();
-    window.addEventListener("tastepassport:account-updated",load);
-    return()=>{active=false;++epoch.current;window.removeEventListener("tastepassport:account-updated",load);};
+    // signedIn is the single auth trigger; avoid a duplicate event-driven fetch.
+    return()=>{active=false;++epoch.current;};
   },[signedIn]);
   useEffect(()=>{setSelectedId("");setStatus("");},[draftVersion]);
   useEffect(()=>{
@@ -70,29 +77,30 @@ export default function ReusableTastes({signedIn,passport,city,disabled,onApply,
     try {
       const data=await accountRequest("/api/account/preferences",{action,city,...(selectedId!=="legacy"?{profileId:selectedId}:{})},action==="delete"?"DELETE":"POST");
       if(current!==epoch.current)return;
-      if(action==="delete"){setProfiles(rows=>rows.filter(row=>row.id!==selectedId));setSelectedId("");setStatus("Taste profile removed.");}
+      if(action==="delete"){setProfiles(rows=>rows.filter(row=>row.id!==selectedId));setSelectedId("");setStatus("Taste profile removed. Your current draft is still available.");showNotice("Taste profile deleted.");}
       else{onApply(data.passport);showNotice("Fresh discoveries using your saved tastes.");}
     }catch(e){if(current===epoch.current)setError(e instanceof Error?e.message:"Please try again.");}
     finally{setLoading(false);if(action==="apply")onBusy(false);}
   }
   const existingName=profiles.some(row=>row.name===name.trim());
   return <>
-    {signedIn&&!passport&&(profiles.length>0||libraryLoading||error) && <section className="reusable-tastes" aria-label="Reusable taste profile">
+    {signedIn&&!passport&&(profiles.length>0||error) && <section className="reusable-tastes" aria-label="Reusable taste profile">
       <div className="profile-heading"><div><span className="micro-label">YOUR TASTES. YOUR NEXT CITY.</span><h2>Pick up where you left off.</h2></div><span>{profiles.length} saved</span></div>
-      <p>Choose a saved taste profile to fill your interests. Pick a destination to discover somewhere new with the same preferences.</p>
-      {libraryLoading?<p role="status">Finding your saved tastes…</p>:<div className="profile-fields"><label>Saved taste profile<select value={selectedId} disabled={disabled||loading} onChange={event=>{
+      <p>Choose a saved profile to load its tastes into the form below. Add or change tastes, then select Find my taste matches to confirm them. You can also discover immediately with the saved preferences.</p>
+      <div className="profile-fields"><label>Saved taste profile<select value={selectedId} disabled={disabled||loading} onChange={event=>{
         const selected=profiles.find(row=>row.id===event.target.value);setSelectedId(event.target.value);setError("");
-        if(selected){onSelect(selected.profile);setStatus(`Loaded “${selected.name}”. Choose your next city below.`);}
-      }}><option value="">Choose a saved profile</option>{profiles.map(row=><option key={row.id} value={row.id}>{row.name}</option>)}</select></label></div>}
+        if(selected){onSelect(selected.profile);setStatus(`Loaded “${selected.name}” into your taste draft. Add another taste or confirm below.`);}
+      }}><option value="">Choose a saved profile</option>{profiles.map(row=><option key={row.id} value={row.id}>{row.name}</option>)}</select></label></div>
+      {libraryLoading&&profiles.length>0&&<p className="helper" role="status">Refreshing your saved tastes…</p>}
       {profile&&<p className="profile-interest-preview">{profile.profile.selected.map(t=>t.name).join(" · ")}</p>}
       <div className="plan-actions">
-        {profile&&<button type="button" className="primary-button" disabled={disabled||loading||!city} onClick={()=>void run("apply")}>{loading?"Finding fresh matches…":city?`Use this profile in ${city}`:"Choose a city below"}</button>}
-        {profile&&<a className="quiet-button" href={`/api/account/preferences/export${selectedId!=="legacy"?`?id=${encodeURIComponent(selectedId)}`:""}`} download>Export JSON</a>}
-        {profile&&<button type="button" className="text-button" disabled={disabled||loading} onClick={()=>void run("delete")}>Remove profile</button>}
+        {profile&&<button type="button" className="primary-button" disabled={disabled||loading||!city||!profileMatchesDraft} onClick={()=>void run("apply")}>{loading?"Finding fresh matches…":!profileMatchesDraft?"Confirm edited tastes below":city?`Discover in ${city} with saved preferences`:"Choose a city below"}</button>}
+        {profile&&<button type="button" className="text-button" disabled={disabled||loading||selectedId==="legacy"} onClick={()=>setConfirmProfile(true)}>Delete profile</button>}
       </div>
       {status&&<p className="profile-status" role="status">{status}</p>}
       {error&&<p role="alert">{error}</p>}
     </section>}
+    {confirmProfile&&profile&&<ConfirmDelete title={`Delete “${profile.name}”?`} description="This saved taste profile will be removed. Your current draft stays here." busy={loading} onCancel={()=>setConfirmProfile(false)} onConfirm={()=>{setConfirmProfile(false);void run("delete");}}/>}
     {saveRequested&&<dialog ref={dialog} className="account-dialog taste-profile-dialog" aria-labelledby="save-taste-title" onCancel={event=>{event.preventDefault();if(!loading)onCancel();}}>
       <div className="dialog-header"><span className="micro-label">BEFORE YOUR NEXT CITY</span><button type="button" className="icon-button" aria-label="Keep exploring this Passport" disabled={loading} onClick={onCancel}><Icon name="close" size={20}/></button></div>
       <h2 id="save-taste-title">Take your tastes with you?</h2>

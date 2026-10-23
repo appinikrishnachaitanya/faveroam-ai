@@ -45,7 +45,7 @@ test("supported destination selector canonicalizes only configured cities",()=>{
   assert.equal(supportedCity("Imaginary city"),undefined);
 });
 test("cinema and nightlife choices require their own returned venue tags",()=>{
-  const value=card("cinema");value.section="Culture";
+  const value=card("cinema");value.section="Culture";value.name="ODEON Cinema";value.address="22 Leicester Square, London";
   value.evidence!.result.tags=[{id:"urn:tag:category:place:movie_theater",name:"Movie theater"}];
   assert.equal(activityMatches(value,"Cinema"),true);
   assert.equal(activityMatches(value,"Nightlife"),false);

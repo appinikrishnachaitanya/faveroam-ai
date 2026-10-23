@@ -1,11 +1,14 @@
+import { browserRequestError, readRequestText } from "../../../../src/http/request.ts";
 import { debugRequest } from "../../../../src/agent/debug";
 import { NextResponse } from "next/server";
 import { resolveCulturalSeeds } from "../../../../src/agent/runtime";
 import { seal } from "../../../../src/passport/service";
 export const runtime = "nodejs";
 async function handlePOST(request: Request) {
+  const rejected = browserRequestError(request);
+  if (rejected) return rejected;
   try {
-    const raw = await request.text();
+    const raw = await readRequestText(request, 3000);
     if (raw.length > 3000) throw Error("Input is too long.");
     const b = JSON.parse(raw);
     if (

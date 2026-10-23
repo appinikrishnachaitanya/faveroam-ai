@@ -1,4 +1,6 @@
 "use client";
+import { sectionLabel } from "../../src/passport/labels";
+import { rankCandidates } from "../../src/passport/matching";
 import { useEffect, useState } from "react";
 import type { Candidate, Section } from "../../src/passport/model";
 import type { Familiarity } from "../../src/passport/evidence";
@@ -253,12 +255,12 @@ export function MoveForm({
               key={section} type="button" aria-pressed={activities.includes(section)}
               disabled={disabled || (!activities.includes(section) && activities.length >= 5)}
               onClick={()=>onActivities(activities.includes(section) ? activities.filter(s=>s!==section) : [...activities,section])}
-            ><Icon name={section} size={16}/>{section === "Eat" ? "Dining" : section === "Culture" ? "Places & culture" : section}</button>)}
+            ><Icon name={section} size={16}/>{section === "Culture" ? "Places & culture" : sectionLabel(section)}</button>)}
           </div>
           <details className="more-activities"><summary>More ways to explore</summary><div className="activity-options">
             {(["Shows","Games","Destinations","Brands","People"] as Section[]).map(section=><button key={section} type="button" aria-pressed={activities.includes(section)} disabled={disabled || (!activities.includes(section) && activities.length>=5)} onClick={()=>onActivities(activities.includes(section)?activities.filter(s=>s!==section):[...activities,section])}><Icon name={section} size={16}/>{section}</button>)}
           </div></details>
-          {!!activities.length && <p className="helper">Selected: {activities.map(s=>s==='Eat'?'Dining':s).join(', ')}</p>}
+          {!!activities.length && <p className="helper">Selected: {activities.map(sectionLabel).join(', ')}</p>}
         </fieldset>}
         <button
           className="primary-button build-map"
@@ -311,7 +313,7 @@ export function TasteConfirmation({
           <br />
           <em>interests</em>
         </h1>
-        <p>Clear matches are suggested for you. Review or change them; choose a match where a name is ambiguous.</p>
+        <p>We’ve suggested the closest clear matches. Check each name and type, change any you meant differently, then confirm. Similar titles may still need your choice.</p>
       </div>
       <div className="confirmation-list">
         {items.map(({ item, index }) => {
@@ -355,7 +357,7 @@ export function TasteConfirmation({
                     <option value="" disabled>
                       Select the one you love
                     </option>
-                    {item.candidates.map((c) => (
+                    {rankCandidates(item.query,item.candidates).map((c) => (
                       <option key={c.id} value={c.id}>
                         {c.name} · {friendlyType(c)}
                         {c.id.startsWith("urn:tag:")
@@ -366,6 +368,7 @@ export function TasteConfirmation({
                       </option>
                     ))}
                   </select>
+                  <small>{item.candidates.length === 1 ? "One match returned. Replace this taste to search another name." : `${item.candidates.length} matches available — choose a different one if we guessed wrong.`}</small>
                 </label>
               ) : (
                 <p className="helper">

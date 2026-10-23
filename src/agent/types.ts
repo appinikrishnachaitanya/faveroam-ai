@@ -15,7 +15,17 @@ export const reasons = [
   "Other",
 ] as const;
 export type Reason = (typeof reasons)[number];
+export interface ConversationCardSummary {
+  id: string;
+  name: string;
+  section: Section;
+  priceLevel?: number;
+  rating?: number;
+  tags?: string[];
+}
+
 export interface Intent {
+  targetCardId?: string;
   kind: "onboard" | "refine" | "hide" | "unknown";
   question?: "capabilities" | "preferences" | "explanation";
   destination?: string;
@@ -40,6 +50,12 @@ export interface FeedbackRecord {
   accepted: boolean;
   reason?: Reason;
   detail?: string;
+}
+export interface ConversationMessage {
+  role: "user" | "agent";
+  text: string;
+  recommendationIds?: string[];
+  referenceIds?: string[];
 }
 export interface AgentState {
   id: string;
@@ -72,11 +88,14 @@ export interface AgentState {
   queryPreferences?: Partial<
     Record<Section, import("../qloo/query-plan.ts").QueryPreferences>
   >;
-  history?: { role: "user" | "agent"; text: string }[];
+  history?: ConversationMessage[];
+  failedSearches?: Partial<Record<Section, import("./refinement-settings.ts").RefinementSettings>>;
+  conversationMemory?: import("./memory.ts").ConversationMemory;
   providerHealth?: "unconfigured" | "configured" | "healthy" | "unavailable";
   recovery?: Section[];
   relaxed?: { section: Section; constraints: Constraint[] }[];
   pending?: {
+    settings?: Partial<Record<Section, import("./refinement-settings.ts").RefinementSettings>>;
     query: string;
     candidates: Candidate[];
     sections: Section[];
@@ -105,7 +124,7 @@ export interface TastePassportSession extends AgentState {
     Record<Section, import("../passport/evidence.ts").Familiarity>
   >;
   categoryTags: Partial<Record<Section, string[]>>;
-  history: { role: "user" | "agent"; text: string }[];
+  history: ConversationMessage[];
   providerHealth: "unconfigured" | "configured" | "healthy" | "unavailable";
   recovery: Section[];
   relaxed: { section: Section; constraints: Constraint[] }[];
@@ -120,15 +139,31 @@ export interface ToolChoice {
   arguments: Record<string, unknown>;
 }
 export interface ConversationContext {
+  summary?: ReturnType<typeof import("./memory.ts").conversationSummary>;
   city: string;
   history?: {role: "user" | "agent"; text: string}[];
   tastes?: string[];
   lastSections?: Section[];
+  activeRecommendations?: ConversationCardSummary[];
   categories?: {section: Section; preferences: Record<string, string | number>; constraints: Constraint[]; concepts: string[]; requirements: string[]; exclusions: string[]; resultCount: number}[];
 }
+export interface GroundedResponseContext {
+  request: string;
+  passport: ConversationContext;
+  outcome: { changed: Section[]; failed: Section[]; pending: boolean; fallback: string };
+  facts: {id:string; text:string}[];
+  choices: {id:string; name:string; section:Section}[];
+  limitations: string[];
+}
+export interface GroundedResponse {
+  message: string;
+  evidenceIds: string[];
+  recommendationIds: string[];
+}
 export interface ModelProvider {
+  compose?(context:GroundedResponseContext, signal?:AbortSignal):Promise<GroundedResponse>;
   explain?(facts: string[]): Promise<number[]>;
-  interpret(text: string, context?: ConversationContext): Promise<Intent>;
+  interpret(text: string, context?: ConversationContext, signal?: AbortSignal): Promise<Intent>;
   baseline?(
     destination: string,
     tastes: string[],
@@ -140,10 +175,19 @@ export interface ModelProvider {
     source: "model-only";
     request: string;
   }>;
+  chooseWithObservation?(
+    text: string,
+    state: AgentState,
+    tools: ToolDefinition[],
+    execute: (choice: ToolChoice) => Promise<ToolResult>,
+    signal?: AbortSignal,
+    allowedQueries?: readonly string[],
+  ): Promise<import("./tool-loop.ts").ObservedChoices>;
   choose(
     text: string,
     state: AgentState,
     tools: ToolDefinition[],
+    signal?: AbortSignal,
   ): Promise<ToolChoice[]>;
 }
 export interface ToolResult {
@@ -166,7 +210,7 @@ export interface AgentInput {
   guided?: { section: Section; constraints: Constraint[] };
   recovery?: {
     section: Section;
-    action: "keep-concept" | "relax-quiet" | "allow-popular" | "closest";
+    action: "keep-concept" | "relax-quiet" | "allow-popular" | "closest" | "retry";
   };
   message?: string;
   feedback?: {
@@ -179,6 +223,7 @@ export interface AgentInput {
   tagChoice?: string;
 }
 export interface AgentReply {
+  execution?: import("./request-policy.ts").RequestExecution;
   state: TastePassportSession;
   changed: Section[];
   events: AgentEvent[];

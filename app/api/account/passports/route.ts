@@ -1,4 +1,7 @@
+import { readRequestText } from "../../../../src/http/request.ts";
 import { debugRequest } from "../../../../src/agent/debug";
+import { assertSessionWriteCommitted } from "../../../../src/agent/session-lifetime";
+import { passportStorageFailure, type PassportStorageStage } from "../../../../src/account/passport-storage-error";
 import {
   accountClient,
   accountConfigured,
@@ -7,7 +10,7 @@ import {
   sameOrigin,
   privateJson,
 } from "../../../../src/account/server";
-import { getSession } from "../../../../src/agent/store";
+import { loadSession, syncSession } from "../../../../src/agent/store";
 import {
   passportSnapshot,
   restoreSnapshot,
@@ -32,7 +35,7 @@ async function handleGET() {
       .eq("user_id", user.id)
       .order("updated_at", { ascending: false })
       .limit(50);
-    if (error) throw Error();
+    if (error) return failedPassportOperation("list", error);
     return privateJson({ passports: data });
   } catch {
     return privateJson(
@@ -40,6 +43,12 @@ async function handleGET() {
       503,
     );
   }
+}
+function failedPassportOperation(stage: PassportStorageStage, error: unknown) {
+  const result = passportStorageFailure(stage, error);
+  // Strict allowlist: no error text, credentials, user IDs, request body or snapshots.
+  console.error(JSON.stringify({ event: "passport.storage.failed", stage, code: result.code }));
+  return privateJson({ error: result.message }, result.status);
 }
 async function handlePOST(request: Request) {
   if (!sameOrigin(request))
@@ -52,11 +61,13 @@ async function handlePOST(request: Request) {
       },
       503,
     );
+  let stage: PassportStorageStage = "request";
   try {
-    const raw = await request.text();
+    const raw = await readRequestText(request, 1000);
     if (raw.length > 1000)
       return privateJson({ error: "Invalid save request." }, 400);
     const b = JSON.parse(raw);
+    stage = "auth";
     const client = await accountClient();
     const {
       data: { user },
@@ -67,16 +78,24 @@ async function handlePOST(request: Request) {
     if (b.action === "restore") {
       if (typeof b.id !== "string" || !uuid(b.id))
         return privateJson({ error: "Invalid Passport." }, 400);
+      stage = "restore-read";
       const { data, error } = await client
         .from("saved_passports")
         .select("snapshot")
         .eq("id", b.id)
         .eq("user_id", user.id)
         .single();
-      if (error || !data)
+      if (error?.code === "PGRST116")
         return privateJson({ error: "Saved Passport not found." }, 404);
+      if (error) return failedPassportOperation(stage, error);
+      if (!data)
+        return privateJson({ error: "Saved Passport not found." }, 404);
+      stage = "restore-snapshot";
       const state = restoreSnapshot(data.snapshot);
+      stage = "restore-session";
       registerRestoredSession(state);
+      const persisted = await syncSession(state);
+      assertSessionWriteCommitted(storageConfigured(), persisted);
       return privateJson({
         passport: passportView(
           state,
@@ -90,13 +109,16 @@ async function handlePOST(request: Request) {
       !Number.isInteger(b.revision)
     )
       return privateJson({ error: "Invalid save request." }, 400);
-    const state = getSession(b.sessionId);
+    stage = "save-session";
+    const state = await loadSession(b.sessionId);
     if (state.revision !== b.revision)
       return privateJson(
         { error: "Your Passport changed. Save the latest version." },
         409,
       );
+    stage = "save-snapshot";
     const snapshot = passportSnapshot(state);
+    stage = "save-upsert";
     const { error } = await storageWriter().from("saved_passports").upsert(
       {
         user_id: user.id,
@@ -106,26 +128,17 @@ async function handlePOST(request: Request) {
       },
       { onConflict: "user_id,city" },
     );
-    if (error) {
-      if (error.code === "23514")
-        return privateJson({ error: "Account storage needs a database update for this destination. Your Passport is preserved; contact the app owner." }, 503);
-      throw Error();
-    }
+    if (error) return failedPassportOperation(stage, error);
     return privateJson({ saved: true, city: state.city });
-  } catch {
-    return privateJson(
-      {
-        error: "Could not save or restore. Your current Passport is preserved.",
-      },
-      502,
-    );
+  } catch (error) {
+    return failedPassportOperation(stage, error);
   }
 }
 async function handleDELETE(request: Request) {
   if (!sameOrigin(request))
     return privateJson({ error: "Please use this app." }, 403);
   try {
-    const raw = await request.text();
+    const raw = await readRequestText(request, 200);
     if (raw.length > 200)
       return privateJson({ error: "Invalid request." }, 400);
     const b = JSON.parse(raw);
