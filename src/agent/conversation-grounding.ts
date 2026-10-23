@@ -1,6 +1,7 @@
 import { categoryLanguage } from "./category-language.ts";
 import { editDistance } from "../text/edit-distance.ts";
 import type { Intent } from "./types.ts";
+import { isOutputCategoryConcept } from './output-category.ts';
 
 /** A discovery goal is a search mode, not a cultural taxonomy tag. */
 export function isDiscoveryGoalConcept(value: string): boolean {
@@ -42,6 +43,7 @@ export function groundedModelIntent(request: string, model: Intent, explicit?: I
   const explicitExclusions = new Set((explicit?.excludeConcepts ?? []).map(x=>words(x).join(" ")));
   const grounded = (concept: string) => {
     if (isDiscoveryGoalConcept(concept)) return false;
+    if (isOutputCategoryConcept(concept,model.sections)) return false;
     if (/^quiet atmosphere$/i.test(concept) && /\b(?:peaceful|peacefully|calm|quiet|not loud|less noisy)\b/i.test(currentRequest)) return true;
     if (explicitConcepts.has(words(concept).join(" "))) return true;
     const meaningful = words(concept).filter(x=>![

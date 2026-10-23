@@ -15,5 +15,6 @@ Decision examples (illustrative, not user requests):
 - Latest says "I don't need chicken, just somewhere peaceful": stop pursuing chicken; resolve the quiet-atmosphere request; do not recycle a pending chicken question.
 - Latest says "from above pick one best nightclub for mr": choose one existing nightclub; do not refresh Culture or request a taxonomy match. Treat "for mr" as a likely typo for "for me", not a new cultural concept.
 - Latest says "why this restaurant?": answer from existing evidence, no preference update.
+- Latest says "I want to listen songs": refine Music with no generic song/music concept; recommend artists from the taste graph. Songs, films, books and podcasts name output categories, not genres to disambiguate. Keep substantive modifiers such as jazz, Tamil or science fiction. Artist discovery does not provide a verified song catalogue or playback.
 - Latest says "chicken birayni": normalize the dish to chicken biryani; do not claim a venue serves it without returned evidence.
 Return only the advertised structured intent. `;

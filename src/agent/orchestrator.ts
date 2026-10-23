@@ -8,6 +8,7 @@ import { sectionLabel } from "../passport/labels.ts";
 import { chatShortlist, chatShortlistText, isShortlistRequest, requestedShortlistSections } from "./chat-shortlist.ts";
 import { refinementScope } from "./scope.ts";
 import { groundedModelIntent, isGreetingOrTypo } from "./conversation-grounding.ts";
+import { isOutputCategoryConcept } from './output-category.ts';
 import { conversationContext } from "./context.ts";
 import { decisionSummary } from "./decision-summary.ts";
 import { passportAnswer, passportAnswerCards, cardSpecificAnswer, isListRequest, listPassportCards, listPassportResults, previewRefinedResults } from "./answers.ts";
@@ -357,6 +358,7 @@ async function executeTurn(
     }
     if (
       state.pending &&
+      (state.pending.exclude || !isOutputCategoryConcept(state.pending.query,state.pending.sections)) &&
       conceptKey(state.pending.request ?? "") === conceptKey(input.message)
     )
       return reply(
@@ -492,43 +494,46 @@ async function executeTurn(
     comparedRequest = pending?.request;
     const tag = pending?.candidates.find((t) => t.id === input.tagChoice);
     if (!pending || !tag) throw Error("Choose a returned concept match.");
-    state.tags = [...state.tags.filter((t) => t.id !== tag.id), tag].slice(-10);
-    if (pending.exclude) {
-      state.queryPreferences ??= {};
-      for (const section of pending.sections)
-        state.queryPreferences[section] = {
-          ...state.queryPreferences[section],
-          excludeTags: [
-            ...new Set([
-              ...(state.queryPreferences[section]?.excludeTags ?? []),
-              tag.id,
-            ]),
-          ],
-        };
-    }
-    for (const section of pending.conceptSections ?? pending.sections) {
-      if (pending.exclude) continue;
-      const replacesCuisine =
-        section === "Eat" &&
-        !state.queryPreferences?.[section]?.tagOperator &&
-        !/^vegetarian(?: cuisine)?$/i.test(tag.name) &&
-        /cuisine|restaurant/i.test(`${tag.id} ${tag.name} ${tag.detail}`);
-      const existing = (state.categoryTags![section] ?? []).filter(
-        (id) =>
-          !replacesCuisine ||
-          !state.tags.some(
-            (t) =>
-              t.id === id &&
-              /cuisine|restaurant/i.test(`${t.id} ${t.name} ${t.detail}`),
-          ),
-      );
-      state.categoryTags![section] = [...new Set([...existing, tag.id])];
+    const outputChoice=!pending.exclude && isOutputCategoryConcept(pending.query,pending.sections);
+    if(!outputChoice) {
+      state.tags = [...state.tags.filter((t) => t.id !== tag.id), tag].slice(-10);
+      if (pending.exclude) {
+        state.queryPreferences ??= {};
+        for (const section of pending.sections)
+          state.queryPreferences[section] = {
+            ...state.queryPreferences[section],
+            excludeTags: [
+              ...new Set([
+                ...(state.queryPreferences[section]?.excludeTags ?? []),
+                tag.id,
+              ]),
+            ],
+          };
+      }
+      for (const section of pending.conceptSections ?? pending.sections) {
+        if (pending.exclude) continue;
+        const replacesCuisine =
+          section === "Eat" &&
+          !state.queryPreferences?.[section]?.tagOperator &&
+          !/^vegetarian(?: cuisine)?$/i.test(tag.name) &&
+          /cuisine|restaurant/i.test(`${tag.id} ${tag.name} ${tag.detail}`);
+        const existing = (state.categoryTags![section] ?? []).filter(
+          (id) =>
+            !replacesCuisine ||
+            !state.tags.some(
+              (t) =>
+                t.id === id &&
+                /cuisine|restaurant/i.test(`${t.id} ${t.name} ${t.detail}`),
+            ),
+        );
+        state.categoryTags![section] = [...new Set([...existing, tag.id])];
+      }
     }
     intent = {
       kind: "refine",
       seeds: [],
       concepts:
-        pending.optional || pending.exclude
+        outputChoice ? pending.remainingConcepts ?? [] : pending.optional || pending.exclude
           ? []
           : [pending.query, ...(pending.remainingConcepts ?? [])],
       sections: pending.sections,
@@ -688,6 +693,15 @@ async function executeTurn(
     for (const section of targets)
       state.categoryModes[section] = intent.familiarity;
   if (intent.kind === "refine") {
+    // Migrate generic content kinds out of older unresolved taste drafts.
+    for(const section of targets) {
+      if(state.categoryConcepts[section])state.categoryConcepts[section]=state.categoryConcepts[section].filter(concept=>!isOutputCategoryConcept(concept,[section]));
+      const obsolete=new Set(state.tags.filter(tag=>isOutputCategoryConcept(tag.name,[section])).map(tag=>tag.id));
+      if(state.categoryTags[section])state.categoryTags[section]=state.categoryTags[section].filter(id=>!obsolete.has(id));
+      const preferences=state.queryPreferences?.[section];
+      if(preferences?.includeTags)preferences.includeTags=preferences.includeTags.filter(id=>!obsolete.has(id));
+    }
+    intent.concepts=intent.concepts.filter(concept=>!isOutputCategoryConcept(concept,targets));
     if (!intent.concepts.length && targets.length === 1)
       intent.concepts = [...(state.categoryConcepts[targets[0]] ?? [])];
     for (const section of targets)

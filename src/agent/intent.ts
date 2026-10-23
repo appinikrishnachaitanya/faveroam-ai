@@ -74,7 +74,7 @@ export function interpret(text: string, fallback = "New York City"): Intent {
   if (/coffee|caf[eé]/i.test(positive)) sections.push("Coffee");
   const screenContent = /(?:movies?|films?).*(?:to watch|recommendations?|suggestions?|stream)|(?:recommend|suggest|watch|stream).*(?:movies?|films?)/i.test(positive) && !/cinema|theat(?:er|re)|go.*movie/i.test(positive) && !(/dinner|party|nightlife|nightclub/i.test(positive) && /then|after|before/i.test(positive));
   if (screenContent) sections.push("Movies");
-  if (/music|musical|artist|bands?/i.test(positive) && !/live music|music.friendly|concert/i.test(positive)) sections.push("Music");
+  if (/\b(?:music|musical|artists?|bands?|songs?|tracks?|tunes?)\b/i.test(positive) && !/live music|music.friendly|concert/i.test(positive)) sections.push("Music");
   if (/cultur(?:e|al)|\bart\b|museum|gallery|cinema|\bparty\b|nightclub|nightlife|concert|live music|music.friendly/i.test(positive) || asksLandmarks || (!screenContent && /\bmovies?\b|\bfilms?\b/i.test(positive)))
     sections.push("Culture");
   if (/bookstore|book shop|lifestyle|shopping|boutique/i.test(positive) && !/coffee\s+shops?/i.test(positive))
@@ -130,7 +130,7 @@ export function interpret(text: string, fallback = "New York City"): Intent {
     : /\bwhy\b|explain.*(?:matches|choices|suggestions|recommendations)/i.test(text) ? "explanation" : undefined;
   const refine =
     !question && !onboarding &&
-    (excludeConcepts.length > 0 || constraints.length > 0 || /tonight|quieter|more|less|find|show|want|give|help|recommend|suggest|too |niche|refine|rank|reorder|trending|hidden gem|safe bet|surprise me|highly rated|make it/i.test(
+    (excludeConcepts.length > 0 || constraints.length > 0 || /tonight|quieter|more|less|find|show|want|give|help|listen|play|recommend|suggest|too |niche|refine|rank|reorder|trending|hidden gem|safe bet|surprise me|highly rated|make it/i.test(
       text,
     ));
   const action: Intent["action"] = /\b(?:save|store|keep)\b[^.!?]{0,70}\b(?:passport|this|it)\b/i.test(text)
