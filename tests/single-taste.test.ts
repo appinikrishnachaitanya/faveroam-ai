@@ -17,15 +17,15 @@ test("one confirmed taste completes resolution, discovery and saved-profile/snap
  process.env.QLOO_API_KEY='single-taste-fixture';process.env.LOG_LEVEL='error';delete process.env.SUPABASE_URL;
  const id='00000000-0000-4000-8000-000000000001', match='00000000-0000-4000-8000-000000000002';
  globalThis.fetch=async(url)=>Response.json({results:{entities:new URL(url).pathname==='/search'?[{entity_id:id,name:'Interstellar',types:['urn:entity:movie'],properties:{release_year:2014}}]:[{entity_id:match,name:'Returned film',types:['urn:entity:movie'],query:{affinity:0.7}}]}});
- const resolved=await resolve(new Request('http://localhost/api/agent/resolve',{method:'POST',body:JSON.stringify({seeds:['Interstellar']})}));
+ const resolved=await resolve(new Request('http://localhost/api/agent/resolve',{method:'POST',headers:{Origin:'http://localhost'},body:JSON.stringify({seeds:['Interstellar']})}));
  assert.equal(resolved.status,200);const resolution=await resolved.json();assert.equal(resolution.items.length,1);
- const generated=await build(new Request('http://localhost/api/passport',{method:'POST',body:JSON.stringify({city:'Toronto',token:resolution.token,ids:[id],activities:['Movies']})}));
+ const generated=await build(new Request('http://localhost/api/passport',{method:'POST',headers:{Origin:'http://localhost'},body:JSON.stringify({city:'Toronto',token:resolution.token,ids:[id],activities:['Movies']})}));
  assert.equal(generated.status,200);const passport=await generated.json();assert.equal(passport.selected.length,1);assert.equal(passport.cards.length,1);
  const state=getSession(passport.agent.sessionId);
  assert.equal(restoreSnapshot(passportSnapshot(state)).selected.length,1);
  assert.equal(readTasteProfile(portableTasteProfile(state)).selected.length,1);
  assert.throws(()=>portableTasteProfile({...state,selected:[]}));
- const empty=await build(new Request('http://localhost/api/passport',{method:'POST',body:JSON.stringify({city:'Toronto',token:resolution.token,ids:[]})}));
+ const empty=await build(new Request('http://localhost/api/passport',{method:'POST',headers:{Origin:'http://localhost'},body:JSON.stringify({city:'Toronto',token:resolution.token,ids:[]})}));
  assert.equal(empty.status,400);
  console.log('Single taste round trip PASS');
  `],{cwd:process.cwd(),encoding:"utf8",timeout:30000});

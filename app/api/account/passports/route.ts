@@ -1,3 +1,4 @@
+import { readRequestText } from "../../../../src/http/request.ts";
 import { debugRequest } from "../../../../src/agent/debug";
 import { assertSessionWriteCommitted } from "../../../../src/agent/session-lifetime";
 import { passportStorageFailure, type PassportStorageStage } from "../../../../src/account/passport-storage-error";
@@ -62,7 +63,7 @@ async function handlePOST(request: Request) {
     );
   let stage: PassportStorageStage = "request";
   try {
-    const raw = await request.text();
+    const raw = await readRequestText(request, 1000);
     if (raw.length > 1000)
       return privateJson({ error: "Invalid save request." }, 400);
     const b = JSON.parse(raw);
@@ -137,7 +138,7 @@ async function handleDELETE(request: Request) {
   if (!sameOrigin(request))
     return privateJson({ error: "Please use this app." }, 403);
   try {
-    const raw = await request.text();
+    const raw = await readRequestText(request, 200);
     if (raw.length > 200)
       return privateJson({ error: "Invalid request." }, 400);
     const b = JSON.parse(raw);

@@ -10,6 +10,7 @@ on:
   pull_request:
     branches:
       - master
+      - 'feat/discover-first-workspace-polish'
       - 'release/**'
   workflow_dispatch:
 

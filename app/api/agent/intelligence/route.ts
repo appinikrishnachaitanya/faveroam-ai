@@ -1,4 +1,6 @@
+import { browserRequestError, readRequestText } from "../../../../src/http/request.ts";
 import { relevantThemes } from "../../../../src/passport/taste-themes";
+import { validSessionId } from "../../../../src/agent/session-lifetime.ts";
 import { trending } from "../../../../src/qloo/trending";
 import { loadSession } from "../../../../src/agent/store";
 import { unseal } from "../../../../src/passport/service";
@@ -21,14 +23,16 @@ const json = (value: unknown, status = 200) =>
     headers: { "Cache-Control": "private, no-store", Vary: "Cookie" },
   });
 async function handlePOST(request: Request) {
+  const rejected = browserRequestError(request);
+  if (rejected) return rejected;
   let id = "",
     acquired = false;
   try {
-    const raw = await request.text();
+    const raw = await readRequestText(request, 20000);
     if (raw.length > 20000)
       return json({ error: "Request is too large." }, 400);
     const b = JSON.parse(raw);
-    if (typeof b.sessionId !== "string")
+    if (!validSessionId(b.sessionId) || !Number.isSafeInteger(b.revision) || b.revision < 0)
       return json({ error: "Build a Passport first." }, 400);
     const state = await loadSession(b.sessionId);
     id = state.id;

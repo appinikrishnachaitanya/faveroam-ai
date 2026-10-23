@@ -1,3 +1,4 @@
+import { readRequestText } from "../../../../src/http/request.ts";
 import { debugRequest } from "../../../../src/agent/debug";
 import {
   accountClient,
@@ -72,7 +73,7 @@ async function handlePOST(request: Request) {
     } = await client.auth.getUser();
     if (authError || !user)
       return privateJson({ error: "Please sign in to save your plan." }, 401);
-    const raw = await request.text();
+    const raw = await readRequestText(request, 1500);
     if (raw.length > 1500)
       return privateJson({ error: "Invalid plan request." }, 400);
     let b;
@@ -133,7 +134,7 @@ async function handleDELETE(request: Request) {
     } = await client.auth.getUser();
     if (authError || !user)
       return privateJson({ error: "Please sign in." }, 401);
-    const raw = await request.text();
+    const raw = await readRequestText(request, 200);
     if (raw.length > 200) return privateJson({ error: "Invalid plan." }, 400);
     const b = JSON.parse(raw);
     if (!b || !uuid(b.id)) return privateJson({ error: "Invalid plan." }, 400);

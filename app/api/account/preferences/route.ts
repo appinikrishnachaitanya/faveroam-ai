@@ -1,3 +1,4 @@
+import { readRequestText } from "../../../../src/http/request.ts";
 import { profileName, validProfileId } from "../../../../src/account/profile-record";
 import { suggestedSections } from "../../../../src/passport/routing";
 import { catalogCity } from "../../../../src/workspace/destinations";
@@ -20,7 +21,7 @@ async function handle(request: Request) {
     if (authError || !user) return privateJson({error:"Sign in to use saved tastes."},401);
     let body: Record<string,unknown> = {};
     if (request.method !== "GET") {
-      const raw = await request.text();
+      const raw = await readRequestText(request, 1400);
       if (raw.length > 1400) return privateJson({error:"Invalid taste profile request."},400);
       body = raw ? JSON.parse(raw) : {};
     }

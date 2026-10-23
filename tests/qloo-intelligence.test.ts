@@ -40,7 +40,7 @@ process.env.NODE_ENV='production';process.env.QLOO_API_KEY='api-protocol-secret'
 const ids=['00000000-0000-4000-8000-000000000001','00000000-0000-4000-8000-000000000002','00000000-0000-4000-8000-000000000003'];
 const selected=ids.map((id,i)=>({id,name:'Protocol '+i,types:['urn:entity:artist'],detail:''}));
 const state=createSession({city:'Toronto',selected,cards:[],notices:[],explanation:'Protocol'});
-const post=b=>POST(new Request('http://localhost/api/agent/intelligence',{method:'POST',body:JSON.stringify({sessionId:state.id,revision:state.revision,...b})}));
+const post=b=>POST(new Request('http://localhost/api/agent/intelligence',{method:'POST',headers:{Origin:'http://localhost'},body:JSON.stringify({sessionId:state.id,revision:state.revision,...b})}));
 assert.equal((await post({action:'details',revision:99})).status,409);
 assert.equal((await post({action:'details',entityId:'unowned'})).status,400);
 assert.equal((await post({action:'debug'})).status,404);

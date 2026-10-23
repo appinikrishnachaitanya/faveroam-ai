@@ -1,4 +1,5 @@
 import { categoryLanguage } from "./category-language.ts";
+import { containsConfiguredSecret } from "./secrets.ts";
 import { refinementScope } from "./scope.ts";
 import {
   extractDraft,
@@ -22,15 +23,7 @@ export function culturalText(value: string, max = 1000): string {
     throw new Error(
       "Please share cultural tastes only, without names identifying you, contact details or account identifiers.",
     );
-  if (
-    [
-      process.env.QLOO_API_KEY,
-      process.env.GEMINI_API_KEY,
-      process.env.AGENT_MODEL_API_KEY,
-    ].some(
-      (secret) => secret && value.includes(secret),
-    )
-  )
+  if (containsConfiguredSecret(value))
     throw Error("Credentials are not cultural inputs.");
   return value.trim();
 }

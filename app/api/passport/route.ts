@@ -1,3 +1,4 @@
+import { browserRequestError, readRequestText } from "../../../src/http/request.ts";
 import { debugRequest } from "../../../src/agent/debug";
 import { NextResponse } from "next/server";
 import { passport } from "../../../src/passport/service.ts";
@@ -9,8 +10,10 @@ import { catalogCity } from "../../../src/workspace/destinations";
 import { sectionTypes, type Section } from "../../../src/passport/model";
 import { storageConfigured } from "../../../src/account/server";
 async function handlePOST(request: Request) {
+  const rejected = browserRequestError(request);
+  if (rejected) return rejected;
   try {
-    const raw = await request.text();
+    const raw = await readRequestText(request, 30000);
     if (raw.length > 30000) throw new QlooError("Input is too long.", 400);
     const b = JSON.parse(raw);
     const city = await catalogCity(b.city);

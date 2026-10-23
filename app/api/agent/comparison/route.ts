@@ -1,4 +1,6 @@
+import { browserRequestError, readRequestText } from "../../../../src/http/request.ts";
 import { debugRequest } from "../../../../src/agent/debug";
+import { validSessionId } from "../../../../src/agent/session-lifetime.ts";
 import { getSession } from "../../../../src/agent/store";
 import { configuredProvider } from "../../../../src/agent/provider";
 export const runtime = "nodejs";
@@ -8,13 +10,15 @@ const cache = new Map<
 >();
 const running = new Set<string>();
 async function handlePOST(request: Request) {
+  const rejected = browserRequestError(request);
+  if (rejected) return rejected;
   let id = "",
     acquired = false;
   try {
-    const raw = await request.text();
+    const raw = await readRequestText(request, 200);
     if (raw.length > 200) throw Error();
     const body = JSON.parse(raw);
-    if (typeof body.sessionId !== "string") throw Error();
+    if (!validSessionId(body.sessionId)) throw Error();
     id = body.sessionId;
     const state = getSession(id);
     const comparison = structuredClone(state.comparison);

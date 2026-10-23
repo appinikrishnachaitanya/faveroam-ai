@@ -335,6 +335,10 @@ test("Gemini-compatible HTTP adapter sends the exact baseline request without Ql
  const message=JSON.parse(calls[1].messages[1].content);assert.equal(message.request,request);assert.equal(message.destination,'Toronto');assert.deepEqual(message.tastes,['A.R. Rahman','Interstellar','Indian']);assert.ok(!('tools' in calls[1]));
  assert.ok(!JSON.stringify(calls[1]).includes('protocol-model-secret'));assert.ok(!JSON.stringify(calls[1]).includes('protocol-qloo-secret'));assert.ok(!JSON.stringify(calls[1]).includes('urn:entity:'));
  const state={city:'Toronto',selected:[],cards:[],feedback:[],intent};const choices=await provider.choose('Find independent art',state,[{name:'qloo_find_tags',inputSchema:{type:'object'}}]);assert.equal(choices[0].name,'qloo_find_tags');assert.equal(calls[2].tool_choice,'auto');
+ globalThis.fetch=async()=>Response.json({choices:[{message:{tool_calls:[{function:{name:'delete_account',arguments:'{}'}}]}}]});
+ await assert.rejects(provider.choose('Find independent art',state,[{name:'qloo_find_tags',inputSchema:{type:'object'}}]),/Invalid tool arguments/);
+ let leaked=false;globalThis.fetch=async()=>{leaked=true;throw Error('Unexpected network');};
+ await assert.rejects(provider.interpret('protocol-model-secret'),/Credentials/);assert.equal(leaked,false);
  console.log('Adapter protocol PASS');
  `,
     ],

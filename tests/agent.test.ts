@@ -182,14 +182,16 @@ test("model interpretation cannot smuggle fabricated recommendation data into st
   assert.throws(() => culturalText("email me at sample@example.com"));
   assert.throws(() => culturalText("my name is User Name"));
 });
-test("cultural input rejects a pasted native Gemini credential", () => {
-  const previous = process.env.GEMINI_API_KEY;
-  process.env.GEMINI_API_KEY = "native-gemini-test-secret";
-  try {
-    assert.throws(() => culturalText("native-gemini-test-secret"));
-  } finally {
-    if (previous === undefined) delete process.env.GEMINI_API_KEY;
-    else process.env.GEMINI_API_KEY = previous;
+test("cultural input rejects configured provider and service credentials", () => {
+  for (const name of ["QLOO_API_KEY", "GEMINI_API_KEY", "GOOGLE_API_KEY", "AGENT_MODEL_API_KEY", "SUPABASE_SERVICE_ROLE_KEY"]) {
+    const previous = process.env[name];
+    process.env[name] = "security-regression-test-secret";
+    try {
+      assert.throws(() => culturalText("security-regression-test-secret"), /Credentials/);
+    } finally {
+      if (previous === undefined) delete process.env[name];
+      else process.env[name] = previous;
+    }
   }
 });
 test("Not My Vibe changes only the rejected category, records feedback and excludes rejected ID", async () => {

@@ -1,3 +1,4 @@
+import { browserRequestError, readRequestText } from "../../../../src/http/request.ts";
 import { debugRequest, debugEvent } from "../../../../src/agent/debug";
 import { normalizeSession } from "../../../../src/agent/session";
 import { passportView } from "../../../../src/workspace/state";
@@ -6,11 +7,13 @@ import { sameOrigin, privateJson } from "../../../../src/account/server";
 import { loadSession, discardSession } from "../../../../src/agent/store";
 export const runtime = "nodejs";
 async function handleDELETE(request: Request) {
+  const rejected = browserRequestError(request);
+  if (rejected) return rejected;
   try {
-    const raw = await request.text();
+    const raw = await readRequestText(request, 200);
     if (raw.length > 200) throw Error();
     const body = JSON.parse(raw);
-    if (typeof body.sessionId !== "string") throw Error();
+    if (!validSessionId(body.sessionId)) throw Error();
     await discardSession(body.sessionId);
     debugEvent("session.reset", { action: "new-passport" });
     return Response.json(
@@ -35,7 +38,7 @@ export function POST(request: Request) {
     if (!sameOrigin(request)) return privateJson({ error: "Please use this app." }, 403);
     let sessionId: string;
     try {
-      const raw = await request.text();
+      const raw = await readRequestText(request, 200);
       if (raw.length > 200) throw Error();
       const body = JSON.parse(raw);
       if (!validSessionId(body.sessionId)) throw Error();

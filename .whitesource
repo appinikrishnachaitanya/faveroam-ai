@@ -1,0 +1,24 @@
+{
+  "scanSettings": {
+    "configMode": "AUTO",
+    "baseBranches": [
+      "master",
+      "feat/discover-first-workspace-polish"
+    ]
+  },
+  "checkRunSettings": {
+    "vulnerableCheckRunConclusionLevel": "failure",
+    "displayMode": "diff",
+    "useMendCheckNames": true
+  },
+  "issueSettings": {
+    "minSeverityLevel": "HIGH",
+    "issueType": "DEPENDENCY"
+  },
+  "remediateSettings": {
+    "workflowRules": {
+      "enabled": true,
+      "minVulnerabilitySeverity": "HIGH"
+    }
+  }
+}

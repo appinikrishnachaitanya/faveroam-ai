@@ -1,3 +1,4 @@
+import { readRequestText } from "../../../src/http/request.ts";
 import { existingRegistration } from "../../../src/account/registration";
 import { passwordValidationMessage, passwordProviderMessage } from "../../../src/account/password-policy";
 import { debugRequest } from "../../../src/agent/debug";
@@ -54,7 +55,7 @@ async function handlePOST(request: Request) {
       503,
     );
   try {
-    const raw = await request.text();
+    const raw = await readRequestText(request, 4096);
     if (raw.length > 4096)
       return privateJson({ error: "Invalid account request." }, 400);
     const b = JSON.parse(raw);
@@ -175,7 +176,7 @@ async function handleDELETE(request: Request) {
       503,
     );
   try {
-    const raw = await request.text();
+    const raw = await readRequestText(request, 1000);
     if (raw.length > 1000)
       return privateJson({ error: "Invalid deletion request." }, 400);
     const b = JSON.parse(raw);

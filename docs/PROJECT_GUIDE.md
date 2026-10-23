@@ -103,6 +103,29 @@ Opt-in provider probes, which consume quota, include `npm run verify:gemini`, `n
 
 Deployment uses the Node/Next.js production build, listens on the platform `PORT`, and exposes `/api/health`. GitHub CI runs checks for a pushed branch; a connected hosting trigger builds and deploys the selected branch. Compare the deployed commit to the submitted branch before judging. The currently used release branch is `feat/discover-first-workspace-polish`; the repository default branch may differ. Railway has hosted the public demo; Cloud Run has also been configured with GitHub continuous deployment. Use the verified working public URL in Devpost and `APP_ORIGIN`. A successful health check alone does not validate the guest or agent journey.
 
+## Security boundaries and deployment controls
+
+Guest write endpoints, like account mutations, require the browser's Origin to match `APP_ORIGIN` (or the local server origin when unset). Set `APP_ORIGIN` to the public HTTPS origin you serve. Cross-site browser requests are rejected before body parsing or provider work. Scripts calling these browser endpoints must supply that Origin. This is a CSRF boundary, not authentication or protection against clients that forge headers. Guest session IDs remain bearer capabilities: never share or log them.
+
+Request bodies are bounded while reading, including uploads without Content-Length. Model tool names and taxonomy arguments are allowlisted; extra fields, invalid limits, and out-of-request queries are rejected. Server-owned tool descriptions prevent catalog text from redefining capabilities. User, conversation and tool strings are untrusted data; application validation and state-commit checks enforce authority. Known configured secrets are rejected in cultural inputs and checked in model output. These checks supplement secret isolation; they do not guarantee detection of encoded secrets or every semantic prompt injection.
+
+Responses include anti-framing, MIME-sniffing and referrer protections. The CSP constrains framing, objects and base URLs; it is not a complete script-source policy. Next.js is patched to 16.4.2. Run `npm audit --omit=dev` when releasing: the Qloo harness includes its own pinned dependency tree, so remaining transitive advisories require compatible upstream patches and review. Do not use `npm audit fix --force` to silently replace the integration.
+
+Per-turn budgets and session locks limit individual operations; this app does not yet implement distributed request rate limiting. Before opening traffic widely, configure provider quotas, Cloud Run maximum instances and an edge rate-limiting policy. A Cloud Armor policy requires a supported load-balancer setup; a directly accessible Cloud Run URL must not bypass that boundary. Budget alerts notify rather than enforce a spending cap. Infrastructure controls and live ownership/email acceptance need separate deployment verification.
+
+### Mend for GitHub
+
+The root `.whitesource` config prepares Mend's GitHub integration for `master` and `feat/discover-first-workspace-polish`. It requests automatic dependency scanning, PR checks showing vulnerability changes, dependency issues for High/Critical findings, and remediation PRs for those severities when Mend can supply a fix. Existing CI also runs on PRs targeting the active polish branch, so bot fixes receive the application's tests, build and smoke checks. A scanner cannot necessarily repair Qloo's pinned transitive dependencies.
+
+Activation requires a repository owner:
+
+1. In your Mend account, connect the GitHub integration and install/authorize its GitHub App for **only `appinikrishnachaitanya/tastepassport-ai`**. Check the plan's repository and scanning eligibility; repository configuration alone does not activate a service or establish free coverage.
+2. Push `.whitesource` to both configured base branches you want scanned, following your normal review process. Complete Mend's onboarding PR if it creates one, retaining this repository configuration.
+3. Verify a completed Mend scan and its findings in the dashboard. Open a small dependency PR targeting the polish branch and verify that a Mend check appears alongside CI. Do not assume it is active until a real scan finishes.
+4. In GitHub **Settings → Rules → Rulesets**, require CI and the exact Mend check name observed on that PR for protected branches. Require review before merging dependency fixes; leave automatic merging off. A failed Mend check alone does not prevent merges without a rule requiring it.
+
+The GitHub App authenticates through its installation; this setup adds no Mend API secret to GitHub Actions and no third-party scanner action to CI. Review requested App permissions before installation. Mend dependency scanning complements the agent and HTTP safeguards; it does not prove resistance to prompt injection or replace runtime security testing. Configuration follows [Mend-maintained GitHub integration examples](https://github.com/mend-toolkit/mend-examples/tree/main/Repo-Integration) and [their remediation example](https://github.com/mend-toolkit/mend-examples/blob/main/Workshop/nodegoat/.whitesource_init_pull_request).
+
 ## Judge and submission guide
 
 The [hackathon page](https://qloo.devpost.com/) asks for an agentic tool/app where Qloo’s cultural graph makes the result materially better than a generic LLM. Frame the project around **cultural continuity for a newcomer**, not the number of endpoints or cards. The published judging areas described in the project materials are technological implementation, design, potential impact, and quality of the idea. The submission should show a functional public demo, public code repository with an open-source license, and a clear project description; verify the current rules and field requirements on Devpost before final submission.

@@ -1,5 +1,6 @@
 import { RESPONSE_POLICY } from "./response.ts";
-import { CONVERSATION_POLICY } from "./prompts.ts";
+import { CONVERSATION_POLICY, UNTRUSTED_DATA_POLICY } from "./prompts.ts";
+import { containsConfiguredSecret } from "./secrets.ts";
 import "server-only";
 import { generationSettings } from "./generation-policy.ts";
 import { GoogleGenAI, FunctionCallingConfigMode } from "@google/genai";
@@ -61,6 +62,10 @@ export function configuredProvider(): ModelProvider | undefined {
     required = true,
     signal?: AbortSignal,
   ): Promise<ToolChoice[]> {
+    if (containsConfiguredSecret(JSON.stringify(messages))) throw Error("Unsafe model context");
+    messages = messages.map(message => message.role === "system"
+      ? { ...message, content: UNTRUSTED_DATA_POLICY + "\n" + message.content }
+      : message);
     if (gemini) {
       const trace = crypto.randomUUID();
       debugEvent("gemini.request", {
@@ -115,7 +120,7 @@ export function configuredProvider(): ModelProvider | undefined {
           if (
             !c.name ||
             !tools.some((t) => t.function.name === c.name) ||
-            !isObject(c.args)
+            !isObject(c.args) || containsConfiguredSecret(JSON.stringify(c.args))
           )
             throw Error("Invalid provider tool call");
           debugEvent("gemini.tool_selected", { trace, tool: c.name });
@@ -170,7 +175,9 @@ export function configuredProvider(): ModelProvider | undefined {
       )
         throw Error("Invalid provider tool call");
       const args = JSON.parse(c.function.arguments);
-      if (!isObject(args)) throw Error("Invalid tool arguments");
+      const name = c.function.name;
+      if (!tools.some(tool => tool.function.name === name) ||
+          !isObject(args) || containsConfiguredSecret(JSON.stringify(args))) throw Error("Invalid tool arguments");
       return { name: c.function.name, arguments: args };
     });
   }
@@ -190,7 +197,7 @@ export function configuredProvider(): ModelProvider | undefined {
           });
           if (response.functionCalls?.length || !response.text) throw Error("Invalid response protocol");
           const result=JSON.parse(response.text);
-          if(!isObject(result))throw Error("Invalid response payload");
+          if(!isObject(result) || containsConfiguredSecret(JSON.stringify(result)))throw Error("Invalid response payload");
           debugEvent("gemini.result",{trace,operation:"compose",count:1});
           return result as unknown as import("./types.ts").GroundedResponse;
         } catch(error) {
@@ -253,16 +260,14 @@ export function configuredProvider(): ModelProvider | undefined {
             config: {
               ...generationSettings("response"),
               systemInstruction:
-                "Produce a concise cultural onboarding suggestion using only model knowledge. No tools or Qloo data are available. Explicitly state details and local availability are unverified. Never claim Qloo evidence.",
+                UNTRUSTED_DATA_POLICY + " Produce a concise cultural onboarding suggestion using only model knowledge. No tools or Qloo data are available. Explicitly state details and local availability are unverified. Never claim Qloo evidence.",
             },
           }));
           const text = response.text;
           if (
             !text?.trim() ||
             text.length > 8000 ||
-            [process.env.QLOO_API_KEY, key].some(
-              (secret) => secret && text.includes(secret),
-            )
+            containsConfiguredSecret(text)
           )
             throw Error("Invalid baseline");
           recordProviderHealth("healthy");
@@ -319,9 +324,7 @@ export function configuredProvider(): ModelProvider | undefined {
         typeof text !== "string" ||
         !text.trim() ||
         text.length > 8000 ||
-        [process.env.QLOO_API_KEY, key].some(
-          (secret) => secret && text.includes(secret),
-        )
+        containsConfiguredSecret(text)
       )
         throw Error("Invalid baseline");
       recordProviderHealth("healthy");
