@@ -13,6 +13,7 @@ import { priceLabel } from "../../src/passport/pricing";
 import { suggestedMatches } from "../../src/passport/matching";
 import { isPlaceSection } from "../../src/passport/model";
 import { Icon } from "./passport";
+import { PassportIllustration } from "./illustrations";
 const modes: { id: DiscoveryGoal; name: string; detail: string; icon: string }[] = [
   {
     id: "discover",
@@ -52,14 +53,17 @@ export default function TasteIntelligence({
   onRefine,
   view = "preferences",
   onPreferences,
+  onSectionChange,
 }: {
   passport: Passport;
   busy: boolean;
   onRefine: (input: AgentInput) => void;
   view?: "preferences" | "together";
   onPreferences?: () => void;
+  onSectionChange?: (section: Section) => void;
 }) {
   const [section, setSection] = useState<Section>(()=>sectionOrder.find(s=>passport.cards.some(c=>c.section===s)) ?? "Eat");
+  useEffect(() => { onSectionChange?.(section); }, [section, onSectionChange]);
   const available=activeCategories(passport.session,passport.cards);
   const availableKey=available.join(",");
   useEffect(()=>{if(available.length&&!available.includes(section))setSection(available[0]);},[availableKey,section]);
@@ -347,7 +351,7 @@ export default function TasteIntelligence({
         </form>
         <section className="together-reveal" hidden={view !== "together"} aria-label="Find common ground">
           <div className="together-preference-summary"><div><strong>{sectionLabel(section)} in {passport.city}</strong><p className="helper">Your current preferences for this category carry into the shared search{prefs?.priceMax && prefs.priceMax < 4 ? ` · ${priceLabel(prefs.priceMax)} or less` : ""}{prefs?.businessRatingMin ? ` · rating ${prefs.businessRatingMin}+` : ""}.</p></div><button type="button" className="quiet-button" onClick={onPreferences}>Review preferences</button></div>
-          <div className="together-heading"><div><span className="micro-label">A LITTLE OF YOU. A LITTLE OF THEM.</span><h3>What are they into?</h3><p>Pick an artist, film, book or brand they love. We’ll find cultural common ground and suggest {sectionLabel(section).toLowerCase()} in {passport.city}.</p></div><img src="/illustrations/together-passports.svg" width="440" height="260" alt="" aria-hidden="true" loading="lazy" /></div>
+          <div className="together-heading"><div><span className="micro-label">A LITTLE OF YOU. A LITTLE OF THEM.</span><h3>What are they into?</h3><p>Pick an artist, film, book or brand they love. We’ll find cultural common ground and suggest {sectionLabel(section).toLowerCase()} in {passport.city}.</p></div><PassportIllustration scene="together" className="together-illustration" /></div>
           <p className="helper">Start with one. Add more if you like. Your Passport and preferences stay yours.</p>
           {!hasEntityProfile && <p role="status">Add a named artist, film, book or brand to your Passport to use Together.</p>}
           <form

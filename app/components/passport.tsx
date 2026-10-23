@@ -1,6 +1,7 @@
 "use client";
 import { sectionLabel } from "../../src/passport/labels";
 import { useState } from "react";
+import { CategoryIllustration } from "./illustrations";
 import { ResultMetrics, WhyEvidence } from "./intelligence-evidence";
 import { evidenceFacts, recommendationSummary } from "../../src/qloo/explanation";
 import { threeChoices } from "../../src/passport/shortlist";
@@ -285,13 +286,6 @@ export function TranslationMap({
 }
 
 export type Feedback = "like" | "dislike";
-function EntityPhoto({url,name,section}:{url?:string;name:string;section:Section}) {
-  const [failed,setFailed]=useState(false);
-  return <div className={`discovery-photo${!url || failed ? " photo-placeholder" : ""}`}>
-    {url && !failed ? <img src={url} alt={name} loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={()=>setFailed(true)}/>
-      : <><Icon name={section} size={44}/><span>{`${sectionLabel(section)} discovery`}</span></>}
-  </div>;
-}
 export function DiscoveryCard({
   session,
   card,
@@ -312,7 +306,7 @@ export function DiscoveryCard({
       data-entity-id={card.id}
       className={`discovery-card card-${card.section.toLowerCase()} ${feedback === "dislike" ? "muted-card" : ""}`}
     >
-      <EntityPhoto key={card.intelligence?.image ?? card.id} url={card.intelligence?.image} name={card.name} section={card.section}/>
+      <div className="discovery-media discovery-art"><CategoryIllustration section={card.section} /></div>
       <div className="card-header">
         <span className="category-token">
           <Icon name={card.section} size={14} />

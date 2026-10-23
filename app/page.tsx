@@ -1,5 +1,6 @@
 "use client";
 import { refinementErrorMessage } from "../src/agent/customer-error";
+import { BrandMark } from "./components/illustrations";
 import { sectionLabel } from "../src/passport/labels";
 import { useEffect, useRef, useState } from "react";
 import { validDestination } from "../src/workspace/location";
@@ -80,6 +81,7 @@ export default function Home() {
   const [tasteDraftVersion,setTasteDraftVersion]=useState(0);
   const [saveTastePrompt,setSaveTastePrompt]=useState(false);
   const [showSaved, setShowSaved] = useState(false);
+  const [preferenceSection, setPreferenceSection] = useState<Section>("Eat");
   const [adaptation, setAdaptation] = useState("");
   const [recoveryStatus, setRecoveryStatus] = useState<"checking" | "expired" | "unavailable">();
   const [city, setCity] = useState("");
@@ -662,10 +664,10 @@ export default function Home() {
       <header className="workspace-topbar">
         <a className="brand" href="/" aria-label="TastePassport home" onClick={event=>{if(result){event.preventDefault();requestNewPassport();}}}>
           <span className="brand-symbol">
-            <Icon name="star" size={22} />
+            <BrandMark size={36} />
           </span>
-          <span>
-            TastePassport <small>AI</small>
+          <span className="brand-wordmark">
+            Taste<span className="brand-accent">Passport</span> <small>AI</small>
           </span>
         </a>
         <span className="topbar-caption">Move anywhere. Keep your vibe.</span>
@@ -797,13 +799,6 @@ export default function Home() {
             aria-labelledby="passport-title"
             aria-busy={busy}
           >
-            <PassportCover
-              passport={result}
-              origin={origin}
-              onConnections={() => {
-                selectWorkspaceView("connections");
-              }}
-            />
             <div className="passport-workspace">
               <PassportNavigation active={workspaceView === "discover" && showSaved ? "saved" : workspaceView}
                 savedCount={result.session?.savedCards.length ?? 0}
@@ -813,6 +808,11 @@ export default function Home() {
                   requestAnimationFrame(()=>document.getElementById("passport-workspace-content")?.focus({preventScroll:true}));
                 }}/>
               <div id="passport-workspace-content" className="passport-workspace-content" tabIndex={-1}>
+              {workspaceView === "discover" && !showSaved && <PassportCover
+                passport={result}
+                origin={origin}
+                onConnections={() => selectWorkspaceView("connections")}
+              />}
               <button
                 className="assistant-launch"
                 onClick={() => setAssistantOpen(true)}
@@ -849,7 +849,7 @@ export default function Home() {
               className="workspace-view-anchor"
               hidden={workspaceView !== "discover"}
             >
-              {!showSaved && <DiscoveryConcierge busy={busy} onAsk={request=>{if(request)setComposer(request);setAssistantTab("ask");setAssistantOpen(true);}} onNavigate={selectWorkspaceView} />}
+              {!showSaved && <details className="discovery-help"><summary><Icon name="star" size={18}/><strong>Need a hand choosing?</strong><span>Ask, refine or explore together</span><Icon name="plus" size={16}/></summary><DiscoveryConcierge busy={busy} onAsk={request=>{if(request)setComposer(request);setAssistantTab("ask");setAssistantOpen(true);}} onNavigate={selectWorkspaceView} /></details>}
               {result.session && (
                 <FamiliarityControl
                   session={result.session}
@@ -858,6 +858,9 @@ export default function Home() {
                 />
               )}
             </div>
+            <div className={workspaceView === "preferences" ? "discovery-preferences-layout" : undefined}>
+            <div className="discovery-results-column">
+            {workspaceView === "preferences" && <div className="contextual-results-heading"><span className="micro-label">YOUR RESULTS, IN CONTEXT</span><h2>{sectionLabel(preferenceSection)} in {result.city}</h2><p>Choose your preferences alongside these discoveries, then apply your changes.</p></div>}
             {workspaceView === "discover" && !showSaved && missingSections.length > 0 && (
               <section className="missing-discoveries" aria-label="Find more discoveries">
                 <h3>Still looking for a few matches</h3>
@@ -886,7 +889,7 @@ export default function Home() {
                 You can bring them back with manual refinement.
               </p>
             ) : null}
-            <div hidden={workspaceView !== "discover"}>
+            <div hidden={workspaceView !== "discover" && workspaceView !== "preferences"}>
               {showSaved ? (
                 <SavedDiscoveries
                   cards={result.session?.savedCards ?? []}
@@ -902,7 +905,7 @@ export default function Home() {
                       cards: result.cards.filter(
                         (c) =>
                           !result.session?.hiddenCategories.includes(c.section),
-                      ),
+                      ).filter(c => workspaceView !== "preferences" || c.section === preferenceSection),
                     }}
                     feedback={feedback}
                     onFeedback={recordFeedback}
@@ -911,6 +914,24 @@ export default function Home() {
                   />
                 </>
               )}
+            </div>
+            </div>
+            <div
+              className="workspace-panel"
+              id="view-preferences"
+              hidden={workspaceView !== "preferences" && workspaceView !== "together"}
+            >
+              <TasteIntelligence
+                key={`intelligence:${result.session?.id ?? result.city}`}
+                view={workspaceView === "together" ? "together" : "preferences"}
+                onPreferences={()=>selectWorkspaceView("preferences")}
+                onSectionChange={setPreferenceSection}
+                passport={result}
+                busy={busy}
+                onRefine={(input) => {if(workspaceView !== "preferences")setWorkspaceView("discover");setShowSaved(false);void refine(input);}}
+              />
+
+            </div>
             </div>
             <div
               id="view-plan"
@@ -926,21 +947,6 @@ export default function Home() {
                 disabled={busy}
                 signedIn={accountSignedIn}
               />
-            </div>
-            <div
-              className="workspace-panel"
-              id="view-preferences"
-              hidden={workspaceView !== "preferences" && workspaceView !== "together"}
-            >
-              <TasteIntelligence
-                key={`intelligence:${result.session?.id ?? result.city}`}
-                view={workspaceView === "together" ? "together" : "preferences"}
-                onPreferences={()=>selectWorkspaceView("preferences")}
-                passport={result}
-                busy={busy}
-                onRefine={(input) => {setWorkspaceView("discover");setShowSaved(false);void refine(input);}}
-              />
-
             </div>
             <div
               className="workspace-panel"

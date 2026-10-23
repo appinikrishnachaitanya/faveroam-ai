@@ -8,7 +8,7 @@ Moving cities changes daily routines, but a generic city guide starts from popul
 
 1. Pick a destination and one to five interests. An optional home city labels the Passport cover; it does not fetch origin-city recommendations or infer a background.
 2. Confirm ambiguous named entities. Taxonomy concepts such as cuisine and dietary options use returned Qloo tags rather than invented identifiers.
-3. Choose discovery categories. The application requests output entity types appropriate to each category, then validates and ranks returned candidates. Place cards can contain available address, image, business rating, and price metadata. Cultural content is not presented as a local event.
+3. Choose discovery categories. The application requests output entity types appropriate to each category, then validates and ranks returned candidates. Place cards show available address, business rating, and price metadata alongside decorative category illustrations. Cultural content is not presented as a local event.
 4. Refine one or more sections with Ask TastePassport or guided controls. Explicit constraints and untouched categories remain intact. My Vibe saves liked cards within the Passport; rejected cards guide future relevant retrieval.
 5. Compare confirmed profiles through Together. Qloo Compare returns shared cultural associations that inform joint discovery; a match is not a claim of personal compatibility.
 6. Build an outing from actual place options, select a date and suggested local times, reorder stops without replacing venues, and swap a stop deliberately. The planner does not book or verify hours, routes, or showtimes.
@@ -35,7 +35,7 @@ The hackathon [developer guide](https://docs.qloo.com/reference/qloo-llm-hackath
 
 `src/qloo/query-plan.ts` allowlists parameters by output type. `src/qloo/verify-result.ts` and the agent validate returned identity, locality, exclusions, and observable numeric limits. Missing price or rating metadata does not satisfy a strict maximum or minimum. Place geography differs from content audience geography; neither proves travel time or live event availability. Cuisine and dietary requirements remain conjunctive. “Vegetarian options” is not evidence of allergen or medical safety.
 
-Cards retain available Qloo metadata, query inputs, and returned contribution evidence. Audience associations are explained as such; they do not prove that an artist caused someone to like a particular venue or that two films share a plot. Explanations state when only collective evidence is available. Affinity values are not presented as universal match probabilities. Entity image URLs come from Qloo when available; the interface falls back visibly when an image cannot load. Original decorative assets are separate from recommendation evidence.
+Cards retain available Qloo metadata, query inputs, and returned contribution evidence. Audience associations are explained as such; they do not prove that an artist caused someone to like a particular venue or that two films share a plot. Explanations state when only collective evidence is available. Affinity values are not presented as universal match probabilities. The Afterglow interface uses original category illustrations instead of entity photographs; artwork is decorative and is never evidence about a venue. Existing returned image metadata remains available in the data model.
 
 ## Agent architecture
 

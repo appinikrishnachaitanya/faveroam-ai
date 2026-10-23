@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { BrandMark } from "../components/illustrations";
 export const metadata: Metadata = {
   title: "About us · TastePassport",
   description:
@@ -10,7 +11,7 @@ export default function About() {
     <main className="about-page">
       <nav aria-label="About navigation">
         <Link className="about-brand" href="/">
-          TastePassport <small>AI</small>
+          <BrandMark /><span className="brand-wordmark">Taste<span className="brand-accent">Passport</span> <small>AI</small></span>
         </Link>
         <Link href="/">Start exploring →</Link>
       </nav>

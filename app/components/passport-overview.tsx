@@ -6,6 +6,7 @@ import type { Candidate, Card, Section } from "../../src/passport/model";
 import { bridgeRoutes } from "../../src/passport/evidence";
 import { evidenceFacts } from "../../src/qloo/explanation";
 import { DiscoveryCard, Icon } from "./passport";
+import { PassportIllustration } from "./illustrations";
 import type { Feedback } from "./passport";
 export function PassportCover({
   passport,
@@ -30,7 +31,7 @@ export function PassportCover({
         </div>
         <h1 id="passport-title">
           Your {passport.city}
-          <br />
+          {" "}
           <em>TastePassport</em>
         </h1>
         <p>A new chapter, connected to the things you already love.</p>
@@ -44,7 +45,7 @@ export function PassportCover({
         </button>
       </div>
       <div className="cover-art" aria-hidden="true">
-        <img className="cover-illustration" src="/illustrations/passport-journey.svg" width="520" height="350" alt="" />
+        <PassportIllustration className="cover-illustration" />
         <div className="cover-stamp">
           <strong>{count}</strong>
           <span>
@@ -77,6 +78,7 @@ export function SavedDiscoveries({
           <p>The discoveries you love stay here as you explore. Save your Passport to keep them for your next visit.</p>
           <div className="vibe-summary"><span>{cards.length} saved {cards.length === 1 ? "discovery" : "discoveries"}</span><span>{new Set(cards.map(card=>card.section)).size} categories</span></div>
         </div>
+        <PassportIllustration scene="saved" className="workspace-illustration" />
       </header>
       {cards.length ? (
         <div className="discovery-grid">

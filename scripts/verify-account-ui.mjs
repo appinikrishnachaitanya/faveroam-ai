@@ -393,19 +393,24 @@ await call("Page.navigate", { url: base + "/?ui-contract=1" });
 await wait(
   "location.search.includes('ui-contract=1') && document.readyState==='complete' && Boolean(document.querySelector('.account-launch'))",
 );
+// This script requires an isolated browser profile. Remove fixtures from a prior run.
+await evaluate("sessionStorage.clear()");
+await call("Page.reload");
 await new Promise((r) => setTimeout(r, 600));
 await wait("Array.from(document.querySelectorAll('#destination option')).some(option=>option.value==='Lisbon')");
 assert.equal(await evaluate("Array.from(document.querySelectorAll('#destination option')).some(option=>option.value==='Tokyo')"), false, "Dropdown uses returned catalogue, not hardcoded cities");
-await wait("document.querySelector('.journey-illustration')?.complete && document.querySelector('.journey-illustration').naturalWidth>0");
+await wait("document.querySelector('.journey-illustration')?.tagName.toLowerCase()==='svg'");
 await evaluate("window.scrollTo({top:0,behavior:'instant'})");
 const artworkShot=await call("Page.captureScreenshot",{format:"png"});
 await fs.writeFile("/tmp/tastepassport-original-illustrations.png",Buffer.from(artworkShot.result.data,"base64"));
 // Recover a guest view through trusted server state, with actionable expiry.
-await evaluate(`sessionStorage.setItem('tastepassport.guest.recovery.v1', ${JSON.stringify(JSON.stringify({version:1,savedAt:Date.now(),expiresAt:Date.now()+7200000,passport}))})`);
+const recoveryTime = Date.now();
+await evaluate(`sessionStorage.setItem('tastepassport.guest.recovery.v1', ${JSON.stringify(JSON.stringify({version:1,savedAt:recoveryTime,expiresAt:recoveryTime+7200000,passport}))})`);
 await call("Page.reload");
 await wait("Boolean(document.querySelector('.passport-cover')) && !document.querySelector('.passport-recovery')");
 assert.equal(await evaluate("document.body.textContent.includes('active server session')"),false);
-for (const [label,selector,file] of [["Discover",".discovery-concierge","discover"],["My Vibe",".vibe-intro","my-vibe"],["Taste insights",".analysis-intro","insights"],["Plan a day",".outing-intro","plan"]]) {
+assert.equal(await evaluate("document.querySelectorAll('img').length"),0,"Artwork is vector-based, without venue photographs");
+for (const [label,selector,file] of [["Discover",".passport-cover","discover"],["My Vibe",".vibe-intro","my-vibe"],["Taste insights",".analysis-intro","insights"],["Plan a day",".outing-intro","plan"]]) {
   await textClick(label);
   await wait(`Boolean(document.querySelector('${selector}'))`);
   for(const width of [320,390,1440]) {
@@ -424,10 +429,13 @@ await evaluate("sessionStorage.removeItem('tastepassport.guest.recovery.v1')");
 reconnectExpired=false;
 await call("Page.reload");
 await wait("Boolean(document.querySelector('.account-launch')) && !document.querySelector('.passport-cover')");
+await wait("Array.from(document.querySelectorAll('#destination option')).some(option=>option.value==='Lisbon')");
 // Motion is optional and never required to reveal or operate the page.
 await call("Emulation.setEmulatedMedia",{features:[{name:"prefers-reduced-motion",value:"no-preference"}]});
+await wait("getComputedStyle(document.querySelector('.move-form')).animationName==='passport-arrive'");
 assert.equal(await evaluate("getComputedStyle(document.querySelector('.move-form')).animationName"),"passport-arrive");
 await call("Emulation.setEmulatedMedia",{features:[{name:"prefers-reduced-motion",value:"reduce"}]});
+await wait("getComputedStyle(document.querySelector('.move-form')).animationName==='none'");
 assert.equal(await evaluate("getComputedStyle(document.querySelector('.move-form')).animationName"),"none");
 assert.equal(await evaluate("getComputedStyle(document.querySelector('.move-form')).opacity"),"1","Reduced motion must keep the form visible");
 await call("Emulation.setEmulatedMedia",{features:[{name:"prefers-reduced-motion",value:"no-preference"}]});
@@ -576,7 +584,7 @@ for (const width of [320, 390, 640, 768, 1024, 1440]) {
     `Signed-in layout overflow at ${width}`,
   );
   assert.equal(await evaluate("getComputedStyle(document.querySelector('.passport-sidebar')).position"),"static","Passport navigation must not stick to the viewport");
-  if(width<1100) {
+  if(width<900) {
     assert.equal(await evaluate("document.querySelector('.passport-menu-toggle').getAttribute('aria-expanded')"),"false");
     await click('.passport-menu-toggle');
     assert.equal(await evaluate("document.querySelector('.passport-navigation').getClientRects().length>0"),true);
@@ -623,6 +631,12 @@ assert.ok(
   ),
 );
 await textClick("Preferences");
+assert.ok(await evaluate("Boolean(document.querySelector('.discovery-preferences-layout'))"),"Preferences retain adjacent discoveries");
+await input('.intelligence-section select', "Coffee", "HTMLSelectElement");
+await wait("Boolean(document.querySelector('[data-category=coffee]'))");
+assert.equal(await evaluate("document.querySelectorAll('.result-section').length"),1,"Only the category being edited appears beside its preferences");
+await input('.intelligence-section select', "Eat", "HTMLSelectElement");
+await wait("Boolean(document.querySelector('[data-category=eat]'))");
 await evaluate("document.querySelector('.intelligence-preferences').scrollIntoView({block:'start',behavior:'instant'})");
 const preferencesShot=await call("Page.captureScreenshot",{format:"png"});
 await fs.writeFile("/tmp/tastepassport-preferences.png",Buffer.from(preferencesShot.result.data,"base64"));
@@ -634,6 +648,7 @@ await wait(
 );
 for (let attempt=0; budgetUpdates===0 && attempt<100; attempt++) await new Promise(resolve=>setTimeout(resolve,50));
 assert.equal(budgetUpdates, 1, "Explicit Update applies the chosen budget");
+assert.ok(await evaluate("Boolean(document.querySelector('.discovery-preferences-layout'))"),"Applying preferences keeps the editing context open");
 for (let attempt=0; !passportSaves.includes(session.revision) && attempt<100; attempt++) await new Promise(resolve=>setTimeout(resolve,50));
 assert.ok(passportSaves.includes(session.revision),"Changing an already-saved Passport updates its server snapshot");
 await textClick("Together");
@@ -883,7 +898,7 @@ assert.equal(await evaluate("document.querySelector('#taste-profile-name').value
 assert.equal(await evaluate("document.querySelector('.taste-profile-dialog button[type=submit]').disabled"),true);
 await click('[aria-label="Keep exploring this Passport"]');
 await wait("!document.querySelector('.taste-profile-dialog')");
-assert.ok(await evaluate("Boolean(document.querySelector('.passport-cover'))"),'Cancelling preserves the current Passport');
+assert.ok(await evaluate("Boolean(document.querySelector('.living-passport')) && Boolean(document.querySelector('.passport-navigation button[aria-current=page]'))"),'Cancelling preserves the current Passport and its active workspace');
 await click('[aria-label="Start a new Passport"]');
 await wait("Boolean(document.querySelector('.taste-profile-dialog[open]'))");
 await input('#taste-profile-name',"Weekend culture");

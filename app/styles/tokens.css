@@ -1,14 +1,27 @@
 /* Tokens: shared TastePassport presentation. */
 
 :root {
-  --ui-ink: #193e31;
-  --ui-muted: #59644a;
-  --ui-action: #1d513b;
-  --ui-action-hover: #143e2c;
-  --ui-surface: #fffdf5;
-  --ui-tint: #f3edcf;
-  --ui-border: #d9d8bb;
+  --ink: #312239;
+  --muted: #675663;
+  --paper: #fff9f5;
+  --line: #e7d5d2;
+  --accent: #efb38e;
+  --ui-ink: #312239;
+  --ui-muted: #675663;
+  --ui-action: #96372f;
+  --ui-action-hover: #742922;
+  --ui-surface: #fffaf7;
+  --ui-tint: #f0e8f4;
+  --ui-border: #e6d4d2;
   --ui-radius: 18px;
-  --ui-shadow: 0 12px 36px #193e3210;
+  --ui-shadow: 0 12px 36px #5b293212;
   --ui-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --art-line: #593748;
+  --art-paper: #fff9f5;
+  --art-accent: #bd5949;
+  --art-sun: #ffd3ac;
+  --art-lilac: #dfd3e9;
+  --art-haze: #f4ded5;
+  --art-shadow: #dbc6cb;
+  --art-passport: #70445f;
 }

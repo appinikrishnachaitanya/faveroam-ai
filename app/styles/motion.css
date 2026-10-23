@@ -25,8 +25,25 @@
   0%, 100% { scale: 1; }
   45% { scale: 1.16; }
 }
+@keyframes illustration-reveal {
+  from { opacity: 0; translate: 0 8px; }
+  to { opacity: 1; translate: 0 0; }
+}
+@keyframes steam-rise {
+  from { opacity: .35; translate: 0 3px; }
+  to { opacity: .7; translate: 0 -3px; }
+}
 
 @media (prefers-reduced-motion: no-preference) {
+  .workspace-panel:not([hidden]), .contextual-results-heading {
+    animation: passport-arrive 300ms var(--motion-ease-out) backwards;
+  }
+  .passport-illustration { animation: illustration-reveal 520ms var(--motion-ease-out) backwards; }
+  .passport-illustration .illustration-ticket { transform-box: fill-box; transform-origin: center; }
+  .passport-navigation button, .passport-menu-toggle {
+    transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease;
+  }
+  .passport-sidebar[data-menu-open="true"] .passport-navigation { animation: passport-arrive 180ms var(--motion-ease-out); }
   .move-onboarding .onboarding-heading,
   .passport-cover .cover-copy,
   .discovery-concierge,
@@ -70,6 +87,9 @@
   .brand-symbol { transition: rotate 220ms var(--motion-ease-out); }
 
   @media (hover: hover) and (pointer: fine) {
+    .category-illustration { transition: translate 260ms var(--motion-ease-out); }
+    .discovery-card:hover .category-illustration { translate: 0 -3px; }
+    .discovery-card:hover .illustration-steam { animation: steam-rise 650ms ease-out; }
     :is(.primary-button, .cover-connection, .discovery-next-steps button):hover:not(:disabled) > svg:last-child { translate: 3px 0; }
     .brand:hover .brand-symbol { rotate: -7deg; }
   }

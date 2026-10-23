@@ -21,15 +21,28 @@ export default function PassportNavigation({active,savedCount,onNavigate}:{
   const [open,setOpen] = useState(false);
   const menuId = useId();
   const toggle = useRef<HTMLButtonElement>(null);
+  const sidebar = useRef<HTMLElement>(null);
   useEffect(()=>setOpen(false),[active]);
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" || document.querySelector("dialog[open]")) return;
+      setOpen(false);
+      toggle.current?.focus();
+    };
+    const onPointer = (event: PointerEvent) => {
+      if (event.target instanceof Node && !sidebar.current?.contains(event.target)) setOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("pointerdown", onPointer);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("pointerdown", onPointer);
+    };
+  }, [open]);
 
   return (
-    <aside className="passport-sidebar" data-menu-open={open} onKeyDown={event=>{
-      if(event.key === "Escape" && open) {
-        setOpen(false);
-        toggle.current?.focus();
-      }
-    }}>
+    <aside ref={sidebar} className="passport-sidebar" data-menu-open={open}>
       <span className="passport-sidebar-title micro-label">YOUR PASSPORT</span>
       <div className="passport-mobile-heading">
         <button ref={toggle} type="button" className="passport-menu-toggle" aria-expanded={open}

@@ -7,6 +7,7 @@ import type { Familiarity } from "../../src/passport/evidence";
 import type { Resolution } from "../../src/workspace/state";
 import { typeLabel } from "../../src/workspace/state";
 import { Icon } from "./passport";
+import { PassportIllustration } from "./illustrations";
 
 export function StepIndicator({ step }: { step: number }) {
   return (
@@ -115,7 +116,7 @@ export function MoveForm({
         </h1>
         <p>Tell us where you’re moving and a few things you already love.</p>
         <div className="onboarding-story">
-          <img className="journey-illustration" src="/illustrations/passport-journey.svg" width="520" height="350" alt="" aria-hidden="true" />
+          <PassportIllustration className="journey-illustration" />
           <ul>
             <li><Icon name="check" size={16} /> Your tastes, explicitly confirmed</li>
             <li><Icon name="check" size={16} /> Real discoveries. Visible connections.</li>

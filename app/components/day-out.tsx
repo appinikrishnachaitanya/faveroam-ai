@@ -1,5 +1,6 @@
 "use client";
 import { Icon } from "./passport";
+import { PassportIllustration } from "./illustrations";
 import { useState, useEffect } from "react";
 import type { Card } from "../../src/passport/model";
 import type { Passport } from "../../src/workspace/state";
@@ -177,7 +178,7 @@ export default function DayOutPlan({
       <summary>Plan a day out in {passport.city}</summary>
       <div className="day-out-plan">
         <header className="outing-intro"><span className="outing-emblem" aria-hidden="true"><Icon name="pin" size={28}/></span><div><span className="micro-label">A LITTLE TASTE. A WHOLE DAY OUT.</span>
-        <h2>Make a day of it.</h2><p>Your places, your pace. Bring a few favorites together into a plan.</p></div></header>
+        <h2>Make a day of it.</h2><p>Your places, your pace. Bring a few favorites together into a plan.</p></div><PassportIllustration scene="plan" className="workspace-illustration" /></header>
         <div className="outing-progress" aria-label="Your plan at a glance"><span><Icon name="pin" size={16}/>{passport.city}</span><span>{selected.length}/{activities.length} stops chosen</span><span>{date ? new Date(`${date}T12:00:00Z`).toLocaleDateString(undefined,{month:"short",day:"numeric",timeZone:"UTC"}) : "Choose a date"}</span></div>
         {selected.length < activities.length && <p role="status">{activities.length-selected.length} stops still need a place. Choose an option below, or leave them open.</p>}
         <p>Swap a stop or change the order. Your selected venues stay put.</p>

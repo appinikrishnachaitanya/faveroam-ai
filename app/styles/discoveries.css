@@ -1,8 +1,5 @@
 /* Discoveries: shared TastePassport presentation. */
-.discovery-photo { width: calc(100% + 48px); margin: -24px -24px 20px; aspect-ratio: 16 / 10; border-radius: var(--ui-radius) var(--ui-radius) 0 0; overflow: hidden; background: #eee8c8; }
-.discovery-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.photo-placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; color: #fff5d5; background: radial-gradient(circle at 75% 20%, #fff1a726, transparent 55%), linear-gradient(135deg, var(--discovery-accent, #31583d), #182d23); }
-.photo-placeholder span { font-size: 13px; font-weight: 600; }
+.discovery-media { width: calc(100% + 48px); margin: -24px -24px 20px; border-radius: var(--ui-radius) var(--ui-radius) 0 0; overflow: hidden; background: var(--ui-tint); }
 
 .mode-category {
   display: flex;
