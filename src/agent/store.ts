@@ -129,7 +129,7 @@ export async function inSession<T>(
     next.state.revision = revision + 1;
     next.state.expires = activeSessionExpiry();
     if (!sessions.has(id)) throw Error("Passport was reset.");
-    // CAS protects the revision when a second Railway instance processes a
+    // CAS protects the revision when a second server instance processes a
     // concurrent edit. An unavailable shared table retains the legacy map.
     const committed = await persistActiveSession(next.state, revision);
     assertSessionWriteCommitted(durableIds.has(id), committed);

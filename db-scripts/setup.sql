@@ -87,7 +87,7 @@ create policy taste_profiles_read_own on public.taste_profiles
 create policy taste_profiles_delete_own on public.taste_profiles
   for delete to authenticated using ((select auth.uid()) = user_id);
 
--- Temporary server-only editing state survives Railway restarts and replicas.
+-- Temporary server-only editing state survives server restarts and replicas.
 create table public.active_passport_sessions (
   id uuid primary key,
   revision integer not null default 0,
