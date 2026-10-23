@@ -250,9 +250,16 @@
 .category-multi-select fieldset { position:absolute; right:0; top:calc(100% + 6px); width:min(360px,calc(100vw - 48px)); max-height:min(390px,60vh); overflow:auto; margin:0; padding:14px; border:1px solid var(--ui-border); border-radius:16px; background:var(--ui-surface); box-shadow:0 18px 42px #173c3030; }
 .category-multi-select fieldset p { margin:0 0 10px; color:var(--ui-muted); font-size:12px; line-height:1.5; }
 .category-picker-options { display:grid; gap:4px; }
-.category-picker-options label { display:flex; align-items:center; gap:10px; min-height:44px; padding:8px 10px; border-radius:9px; cursor:pointer; font-size:14px; }
+.category-picker-options label { position:relative; display:flex; align-items:center; gap:10px; min-height:44px; padding:8px 10px; border-radius:9px; cursor:pointer; font-size:14px; }
+.category-picker-options label::before { content:""; display:grid; place-items:center; flex:0 0 20px; width:20px; height:20px; border:1px solid var(--ui-border); border-radius:7px; background:var(--ui-surface); color:#fff; font-size:14px; font-weight:800; }
+.category-picker-options label:has(input:checked)::before { content:"✓"; border-color:var(--ui-action); background:var(--ui-action); }
 .category-picker-options label:hover,.category-picker-options label.selected { background:var(--ui-tint); }
-.category-picker-options input { width:18px; height:18px; flex:none; accent-color:var(--ui-action); }
+.category-multi-select .category-picker-options input { position:absolute; width:1px; height:1px; min-height:1px; padding:0; opacity:0; }
+.category-picker-options label:has(input:focus-visible) { outline:2px solid var(--ui-action); outline-offset:2px; }
 .category-picker-options label:has(input:disabled) { opacity:.7; }
 .category-picker-done { display:block; width:100%; min-height:40px; margin-top:10px; border:0; border-radius:10px; background:var(--ui-action); color:#fff; font:inherit; font-size:13px; font-weight:700; cursor:pointer; }
-@media(max-width:640px) { .category-multi-select { width:100%; } }
+@media(max-width:640px) {
+  .category-multi-select { width:100%; }
+  .category-multi-select[open] { z-index:100; }
+  .category-multi-select fieldset { position:fixed; left:12px; right:12px; top:auto; bottom:calc(12px + env(safe-area-inset-bottom)); width:auto; max-width:none; max-height:min(62dvh,480px); box-sizing:border-box; }
+}

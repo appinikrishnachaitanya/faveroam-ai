@@ -6,6 +6,7 @@ import { isListRequest } from "./answers.ts";
 import { isReadOnlyFollowUp } from "./read-only.ts";
 import { refinementScope } from "./scope.ts";
 import { sectionTypes } from "../passport/model.ts";
+import { siteGuidanceAction } from "./site-guidance.ts";
 import type { AgentInput, AgentReply, AgentState } from "./types.ts";
 
 export type RequestRoute = "conversation" | "clarification" | "current-results" | "interpret" | "action";
@@ -21,6 +22,7 @@ export interface RequestExecution {
 export function routeRequest(input: AgentInput): RequestRoute {
   if (!input.message) return "action";
   const text = input.message;
+  if (siteGuidanceAction(text)) return "action";
   if (isGreetingOrTypo(text) || /^(?:thanks(?: bro)?|thank you(?: bro)?|cheers)[!,.\s]*$/i.test(text.trim())) return "conversation";
   if (incompleteUtterance(text) || accidentalKeystrokes(text)) return "clarification";
   if (isExistingChoiceRequest(text) || isShortlistRequest(text) || isListRequest(text) || isReadOnlyFollowUp(text)) return "current-results";

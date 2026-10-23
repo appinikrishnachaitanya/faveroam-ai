@@ -32,7 +32,7 @@ export default function AccountControl({
   disabled: boolean;
   onRestore: (passport: Passport) => void;
   onSignOut: () => void;
-  onAccountChange?: (signedIn: boolean) => void;
+  onAccountChange?: (signedIn: boolean, firstName?: string) => void;
   onPassportSaved?: (sessionId?: string) => void;
   onEditPlan?: (plan: SavedPlan) => void;
 }) {
@@ -110,7 +110,7 @@ export default function AccountControl({
       accountIdentity.current = identity;
       setAccount(data);
       if (identityChanged) {
-        onAccountChange?.(Boolean(data.user));
+        onAccountChange?.(Boolean(data.user),data.user?.firstName);
         accountChanged();
       }
       if (data.user && loadLibrary) {

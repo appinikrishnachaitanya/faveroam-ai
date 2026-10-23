@@ -105,6 +105,8 @@ export default function Home() {
     "discover" | "plan" | "preferences" | "together" | "connections"
   >("discover");
   const [accountSignedIn, setAccountSignedIn] = useState(false);
+  const [accountFirstName, setAccountFirstName] = useState("");
+  const [savePlanRequest, setSavePlanRequest] = useState(0);
   const [savedSessionId, setSavedSessionId] = useState<string>();
   const saveQueue = useRef<Promise<void>>(Promise.resolve());
 
@@ -415,10 +417,15 @@ export default function Home() {
         return next;
       });
       setProviderHealth(reply.state.providerHealth ?? "unconfigured");
-      if (reply.action === "plan-day") {
+      if (reply.action === "plan-day" || reply.action === "save-plan") {
         setAssistantOpen(false);
-        setWorkspaceView("plan");
-        requestAnimationFrame(()=>document.getElementById("view-plan")?.scrollIntoView({behavior:window.matchMedia("(prefers-reduced-motion: reduce)").matches?"instant":"smooth",block:"start"}));
+        selectWorkspaceView("plan");
+        if(reply.action === "save-plan")setSavePlanRequest(current=>current+1);
+      }
+      if(reply.action === "open-preferences" || reply.action === "open-vibe" || reply.action === "open-discover" || reply.action === "open-together" || reply.action === "open-insights") {
+        setAssistantOpen(false);
+        setShowSaved(reply.action === "open-vibe");
+        selectWorkspaceView(reply.action === "open-preferences"?"preferences":reply.action === "open-together"?"together":reply.action === "open-insights"?"connections":"discover");
       }
       if (reply.action === "save-passport") {
         if (!accountSignedIn) {
@@ -645,6 +652,7 @@ export default function Home() {
     setShowSaved(false);
     setWorkspaceView("discover");
     setEditingPlan(undefined);
+    setSavePlanRequest(0);
     setAdaptation("");
     setCity("");
     setOrigin("");
@@ -693,7 +701,7 @@ export default function Home() {
         <span className="topbar-caption">Move anywhere. Keep your vibe.</span>
         <nav className="header-controls" aria-label="Passport actions">
           <AccountControl
-            onAccountChange={setAccountSignedIn}
+            onAccountChange={(signedIn,firstName)=>{setAccountSignedIn(signedIn);setAccountFirstName(signedIn?firstName?.trim()??"":"");}}
             onPassportSaved={sessionId=>{if(sessionId)rememberSavedSession(window.sessionStorage,sessionId);else clearSavedSession(window.sessionStorage);setSavedSessionId(sessionId);}}
             onEditPlan={plan=>{setEditingPlan(current=>({plan,nonce:(current?.nonce??0)+1}));setWorkspaceView("plan");}}
             passport={result}
@@ -741,6 +749,7 @@ export default function Home() {
         </nav>
       </header>
       <div className="progressive-content" id="passport-content" tabIndex={-1}>
+        {accountSignedIn && <p className="account-welcome" role="status">{accountFirstName?`Hi, ${accountFirstName}.`:"Welcome back."} {result?`Your ${result.city} Passport is ready to explore.`:"Ready to take your tastes somewhere new?"}</p>}
         {<ReusableTastes signedIn={accountSignedIn} passport={result} city={city} draft={draft} disabled={busy} draftVersion={tasteDraftVersion} showLibrary={!result && step === 1}
           saveRequested={saveTastePrompt} onContinue={fresh} onCancel={()=>setSaveTastePrompt(false)}
           onSelect={profile=>{resetMatches("idle");setDraft(profile.selected.map(s=>s.name));setConceptSeeds(profile.selected.filter(s=>s.id.startsWith("urn:tag:")).map(s=>s.name));setInitialMode(profile.discoveryMode);setConstraints(profile.constraints);setRequestedActivities(profile.activeCategories.filter(s=>!profile.hiddenCategories.includes(s)).slice(0,5));setEditing(true);}}
@@ -947,6 +956,8 @@ export default function Home() {
                 passport={result}
                 disabled={busy}
                 signedIn={accountSignedIn}
+                saveRequest={savePlanRequest}
+                onSaveRequestHandled={()=>setSavePlanRequest(0)}
               />
             </div>
             <div

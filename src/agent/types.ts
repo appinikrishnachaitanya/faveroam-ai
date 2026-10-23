@@ -25,7 +25,7 @@ export interface ConversationCardSummary {
 }
 
 export interface Intent {
-  action?: "save-passport" | "plan-day";
+  action?: "save-passport" | "save-plan" | "plan-day" | "open-preferences" | "open-vibe" | "open-discover" | "open-together" | "open-insights";
   targetCardId?: string;
   kind: "onboard" | "refine" | "hide" | "unknown";
   question?: "capabilities" | "preferences" | "explanation";
@@ -228,7 +228,7 @@ export interface AgentInput {
   tagChoice?: string;
 }
 export interface AgentReply {
-  action?: "save-passport" | "plan-day";
+  action?: Intent["action"];
   execution?: import("./request-policy.ts").RequestExecution;
   state: TastePassportSession;
   changed: Section[];

@@ -83,7 +83,7 @@
 .intelligence-category-options label.selected { border-color:var(--ui-action); background:var(--ui-tint); color:var(--ui-ink); font-weight:700; }
 .intelligence-category-options input { appearance:auto; width:18px; height:18px; min-height:18px; padding:0!important; border:0; border-radius:0; background:transparent; accent-color:var(--ui-action); flex:0 0 18px; }
 .intelligence-content .category-picker-options label { display:flex; align-items:center; min-height:44px; }
-.intelligence-content .category-picker-options input { appearance:auto; width:18px; height:18px; min-height:18px; padding:0; border:0; border-radius:0; flex:0 0 18px; accent-color:var(--ui-action); }
+.intelligence-content .category-picker-options input { position:absolute; width:1px; height:1px; min-height:1px; padding:0; opacity:0; }
 .intelligence-modes {
   display: flex;
   flex-wrap: wrap;

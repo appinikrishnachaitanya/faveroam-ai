@@ -56,7 +56,7 @@ export function passportAnswer(state: AgentState, intent: Intent): string {
     if (card) return cardSpecificAnswer(card);
   }
   if (intent.question === "capabilities")
-    return `I can refine your ${state.city} discoveries by cuisine, budget, rating or atmosphere, explain returned matches, and find cinema, café or food stops for an outing. Tell me what to change and what to keep. I cannot book tickets or verify live opening hours.`;
+    return `Start in Discover to browse ${state.city} suggestions. Save favorites to My Vibe, set budget or mood in Preferences, plan an outing in Plan a day, compare shared tastes in Together, or explore connections in Taste Insights. Ask me to open any of those screens or refine food, places and other discoveries for you. I cannot book tickets or verify live opening hours.`;
   const sections = intent.sections.length ? intent.sections : state.intent?.sections.length ? state.intent.sections : state.activeCategories ?? [];
   if (intent.question === "preferences") {
     const lines = sections.map(section => {

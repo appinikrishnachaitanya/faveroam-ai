@@ -35,6 +35,7 @@ import { tagCandidates } from "./validation.ts";
 import { sectionOrder } from "../workspace/state.ts";
 import { conceptSections } from "../passport/routing.ts";
 import { editDistance } from "../text/edit-distance.ts";
+import { siteGuidanceAction, siteGuidanceReply } from "./site-guidance.ts";
 import { sectionTypes, isPlaceSection } from "../passport/model.ts";
 import { isObject } from "../qloo/types.ts";
 import type { Card, Section } from "../passport/model.ts";
@@ -292,6 +293,11 @@ async function executeTurn(
   const route = routeRequest(input);
   if (input.message) {
     culturalText(input.message);
+    const siteAction=siteGuidanceAction(input.message);
+    if(siteAction) {
+      delete state.pending;
+      return { ...reply(siteGuidanceReply(siteAction,state.city)), action:siteAction };
+    }
     if(route === "clarification") {
       if(state.pending){
         const abandoned=new Set([state.pending.query,...(state.pending.remainingConcepts ?? [])].map(conceptKey));
