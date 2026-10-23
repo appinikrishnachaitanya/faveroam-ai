@@ -189,6 +189,7 @@ export function configuredProvider(): ModelProvider | undefined {
       async compose(context: import("./types.ts").GroundedResponseContext, signal?: AbortSignal): Promise<import("./types.ts").GroundedResponse> {
         const trace=crypto.randomUUID();
         debugEvent("gemini.request", {trace,operation:"compose"});
+        let failureReason = "transport";
         try {
           // One tool-free, structured response. No retry and no new actions.
           const response=await gemini.models.generateContent({
@@ -198,13 +199,24 @@ export function configuredProvider(): ModelProvider | undefined {
                 message:{type:"string"},evidenceIds:{type:"array",items:{type:"string"}},recommendationIds:{type:"array",items:{type:"string"}},
               },required:["message","evidenceIds","recommendationIds"],additionalProperties:false}},
           });
-          if (response.functionCalls?.length || !response.text) throw Error("Invalid response protocol");
+          failureReason = "invalid-protocol";
+          if (response.functionCalls?.length) throw Error("Invalid response protocol");
+          failureReason = "empty-response";
+          if (!response.text) {
+            if (response.candidates?.[0]?.finishReason === "MAX_TOKENS") failureReason = "max-tokens";
+            else if (response.candidates?.[0]?.finishReason === "SAFETY") failureReason = "safety";
+            throw Error("Empty response");
+          }
+          failureReason = "invalid-json";
           const result=JSON.parse(response.text);
-          if(!isObject(result) || containsConfiguredSecret(JSON.stringify(result)))throw Error("Invalid response payload");
+          failureReason = "invalid-protocol";
+          if(!isObject(result))throw Error("Invalid response payload");
+          failureReason = "unsafe-payload";
+          if(containsConfiguredSecret(JSON.stringify(result)))throw Error("Unsafe response payload");
           debugEvent("gemini.result",{trace,operation:"compose",count:1});
           return result as unknown as import("./types.ts").GroundedResponse;
         } catch(error) {
-          debugEvent("gemini.failed",{trace,operation:"compose",status:safeStatus(error)});
+          debugEvent("gemini.failed",{trace,operation:"compose",status:safeStatus(error),reason:failureReason});
           throw Error("Grounded response unavailable");
         }
       },

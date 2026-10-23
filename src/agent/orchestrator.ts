@@ -181,9 +181,11 @@ export async function runTurn(
     const isGroundedShortlist = Boolean(input.message && isShortlistRequest(input.message) &&
       result.state.history?.at(-1)?.recommendationIds?.length);
     if (input.message && provider?.compose && input.reset !== "conversation" && !result.action && !isGroundedShortlist) {
+      let responseFailure = "transport";
       try {
         const context=responseContext(result,input);
         const drafted=await guard.respond(signal=>provider.compose!(structuredClone(context),signal));
+        responseFailure = "validation";
         const composed=validateResponse(drafted,context);
         guard.signal.throwIfAborted();
         const receipt=responseReceipt(result,input);
@@ -197,7 +199,7 @@ export async function runTurn(
         debugEvent("agent.response",{action:"completed",count:composed.recommendationIds.length});
       } catch {
         // Composition is optional. Never roll back validated retrieval or retry tools.
-        debugEvent("agent.response",{action:"fallback"});
+        debugEvent("agent.response",{action:"fallback",reason:responseFailure});
       }
     }
     guard.signal.throwIfAborted();

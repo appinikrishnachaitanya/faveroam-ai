@@ -82,6 +82,8 @@
 .intelligence-category-options label { display:flex!important; grid-template-columns:none!important; align-items:center; gap:8px!important; min-height:44px; padding:9px 14px; border:1px solid var(--ui-border); border-radius:999px; background:var(--ui-surface); cursor:pointer; font-size:14px!important; }
 .intelligence-category-options label.selected { border-color:var(--ui-action); background:var(--ui-tint); color:var(--ui-ink); font-weight:700; }
 .intelligence-category-options input { appearance:auto; width:18px; height:18px; min-height:18px; padding:0!important; border:0; border-radius:0; background:transparent; accent-color:var(--ui-action); flex:0 0 18px; }
+.intelligence-content .category-picker-options label { display:flex; align-items:center; min-height:44px; }
+.intelligence-content .category-picker-options input { appearance:auto; width:18px; height:18px; min-height:18px; padding:0; border:0; border-radius:0; flex:0 0 18px; accent-color:var(--ui-action); }
 .intelligence-modes {
   display: flex;
   flex-wrap: wrap;
@@ -288,6 +290,7 @@
 .taste-analysis .taste-theme-list button { background:#edf1df; color:#294632; border:1px solid #bdcba9; border-radius:24px; font-size:14px; }
 .taste-analysis .taste-theme-list button[aria-pressed="true"] { background:#254c39; color:#fff9dc; border-color:#254c39; }
 .theme-next-step { display:flex; align-items:end; gap:16px; flex-wrap:wrap; }
+.theme-next-step .category-multi-select { flex:1 1 260px; }
 .theme-next-step label { display:grid; gap:8px; flex:1; max-width:300px; font-size:14px; font-weight:600; }
 .theme-next-step select { min-height:48px; padding:12px 38px 12px 14px; border:1px solid #bdcbb2; border-radius:12px; background-color:#fffdf5; color:#294632; font:inherit; width:100%; }
 .theme-next-step > button { display:inline-flex; gap:12px; align-items:center; min-height:48px; }

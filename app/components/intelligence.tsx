@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { Passport, Resolution } from "../../src/workspace/state";
 import { activeCategories } from "../../src/passport/active-categories";
 import { sectionOrder } from "../../src/workspace/state";
+import { CategoryMultiSelect } from "./category-multi-select";
 import type { AgentInput } from "../../src/agent/types";
 import type { Card, Section } from "../../src/passport/model";
 import type { TasteComparison } from "../../src/qloo/compare";
@@ -64,6 +65,10 @@ export default function TasteIntelligence({
   const available=activeCategories(passport.session,passport.cards);
   const availableKey=available.join(",");
   useEffect(()=>{if(available.length&&!available.includes(section))setSection(available[0]);},[availableKey,section]);
+  useEffect(()=>setSelectedSections(current=>{
+    const kept=current.filter(category=>available.includes(category));
+    return kept.length?kept:available.slice(0,1);
+  }),[availableKey]);
   const prefs = passport.session?.queryPreferences?.[section];
   const [goal, setGoal] = useState<DiscoveryGoal>(
     () => prefs?.goal ?? "discover",
@@ -156,18 +161,12 @@ export default function TasteIntelligence({
     <section className="taste-intelligence" aria-label={view === "together" ? "Together" : "Your discovery preferences"}>
       <div className="intelligence-content">
         <div className="intelligence-intro"><div><span className="micro-label">{view === "together" ? "TOGETHER" : "MAKE IT YOURS"}</span><h2>{view === "together" ? "Find your next yes, together." : "Your city. Your kind of day."}</h2><p>{view === "together" ? "One thing they love is enough to find a shared starting point." : "Choose one or more categories to refresh together. Your other discoveries stay put."}</p></div><span className="intelligence-intro-mark" aria-hidden="true"><Icon name={view === "together" ? "People" : "sliders"} size={44}/></span></div>
-        <fieldset className="intelligence-category-picker" disabled={busy||loading}>
-          <legend>{view === "together" ? "Which kinds of plans should we find?" : "Which suggestions should change?"}</legend>
-          <p>{view === "together" ? "Choose up to three categories; we’ll look for shared ideas in each." : "Select up to three categories to update them together. Other discoveries stay as they are."}</p>
-          <div className="intelligence-category-options">{available.map(category=><label key={category} className={selectedSections.includes(category)?"selected":""}>
-            <input type="checkbox" checked={selectedSections.includes(category)} onChange={event=>{
-              const next=event.target.checked?[...selectedSections,category]:selectedSections.filter(item=>item!==category);
-              if(!next.length)return;
-              setSelectedSections(next);
-              const focus=next[0];setSection(focus);
-              const pref=passport.session?.queryPreferences?.[focus];setGoal(pref?.goal??"discover");setPrice(pref?.priceMax?.toString()??"4");setRating(pref?.businessRatingMin?.toString()??"");setArea(pref?.locationQuery??"");setAvoidArea(pref?.excludeLocation??"");setSource(pref?.requiredExternalSources?.[0]??"");setReviews(pref?.tripAdvisorReviewCountMin?.toString()??"");setTogether(undefined);
-            }} disabled={!selectedSections.includes(category)&&selectedSections.length>=3}/>{sectionLabel(category)}</label>)}</div>
-        </fieldset>
+        <CategoryMultiSelect label={view === "together" ? "Categories to find together" : "Categories to update"}
+          available={available} selected={selectedSections} disabled={busy||loading} onChange={next=>{
+            setSelectedSections(next);
+            const focus=next[0];setSection(focus);
+            const pref=passport.session?.queryPreferences?.[focus];setGoal(pref?.goal??"discover");setPrice(pref?.priceMax?.toString()??"4");setRating(pref?.businessRatingMin?.toString()??"");setArea(pref?.locationQuery??"");setAvoidArea(pref?.excludeLocation??"");setSource(pref?.requiredExternalSources?.[0]??"");setReviews(pref?.tripAdvisorReviewCountMin?.toString()??"");setTogether(undefined);
+          }}/>
         <form
           hidden={view !== "preferences"}
           className="intelligence-preferences"

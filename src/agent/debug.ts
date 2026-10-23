@@ -66,6 +66,7 @@ type DebugEvent =
   | "service.response"
   | "service.failed";
 interface DebugMeta {
+  reason?: string;
   service?: "supabase-auth" | "supabase-storage";
   trace?: string;
   operation?: "interpret" | "choose" | "baseline" | "explain" | "observe-tools" | "compose";
@@ -137,6 +138,9 @@ export function debugEvent(event: DebugEvent, meta: DebugMeta = {}) {
         "baseline",
         "explain",
       ]),
+      reason: allowed(meta.reason, [
+        "transport", "empty-response", "max-tokens", "safety", "invalid-json", "invalid-protocol", "unsafe-payload", "validation",
+      ]),
       tool: allowed(meta.tool, [
         "interpret_cultural_intent",
         "explain_qloo_evidence",
@@ -182,7 +186,7 @@ export function debugEvent(event: DebugEvent, meta: DebugMeta = {}) {
       pool: allowed(meta.pool, ["direct", "adjacent", "place", "artist"]),
       action: allowed(meta.action, [
         "interpret", "action", "clarification", "current-results",
-        "completed", "needs-input", "partial", "blocked", "cancelled", "failed",
+        "completed", "needs-input", "partial", "blocked", "cancelled", "failed", "fallback",
         "conversation",
         "new-passport",
         "feedback",

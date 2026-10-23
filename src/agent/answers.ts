@@ -79,7 +79,7 @@ export function passportAnswer(state: AgentState, intent: Intent): string {
 
 // Chat is a first-class recommendation surface. "List them here" is read-only,
 // so it must never re-run Qloo, change the Passport, or invent venue metadata.
-const listWords = new Set("please can could you bro hey list show display give me tell name what are which did find have found here them these those results suggestions recommendations your already current existing the my all in passport restaurants restaurant dining food eat places place venues venue coffee cafes cafe movies movie films film books book music culture museums museum galleries gallery cinema nightlife nightclubs nightclub shows show series tv games game gaming podcasts podcast lifestyle shops shop shopping bookstores bookstore brands brand people artists artist authors author destinations destination cities".split(" "));
+const listWords = new Set("please can could you bro hey list show display give me tell name what are which did find have found here them these those results suggestions recommendations options your already current existing the my all in passport restaurants restaurant dining food eat places place venues venue coffee cafes cafe movies movie films film books book music culture museums museum galleries gallery cinema nightlife nightclubs nightclub shows show series tv games game gaming podcasts podcast lifestyle shops shop shopping bookstores bookstore brands brand people artists artist authors author destinations destination cities".split(" "));
 export function isListRequest(text: string): boolean {
   const request=categoryLanguage(text).normalize("NFD").replace(/\p{M}/gu, "").trim().toLowerCase();
   if (request.match(/[a-z]+/g)?.some(word=>!listWords.has(word))) return false;

@@ -6,6 +6,7 @@ import type { Card, Section } from "../../src/passport/model";
 import { familiarities } from "../../src/passport/evidence";
 import { activeCategories } from "../../src/passport/active-categories";
 import { sectionOrder } from "../../src/workspace/state";
+import { CategoryMultiSelect } from "./category-multi-select";
 export function FamiliarityControl({
   session,
   disabled,
@@ -33,10 +34,7 @@ export function FamiliarityControl({
           <h2 id="familiarity-title">How should these suggestions feel?</h2>
           <p>Choose up to three categories, then a style. Only those suggestions refresh.</p>
         </div>
-        {available.length>1 && <fieldset className="mode-category-tabs" disabled={disabled}><legend>Categories to update</legend>{available.map(category=><label key={category} className={selected.includes(category)?"selected":""}><input type="checkbox" checked={selected.includes(category)} disabled={!selected.includes(category)&&selected.length>=3} onChange={event=>setSelectedSections(current=>{
-          const next=event.target.checked?[...current,category]:current.filter(item=>item!==category);
-          return next.length?next:current;
-        })}/>{sectionLabel(category)}</label>)}</fieldset>}
+        {available.length>1 && <CategoryMultiSelect label="Categories to update" available={available} selected={selected} onChange={setSelectedSections} disabled={disabled}/>}
 
       </div>
       <div className="familiarity-axis">

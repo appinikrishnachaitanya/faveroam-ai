@@ -7,6 +7,6 @@ export function generationSettings(phase: "decision" | "response") {
     temperature: GEMINI_TEMPERATURE,
     // Structured calls need room for arguments and model reasoning. Short
     // conclusions/evidence selections have a separate, smaller output ceiling.
-    maxOutputTokens: phase === "decision" ? 2048 : 768,
+    maxOutputTokens: phase === "decision" ? 2048 : 4096,
   };
 }

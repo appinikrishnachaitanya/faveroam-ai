@@ -169,3 +169,11 @@ test("a cross-interest shortlist keeps grounded card IDs when a response model i
  assert.deepEqual(reply.changed,[]);
  assert.deepEqual(chatParagraphs(reply.message,true),["Here are 2 starting choices from your Toronto Passport."]);
 });
+test("a failed response-writing call preserves a useful grounded reply",async()=>{
+ const reply=await runTurn(fixture(),{message:"List my Food options"},{...readonly,
+  provider:{interpret:async()=>{throw Error("Read-only answer should use current state")},choose:async()=>[],compose:async()=>{throw Error("Response model unavailable")}},
+ });
+ assert.match(reply.message,/Existing restaurant/);
+ assert.doesNotMatch(reply.message,/Taste Concierge is temporarily unavailable/);
+ assert.deepEqual(reply.changed,[]);
+});
