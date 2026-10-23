@@ -35,6 +35,7 @@ import {
 import ConciergeDrawer from "./components/concierge";
 import ChatRecommendations from "./components/chat-recommendations";
 import ChatComparison from "./components/chat-comparison";
+import { chatParagraphs } from "../src/agent/chat-presentation";
 import ConceptClarification from "./components/concept-clarification";
 import DiscoveryConcierge from "./components/discovery-concierge";
 import PassportNavigation from "./components/passport-navigation";
@@ -52,7 +53,7 @@ import { sectionOrder } from "../src/workspace/state";
 import TasteAnalysis from "./components/taste-analysis";
 import { rememberGuestPassport, restoreGuestPassport, clearGuestPassport } from "../src/workspace/guest-recovery";
 import { rememberActiveSession, restoreActiveSession, clearActiveSession, rememberSavedSession, restoreSavedSession, clearSavedSession } from "../src/workspace/active-session";
-import { showNotice } from "../src/account/browser";
+import { accountRequest, showNotice } from "../src/account/browser";
 import { saveOnboardingDraft, restoreOnboardingDraft, clearOnboardingDraft } from "../src/workspace/draft-recovery";
 import type { Familiarity } from "../src/passport/evidence";
 import type { SavedPlan } from "../src/account/plans";
@@ -414,6 +415,25 @@ export default function Home() {
         return next;
       });
       setProviderHealth(reply.state.providerHealth ?? "unconfigured");
+      if (reply.action === "plan-day") {
+        setAssistantOpen(false);
+        setWorkspaceView("plan");
+        requestAnimationFrame(()=>document.getElementById("view-plan")?.scrollIntoView({behavior:window.matchMedia("(prefers-reduced-motion: reduce)").matches?"instant":"smooth",block:"start"}));
+      }
+      if (reply.action === "save-passport") {
+        if (!accountSignedIn) {
+          window.dispatchEvent(new Event("tastepassport:save-passport"));
+        } else {
+          try {
+            await accountRequest("/api/account/passports",{action:"save",sessionId:reply.state.id,revision:reply.state.revision});
+            rememberSavedSession(window.sessionStorage,reply.state.id);
+            setSavedSessionId(reply.state.id);
+            showNotice("Your Passport is saved to your account.");
+          } catch (saveError) {
+            showNotice(saveError instanceof Error?saveError.message:"Your Passport could not be saved. Please try again.","error");
+          }
+        }
+      }
       if (input.reset) {
         setMessages([welcome]);
         setComposer("");
@@ -1080,7 +1100,7 @@ export default function Home() {
                       <span className="message-label">
                         {m.role === "agent" ? "TASTEPASSPORT" : "YOU"}
                       </span>
-                      <p>{m.role==='agent' && m.recommendationIds?.length ? m.text.split(/\n\nHere are \d+ choices to consider:|\n\n1\. /)[0] : m.text}</p>
+                      {chatParagraphs(m.text,m.role==="agent" && Boolean(m.recommendationIds?.some(id=>result.cards.some(card=>card.id===id && !result.session?.hiddenCategories?.includes(card.section))))).map((paragraph,index)=><p key={index}>{paragraph}</p>)}
                       {m.role === "agent" && m.comparisonIds?.length ? <ChatComparison cards={m.comparisonIds.flatMap(id=>result.cards.find(card=>card.id===id && !result.session?.hiddenCategories?.includes(card.section)) ?? [])} /> : null}
                       {m.role === "agent" && !m.comparisonIds?.length && Array.isArray(m.recommendationIds) && m.recommendationIds.length ? <ChatRecommendations city={result.city}
                         cards={m.recommendationIds.flatMap(id=>result.cards.find(card=>card.id===id && !result.session?.hiddenCategories?.includes(card.section)) ?? [])}

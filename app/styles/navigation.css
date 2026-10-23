@@ -111,10 +111,12 @@
 
 @media (max-width: 640px) {
   .progressive-app .workspace-topbar {
-    height: var(--header-height);
+    grid-template-columns: minmax(0, 1fr);
+    height: auto;
+    min-height: var(--header-height);
     margin-top: 10px;
-    gap: 8px;
-    padding-inline: 16px;
+    gap: 4px;
+    padding: 10px 16px;
   }
   .progressive-app .brand {
     font-size: 18px;
@@ -128,15 +130,16 @@
   .header-controls, .header-controls .topbar-actions, .header-controls .account-control {
     gap: 4px;
   }
-  .header-controls .save-passport {
-    display: none;
-  }
+  .header-controls { width:100%; justify-content:space-between; flex-wrap:wrap; }
+  .header-controls .account-control { flex-wrap:wrap; }
+  .progressive-app .workspace-topbar:not(:has(.save-passport)):not(:has(.signout-button)) { grid-template-columns:auto minmax(0,1fr); min-height:76px; }
+  .workspace-topbar:not(:has(.save-passport)):not(:has(.signout-button)) .header-controls { justify-content:flex-end; }
 }
 
 @media (max-width: 380px) {
   .progressive-app .workspace-topbar {
     grid-template-columns: 1fr;
-    height: var(--header-height);
+    height: auto;
     margin-top: 8px;
     padding: 8px 12px;
     gap: 2px;

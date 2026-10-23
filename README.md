@@ -18,7 +18,7 @@ TastePassport starts with **confirmed cultural interests** and makes a useful ne
 2. Review the suggested identity for each interest. The dropdown contains other returned matches so you can correct a title or name before discovery.
 3. Choose the activities you want to explore. Open a recommendation to see what evidence is available: its type, place details where returned, and an explanation that distinguishes an audience-taste association from a proven personal preference.
 4. Ask TastePassport something specific, such as **“Find quieter Indian food within a moderate budget. Keep my movies unchanged.”** Check which section changed and whether the choices meet the request. Follow with **“Make those cheaper.”**
-5. Save a promising choice to **My Vibe**. Try **Together** with another confirmed interest to look for shared cultural ground. Build **A day out** by choosing stops and times; reorder stops without silently replacing their venues.
+5. Save a promising choice to **My Vibe**. Ask **“Save my Passport”** to save it to your signed-in account, or **“Plan a day out”** to open the editable planner. Try **Together** with another confirmed interest to look for shared cultural ground. Choose stops and times; reorder stops without silently replacing their venues.
 6. Optionally create an account to save a Passport, a dated plan, or a named taste profile for another destination.
 
 Live coverage varies by city and interest. The app should show a gap when Qloo does not return a suitable choice rather than manufacture a venue. For a recorded demo, use the results the app actually returns.
@@ -57,7 +57,7 @@ flowchart LR
   Compose --> Reply
 ```
 
-The API loads the current Passport from the server session and validates the incoming message before interpreting it. Exact greetings, current-result listing/comparison, some card questions, and unsupported actions such as booking or checking live hours can be answered directly from the existing state. Other messages go to Gemini as a structured `interpret_cultural_intent` function call. This is currently a required intent call (`ANY`); Gemini does **not** yet make one `AUTO` choice among separate answer, clarification and discovery tools.
+The API loads the current Passport from the server session and validates the incoming message before interpreting it. Exact greetings, current-result listing/comparison, some card questions, and unsupported actions such as booking or checking live hours can be answered directly from the existing state. Other messages go to Gemini as a structured `interpret_cultural_intent` function call. Explicit save and plan intents go through server validation: saving uses the signed-in account endpoint; planning opens the editable schedule. This is currently a required intent call (`ANY`); Gemini does **not** yet make one `AUTO` choice among separate answer, clarification and discovery tools.
 
 For a request such as **“Find chicken biryani in London, keep my movies unchanged”**, the flow is:
 
@@ -105,7 +105,7 @@ Open `http://localhost:3000`. Set these **server-side** values in `.env.local` o
 | `QLOO_API_BASE_URL` | Use `https://hackathon.api.qloo.com`. |
 | `GEMINI_API_KEY` or `GOOGLE_API_KEY` | Enables native Gemini conversation through Vertex AI Express Mode. `GOOGLE_API_KEY` takes precedence if both are set. |
 | `GEMINI_MODEL` | Configurable lower-cost model for concise response composition; defaults to `gemini-3.1-flash-lite`. |
-| `GEMINI_DECISION_MODEL` | Model for intent decisions and tool selection; defaults to `gemini-2.5-flash`. |
+| `GEMINI_DECISION_MODEL` | Optional model for intent decisions and tool selection; defaults to `GEMINI_MODEL` when unset. |
 | `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY` | Optional together for accounts and durable saved data. Keep the service-role key server-only. |
 | `APP_ORIGIN` | Canonical origin for account email redirects, for example `http://localhost:3000` locally or the deployed HTTPS origin. |
 

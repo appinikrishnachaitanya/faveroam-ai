@@ -93,6 +93,15 @@ test("duplicate Qloo display labels collapse to one meaningful tag and prefer pl
  assert.match(results[0].id,/:place:/);
  assert.equal(results[1].name,"Nightclubs");
 });
+test("duplicate beverage labels keep the returned venue category ahead of offerings and audience tags",()=>{
+ const result=tagCandidates({status:"ok",results:[
+   {id:"urn:tag:offerings:place:beverages",name:"Beverages"},
+   {id:"urn:tag:category:place:beverages",name:"Beverages"},
+   {id:"urn:tag:cuisine:qloo:beverages",name:"Beverages"}
+ ]},"bevarages");
+ assert.equal(result.length,1);
+ assert.equal(result[0].id,"urn:tag:category:place:beverages");
+});
 test("list Shows is a read-only chat action, without reopening an old prompt",async()=>{
  const s=state();
  s.cards.push({id:"show-1",name:"Star Trek: Picard",section:"Shows",types:["urn:entity:tv_show"],detail:""});

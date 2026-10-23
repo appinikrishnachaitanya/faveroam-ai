@@ -34,6 +34,7 @@ import {
 import { tagCandidates } from "./validation.ts";
 import { sectionOrder } from "../workspace/state.ts";
 import { conceptSections } from "../passport/routing.ts";
+import { editDistance } from "../text/edit-distance.ts";
 import { sectionTypes, isPlaceSection } from "../passport/model.ts";
 import { isObject } from "../qloo/types.ts";
 import type { Card, Section } from "../passport/model.ts";
@@ -175,7 +176,11 @@ export async function runTurn(
         message: "I couldn't safely apply that update. Your Passport is unchanged. Please try changing one category at a time.",
       };
     }
-    if (input.message && provider?.compose && input.reset !== "conversation") {
+    // A shortlist already has validated card IDs and a rich card presentation.
+    // Composing it again can discard those IDs and leave only a plain-text list.
+    const isGroundedShortlist = Boolean(input.message && isShortlistRequest(input.message) &&
+      result.state.history?.at(-1)?.recommendationIds?.length);
+    if (input.message && provider?.compose && input.reset !== "conversation" && !result.action && !isGroundedShortlist) {
       try {
         const context=responseContext(result,input);
         const drafted=await guard.respond(signal=>provider.compose!(structuredClone(context),signal));
@@ -363,13 +368,17 @@ async function executeTurn(
     return reply(passportAnswer(state, intent));
   }
   if (input.familiarity) {
-    const previous = state.queryPreferences?.[input.familiarity.section];
-    if (previous?.goal === "surprise") previous.goal = "discover";
-    state.categoryModes[input.familiarity.section] = input.familiarity.mode;
+    const selectedSections = input.familiarity.sections ?? (input.familiarity.section ? [input.familiarity.section] : []);
+    for (const section of selectedSections) {
+      const previous = state.queryPreferences?.[section];
+      if (previous?.goal === "surprise") previous.goal = "discover";
+      state.categoryModes[section] = input.familiarity.mode;
+    }
     intent = guidedIntent(
-      input.familiarity.section,
-      state.categoryConstraints[input.familiarity.section] ?? [],
+      selectedSections[0],
+      [],
     );
+    intent.sections = selectedSections;
   }
   if (input.guided)
     intent = guidedIntent(input.guided.section, input.guided.constraints);
@@ -573,12 +582,25 @@ async function executeTurn(
     sections: intent.sections,
     mode,
   });
+  if (input.message && intent.action === "save-passport" &&
+      /\b(?:save|store|keep)\b[^.!?]{0,70}\b(?:passport|this|it)\b/i.test(input.message)) {
+    delete state.pending;
+    return { ...reply("I’ll save your current Passport to your account. Sign in if needed; your discoveries stay here."), action: "save-passport" };
+  }
+  if (input.message && intent.action === "plan-day" &&
+      /\b(?:plan|itinerary|schedule|outing|day out)\b/i.test(input.message) &&
+      intent.kind !== "refine") {
+    delete state.pending;
+    return { ...reply("Let’s plan your day with your current discoveries. Choose activities, order, date and times; check availability before going."), action: "plan-day" };
+  }
   if (intent.kind === "unknown" && intent.question) {
     if (/^(?:what|why|how|which|who|when|can|could|is|are|do|does)\b/i.test(input.message?.trim() ?? ""))
       state.pending = original.pending;
     return reply(passportAnswer(state, intent));
   }
   if (intent.kind === "unknown" || intent.kind === "onboard") {
+    if (mode === "deterministic" && state.providerHealth === "unavailable")
+      return clarify("Live conversation is unavailable right now, so I couldn't verify what you meant. Your Passport is unchanged. Try again later or use Adjust filters.");
     const question = intent.clarification && intent.clarification.length <= 240 &&
       intent.clarification.endsWith("?") &&
       !/\b(?:password|api key|email|phone|address|account|secret|credential)\b|https?:\/\//i.test(intent.clarification)
@@ -1014,23 +1036,22 @@ async function executeTurn(
               ).test(t.name),
           )
         : [];
-      const foodVenueMatches = scopedTargets.includes("Eat") &&
-        /^(?:ice\s*cream|gelato|dessert|frozen yogurt)$/i.test(concept.trim())
-        ? choices.filter((tag) =>
-            /urn:tag:(?:genre|category):place:/.test(tag.id) &&
-            /ice\s*cream|gelato|dessert|frozen yogurt/i.test(`${tag.id} ${tag.name}`.replace(/[_-]+/g, " ")),
-          )
+      // A returned venue genre is an output filter, not a personal taste.
+      // Accept one exact genre for any phrase, otherwise let the user choose.
+      const venueLabel = (name: string) => conceptKey(name).replace(/\s+(?:shops?|restaurants?|venues?|places?)$/, "").trim();
+      const venueGenres = scopedTargets.length === 1 && ["Eat", "Coffee", "Culture", "Lifestyle"].includes(scopedTargets[0])
+        ? choices.filter(tag => {
+          if (!/urn:tag:(?:genre|category):place:/.test(tag.id)) return false;
+          const name=venueLabel(tag.name),requested=venueLabel(concept);
+          return name===requested || (requested.length>=5 && editDistance(name,requested)<=(requested.length>=9?2:1));
+        })
         : [];
-      if (foodVenueMatches.length) {
-        const exactFoodVenues = foodVenueMatches.length === 1
-          ? foodVenueMatches
-          : foodVenueMatches.filter(tag => /ice cream shop|gelateria|gelato shop|dessert shop|dessert restaurant/i.test(`${tag.id} ${tag.name}`.replace(/[_-]+/g, " ")));
-        if (exactFoodVenues.length === 1) {
-          const tag = exactFoodVenues[0];
+      if (venueGenres.length === 1) {
+          const tag = venueGenres[0];
           state.tags = [...state.tags.filter(old => old.id !== tag.id), tag].slice(-50);
-          state.categoryTags!.Eat = [...new Set([...(state.categoryTags!.Eat ?? []), tag.id])];
+          const section = scopedTargets[0];
+          state.categoryTags![section] = [...new Set([...(state.categoryTags![section] ?? []), tag.id])];
           continue;
-        }
       }
       if (genres.length) {
         state.tags = [
@@ -1103,13 +1124,7 @@ async function executeTurn(
       }
       event("No matching concept returned", "attention");
       if (/quiet/i.test(concept)) return reply("I could not verify the requested quiet-atmosphere requirement. Your discoveries are unchanged; retry or explicitly relax quietness.");
-      return reply(
-        scopedTargets.includes("Eat")
-          ? /ice\s*cream|gelato|dessert|frozen yogurt/i.test(concept)
-            ? `I couldn't verify an ice-cream or dessert venue category in ${state.city} from Qloo's returned tags. Your current discoveries are unchanged; try “dessert shops” or a broader food request.`
-            : `I can help find ${concept} restaurants in ${state.city}, but Qloo did not return a verified matching food tag this time. I kept your current discoveries rather than showing unrelated places. Try a more specific dish or cuisine.`
-          : "I couldn’t verify that interest in Qloo. Your discoveries are safe; try a more specific phrase.",
-      );
+      return clarify(`I couldn't verify “${concept}” as a search category in ${state.city}. Could you name a more specific dish, drink, or kind of place? Your current discoveries are unchanged.`);
     } catch {
       event("Concept workflow unavailable", "attention");
       if (/quiet/i.test(concept)) return reply("I could not verify the requested quiet-atmosphere requirement. Your discoveries are unchanged; retry or explicitly relax quietness.");
@@ -1348,10 +1363,13 @@ async function executeTurn(
       targets,
       changed,
     );
-  return reply(
+  const finalReply = reply(
     changed.length
       ? `Updated ${changed.map(section => sectionLabel(section)).join(", ")} suggestions. ${decisionSummary(original, state, changed)} ${state.relaxed!.length ? "I couldn't find a strong match satisfying every preference, so these results prioritize your confirmed cultural tastes. Optional preferences relaxed: " + [...new Set(state.relaxed!.flatMap((r) => r.constraints))].map((c) => (c === "crowded" ? "quiet atmosphere" : c)).join(", ") + ". " : ""}${state.pending ? "You can also confirm the atmosphere concept to refine further. " : ""}Your other categories and confirmed interests are unchanged.${previewRefinedResults(state, changed)}`
       : "I couldn’t apply that search because no verified match was returned. Your previous discoveries and their active preferences are unchanged. The attempted search is kept separately so you can adjust it or retry.",
     changed.length ? chatShortlist(state,changed) : undefined,
   );
+  return input.message && intent.action === "plan-day" &&
+    /\b(?:plan|itinerary|schedule|outing|day out)\b/i.test(input.message)
+    ? { ...finalReply, action: "plan-day" } : finalReply;
 }

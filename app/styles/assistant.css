@@ -156,6 +156,7 @@ html { scrollbar-gutter: stable; }
 .chat-comparison-reason { padding-top:8px; border-top:1px solid #e1e4d6; }
 .chat-comparison-footnote { margin:12px 0 0; }
 @media(max-width:520px) { .chat-comparison { padding:12px; } .chat-comparison-grid { grid-template-columns:1fr; } }
+@media(max-width:520px) { .chat-recommendations article { padding:14px; } .chat-choice-actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); } .chat-choice-actions a { grid-column:1/-1; } .chat-choice-actions button, .chat-choice-actions a { width:100%; } }
 
 /* Friendly recovery is one actionable notice, next to the conversation. */
 .conversation-recovery { padding: 14px 16px; margin: 10px 0; border: 1px solid #d5d6bc; border-radius: 15px; background: #f5efda; color: #35513d; }

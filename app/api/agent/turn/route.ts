@@ -65,9 +65,13 @@ async function handlePOST(request: Request) {
     if (
       input.familiarity &&
       (!familiarities.includes(input.familiarity.mode) ||
-        !sectionOrder.includes(input.familiarity.section))
+        !Array.isArray(input.familiarity.sections) && !sectionOrder.includes(input.familiarity.section!))
     )
       throw Error();
+    if (input.familiarity?.sections &&
+      (input.familiarity.sections.length < 1 || input.familiarity.sections.length > 3 ||
+        new Set(input.familiarity.sections).size !== input.familiarity.sections.length ||
+        input.familiarity.sections.some(section => !sectionOrder.includes(section)))) throw Error();
     if (input.reset !== undefined && input.reset !== "conversation")
       throw Error();
     if (

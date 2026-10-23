@@ -133,7 +133,11 @@ export function interpret(text: string, fallback = "New York City"): Intent {
     (excludeConcepts.length > 0 || constraints.length > 0 || /tonight|quieter|more|less|find|show|want|give|help|recommend|suggest|too |niche|refine|rank|reorder|trending|hidden gem|safe bet|surprise me|highly rated|make it/i.test(
       text,
     ));
+  const action: Intent["action"] = /\b(?:save|store|keep)\b[^.!?]{0,70}\b(?:passport|this|it)\b/i.test(text)
+    ? "save-passport"
+    : /\b(?:plan|itinerary|schedule|outing|day out)\b/i.test(text) ? "plan-day" : undefined;
   return {
+    ...(action ? { action } : {}),
     ...(question ? { question } : {}),
     ...(!question && !sections.length && !concepts.length && !constraints.length
       ? { clarification: "What would you like to find: somewhere to eat, a place to go, or something to watch or listen to?" }
@@ -231,6 +235,8 @@ export function validateIntent(raw: unknown): Intent {
     : undefined;
   return {
     kind: x.kind as Intent["kind"],
+    ...(["save-passport", "plan-day"].includes(String(x.action))
+      ? { action: x.action as Intent["action"] } : {}),
     ...(["capabilities", "preferences", "explanation"].includes(String(x.question))
       ? { question: x.question as Intent["question"] } : {}),
     ...(clarification ? { clarification } : {}),

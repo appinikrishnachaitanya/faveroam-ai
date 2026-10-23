@@ -228,5 +228,11 @@
 }
 
 .mode-category-tabs { display:flex; flex-wrap:wrap; gap:8px; max-width:100%; }
+.mode-category-tabs { border:0; padding:0; margin:0; }
+.mode-category-tabs legend { width:100%; margin-bottom:8px; color:var(--ui-muted); font-size:13px; font-weight:650; }
+.mode-category-tabs label { display:inline-flex; align-items:center; gap:8px; min-height:44px; padding:10px 14px; border:1px solid #becbb2; border-radius:12px; background:#fffdf5; color:#294b35; cursor:pointer; }
+.mode-category-tabs label.selected { background:#254e39; border-color:#254e39; color:#fff9df; }
+.mode-category-tabs input { width:16px; height:16px; accent-color:#e7c979; }
+.mode-category-tabs label:has(input:disabled) { opacity:.55; cursor:not-allowed; }
 .mode-category-tabs button { min-height:44px; border:1px solid #becbb2; border-radius:12px; padding:10px 14px; background:#fffdf5; color:#294b35; font:inherit; font-size:14px; }
 .mode-category-tabs button[aria-pressed="true"] { background:#254e39; border-color:#254e39; color:#fff9df; }
