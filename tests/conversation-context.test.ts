@@ -88,3 +88,14 @@ test("card inquiry resolves active card without triggering disambiguation modal"
   assert.match(reply.message, /123 High St/);
   assert.match(reply.message, /4.6/);
 });
+
+test('category-grouped inventories cannot hide Movies from Gemini behind food and coffee cards',()=>{
+ const state=fixture();
+ state.cards=(['Eat','Coffee','Music','Movies'] as const).flatMap(section=>Array.from({length:20},(_,i)=>({id:`${section}-${i}`,name:`Fixture ${section} ${i}`,section,types:[],detail:''})));
+ state.activeCategories=['Eat','Coffee','Music','Movies'];
+ state.history=[{role:'agent',text:'Coffee choices',recommendationIds:['Coffee-0','Coffee-1','Coffee-2']}];
+ const context=conversationContext(state);
+ assert.deepEqual(new Set(context.activeRecommendations?.map(card=>card.section)),new Set(['Eat','Coffee','Music','Movies']));
+ assert.ok(context.activeRecommendations!.length<=20);
+ for(const id of ['Coffee-0','Coffee-1','Coffee-2'])assert.ok(context.activeRecommendations!.some(card=>card.id===id));
+});

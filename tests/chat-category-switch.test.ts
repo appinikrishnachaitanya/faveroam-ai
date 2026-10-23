@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { runTurn, type AgentDependencies } from '../src/agent/orchestrator.ts';
 import { normalizeSession } from '../src/agent/session.ts';
-import { chatShortlist, requestedShortlistSections } from '../src/agent/chat-shortlist.ts';
+import { chatShortlist, isShortlistRequest, requestedShortlistSections } from '../src/agent/chat-shortlist.ts';
 import { listPassportCards } from '../src/agent/answers.ts';
 import type { Card } from '../src/passport/model.ts';
 const card=(id:string,section:Card['section']):Card=>({id,name:'Fixture '+id,section,types:['urn:entity:place'],detail:''});
@@ -11,7 +11,7 @@ const forbidden=async():Promise<never>=>{throw Error('No discovery for a current
 const deps:AgentDependencies={tools:forbidden,workflow:forbidden,discover:forbidden,provider:{interpret:async()=>({kind:'unknown',question:'explanation',sections:['Coffee'],seeds:[],concepts:[],constraints:[],strategy:'discover'}),choose:forbidden,compose:async()=>{throw Error('Keep the grounded cards');}}};
 test('a mixed-category request and its follow-up supersede the previous coffee focus',async()=>{
  let state=initial();
- for(const message of ['show me food, music and movie discoveries','give me one restaurant, one artist and one movie',"Don't focus on coffee. Can you give me three recommendations across food, music and movies? One restaurant, one artist and one movie, please."]){
+ for(const message of ['show me food, music and movie discoveries','give me one restaurant, one artist and one movie',"Don't focus on coffee. Can you give me three recommendations across food, music and movies? One restaurant, one artist and one movie, please.","You keep showing coffee. Please recommend exactly one restaurant, one artist and one movie from my Passport.","No more coffee please. I want exactly one restaurant, one artist and one movie."]){
    const reply=await runTurn(state,{message},deps);
    const ids=reply.state.history?.at(-1)?.recommendationIds;
    assert.deepEqual(ids,['Restaurant','Artist','Movie'],message);
@@ -34,6 +34,12 @@ test('explicit categories take precedence over across, and show is a verb rather
 test('missing requested categories do not get replaced with more coffee choices',()=>{
  const state=initial();state.cards=state.cards.filter(c=>c.section==='Coffee');
  assert.deepEqual(chatShortlist(state,['Coffee','Music','Movies']).map(c=>c.id),['Coffee one']);
+});
+
+test('a counted request with cuisine qualifiers keeps Food in scope and still requires model interpretation',()=>{
+ const request='After the coffee discussion, give me one Indian restaurant, one artist and one movie.';
+ assert.deepEqual(requestedShortlistSections(request),['Eat','Music','Movies']);
+ assert.equal(isShortlistRequest(request),false);
 });
 
 test('compound artist explanation answers the taste question and the live-event limitation',async()=>{

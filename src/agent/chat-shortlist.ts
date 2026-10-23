@@ -12,6 +12,10 @@ const shortlistWords = new Set(["top","best","pick","choose","recommend","show",
 /** Asking for help choosing existing results is not permission to change filters. */
 export function isShortlistRequest(text: string): boolean {
   text=categoryLanguage(text);
+  // Plain, explicitly counted outputs survive longer correction wording.
+  // Qualifiers such as a cuisine or quietness still require interpretation.
+  const quantified=quantifiedSections(text);
+  if(quantified.length>1 && quantifiedSections(text,true).length===quantified.length && !/\b(?:find|search|new|cheaper|quieter|vegetarian|vegan|rating|budget|replace|remove|update|refine|change|adjust)\b/i.test(text))return true;
   if (/\b(?:find|search|new|more|different|cheaper|quieter|vegetarian|vegan|rating|budget|replace|remove|update|refine|change|adjust)\b/i.test(text)) return false;
   const remaining=text.toLowerCase().replace(/[’']/g," ").replace(/[^a-z0-9]+/g," ").split(/\s+/).filter(Boolean)
     .filter(word=>!shortlistWords.has(word));
@@ -21,9 +25,19 @@ export function isShortlistRequest(text: string): boolean {
       /\b(?:one|each|current|existing|discoveries|recommendations|results|suggestions|across)\b/i.test(text);
 }
 
+const names:[Section,RegExp][]=[["Eat",/\b(?:restaurants?|dining|dinner|food)\b/i],["Coffee",/\b(?:coffee|caf[eé]s?)\b/i],["Music",/\b(?:music|artists?)\b/i],["Movies",/\b(?:movies?|films?)\b/i],["Culture",/\b(?:culture|museums?|cinema|nightlife|night\s*clubs?)\b/i],["Books",/\bbooks?\b/i],["Shows",/\b(?:shows|tv|television|series)\b/i],["Podcasts",/\bpodcasts?\b/i],["Games",/\bgames?\b/i],["Lifestyle",/\b(?:shops?|bookstores?)\b/i],["Brands",/\bbrands?\b/i],["People",/\b(?:people|authors?)\b/i],["Destinations",/\b(?:destinations?|cities)\b/i]];
+function quantifiedSections(request:string,plain=false):Section[] {
+  const quantity=plain ? /\b(?:one|1|single)\s+(?:(?:good|best|top|recommended)\s+)?$/i
+    : /\b(?:one|1|single)\s+(?:(?!(?:and|or|not|no|instead|but)\b)[\p{L}-]+\s+){0,3}$/iu;
+  return names.filter(([,pattern])=>[...request.matchAll(new RegExp(pattern.source,'gi'))].some(match=>
+    quantity.test(request.slice(0,match.index)) &&
+    !/\b(?:not|no|without|rather than|instead of)\s+(?:one|1|single)\s+(?:(?:good|best|top|recommended)\s+)?$/i.test(request.slice(0,match.index))
+  )).map(([section])=>section);
+}
 export function requestedShortlistSections(request:string):Section[]|undefined {
   request=categoryLanguage(refinementScope(request).positive);
-  const names:[Section,RegExp][]=[["Eat",/\b(?:restaurants?|dining|dinner|food)\b/i],["Coffee",/\b(?:coffee|caf[eé]s?)\b/i],["Music",/\b(?:music|artists?)\b/i],["Movies",/\b(?:movies?|films?)\b/i],["Culture",/\b(?:culture|museums?|cinema|nightlife|night\s*clubs?)\b/i],["Books",/\bbooks?\b/i],["Shows",/\b(?:shows|tv|television|series)\b/i],["Podcasts",/\bpodcasts?\b/i],["Games",/\bgames?\b/i],["Lifestyle",/\b(?:shops?|bookstores?)\b/i],["Brands",/\bbrands?\b/i],["People",/\b(?:people|authors?)\b/i],["Destinations",/\b(?:destinations?|cities)\b/i]];
+  const quantified=quantifiedSections(request);
+  if(quantified.length>1)return quantified;
   const result=names.filter(([,pattern])=>[...request.matchAll(new RegExp(pattern.source,'gi'))].some(match=>{
     const prefix=request.slice(0,match.index);
     return !/\b(?:not|no|skip|exclude|without|instead of|rather than|don['’]t want|do not want|don['’]t focus on|do not focus on)\s+(?:(?:any|more|the|my)\s+)?$/i.test(prefix);
