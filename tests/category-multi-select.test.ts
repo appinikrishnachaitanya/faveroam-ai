@@ -12,7 +12,9 @@ test("shared category dropdown shows only available choices and a multi-selectio
     onChange:()=>{},
   }));
   assert.match(html,/<details class="category-multi-select">/);
-  assert.match(html,/Food, Culture/);
+  assert.match(html,/aria-label="Selected categories"/);
+  assert.match(html,/>Food<\/span>/);
+  assert.match(html,/>Culture<\/span>/);
   assert.equal((html.match(/type="checkbox"/g)??[]).length,3);
   assert.equal((html.match(/checked=""/g)??[]).length,2);
   assert.doesNotMatch(html,/Music/);

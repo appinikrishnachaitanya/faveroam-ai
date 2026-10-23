@@ -10,7 +10,7 @@ import { refinementScope } from "./scope.ts";
 import { groundedModelIntent, isGreetingOrTypo } from "./conversation-grounding.ts";
 import { conversationContext } from "./context.ts";
 import { decisionSummary } from "./decision-summary.ts";
-import { passportAnswer, cardSpecificAnswer, isListRequest, listPassportCards, listPassportResults, previewRefinedResults } from "./answers.ts";
+import { passportAnswer, passportAnswerCards, cardSpecificAnswer, isListRequest, listPassportCards, listPassportResults, previewRefinedResults } from "./answers.ts";
 import { isReadOnlyFollowUp, readOnlyFollowUp } from "./read-only.ts";
 import { debugEvent } from "./debug.ts";
 import {
@@ -314,21 +314,23 @@ async function executeTurn(
       delete state.pending;
       return reply("Okay, I've skipped that concept choice. Your Passport hasn't changed. What would you like to explore next?");
     }
+    // Explicit mixed-category shortlists supersede the last presented category.
+    // "One restaurant, one artist and one movie" is not a pick from old cafes.
+    if (route === "current-results" && isShortlistRequest(input.message)) {
+      delete state.pending;
+      const sections=requestedShortlistSections(input.message);
+      const cards=chatShortlist(state,sections);
+      return reply(chatShortlistText(state,cards,sections),cards);
+    }
     if (route === "current-results" && isExistingChoiceRequest(input.message)) {
       delete state.pending;
       const choice = chooseExisting(state, input.message);
       if (!choice.cards.length) markNeedsInput();
       return reply(choice.message, choice.cards, undefined, choice.comparison ? choice.cards.map(card=>card.id) : undefined);
     }
-    // Handle presentation requests before intent classification. A model may
-    // otherwise interpret "list here" as another discovery/refinement request.
-    if (route === "current-results" && isShortlistRequest(input.message)) {
-      delete state.pending;
-      const cards=chatShortlist(state,requestedShortlistSections(input.message));
-      return reply(chatShortlistText(state,cards),cards);
-    }
     if (/^(?:thanks(?: bro)?|thank you(?: bro)?|cheers)[!,.\s]*$/i.test(input.message.trim()))
       return reply("You’re welcome. Want to compare a couple of choices, find a different vibe, or put an outing together?");
+    // Listing current cards is presentation, not permission to run discovery.
     if (route === "current-results" && isListRequest(input.message)) {
       delete state.pending; // A read-only listing supersedes an unrelated choice.
       return reply(listPassportResults(state,input.message),[],listPassportCards(state,input.message).slice(0,40).map(card=>card.id));
@@ -338,7 +340,8 @@ async function executeTurn(
     // destroy the original shortlist or unrelated category state.
     if (route === "current-results" && isReadOnlyFollowUp(input.message)) {
       delete state.pending;
-      return reply(readOnlyFollowUp(state,input.message));
+      const named=findMentionedCard(input.message,state.cards.filter(card=>!state.hiddenCategories?.includes(card.section)));
+      return reply(readOnlyFollowUp(state,input.message),named?[named]:undefined);
     }
     const activeCards = [...state.cards, ...state.savedCards];
     const mentioned = findMentionedCard(input.message, activeCards);
@@ -373,7 +376,7 @@ async function executeTurn(
   let intent = interpret(input.message ?? "", state.city);
   if (input.message && intent.question && !deps.provider) {
     state.pending = original.pending; // A genuine read-only question may pause, not confirm, a choice.
-    return reply(passportAnswer(state, intent));
+    return reply(passportAnswer(state, intent,input.message),passportAnswerCards(state,intent,input.message));
   }
   if (input.familiarity) {
     const selectedSections = input.familiarity.sections ?? (input.familiarity.section ? [input.familiarity.section] : []);
@@ -604,7 +607,7 @@ async function executeTurn(
   if (intent.kind === "unknown" && intent.question) {
     if (/^(?:what|why|how|which|who|when|can|could|is|are|do|does)\b/i.test(input.message?.trim() ?? ""))
       state.pending = original.pending;
-    return reply(passportAnswer(state, intent));
+    return reply(passportAnswer(state, intent,input.message),passportAnswerCards(state,intent,input.message));
   }
   if (intent.kind === "unknown" || intent.kind === "onboard") {
     if (mode === "deterministic" && state.providerHealth === "unavailable")

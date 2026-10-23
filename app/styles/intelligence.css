@@ -290,7 +290,7 @@
 .taste-analysis .taste-theme-list button { background:#edf1df; color:#294632; border:1px solid #bdcba9; border-radius:24px; font-size:14px; }
 .taste-analysis .taste-theme-list button[aria-pressed="true"] { background:#254c39; color:#fff9dc; border-color:#254c39; }
 .theme-next-step { display:flex; align-items:end; gap:16px; flex-wrap:wrap; }
-.theme-next-step .category-multi-select { flex:1 1 260px; }
+.theme-next-step .category-picker { flex:0 1 320px; }
 .theme-next-step label { display:grid; gap:8px; flex:1; max-width:300px; font-size:14px; font-weight:600; }
 .theme-next-step select { min-height:48px; padding:12px 38px 12px 14px; border:1px solid #bdcbb2; border-radius:12px; background-color:#fffdf5; color:#294632; font:inherit; width:100%; }
 .theme-next-step > button { display:inline-flex; gap:12px; align-items:center; min-height:48px; }
@@ -335,3 +335,15 @@
 .progressive-app .taste-theme-list button[aria-pressed="true"] { border-color: #284e36; background: #284e36; color: #fff8e5; box-shadow: 0 6px 16px #173c3020; }
 .progressive-app .area-choices article { background: linear-gradient(145deg, #fcfaef, #eef3e4); box-shadow: 0 8px 20px #193e310a; }
 @media (max-width: 640px) { .insight-steps { grid-template-columns: 1fr; gap: 8px; } .insight-steps li { padding: 10px 14px; } .progressive-app .analysis-action { min-height: 112px; } .progressive-app .analysis-interest-picker { padding: 18px; } }
+
+@media(max-width:640px) { .theme-next-step .category-picker { flex-basis:auto; } }
+
+.taste-analysis .taste-theme-list button { display:flex; flex-direction:column; align-items:flex-start; gap:4px; padding:11px 15px; border-radius:13px; text-align:left; }
+.taste-theme-list button small { font-size:11px; line-height:1.4; color:#52664a; font-weight:500; }
+.taste-theme-list button strong { font-size:14px; line-height:1.4; font-weight:650; }
+.taste-theme-list button[aria-pressed="true"] small { color:#f4ebcb; }
+.selected-theme-summary { display:grid; gap:5px; padding:14px 16px; border-left:3px solid var(--ui-action); background:var(--ui-tint); border-radius:0 10px 10px 0; }
+.selected-theme-summary span { font-size:13px; line-height:1.6; }
+.theme-empty-state { padding:16px; border:1px solid var(--ui-border); border-radius:12px; background:var(--ui-tint); }
+.theme-empty-state p { font-size:14px; line-height:1.6; margin-block:8px; }
+.theme-empty-state small { color:var(--ui-muted); }

@@ -5,7 +5,7 @@ import { CategoryMultiSelect } from "./category-multi-select";
 import { useEffect, useRef, useState } from 'react';
 import type { Passport } from '../../src/workspace/state';
 import { activeCategories } from "../../src/passport/active-categories";
-import { curatedThemes, themeCategories, relevantThemes } from "../../src/passport/taste-themes";
+import { curatedThemes, themeCategories, relevantThemes, themeKind } from "../../src/passport/taste-themes";
 import type { Section } from '../../src/passport/model';
 import type { AgentInput } from '../../src/agent/types';
 import { buildAreaGuide } from '../../src/passport/area-guide';
@@ -92,18 +92,19 @@ export default function TasteAnalysis({passport,busy,onRefine}:{passport:Passpor
         <div className="taste-theme-list" role="group" aria-label="Choose a taste theme">
           {primaryThemes.map(tag => <button key={tag.id} type="button"
             aria-pressed={themeId === tag.id} disabled={busy} onClick={() => setThemeId(tag.id)}>
-            {tag.name}
+            <small>{themeKind(tag)}</small><strong>{tag.name}</strong>
           </button>)}
         </div>
-        {additionalThemes.length>0 && <details className="additional-themes"><summary>See {additionalThemes.length} more returned themes</summary><div className="taste-theme-list">{additionalThemes.map(tag=><button key={tag.id} type="button" aria-pressed={themeId===tag.id} disabled={busy} onClick={()=>setThemeId(tag.id)}>{tag.name}</button>)}</div></details>}
+        {additionalThemes.length>0 && <details className="additional-themes"><summary>See {additionalThemes.length} more themes</summary><div className="taste-theme-list">{additionalThemes.map(tag=><button key={tag.id} type="button" aria-pressed={themeId===tag.id} disabled={busy} onClick={()=>setThemeId(tag.id)}><small>{themeKind(tag)}</small><strong>{tag.name}</strong></button>)}</div></details>}
+        {selectedTheme&&<p className="selected-theme-summary" role="status"><strong>Explore {selectedTheme.name}</strong><span>A {themeKind(selectedTheme).toLowerCase()} connection returned for your chosen tastes. Choose where to explore it below.</span></p>}
         <div className="theme-next-step">
-          <CategoryMultiSelect label="Explore this theme in" available={themeOptions} selected={effectiveThemeSections} onChange={setThemeSections} disabled={busy||Boolean(loading)}/>
+          <CategoryMultiSelect label="Explore theme in" available={themeOptions} selected={effectiveThemeSections} onChange={setThemeSections} disabled={busy||Boolean(loading)}/>
           <button disabled={busy || !themeId || Boolean(loading) || !effectiveThemeSections.length} onClick={exploreTheme}>
             Explore selected categories <Icon name="arrow" size={16}/>
           </button>
         </div>
         <p className="helper">Choose a returned theme and one or more relevant categories. We’ll search each selected category with that theme and keep the other results. A theme may have no local matches.</p>
-      </> : <p>No useful themes in the selected interests’ categories were returned. Try another interest or combination, or explore an area. Your discoveries are unchanged.</p>}
+      </> : <div className="theme-empty-state"><strong>No clear new connection for this selection yet.</strong><p>Choose a different favorite above, try your tastes together, or start from a nearby place.</p><button type="button" disabled={busy||Boolean(loading)} onClick={()=>void load('heatmap')}>Find a place to start <Icon name="arrow" size={16}/></button><small>Your Discover results haven’t changed.</small></div>}
 
     </div>}
     {heat&&<div className="analysis-result area-guide"><span className="micro-label">TURN A PLACE INTO AN OUTING</span>

@@ -163,3 +163,17 @@ html { scrollbar-gutter: stable; }
 .conversation-recovery p { margin: 0 0 12px; font-size: 14px; line-height: 1.55; }
 .conversation-recovery > div { display: flex; flex-wrap: wrap; gap: 8px; }
 .conversation-recovery button { min-height: 44px; padding: 10px 14px; font-size: 13px; }
+
+.chat-reply-copy { min-width:0; font-size:14px; line-height:1.65; overflow-wrap:anywhere; }
+.chat-reply-copy p { margin:0 0 10px; }
+.chat-reply-copy p:last-child { margin-bottom:0; }
+.chat-reply-copy ul { display:grid; gap:8px; margin:10px 0; padding-left:20px; }
+.chat-reply-copy li { padding-left:3px; }
+.chat-reply-copy li::marker { color:var(--ui-action); }
+.chat-reply-copy strong { font-weight:700; }
+.chat-taste-path { display:grid; gap:8px; margin-block:12px; padding:12px; border:1px solid var(--ui-border); border-radius:11px; background:var(--ui-tint); }
+.chat-taste-path > span { display:grid; gap:3px; }
+.chat-taste-path small { color:var(--ui-muted); font-size:11px; line-height:1.5; }
+.chat-taste-path strong { font-size:13px; line-height:1.5; color:var(--ui-ink); }
+.chat-taste-path .chat-taste-link { display:flex; align-items:center; gap:6px; font-size:11px; font-weight:650; color:var(--ui-action); }
+.theme-empty-state > small { display:block; margin-top:12px; }

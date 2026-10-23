@@ -35,7 +35,7 @@ import {
 import ConciergeDrawer from "./components/concierge";
 import ChatRecommendations from "./components/chat-recommendations";
 import ChatComparison from "./components/chat-comparison";
-import { chatParagraphs } from "../src/agent/chat-presentation";
+import ChatReply from "./components/chat-reply";
 import ConceptClarification from "./components/concept-clarification";
 import DiscoveryConcierge from "./components/discovery-concierge";
 import PassportNavigation from "./components/passport-navigation";
@@ -1111,7 +1111,7 @@ export default function Home() {
                       <span className="message-label">
                         {m.role === "agent" ? "TASTEPASSPORT" : "YOU"}
                       </span>
-                      {chatParagraphs(m.text,m.role==="agent" && Boolean(m.recommendationIds?.some(id=>result.cards.some(card=>card.id===id && !result.session?.hiddenCategories?.includes(card.section))))).map((paragraph,index)=><p key={index}>{paragraph}</p>)}
+                      {m.role === "agent" ? <ChatReply text={m.text} hasCards={Boolean(m.recommendationIds?.some(id=>result.cards.some(card=>card.id===id && !result.session?.hiddenCategories?.includes(card.section))))}/> : <p>{m.text}</p>}
                       {m.role === "agent" && m.comparisonIds?.length ? <ChatComparison cards={m.comparisonIds.flatMap(id=>result.cards.find(card=>card.id===id && !result.session?.hiddenCategories?.includes(card.section)) ?? [])} /> : null}
                       {m.role === "agent" && !m.comparisonIds?.length && Array.isArray(m.recommendationIds) && m.recommendationIds.length ? <ChatRecommendations city={result.city}
                         cards={m.recommendationIds.flatMap(id=>result.cards.find(card=>card.id===id && !result.session?.hiddenCategories?.includes(card.section)) ?? [])}

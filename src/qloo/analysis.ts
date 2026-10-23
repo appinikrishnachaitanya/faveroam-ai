@@ -41,7 +41,7 @@ export function parseAnalysis(kind:AnalysisKind, body:unknown):AnalysisResult {
     if(typeof t.tag_id!=='string' || !/^urn:tag:[\w:-]+$/.test(t.tag_id) || typeof t.name!=='string')return [];
     const q=isObject(t.query)?t.query:{};
     return [{id:t.tag_id,name:t.name.slice(0,180),...(finite(q.affinity)?{affinity:q.affinity}:{})}];
-  })).slice(0,12)};
+  })).slice(0,50)};
   if(kind==='heatmap') return {kind,recordedAt,points:rows.flatMap(t=>{
     const p=isObject(t.location)?t.location:{},q=isObject(t.query)?t.query:{};
     if(!finite(p.latitude)||Math.abs(p.latitude)>90||!finite(p.longitude)||Math.abs(p.longitude)>180||!finite(q.affinity))return [];
@@ -62,6 +62,8 @@ export async function analyze(kind:AnalysisKind, interests:{entities:string[];ta
   if(interests.entities.length)params['signal.interests.entities']=interests.entities.slice(0,10).join(',');
   if(interests.tags.length)params['signal.interests.tags']=interests.tags.slice(0,10).join(',');
   if(kind==='heatmap')params['filter.location.query']=city;
-  else if(kind==='taste'){params.take='12';params['diversify.by']='subtype';params['diversify.take']='3';}
+  // Retrieve the full supported page before domain/quality filtering. A small
+  // cross-domain top list can contain no useful music or film tags at all.
+  else if(kind==='taste')params.take='50';
   return parseAnalysis(kind,await request('/v2/insights/',params,signal));
 }

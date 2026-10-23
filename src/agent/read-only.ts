@@ -69,7 +69,11 @@ function compact(card:Card):string {
 }
 export function readOnlyFollowUp(state:AgentState,query:string):string {
   const limitation = serviceLimitationAnswer(query);
-  if (limitation) return limitation;
+  if (limitation) {
+    const named=findMentionedCard(query,state.cards.filter(card=>!state.hiddenCategories?.includes(card.section)));
+    return named && /\b(?:why|explain|connection|taste|recommend|fit)\b/i.test(query)
+      ? `${cardSpecificAnswer(named,query)}\n\n**Live information**\n${limitation}` : limitation;
+  }
   const presented=lastPresentedIds(state);
   const requestedIndex=ordinal(query);
   const comparing=/\b(?:compare|comparison|differences?|versus|vs\.?)\b/i.test(query);
