@@ -68,7 +68,7 @@ test("a returned-theme action preserves other categories and existing category p
   original.queryPreferences!.Eat!.includeTags = ["urn:tag:cuisine:restaurant:indian"];
   const calls: string[] = [];
   const reply = await runTurn(original, {
-    discovery: { section: "Eat", preferences: { includeTags: ["urn:tag:cuisine:restaurant:indian", "urn:tag:genre:place:casual_dining"] } },
+    discovery: { sections: ["Eat"], preferences: { includeTags: ["urn:tag:cuisine:restaurant:indian", "urn:tag:genre:place:casual_dining"] } },
   }, {
     ...readonly,
     discover: async (state, section) => {

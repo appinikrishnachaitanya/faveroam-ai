@@ -58,10 +58,10 @@ export default function TasteAnalysis({passport,busy,onRefine}:{passport:Passpor
   function exploreTheme() {
     if (!themeId || busy) return;
     const existing = passport.session?.queryPreferences?.[effectiveThemeSection]?.includeTags ?? [];
-    onRefine({discovery:{section:effectiveThemeSection,preferences:{includeTags:[...new Set([...existing,themeId])]}}});
+    onRefine({discovery:{sections:[effectiveThemeSection],preferences:{includeTags:[...new Set([...existing,themeId])]}}});
   }
   function nearby(point:{latitude:number;longitude:number}) {
-    onRefine({discovery:{section:'Eat',preferences:{locationPoint:`POINT(${point.longitude} ${point.latitude})`,radius:1500}}});
+    onRefine({discovery:{sections:['Eat'],preferences:{locationPoint:`POINT(${point.longitude} ${point.latitude})`,radius:1500}}});
   }
   return <section className="taste-analysis" aria-labelledby="analysis-title">
     <div className="analysis-intro"><span className="analysis-emblem" aria-hidden="true"><Icon name="star" size={28}/></span><div><span className="micro-label">MAKE THE CITY FEEL MORE LIKE YOU</span><h2 id="analysis-title">Find your next direction.</h2><p>Turn what you love into a new direction. Find a theme, or pick a starting place and explore food nearby.</p></div></div>

@@ -6,7 +6,7 @@ import type { Intent } from '../src/agent/types.ts';
 const fresh=()=>normalizeSession({id:'pending-regression',revision:0,expires:Date.now()+60000,city:'London',selected:[],tags:[],constraints:[],categoryConstraints:{},cards:[],previous:[],feedback:[],notices:[],activeCategories:['Eat','Coffee','Music']});
 const unknown:Intent={kind:'unknown',question:'explanation',sections:[],concepts:[],seeds:[],constraints:[],strategy:'discover'};
 const lookups:string[]=[];
-const deps:AgentDependencies={provider:{interpret:async message=>message.includes('noddles')?{kind:'refine',sections:['Eat'],concepts:['noodles'],seeds:[],constraints:[],strategy:'discover'}:structuredClone(unknown),choose:async()=>[]},tools:async()=>[],workflow:async(_mode,_tool,args)=>{const query=String(args.query);lookups.push(query);if(/quiet/.test(query))return {status:'ok',results:[{id:'urn:tag:ambience:place:quiet',name:'Quiet atmosphere'}]};return {status:'ok',results:[{id:`urn:tag:specialty_dish:place:${query.replace(/\s+/g,'_')}`,name:`${query} dishes`},{id:`urn:tag:genre:place:${query.replace(/\s+/g,'_')}_other`,name:`${query} alternative`}]};},discover:async()=>[]};
+const deps:AgentDependencies={provider:{interpret:async message=>message.includes('noddles')?{kind:'refine',sections:['Eat'],concepts:['noodles'],seeds:[],constraints:[],strategy:'discover'}:message.includes('birayni')?{kind:'refine',sections:['Eat'],concepts:['chicken biryani'],seeds:[],constraints:[],strategy:'discover'}:/peaceful/.test(message)?{kind:'refine',sections:['Eat'],concepts:['quiet atmosphere'],seeds:[],constraints:['crowded'],strategy:'discover'}:structuredClone(unknown),choose:async()=>[]},tools:async()=>[],workflow:async(_mode,_tool,args)=>{const query=String(args.query);lookups.push(query);if(/quiet/.test(query))return {status:'ok',results:[{id:'urn:tag:ambience:place:quiet',name:'Quiet atmosphere'}]};return {status:'ok',results:[{id:`urn:tag:specialty_dish:place:${query.replace(/\s+/g,'_')}`,name:`${query} dishes`},{id:`urn:tag:genre:place:${query.replace(/\s+/g,'_')}_other`,name:`${query} alternative`}]};},discover:async()=>[]};
 test('new dish and cancellation supersede the pending noodles question even when the model returns a stale read-only intent',async()=>{
  lookups.length=0;
  const noodles=await runTurn(fresh(),{message:'i want to eat noddles man'},deps);
@@ -18,7 +18,7 @@ test('new dish and cancellation supersede the pending noodles question even when
  assert.doesNotMatch(peaceful.state.pending?.query ?? '',/noodles|chicken|biryani/i);
  assert.ok(!peaceful.state.pending || /quiet|peaceful/i.test(peaceful.state.pending.query));
  assert.deepEqual(peaceful.changed,[]);
- assert.ok(lookups.includes('quiet atmosphere'));
+ assert.ok(lookups.includes('quiet atmosphere'),JSON.stringify({lookups,pending:peaceful.state.pending,intent:peaceful.state.intent,message:peaceful.message}));
  assert.ok(!peaceful.state.categoryTags?.Eat?.some(id=>/noodles|chicken|biryani/.test(id)));
  assert.ok(!peaceful.state.history?.at(-1)?.text.includes('noodles'));
 });

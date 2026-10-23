@@ -99,7 +99,7 @@ export function WhyEvidence({
       })
       .slice(0, 3) ?? [];
   return (
-    <div className="why-evidence">
+    <section className="why-evidence" aria-label={`Why ${card.name} was suggested`}>
       {card.evidence?.strategyNote?.startsWith("Broader local") && (
         <p>Broader local suggestion. Your venue requirements were kept.</p>
       )}
@@ -113,8 +113,8 @@ export function WhyEvidence({
         </p>
         {!screenTasteConnection(card) && <p>Search inputs are shown here; they do not by themselves establish an individual relationship.</p>}
       </details>
-      {screenTasteConnection(card) ? <p>{screenTasteConnection(card)}</p> : !!connected.length && (
-        <p>Connected to {connected.join(", ")} in your interests.</p>
+      {screenTasteConnection(card) ? <p className="why-summary"><strong>Why it may fit</strong>{screenTasteConnection(card)}</p> : !!connected.length && (
+        <p className="why-summary"><strong>Why it may fit</strong>Connected to {connected.join(", ")} in your interests.</p>
       )}
       <dl className="evidence-metrics">
         {m?.quality?.businessRating !== undefined && (
@@ -171,6 +171,6 @@ export function WhyEvidence({
       )}
       {error && <p role="status">{error}</p>}
       {details?.description && <p>{details.description}</p>}
-    </div>
+    </section>
   );
 }

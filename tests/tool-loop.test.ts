@@ -78,7 +78,7 @@ test("real Gemini protocol sends functionResponse after executing allowed Qloo l
  assert.equal(requests.length,2);assert.equal(requests[0].config.tools[0].functionDeclarations.length,1);
  assert.equal(requests[0].config.tools[0].functionDeclarations[0].name,"qloo_find_tags");
  assert.equal(requests[0].config.toolConfig.functionCallingConfig.mode,"AUTO");
- assert.equal(requests[0].config.temperature,1);assert.equal(requests[0].config.maxOutputTokens,4096);
+ assert.equal(requests[0].config.temperature,1);assert.equal(requests[0].config.maxOutputTokens,2048);
  assert.equal(requests[1].contents[1].role,"model");
  assert.equal(requests[1].contents[1].parts[0].functionCall.name,"qloo_find_tags");
  assert.equal(requests[1].contents[1].parts[0].thoughtSignature,"test-signature-1");
@@ -87,18 +87,14 @@ test("real Gemini protocol sends functionResponse after executing allowed Qloo l
  assert.deepEqual(response.response.matches.map((m:Record<string,unknown>)=>m.id),["urn:tag:cuisine:indian"]);
  assert.ok(!JSON.stringify(requests[1]).includes("never send this"));
 });
-test("three sequential calls followed by one tool-free final Gemini response",async()=>{
- const {model,requests}=stub([{functionCalls:[call("Indian cuisine")]},{functionCalls:[call("quiet atmosphere")]},{functionCalls:[call("Thai cuisine")]},{text:"Done."}]);
+test("two bounded taxonomy observations return to the server without another Gemini call",async()=>{
+ const {model,requests}=stub([{functionCalls:[call("Indian cuisine")]},{functionCalls:[call("quiet atmosphere")]}]);
  const observed=await boundedToolLoop(model,"model","{}",tools,async c=>result(String(c.arguments.query)));
- assert.deepEqual(observed.choices.map(c=>c.arguments.query),["Indian cuisine","quiet atmosphere","Thai cuisine"]);
- assert.equal(MAX_OBSERVED_TOOL_CALLS,3);
+ assert.deepEqual(observed.choices.map(c=>c.arguments.query),["Indian cuisine","quiet atmosphere"]);
+ assert.equal(MAX_OBSERVED_TOOL_CALLS,2);
  assert.equal(observed.observations.length,MAX_OBSERVED_TOOL_CALLS);
- assert.equal(requests.length,4);
- assert.equal(requests[2].config.tools[0].functionDeclarations[0].name,"qloo_find_tags");
- assert.equal(requests[3].config.tools,undefined);
- assert.equal(requests[3].config.maxOutputTokens,1024);
- assert.equal(observed.finalText,"Done.");
- assert.equal(requests[3].contents[5].parts[0].thoughtSignature,"test-signature-3");
+ assert.equal(requests.length,2);
+ assert.equal(observed.finalText,undefined);
 });
 test("repeating the same tool query is rejected before executing twice",async()=>{
  const {model}=stub([{functionCalls:[call("Indian cuisine")]},{functionCalls:[call(" INDIAN CUISINE ")]}]);
@@ -118,18 +114,17 @@ test("unadvertised, malformed, and parallel tool calls cannot execute",async()=>
    assert.equal(executed,false);
  }
 });
-test("the three-tool-call cap prohibits a fourth tool even during finalization",async()=>{
- const {model,requests}=stub([{functionCalls:[call("Indian cuisine")]},{functionCalls:[call("quiet atmosphere")]},{functionCalls:[call("Thai cuisine")]},{functionCalls:[call("Japanese cuisine")]}]);
+test("the two-observation cap prohibits an additional taxonomy execution",async()=>{
+ const {model,requests}=stub([{functionCalls:[call("Indian cuisine")]},{functionCalls:[call("quiet atmosphere")]}]);
  let count=0;
  const observed=await boundedToolLoop(model,"model","{}",tools,async()=>{count++;return result("Indian");});
- assert.equal(count,3);
- assert.equal(observed.choices.length,3);
- assert.equal(requests.length,4);
- assert.equal(requests[3].config.tools,undefined);
+ assert.equal(count,2);
+ assert.equal(observed.choices.length,2);
+ assert.equal(requests.length,2);
 });
 
 
-test("each new user message receives a fresh three-tool-call budget",async()=>{
+test("each new user message receives a fresh bounded tool-call budget",async()=>{
  let state=fixture();
  const limits:number[]=[];
  for(const cuisine of ["Indian","Thai","Japanese","Korean"]) {
@@ -185,11 +180,11 @@ test("Gemini 400 is not retried and cancellation prevents retries",async()=>{
  await assert.rejects(retryGemini502(async()=>{count++;throw Object.assign(new Error("gateway"),{status:502});},controller.signal,async()=>controller.abort()));
  assert.equal(count,1);
 });
-test("failed final Gemini response preserves verified tool observations",async()=>{
+test("a failed follow-up Gemini call preserves verified tool observations",async()=>{
  const {model,requests}=stub([{functionCalls:[call("Indian cuisine")]},{functionCalls:[call("quiet atmosphere")]},{functionCalls:[call("Thai cuisine")]}]);
  const observed=await boundedToolLoop(model,"model","{}",tools,async c=>result(String(c.arguments.query)));
- assert.equal(requests.length,4);
- assert.equal(observed.observations.length,3);
+ assert.equal(requests.length,2);
+ assert.equal(observed.observations.length,2);
  assert.equal(observed.finalText,undefined);
 });
 

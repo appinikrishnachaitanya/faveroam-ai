@@ -57,7 +57,7 @@ async function handlePOST(request: Request) {
     ].filter((x) => x !== undefined);
     if (actions.length !== 1) throw Error();
     if (input.discovery) {
-      if (!sectionOrder.includes(input.discovery.section)) throw Error();
+      if (!Array.isArray(input.discovery.sections) || input.discovery.sections.length < 1 || input.discovery.sections.length > 3 || new Set(input.discovery.sections).size !== input.discovery.sections.length || input.discovery.sections.some(section => !sectionOrder.includes(section))) throw Error();
       input.discovery.preferences = validatePreferences(
         input.discovery.preferences,
       );

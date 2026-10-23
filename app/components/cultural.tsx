@@ -55,10 +55,10 @@ export function FamiliarityControl({
             </strong>
             <small>
               {mode === "familiar"
-                ? "Start with what you love"
+                ? "Stay closer to confirmed tastes"
                 : mode === "balanced"
-                  ? "A little familiar, a little new"
-                  : "Find your next favorite"}
+                  ? "Mix close matches with broader connections"
+                  : "Broaden the cultural connections"}
             </small>
           </button>
         ))}
@@ -69,7 +69,7 @@ export function FamiliarityControl({
           : applied === "balanced"
             ? "Mix closer matches with broader cultural discoveries."
             : "Explore further while keeping a connection to your tastes."}{" "}
-        Changes refresh {sectionLabel(effectiveSection)} in Discover. My Vibe keeps the specific discoveries you saved; results can overlap when coverage is limited.
+        This setting changes {sectionLabel(effectiveSection).toLowerCase()} suggestions only. My Vibe is separate: it’s the list of discoveries you saved.
       </p>
     </section>
   );

@@ -87,7 +87,7 @@ cp .env.example .env.local
 npm run dev -- --port 3000
 ```
 
-`QLOO_API_KEY` and `QLOO_API_BASE_URL=https://hackathon.api.qloo.com` enable live discovery. `GEMINI_API_KEY` (or `GOOGLE_API_KEY`, which takes precedence) and `GEMINI_MODEL` enable Vertex AI Express Mode. The default model is `gemini-3.1-flash-lite`; no Gemini base URL, GCP project, or location is required for this key mode. The optional OpenAI-compatible provider uses `AGENT_MODEL_*` variables separately. Keep all secrets server-side, out of `NEXT_PUBLIC_` names, command output, and commits. Provider quota and key permissions still apply.
+`QLOO_API_KEY` and `QLOO_API_BASE_URL=https://hackathon.api.qloo.com` enable live discovery. `GEMINI_API_KEY` (or `GOOGLE_API_KEY`, which takes precedence) enables Vertex AI Express Mode. `GEMINI_DECISION_MODEL` defaults to `gemini-2.5-flash` for intent and tool decisions; `GEMINI_MODEL` defaults to `gemini-3.1-flash-lite` for concise response composition. No Gemini base URL, GCP project, or location is required for this key mode. The optional OpenAI-compatible provider uses `AGENT_MODEL_*` variables separately. Keep all secrets server-side, out of `NEXT_PUBLIC_` names, command output, and commits. Provider quota and key permissions still apply.
 
 ```sh
 npm run check:docs

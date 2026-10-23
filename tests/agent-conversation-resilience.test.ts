@@ -55,7 +55,7 @@ test("model hallucinated hidden-gems search concept cannot block nightclub disco
    provider:{
      interpret:async()=>({
        kind:"refine",seeds:[],concepts:["hidden-gems"],constraints:[],
-       sections:["Eat"],strategy:"discover",query:{goal:"hidden-gems"}
+       sections:["Culture"],activityGenres:["nightclub"],strategy:"discover",query:{goal:"hidden-gems"}
      }),
      choose:async()=>{throw Error("No taxonomy search for goal strings");}
    },

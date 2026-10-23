@@ -1,12 +1,11 @@
 import { isExistingChoiceRequest } from "./existing-choice.ts";
 import { incompleteUtterance } from "./category-language.ts";
-import { isGreetingOrTypo } from "./conversation-grounding.ts";
+import { accidentalKeystrokes, isGreetingOrTypo } from "./conversation-grounding.ts";
 import { isShortlistRequest } from "./chat-shortlist.ts";
 import { isListRequest } from "./answers.ts";
 import { isReadOnlyFollowUp } from "./read-only.ts";
 import { refinementScope } from "./scope.ts";
 import { sectionTypes } from "../passport/model.ts";
-import { interpret } from "./intent.ts";
 import type { AgentInput, AgentReply, AgentState } from "./types.ts";
 
 export type RequestRoute = "conversation" | "clarification" | "current-results" | "interpret" | "action";
@@ -23,8 +22,8 @@ export function routeRequest(input: AgentInput): RequestRoute {
   if (!input.message) return "action";
   const text = input.message;
   if (isGreetingOrTypo(text) || /^(?:thanks(?: bro)?|thank you(?: bro)?|cheers)[!,.\s]*$/i.test(text.trim())) return "conversation";
-  if (incompleteUtterance(text)) return "clarification";
-  if (isExistingChoiceRequest(text) || isShortlistRequest(text) || isListRequest(text) || isReadOnlyFollowUp(text) || interpret(text).question) return "current-results";
+  if (incompleteUtterance(text) || accidentalKeystrokes(text)) return "clarification";
+  if (isExistingChoiceRequest(text) || isShortlistRequest(text) || isListRequest(text) || isReadOnlyFollowUp(text)) return "current-results";
   return "interpret";
 }
 

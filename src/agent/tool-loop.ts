@@ -21,7 +21,9 @@ export interface ObservedChoices {
   /** Optional model conclusion about validated taxonomy only, never Passport data. */
   finalText?: string;
 }
-export const MAX_OBSERVED_TOOL_CALLS = 3;
+// The intent interpretation is the first decision call. Two observation turns
+// keep the combined planner/tool loop at three decision calls per user turn.
+export const MAX_OBSERVED_TOOL_CALLS = 2;
 function safeFinalText(value: string | undefined): string | undefined {
   const text = value?.trim();
   return text && text.length <= 400 && !text.includes("://") && !text.includes("@") && !containsConfiguredSecret(text) ? text : undefined;
@@ -50,6 +52,7 @@ export async function boundedToolLoop(
   execute: (choice: ToolChoice) => Promise<ToolResult>,
   signal?: AbortSignal,
   allowedQueries?: readonly string[],
+  modelCall: <T>(call: () => Promise<T>) => Promise<T> = call => call(),
 ): Promise<ObservedChoices> {
   if (containsConfiguredSecret(payload) || containsConfiguredSecret(JSON.stringify(allowedQueries ?? [])))
     throw Error("Unsafe model context");
@@ -82,7 +85,7 @@ export async function boundedToolLoop(
     signal?.throwIfAborted();
     let response;
     try {
-      response = await retryGemini502(() => gemini.models.generateContent({
+      response = await modelCall(() => retryGemini502(() => gemini.models.generateContent({
         model,
         contents,
         config: {
@@ -93,7 +96,7 @@ export async function boundedToolLoop(
           tools: [{ functionDeclarations: declarations }],
           toolConfig: { functionCallingConfig: { mode: FunctionCallingConfigMode.AUTO } },
         },
-      }), signal);
+      }), signal));
     } catch (error) {
       if (signal?.aborted || !observations.length) throw error;
       return partial(); // Model transient failure cannot erase verified Qloo results.
@@ -142,19 +145,9 @@ export async function boundedToolLoop(
       parts: [{ functionResponse: { name: choice.name, response: compactToolObservation(result) } }],
     });
   }
-  // Three tool executions is the hard limit. A final Gemini call WITHOUT any
-  // tools is allowed to conclude the turn. No fourth function call can run.
+  // The interpreter has already planned the request. After two bounded
+  // taxonomy observations, validated Qloo results go back to the server. A
+  // separate optional response composer handles the final user-facing summary.
   signal?.throwIfAborted();
-  try {
-    const final = await retryGemini502(() => gemini.models.generateContent({
-      model, contents,
-      config: { abortSignal: signal, ...generationSettings("response"), systemInstruction:
-        UNTRUSTED_DATA_POLICY + " Conclude briefly based only on verified taxonomy tool observations. No tool calls, invented places, ratings, prices or claims. Recommendation cards are assembled separately by the application; do not claim any venue has been found." },
-    }), signal);
-    if ((final.functionCalls ?? []).length) throw Error("Final model turn attempted an unsupported tool call");
-    return { ...partial(), finalText: safeFinalText(final.text) };
-  } catch (error) {
-    if (signal?.aborted || !observations.length) throw error;
-    return partial();
-  }
+  return partial();
 }

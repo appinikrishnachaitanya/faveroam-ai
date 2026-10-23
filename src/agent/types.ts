@@ -28,6 +28,7 @@ export interface Intent {
   targetCardId?: string;
   kind: "onboard" | "refine" | "hide" | "unknown";
   question?: "capabilities" | "preferences" | "explanation";
+  clarification?: string;
   destination?: string;
   seeds: string[];
   concepts: string[];
@@ -38,7 +39,7 @@ export interface Intent {
   familiarity?: import("../passport/evidence.ts").Familiarity;
   query?: import("../qloo/query-plan.ts").QueryPreferences;
   excludeConcepts?: string[];
-  activityGenres?: ("cinema" | "nightclub")[];
+  activityGenres?: ("cinema" | "nightclub" | "landmark")[];
 }
 export interface AgentEvent {
   label: string;
@@ -56,6 +57,7 @@ export interface ConversationMessage {
   text: string;
   recommendationIds?: string[];
   referenceIds?: string[];
+  comparisonIds?: string[];
 }
 export interface AgentState {
   id: string;
@@ -67,7 +69,7 @@ export interface AgentState {
   constraints: Constraint[];
   categoryConstraints: Partial<Record<Section, Constraint[]>>;
   categoryConcepts?: Partial<Record<Section, string[]>>;
-  activityGenres?: Partial<Record<Section, ("cinema" | "nightclub")[]>>;
+  activityGenres?: Partial<Record<Section, ("cinema" | "nightclub" | "landmark")[]>>;
   outingActivities?: string[];
   cards: Card[];
   previous: Card[];
@@ -182,6 +184,7 @@ export interface ModelProvider {
     execute: (choice: ToolChoice) => Promise<ToolResult>,
     signal?: AbortSignal,
     allowedQueries?: readonly string[],
+    modelCall?: <T>(call: () => Promise<T>) => Promise<T>,
   ): Promise<import("./tool-loop.ts").ObservedChoices>;
   choose(
     text: string,
@@ -199,7 +202,7 @@ export interface ToolResult {
 }
 export interface AgentInput {
   discovery?: {
-    section: Section;
+    sections: Section[];
     preferences: import("../qloo/query-plan.ts").QueryPreferences;
   };
   reset?: "conversation";
@@ -228,5 +231,6 @@ export interface AgentReply {
   changed: Section[];
   events: AgentEvent[];
   message: string;
+  comparisonIds?: string[];
   mode: "deterministic" | "model-mcp";
 }

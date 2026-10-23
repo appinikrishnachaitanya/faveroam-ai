@@ -10,7 +10,7 @@ test('native response uses configured Vertex model, structured output and no act
  globalThis.fetch=async(url,options)=>{
   calls++;assert.ok(String(url).includes('configured-test-model:generateContent'));
   const body=JSON.parse(options.body);
-  assert.equal(body.generationConfig.maxOutputTokens,1024);
+  assert.equal(body.generationConfig.maxOutputTokens,768);
   assert.equal(body.generationConfig.responseMimeType,'application/json');
   assert.ok(!body.tools);assert.ok(!body.toolConfig);
   assert.ok(JSON.stringify(body.systemInstruction).includes('NO action tools'));

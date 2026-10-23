@@ -34,6 +34,7 @@ import {
 } from "./components/onboarding";
 import ConciergeDrawer from "./components/concierge";
 import ChatRecommendations from "./components/chat-recommendations";
+import ChatComparison from "./components/chat-comparison";
 import ConceptClarification from "./components/concept-clarification";
 import DiscoveryConcierge from "./components/discovery-concierge";
 import PassportNavigation from "./components/passport-navigation";
@@ -59,6 +60,7 @@ interface Message {
   role: "agent" | "user";
   text: string;
   recommendationIds?: string[];
+  comparisonIds?: string[];
 }
 const welcome: Message = {
   role: "agent",
@@ -719,7 +721,7 @@ export default function Home() {
         </nav>
       </header>
       <div className="progressive-content" id="passport-content" tabIndex={-1}>
-        {<ReusableTastes signedIn={accountSignedIn} passport={result} city={city} draft={draft} disabled={busy} draftVersion={tasteDraftVersion}
+        {<ReusableTastes signedIn={accountSignedIn} passport={result} city={city} draft={draft} disabled={busy} draftVersion={tasteDraftVersion} showLibrary={!result && step === 1}
           saveRequested={saveTastePrompt} onContinue={fresh} onCancel={()=>setSaveTastePrompt(false)}
           onSelect={profile=>{resetMatches("idle");setDraft(profile.selected.map(s=>s.name));setConceptSeeds(profile.selected.filter(s=>s.id.startsWith("urn:tag:")).map(s=>s.name));setInitialMode(profile.discoveryMode);setConstraints(profile.constraints);setRequestedActivities(profile.activeCategories.filter(s=>!profile.hiddenCategories.includes(s)).slice(0,5));setEditing(true);}}
           onBusy={value=>{if(value)setPhase("exploring");else setPhase(current=>current==="exploring"?"idle":current);}}
@@ -850,7 +852,7 @@ export default function Home() {
               hidden={workspaceView !== "discover"}
             >
               {!showSaved && <DiscoveryConcierge busy={busy} onAsk={request=>{if(request)setComposer(request);setAssistantTab("ask");setAssistantOpen(true);}} onNavigate={selectWorkspaceView} />}
-              {result.session && (
+              {result.session && !showSaved && (
                 <FamiliarityControl
                   session={result.session}
                   disabled={busy}
@@ -873,7 +875,7 @@ export default function Home() {
                 </div>
               </section>
             )}
-             {result.session && (
+             {result.session && !showSaved && (
               <RefinementRecovery
                 session={result.session}
                 disabled={busy}
@@ -1079,7 +1081,8 @@ export default function Home() {
                         {m.role === "agent" ? "TASTEPASSPORT" : "YOU"}
                       </span>
                       <p>{m.role==='agent' && m.recommendationIds?.length ? m.text.split(/\n\nHere are \d+ choices to consider:|\n\n1\. /)[0] : m.text}</p>
-                      {m.role === "agent" && Array.isArray(m.recommendationIds) && m.recommendationIds.length ? <ChatRecommendations city={result.city}
+                      {m.role === "agent" && m.comparisonIds?.length ? <ChatComparison cards={m.comparisonIds.flatMap(id=>result.cards.find(card=>card.id===id && !result.session?.hiddenCategories?.includes(card.section)) ?? [])} /> : null}
+                      {m.role === "agent" && !m.comparisonIds?.length && Array.isArray(m.recommendationIds) && m.recommendationIds.length ? <ChatRecommendations city={result.city}
                         cards={m.recommendationIds.flatMap(id=>result.cards.find(card=>card.id===id && !result.session?.hiddenCategories?.includes(card.section)) ?? [])}
                         busy={busy} savedIds={result.session?.savedCards?.map(card=>card.id) ?? []}
                         onAsk={question=>void refine({message:question})}

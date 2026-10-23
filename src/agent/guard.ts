@@ -48,7 +48,7 @@ export class TurnGuard {
   /** Model planning is timed separately and does not consume the Qloo budget. */
   async model<T>(call: () => Promise<T>): Promise<T> {
     if (this.signal.aborted) throw Error("Turn cancelled");
-    if (++this.modelCalls > 2) throw Error("Model planning budget reached");
+    if (++this.modelCalls > 3) throw Error("Model planning budget reached");
     const remaining = this.deadline - Date.now();
     if (remaining <= 0) throw Error("Turn timeout");
     let timer: ReturnType<typeof setTimeout> | undefined;

@@ -75,6 +75,13 @@
   max-width: 300px;
   margin-block: 22px;
 }
+.intelligence-category-picker { min-width:0; margin:20px 0 24px; padding:18px; border:1px solid var(--ui-border); border-radius:16px; background:var(--ui-surface); }
+.intelligence-category-picker legend { padding:0 7px; font-size:16px; font-weight:750; }
+.intelligence-category-picker > p { margin:2px 0 14px; color:var(--ui-muted); font-size:14px; line-height:1.55; }
+.intelligence-category-options { display:flex; flex-wrap:wrap; gap:9px; }
+.intelligence-category-options label { display:flex!important; grid-template-columns:none!important; align-items:center; gap:8px!important; min-height:44px; padding:9px 14px; border:1px solid var(--ui-border); border-radius:999px; background:var(--ui-surface); cursor:pointer; font-size:14px!important; }
+.intelligence-category-options label.selected { border-color:var(--ui-action); background:var(--ui-tint); color:var(--ui-ink); font-weight:700; }
+.intelligence-category-options input { appearance:auto; width:18px; height:18px; min-height:18px; padding:0!important; border:0; border-radius:0; background:transparent; accent-color:var(--ui-action); flex:0 0 18px; }
 .intelligence-modes {
   display: flex;
   flex-wrap: wrap;
@@ -173,6 +180,11 @@
   font-size: 15px;
   margin: 18px 0 10px;
 }
+.why-evidence { display:grid; gap:12px; min-width:0; }
+.why-evidence .why-summary { padding:12px 14px; border-left:3px solid var(--ui-action); border-radius:0 10px 10px 0; background:var(--ui-tint); color:var(--ui-ink); line-height:1.65; overflow-wrap:anywhere; }
+.why-evidence .why-summary strong { display:block; margin-bottom:4px; }
+.why-evidence details { min-width:0; padding:10px 12px; border:1px solid var(--ui-border); border-radius:11px; background:var(--ui-surface); }
+.why-evidence summary { min-height:40px; display:flex; align-items:center; cursor:pointer; font-weight:650; color:var(--ui-ink); }
 .why-evidence p,
 .why-evidence li {
   font-size: 13px;
@@ -248,6 +260,8 @@
 .partner-selection button { flex-shrink:0; }
 .partner-matches .candidate-options { max-height:310px; overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin; }
 .together-results { margin-top:24px; }
+.together-category { margin-top:24px; }
+.together-category > h4 { margin:0 0 12px; font-size:20px; color:var(--ui-ink); }
 .together-cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr)); gap:18px; }
 .together-cards article { min-width:0; padding:20px; border:1px solid var(--ui-border); border-radius:16px; background:var(--ui-surface); }
 .together-cards h4 { font-size:20px; line-height:1.4; }

@@ -146,6 +146,16 @@ html { scrollbar-gutter: stable; }
 .chat-recommendation-note { color:#53654f; font-size:12px; line-height:1.6; }
 .chat-next-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:20px; }
 .chat-next-actions button { min-height:44px; padding:10px 12px; border:1px solid #c5d0b9; border-radius:12px; background:#edf2e4; color:#284a35; font:inherit; font-size:12px; line-height:1.5; text-align:left; }
+.chat-comparison { margin-top:16px; padding:16px; border:1px solid #c5d0b9; border-radius:18px; background:linear-gradient(145deg,#f7f5e9,#fffdf5); color:#284432; }
+.chat-comparison-heading h3 { margin:5px 0; font-size:19px; }
+.chat-comparison-heading p,.chat-comparison-footnote { margin:6px 0 14px; color:#53654f; font-size:13px; line-height:1.55; }
+.chat-comparison-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+.chat-comparison-grid article { min-width:0; padding:14px; border:1px solid #d3d9c6; border-radius:14px; background:#fffefa; }
+.chat-comparison-grid h4 { margin:8px 0 12px; font-size:17px; line-height:1.35; overflow-wrap:anywhere; }
+.chat-comparison-grid article > p,.chat-comparison-reason p { margin:8px 0; font-size:13px; line-height:1.55; color:#445846; overflow-wrap:anywhere; }
+.chat-comparison-reason { padding-top:8px; border-top:1px solid #e1e4d6; }
+.chat-comparison-footnote { margin:12px 0 0; }
+@media(max-width:520px) { .chat-comparison { padding:12px; } .chat-comparison-grid { grid-template-columns:1fr; } }
 
 /* Friendly recovery is one actionable notice, next to the conversation. */
 .conversation-recovery { padding: 14px 16px; margin: 10px 0; border: 1px solid #d5d6bc; border-radius: 15px; background: #f5efda; color: #35513d; }

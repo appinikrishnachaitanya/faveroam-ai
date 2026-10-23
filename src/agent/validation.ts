@@ -72,14 +72,14 @@ export function validatedSection(e: Entity): Section | undefined {
     !/tiffin|delivery kitchen|meal delivery|catering service/.test(
       description,
     ) &&
-    /\b(?:museum|art gallery|gallery|theater|theatre|concert hall|cinema|nightclub|night club|live music venue|music venue)\b/.test(
+    /\b(?:museum|art gallery|gallery|theater|theatre|concert hall|cinema|nightclub|night club|live music venue|music venue|tourist attraction|landmark|sightseeing)\b/.test(
       names,
     )
   )
     return "Culture";
-  if (/tourist attraction|landmark/.test(names)) return;
+  if (/tourist attraction|landmark|sightseeing/.test(names)) return "Culture";
   if (/coffee|cafe|café|tea house/.test(names)) return "Coffee";
-  if (/restaurant|dining|bakery|bistro|food court|pizza/.test(names))
+  if (/restaurant|dining|bakery|bistro|food court|pizza|ice cream|gelato|dessert shop|gelateria|frozen yogurt/.test(names))
     return "Eat";
   if (/bookstore|book shop|record store|boutique|shopping|yoga/.test(names))
     return "Lifestyle";

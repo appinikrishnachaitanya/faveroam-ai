@@ -9,7 +9,7 @@ const deps:AgentDependencies={tools:forbidden,workflow:forbidden,discover:async(
 const filters={locationQuery:'Soho',excludeLocation:'Mayfair',requiredExternalSources:['michelin'],priceMax:2,businessRatingMin:4.5,tripAdvisorReviewCountMin:100};
 test('zero-result restrictive search retains old cards with their old active filters, and separates attempted filters',async()=>{
  const original=state();
- const reply=await runTurn(original,{discovery:{section:'Eat',preferences:filters}},deps);
+ const reply=await runTurn(original,{discovery:{sections:['Eat'],preferences:filters}},deps);
  assert.deepEqual(reply.changed,[]);assert.deepEqual(reply.state.cards,original.cards);
  assert.deepEqual(reply.state.queryPreferences,original.queryPreferences);
  assert.equal(reply.state.failedSearches?.Eat?.queryPreferences?.excludeLocation,'Mayfair');
@@ -22,7 +22,7 @@ test('zero-result restrictive search retains old cards with their old active fil
  assert.ok(observed);assert.deepEqual(retried.state.queryPreferences,original.queryPreferences);
 });
 test('provider failure also rolls back attempted category preferences',async()=>{
- const original=state();const reply=await runTurn(original,{discovery:{section:'Eat',preferences:filters}},{...deps,discover:forbidden});
+ const original=state();const reply=await runTurn(original,{discovery:{sections:['Eat'],preferences:filters}},{...deps,discover:forbidden});
  assert.deepEqual(reply.state.queryPreferences,original.queryPreferences);assert.deepEqual(reply.state.cards,original.cards);
 });
 for (const message of ['Are these open now?','What are their opening hours?','Book a table for me']) {

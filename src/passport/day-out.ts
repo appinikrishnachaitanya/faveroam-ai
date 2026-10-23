@@ -69,7 +69,7 @@ export function dayOutText(city: string, stops: OutingExportStop[], date?: strin
     `My day out in ${city} · TastePassport AI`,
     ...(date ? [`Planned for ${date}`] : []),
     ...(timeZone ? [`Suggested times (${timeZone})`] : []),
-    `${chosen === stops.length ? "Complete plan" : "Partial plan"} · ${chosen}/${stops.length} stops chosen`,
+    `${chosen === stops.length ? "Complete day plan" : `Day plan · ${chosen} of ${stops.length} stops have a place`}`,
     "Suggested sequence. Check opening hours, travel times and availability before going.",
     ...stops.map((stop,index)=>{
       const label=outingActivities.find(activity=>activity.id===stop.activity)!.label;

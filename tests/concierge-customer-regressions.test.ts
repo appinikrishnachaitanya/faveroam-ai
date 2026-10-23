@@ -11,6 +11,7 @@ import { activeCategories } from "../src/passport/active-categories.ts";
 import { reviewMatch, reviewMatches } from "../src/passport/matching.ts";
 import { themeCategories, curatedThemes } from "../src/passport/taste-themes.ts";
 import type { Card, Candidate } from "../src/passport/model.ts";
+import type { Intent } from "../src/agent/types.ts";
 
 const card=(id:string,section:Card['section']):Card=>({id,name:id,section,types:[],detail:""});
 const state=()=>normalizeSession({id:"regression",revision:3,expires:Date.now()+60000,city:"London",selected:[],tags:[],constraints:[],categoryConstraints:{},cards:[card("Returned dining","Eat"),card("Returned coffee","Coffee"),card("Returned artist","Music")],previous:[],feedback:[],notices:[],activeCategories:["Eat","Coffee","Music"],intent:{kind:"refine",sections:["Music"],seeds:[],concepts:[],constraints:[],strategy:"discover"}});
@@ -51,6 +52,17 @@ test("a three-choice shortlist is diverse, read-only and supports exact ordinal 
  const removed=await runTurn(stale,{message:"Compare the first two"},forbidden);
  assert.match(removed.message,/no longer/);
 });
+test("Gemini intent remains authoritative; model mode does not regex-fill omitted fields",()=>{
+ const request="Find restaurants in London";
+ const explicit=interpret(request,"London");
+ const model:Intent={...explicit,sections:["Music"],constraints:["mainstream"],query:{priceMax:1}};
+ const grounded=groundedModelIntent(request,model,explicit);
+ assert.deepEqual(grounded.sections,["Music"]);
+ assert.deepEqual(grounded.constraints,["mainstream"]);
+ assert.equal(grounded.query?.priceMax,1);
+ const missing=groundedModelIntent(request,{...model,sections:[],constraints:[],query:undefined});
+ assert.deepEqual(missing.sections,[]);
+});
 test("sparse evidence stays honest and current categories omit unrelated and hidden outputs",()=>{
  assert.match(chatReason(card("A","Eat")),/isn’t enough returned evidence/);
  assert.deepEqual(activeCategories({activeCategories:["Eat","Music"],hiddenCategories:["Music"]},[card("B","Coffee")]),["Eat","Coffee"]);
@@ -89,11 +101,11 @@ test("unrecognized text cannot authorize a model-invented broad refresh",async()
  const output=await runTurn(initial,{message:"asdfasdf qwertyuiop"},{...forbidden,provider:{
   interpret:async()=>{called=true;return {kind:"refine",sections:["Eat","Coffee","Culture"],seeds:[],concepts:[],constraints:["expensive"],query:{priceMax:2},strategy:"discover"};},choose:async()=>[]
  }});
- assert.equal(called,true);
+ assert.equal(called,false,"the cheap keyboard-noise guard should stop before Gemini");
  assert.deepEqual(output.changed,[]);
  assert.deepEqual(output.state.cards,initial.cards);
  assert.deepEqual(output.state.queryPreferences,initial.queryPreferences);
- assert.match(output.message,/didn't catch/);
+ assert.match(output.message,/didn.t catch/);
 });
 
  test("a conservative spelling correction can ground noodles without inventing a different concept",()=>{
@@ -113,7 +125,7 @@ test("a cancelled chicken clarification cannot block a new peaceful-seating requ
   interpret:async()=>({kind:"refine",sections:["Eat"],seeds:[],concepts:["chicken","quiet atmosphere"],constraints:["crowded"],strategy:"discover"}),choose:async()=>[]
  },discover:async(current,section)=>{assert.equal(current.pending,undefined);return [card("Quiet returned place",section)];}});
  assert.equal(output.state.pending,undefined);
- assert.deepEqual(output.changed,["Eat"]);
+ assert.deepEqual(output.changed,["Eat"],JSON.stringify({message:output.message,intent:output.state.intent,pending:output.state.pending,events:output.events}));
  assert.ok(!output.state.categoryTags?.Eat?.some(id=>/chicken/.test(id)));
  assert.ok(output.state.categoryConstraints.Eat?.includes("crowded"));
 });

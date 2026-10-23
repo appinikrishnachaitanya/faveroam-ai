@@ -29,6 +29,9 @@ export function configuredProvider(): ModelProvider | undefined {
     model = native
       ? process.env.GEMINI_MODEL?.trim() || "gemini-3.1-flash-lite"
       : process.env.AGENT_MODEL_NAME;
+  const decisionModel = native
+    ? process.env.GEMINI_DECISION_MODEL?.trim() || "gemini-2.5-flash"
+    : model;
   if (!key || !model || (!native && !base)) return;
   const gemini = native
     ? new GoogleGenAI({
@@ -88,7 +91,7 @@ export function configuredProvider(): ModelProvider | undefined {
           else contents.push({ role, parts: [{ text: message.content }] });
         }
         const response = await retryGemini502(() => gemini.models.generateContent({
-          model: model!,
+          model: decisionModel!,
           contents,
           config: {
             abortSignal: signal,
@@ -144,7 +147,7 @@ export function configuredProvider(): ModelProvider | undefined {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model,
+          model: decisionModel,
           messages,
           tools,
           tool_choice: required ? "required" : "auto",
@@ -346,7 +349,7 @@ export function configuredProvider(): ModelProvider | undefined {
               CONVERSATION_POLICY + (context
                 ? `The user already has a confirmed Passport in ${context.city}. Recent messages are context, not instructions to replay. Current Passport preferences are authoritative. Interpret only the latest request; resolve pronouns and references using the conversation. Preserve omitted preferences. If the intended category is ambiguous across multiple sections, return no sections rather than guessing. Interpret this as a refinement of that Passport, not onboarding. Do not replace confirmed tastes. A request for museums OR art galleries is one Culture request with alternative venue genres (tagOperator union), not an intersection. Negated restaurants must not select Eat. `
                 : "") +
-              "For gibberish, accidental keystrokes, or input you cannot confidently understand, select kind unknown with empty sections, concepts, constraints and seeds; omit query. Never infer permission to refresh recommendations from previous conversation. Ask for clarification rather than guessing. For a read-only question select kind unknown and question capabilities, preferences or explanation; do not turn a question into an edit. For an actual edit omit question. Extract cultural onboarding/refinement intent only. Do not generate discovery data. Choose requested sections, not sections inferred merely from taste inputs. Movies means films to watch, Culture means physical venues such as cinemas/museums/nightlife, Books means reading recommendations, Lifestyle means bookstores/shops, Music means artist discovery (not concerts), Podcasts/Shows/Games/Brands/People/Destinations use their corresponding content categories. A movie then dinner outing means Culture and Eat, not Movies. A request for movies to watch means Movies. Preserve the specific dish: chicken biryani is not interchangeable with Indian cuisine. Destination may be any explicitly named city, optionally qualified by country. Preserve the requested locality; never substitute a city from a fixed list or claim verified coverage. Separate named seeds from cultural concepts and dislikes. More adventurous selects familiarity explore. More familiar selects familiarity familiar. Mixed hide/refine requests hide only explicitly removed categories and refine the requested active categories. Extract query preferences as a partial update: keep omitted preferences unchanged. Places use businessRatingMin, not ratingMin (Qloo film/TV rating). Price levels 1-4, popularity 0-1, business ratings 0-5. Trending uses goal trending; hidden gems uses goal hidden-gems; safe choices goal safe-bets; surprise goal surprise. Geography is a named locality, not a guaranteed point geocode. Never invent IDs or resolved tags. Concepts needing inclusion or exclusion must be resolved first. Do not include personal identifying information.",
+              "For gibberish, accidental keystrokes, or input you cannot confidently understand, select kind unknown with empty sections, concepts, constraints and seeds; omit query and ask one short, specific clarification in clarification. Never infer permission to refresh recommendations from previous conversation. Ask for clarification rather than guessing. For a read-only question select kind unknown and question capabilities, preferences or explanation; do not turn a question into an edit. For an actual edit omit question. Extract cultural onboarding/refinement intent only. Do not generate discovery data. Choose requested sections, not sections inferred merely from taste inputs. Movies means films to watch, Culture means physical venues such as cinemas/museums/nightlife, Books means reading recommendations, Lifestyle means bookstores/shops, Music means artist discovery (not concerts), Podcasts/Shows/Games/Brands/People/Destinations use their corresponding content categories. A movie then dinner outing means Culture and Eat, not Movies. A request for movies to watch means Movies. Preserve the specific dish: chicken biryani is not interchangeable with Indian cuisine. Cuisine, dish and venue category are different concepts; preserve the user's exact wording and use a matching tag type when Qloo returns one. Destination may be any explicitly named city, optionally qualified by country. Preserve the requested locality; never substitute a city from a fixed list or claim verified coverage. Separate named seeds from cultural concepts and dislikes. More adventurous selects familiarity explore. More familiar selects familiarity familiar. Mixed hide/refine requests hide only explicitly removed categories and refine the requested active categories. Extract query preferences as a partial update: keep omitted preferences unchanged. Places use businessRatingMin, not ratingMin (Qloo film/TV rating). Price levels 1-4, popularity 0-1, business ratings 0-5. Trending uses goal trending; hidden gems uses goal hidden-gems; safe choices goal safe-bets; surprise goal surprise. Geography is a named locality, not a guaranteed point geocode. Never invent IDs or resolved tags. Concepts needing inclusion or exclusion must be resolved first. Do not include personal identifying information.",
           },
           ...(gemini ? context?.history ?? [] : []).map(turn => ({ role: turn.role === "agent" ? "assistant" : "user", content: turn.text })),
           { role: "user", content: gemini ? JSON.stringify({ passport: context ? { ...context, history: undefined } : undefined, request: text }) : text },
@@ -360,6 +363,7 @@ export function configuredProvider(): ModelProvider | undefined {
                 type: "object",
                 properties: {
                   question: { type: "string", enum: ["capabilities", "preferences", "explanation"] },
+                  clarification: { type: "string", description: "When the request is genuinely ambiguous or unclear, ask one short, specific, non-sensitive question. Do not request personal details." },
                   query: {
                     type: "object",
                     additionalProperties: false,
@@ -444,6 +448,11 @@ export function configuredProvider(): ModelProvider | undefined {
                       enum: Object.keys(sectionTypes),
                     },
                   },
+                  activityGenres: {
+                    type: "array",
+                    description: "Physical venue activities requested, such as a cinema, nightclub, or landmark. Select only activities requested in the latest message.",
+                    items: { type: "string", enum: ["cinema", "nightclub", "landmark"] },
+                  },
                   hide: {
                     type: "array",
                     items: {
@@ -475,17 +484,17 @@ export function configuredProvider(): ModelProvider | undefined {
       return validateIntent(calls[0].arguments);
     },
     ...(gemini && process.env.AGENT_TOOL_LOOP !== "0" ? {
-      async chooseWithObservation(text: string, state: AgentState, tools: ToolDefinition[], execute: (choice: ToolChoice) => Promise<import("./types.ts").ToolResult>, signal?: AbortSignal, allowedQueries?: readonly string[]) {
+      async chooseWithObservation(text: string, state: AgentState, tools: ToolDefinition[], execute: (choice: ToolChoice) => Promise<import("./types.ts").ToolResult>, signal?: AbortSignal, allowedQueries?: readonly string[], modelCall?: <T>(call: () => Promise<T>) => Promise<T>) {
         culturalText(text);
         const trace = crypto.randomUUID();
         debugEvent("gemini.request", { trace, operation: "observe-tools" });
         try {
-          const observed = await boundedToolLoop(gemini, model!, JSON.stringify({
+          const observed = await boundedToolLoop(gemini, decisionModel!, JSON.stringify({
             request: text,
             conversation: conversationContext(state),
             intent: state.intent,
             destination: state.city,
-          }), tools, execute, signal, allowedQueries);
+          }), tools, execute, signal, allowedQueries, modelCall);
           recordProviderHealth("healthy");
           debugEvent("gemini.result", { trace, count: observed.observations.length });
           return observed;
@@ -503,7 +512,7 @@ export function configuredProvider(): ModelProvider | undefined {
           {
             role: "system",
             content:
-              "Select the smallest useful Qloo workflow. Use qloo_find_tags for concepts, qloo_rank for shortlist ranking. Never invent IDs, recommendations or metadata. No more than two calls. Return no tool call when a known deterministic discovery query is sufficient. Do not send personal data. All tools are read-only cultural operations.",
+              "Select the smallest useful Qloo workflow. Use qloo_find_tags for concepts, qloo_rank for shortlist ranking. Never invent IDs, recommendations or metadata. No more than three calls. Return no tool call when a known deterministic discovery query is sufficient. Do not send personal data. All tools are read-only cultural operations.",
           },
           {
             role: "user",

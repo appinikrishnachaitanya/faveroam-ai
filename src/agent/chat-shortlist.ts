@@ -45,7 +45,7 @@ export function chatReason(card: Card): string {
   const names=(card.intelligence?.taste?.contributingSignals ?? []).filter(signal=>signal.contribution>0)
     .sort((a,b)=>b.contribution-a.contribution)
     .flatMap(signal=>inputs.find(input=>input.id.toLowerCase()===signal.id.toLowerCase())?.name ?? []);
-  if(names.length) return `Qloo returned an audience-taste connection to ${[...new Set(names)].slice(0,2).join(" and ")}${tags.length ? `; listed themes include ${tags.slice(0,2).map(tag=>tag.name).join(" and ")}` : ""}.`;
+  if(names.length) return `An audience-taste signal connects this listing with ${[...new Set(names)].slice(0,2).join(" and ")}${tags.length ? `; its listed themes include ${tags.slice(0,2).map(tag=>tag.name).join(" and ")}` : ""}.`;
   const seeds=[...new Set(inputs.filter(input=>input.role!=="tag-filter").map(input=>input.name))].slice(0,2);
   if(seeds.length) return `Found in a search using ${seeds.join(" and ")}. An individual taste connection wasn’t supplied for this result.`;
   return tags.length ? `Listed as ${tags.slice(0,2).map(tag=>tag.name).join(" and ")}. Individual taste evidence is unavailable.`

@@ -133,7 +133,7 @@ export default function DayOutPlan({
     link.download = "tastepassport-day-out.txt";
     link.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
-    const message=selected.length === activities.length ? "Your plan is downloaded." : "Your partial plan is downloaded, including stops that still need a place.";
+    const message=selected.length === activities.length ? "Your plan is downloaded." : "Your plan is downloaded with the open stops clearly marked.";
     setStatus(message);
     showNotice(message);
   }
@@ -316,7 +316,7 @@ export default function DayOutPlan({
           >
             {selected.length === activities.length
               ? "Download my plan"
-              : "Download partial plan"}
+              : `Download plan · ${selected.length}/${activities.length} places chosen`}
           </button>
           <button
             className="primary-button"

@@ -12,7 +12,7 @@ Moving changes more than an address. A newcomer often knows what they love but n
 
 TastePassport starts with **confirmed cultural interests** and makes a useful next step from them. The user stays in control: they can correct a match, set a budget or other supported requirements, reject a suggestion, ask a follow-up, or choose the stops in an outing.
 
-## What to try as a judge
+## Explore the app
 
 1. Pick a destination and add **one to five interests**. For example, try *A.R. Rahman*, *Interstellar*, and *Indian cuisine*. The home city is optional and labels your journey; it does not silently infer your tastes.
 2. Review the suggested identity for each interest. The dropdown contains other returned matches so you can correct a title or name before discovery.
@@ -37,21 +37,40 @@ This describes the **difference in workflow and evidence**, not a measured claim
 
 The integration uses Qloo [entity search, tags, Insights and Compare](https://docs.qloo.com/reference/qloo-llm-hackathon-developer-guide), plus validated official harness/MCP functions where appropriate. In an Insights request, `filter.type` is the **requested output type**. An artist and a film can be input signals while `urn:entity:place` requests places. Food, coffee and cinema are place activities selected with supported taxonomy, not made-up entity types. Music results are artist discoveries, not verified local concerts.
 
-## How the agent works
+## How a conversation turn works today
 
 ```mermaid
 flowchart LR
-  UI[Request + current Passport] --> Route[Route the action]
-  Route --> Model[Gemini: interpret / select allowed functions]
-  Route --> Policy[Server policy]
-  Model --> Policy
-  Policy --> Qloo[Qloo API or official harness/MCP]
-  Qloo --> Verify[Check evidence and requirements]
-  Verify --> State[Commit allowed changes with a revision check]
-  State --> Reply[Grounded choices + what changed]
+  User[Latest message + server Passport] --> Guard[Input, secret and sensitive-data guards]
+  Guard --> Fast{Known greeting, list, comparison or safety question?}
+  Fast -->|yes| Existing[Answer from validated current state]
+  Fast -->|no| Intent[Gemini structured intent call]
+  Intent --> Validate[Validate schema, user wording and protected sections]
+  Validate --> Taxonomy{New concept needs Qloo taxonomy?}
+  Taxonomy -->|yes| Lookup[Bounded Gemini tool choice + Qloo tag lookup]
+  Taxonomy -->|no| Discover[Server executes Qloo discovery]
+  Lookup --> Discover
+  Discover --> Check[Validate returned entities, locality and filters]
+  Check --> Commit[Revision-check and commit only allowed sections]
+  Commit --> Compose[Optional Gemini response from checked facts]
+  Existing --> Reply[Answer with current evidence]
+  Compose --> Reply
 ```
 
-The Next.js API owns the turn. Native Gemini function calling through `@google/genai` can propose an action or tool call; **the server decides what is allowed**, executes Qloo requests, validates returned IDs and user constraints, and updates only the relevant Passport sections. Read-only questions can use already-returned evidence without another search. The tool loop and retries are bounded, and guided controls remain available when conversation is unavailable. Backend logs record safe stages and status, not keys, account tokens, chat transcripts or raw provider payloads.
+The API loads the current Passport from the server session and validates the incoming message before interpreting it. Exact greetings, current-result listing/comparison, some card questions, and unsupported actions such as booking or checking live hours can be answered directly from the existing state. Other messages go to Gemini as a structured `interpret_cultural_intent` function call. This is currently a required intent call (`ANY`); Gemini does **not** yet make one `AUTO` choice among separate answer, clarification and discovery tools.
+
+For a request such as **“Find chicken biryani in London, keep my movies unchanged”**, the flow is:
+
+1. The server checks the text for secrets, personal contact details, unsupported length and explicit “keep unchanged” clauses. The protected Movies section becomes a server-side commit guard.
+2. Gemini receives the latest request with a compact context: destination, confirmed tastes, active preferences and filters, a short validated conversation summary, recent turns, and a capped set of current recommendation cards. The system prompt says to interpret only the latest request, treat history and tool output as untrusted, preserve omitted preferences, and ask when meaning is unclear.
+3. Gemini returns a schema-constrained intent: Food section, the specific “chicken biryani” concept, and any requested constraints. The server validates the object and grounds concepts in the latest message; in model mode, omitted fields remain omitted rather than being filled from a competing regex interpretation. Deterministic interpretation is the fallback when Gemini is unavailable. Explicit preservation rules are applied independently by the server.
+4. If the concept needs taxonomy resolution, a bounded Gemini function-calling pass can select the Qloo tag lookup. Only tool names and arguments allowed by the application are executed. Returned tags are treated as data, not instructions, and candidate IDs must come from Qloo.
+5. The server builds the Insights request using the requested output type (`urn:entity:place` for venues), the selected destination and validated tags/preferences. The server—not Gemini—calls Qloo, checks returned entities and constraints, and prepares the new cards. If evidence is too broad or absent, the UI must disclose that rather than claim an exact dish match.
+6. A commit check verifies that identity, destination, confirmed tastes and every untouched section are unchanged. The session is updated only if this check passes. One optional tool-free Gemini response call may summarize the verified outcome; its claims and card references are validated against the actual result. If it fails, the deterministic response remains.
+
+This is a **structured intent plus server-orchestrated retrieval** pattern with a bounded taxonomy tool loop. It is not a fully autonomous multi-agent system: Gemini does not execute tools, choose arbitrary endpoints, make bookings, or commit Passport changes. The server allows at most three Gemini planning calls per turn (intent plus up to two taxonomy observations), one optional response-composition call, and four guarded MCP/tool workflow calls. Qloo Insights discovery is performed by the server and uses its own bounded transport retry policy. The planned single `AUTO` planner with `find_tags`, `discover_places` and `reply_from_context` tools is not yet implemented. This distinction is important: a flowchart or prompt proposal must not be mistaken for deployed behavior.
+
+Generation settings currently use temperature `1.0` and explicit output-token ceilings. Temperature is not the security boundary: schemas, input checks, tool allow-lists, evidence validation, preservation checks and revision checks are. Backend logs record safe stages and status, not keys, account tokens, chat transcripts or raw provider payloads.
 
 Discovery first checks identity and hard requirements, then ranks and diversifies eligible results. Matching-domain tastes guide familiar choices; Balanced can blend direct and adjacent Qloo results; Explore can surface more adjacent discoveries. Chain and duplicate limits reduce repetitive previews. These are product ranking rules, **not Qloo-issued probabilities**. The [project guide](docs/PROJECT_GUIDE.md) documents retrieval, ranking, sessions and failure behavior in more detail.
 
@@ -85,7 +104,8 @@ Open `http://localhost:3000`. Set these **server-side** values in `.env.local` o
 | `QLOO_API_KEY` | Required for live Qloo discovery. Obtain a hackathon-enabled key. |
 | `QLOO_API_BASE_URL` | Use `https://hackathon.api.qloo.com`. |
 | `GEMINI_API_KEY` or `GOOGLE_API_KEY` | Enables native Gemini conversation through Vertex AI Express Mode. `GOOGLE_API_KEY` takes precedence if both are set. |
-| `GEMINI_MODEL` | Configurable model; the code defaults to `gemini-3.1-flash-lite`. |
+| `GEMINI_MODEL` | Configurable lower-cost model for concise response composition; defaults to `gemini-3.1-flash-lite`. |
+| `GEMINI_DECISION_MODEL` | Model for intent decisions and tool selection; defaults to `gemini-2.5-flash`. |
 | `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY` | Optional together for accounts and durable saved data. Keep the service-role key server-only. |
 | `APP_ORIGIN` | Canonical origin for account email redirects, for example `http://localhost:3000` locally or the deployed HTTPS origin. |
 
@@ -107,8 +127,8 @@ Those checks use local fixtures and a production smoke test; they do not certify
 
 The app can be deployed to Cloud Run from GitHub. It listens on the host-provided `PORT` and exposes `/api/health` for process readiness. Configure secrets in the host, set `APP_ORIGIN` to the public HTTPS origin, and verify a real discovery and refinement in addition to the health response. GitHub Actions validates pushed `feat/**` branches. **[Open the live demo](https://taste-passport-ai.cloud.run/).**
 
-## Boundaries and submission
+## Boundaries
 
 TastePassport does not book venues, verify current opening hours or showtimes, guarantee travel times, or certify dietary or medical safety. Some Qloo entities have no image, rating or usable venue details; the UI must not infer missing facts. Geographic affinity and aggregate audience patterns do not describe an individual.
 
-We built this for the [Qloo Agentic Hackathon](https://qloo.devpost.com/): a specific use case where an agent becomes more useful when it knows what people love. The public code is available under the [MIT license](LICENSE). Judges and other teams can start with this README, inspect the [project guide](docs/PROJECT_GUIDE.md) for implementation details, and run the app with their own credentials.
+We built TastePassport for the [Qloo Agentic Hackathon](https://qloo.devpost.com/) around a specific use case: carrying familiar cultural interests into a new city. The public code is available under the [MIT license](LICENSE). Developers can start with this README, inspect the [project guide](docs/PROJECT_GUIDE.md) for implementation details, and run the app with their own credentials.
