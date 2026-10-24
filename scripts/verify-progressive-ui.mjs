@@ -80,6 +80,8 @@ async function verifyHeaderLayout() {
   })()`), "Brand and navigation must fit without overlap");
 }
 async function verifyAccountCentering() {
+  await waitFor("Boolean(document.querySelector('.account-launch')) && !document.querySelector('.account-launch').disabled");
+  await waitFor("(()=>{const button=document.querySelector('.account-launch');const props=Object.keys(button).find(key=>key.startsWith('__reactProps'));return typeof button[props]?.onClick==='function';})()");
   await evaluate("document.querySelector('.account-launch').focus();document.querySelector('.account-launch').click()");
   await waitFor("Boolean(document.querySelector('.account-dialog[open]'))");
   assert.ok(await evaluate(`(()=>{
