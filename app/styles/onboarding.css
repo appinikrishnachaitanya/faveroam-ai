@@ -312,3 +312,36 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Review actions share a baseline without the global primary-button margin. */
+.taste-confirmation .confirmation-actions {
+  display: grid;
+  grid-template-columns: minmax(100px, 140px) minmax(0, 280px);
+  justify-content: space-between;
+  align-items: stretch;
+  gap: 16px;
+  padding-top: 24px;
+  margin: 24px 0 0;
+  border-top: 1px solid var(--ui-border);
+}
+.taste-confirmation .confirmation-actions > button {
+  width: 100%;
+  min-height: 52px;
+  margin: 0;
+  padding: 12px 20px;
+  border-radius: 12px;
+  font-size: 14px;
+  line-height: 1.4;
+  font-weight: 650;
+  justify-content: center;
+}
+.taste-confirmation .confirmation-back {
+  background: var(--ui-surface);
+  border-color: var(--ui-border);
+  color: var(--ui-ink);
+}
+.taste-confirmation .confirmation-help { margin-top: 12px; line-height: 1.5; }
+@media (max-width: 480px) {
+  .taste-confirmation .confirmation-actions { grid-template-columns: 1fr; gap: 10px; padding-top: 20px; }
+  .taste-confirmation .confirmation-help { text-align: left; }
+}
