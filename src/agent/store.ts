@@ -68,6 +68,7 @@ export function getSession(id: string): AgentState {
  * No browser-submitted recommendation data is accepted as a replacement.
  */
 export async function loadSession(id: string): Promise<AgentState> {
+  const started = Date.now();
   let persisted: AgentState | undefined;
   let storageUnavailable = false;
   try { persisted = await loadActiveSession(id); }
@@ -84,8 +85,10 @@ export async function loadSession(id: string): Promise<AgentState> {
     ? normalizeSession(persisted) : validLocal;
   if (chosen) {
     sessions.set(id, chosen);
+    debugEvent("session.loaded", { action: persisted ? "shared" : "local", elapsedMs: Date.now() - started });
     return chosen;
   }
+  debugEvent("session.load_failed", { elapsedMs: Date.now() - started });
   if (storageUnavailable) throw Error("Passport storage is temporarily unavailable.");
   return getSession(id);
 }
@@ -131,11 +134,18 @@ export async function inSession<T>(
     if (!sessions.has(id)) throw Error("Passport was reset.");
     // CAS protects the revision when a second server instance processes a
     // concurrent edit. An unavailable shared table retains the legacy map.
-    const committed = await persistActiveSession(next.state, revision);
-    assertSessionWriteCommitted(durableIds.has(id), committed);
+    const writeStarted = Date.now();
+    let committed: boolean;
+    try {
+      committed = await persistActiveSession(next.state, revision);
+      assertSessionWriteCommitted(durableIds.has(id), committed);
+    } catch (error) {
+      debugEvent("session.write_failed", { action: "commit", elapsedMs: Date.now() - writeStarted });
+      throw error;
+    }
     if (committed) durableIds.add(id);
     sessions.set(id, next.state);
-    debugEvent("session.updated", { count: next.state.cards.length });
+    debugEvent("session.updated", { count: next.state.cards.length, elapsedMs: Date.now() - writeStarted, action: committed ? "shared" : "local" });
     return next.value;
   } finally {
     locks.delete(id);

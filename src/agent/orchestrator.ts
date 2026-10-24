@@ -182,7 +182,8 @@ export async function runTurn(
     // Composing it again can discard those IDs and leave only a plain-text list.
     const isGroundedShortlist = Boolean(input.message && isShortlistRequest(input.message) &&
       result.state.history?.at(-1)?.recommendationIds?.length);
-    if (input.message && provider?.compose && input.reset !== "conversation" && !result.action && !isGroundedShortlist) {
+    const simpleReply = input.message && /^(?:hi|hello|hey|thanks(?: bro)?|thank you(?: bro)?|cheers)[!,.\s]*$/i.test(input.message.trim());
+    if (input.message && provider?.compose && input.reset !== "conversation" && !result.action && !isGroundedShortlist && !simpleReply && result.state.providerHealth !== "unavailable") {
       let responseFailure = "transport";
       try {
         const context=responseContext(result,input);

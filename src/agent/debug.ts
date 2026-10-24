@@ -60,6 +60,9 @@ type DebugEvent =
   | "session.reset"
   | "session.created"
   | "session.updated"
+  | "session.loaded"
+  | "session.load_failed"
+  | "session.write_failed"
   | "session.missing"
   | "session.expired"
   | "service.invoked"
@@ -139,7 +142,7 @@ export function debugEvent(event: DebugEvent, meta: DebugMeta = {}) {
         "explain",
       ]),
       reason: allowed(meta.reason, [
-        "transport", "empty-response", "max-tokens", "safety", "invalid-json", "invalid-protocol", "unsafe-payload", "validation",
+        "transport", "timeout", "rate-limit", "empty-response", "max-tokens", "safety", "invalid-json", "invalid-protocol", "unsafe-payload", "validation",
       ]),
       tool: allowed(meta.tool, [
         "interpret_cultural_intent",

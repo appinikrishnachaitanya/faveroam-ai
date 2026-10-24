@@ -9,14 +9,14 @@ const initial=()=>normalizeSession({id:'fixture',revision:0,expires:Date.now()+6
 const forbidden=async():Promise<never>=>{throw Error('No tools permitted');};
 const base:AgentDependencies={tools:forbidden,workflow:forbidden,discover:forbidden};
 const provider=(compose:NonNullable<NonNullable<AgentDependencies['provider']>['compose']>)=>({interpret:forbidden,choose:forbidden,compose});
-test('a greeting receives a dynamic response with context and no tool execution',async()=>{
+test('a greeting answers immediately without model or tool execution',async()=>{
  let calls=0;
  const reply=await runTurn(initial(),{message:'Hi'},{...base,provider:provider(async context=>{
   calls++;assert.equal(context.request,'Hi');assert.equal(context.passport.city,'London');
   assert.deepEqual(context.outcome.changed,[]);
   return {message:'Welcome! What would make London feel like your kind of place?',evidenceIds:[],recommendationIds:[]};
  })});
- assert.equal(calls,1);assert.match(reply.message,/What would make London/);assert.equal(reply.state.history?.at(-1)?.text,reply.message);assert.deepEqual(reply.changed,[]);
+ assert.equal(calls,0);assert.match(reply.message,/Hi!/);assert.equal(reply.state.history?.at(-1)?.text,reply.message);assert.deepEqual(reply.changed,[]);
 });
 test('final response observes retrieval outcome, cites returned choices and cannot change committed preferences',async()=>{
  const original=initial();

@@ -419,7 +419,7 @@ export function TasteConfirmation({
         </div>
       </fieldset>
       <div className="confirmation-actions">
-        <button className="quiet-button" onClick={onBack} disabled={disabled}>
+        <button type="button" className="quiet-button confirmation-back" onClick={onBack} disabled={disabled}>
           Back
         </button>
         <button

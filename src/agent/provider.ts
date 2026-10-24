@@ -71,14 +71,11 @@ export function configuredProvider(): ModelProvider | undefined {
       : message);
     if (gemini) {
       const trace = crypto.randomUUID();
+      const started = Date.now();
+      const operation = tools[0]?.function.name === "explain_qloo_evidence" ? "explain" : required ? "interpret" : "choose";
       debugEvent("gemini.request", {
         trace,
-        operation:
-          tools[0]?.function.name === "explain_qloo_evidence"
-            ? "explain"
-            : required
-              ? "interpret"
-              : "choose",
+        operation,
       });
       try {
         // Guided actions can add adjacent agent replies. Group equal roles for a
@@ -129,11 +126,11 @@ export function configuredProvider(): ModelProvider | undefined {
           debugEvent("gemini.tool_selected", { trace, tool: c.name });
           return { name: c.name, arguments: c.args };
         });
-        debugEvent("gemini.result", { trace, count: choices.length });
+        debugEvent("gemini.result", { trace, operation, count: choices.length, elapsedMs: Date.now() - started });
         recordProviderHealth("healthy");
         return choices;
       } catch (error) {
-        debugEvent("gemini.failed", { trace, status: safeStatus(error) });
+        debugEvent("gemini.failed", { trace, operation, status: safeStatus(error), reason: safeStatus(error) === 429 ? "rate-limit" : signal?.aborted ? "timeout" : "transport", elapsedMs: Date.now() - started });
         recordProviderHealth("unavailable");
         throw Error("Model provider unavailable");
       }
@@ -188,6 +185,7 @@ export function configuredProvider(): ModelProvider | undefined {
     ...(gemini ? {
       async compose(context: import("./types.ts").GroundedResponseContext, signal?: AbortSignal): Promise<import("./types.ts").GroundedResponse> {
         const trace=crypto.randomUUID();
+        const started = Date.now();
         debugEvent("gemini.request", {trace,operation:"compose"});
         let failureReason = "transport";
         try {
@@ -213,10 +211,10 @@ export function configuredProvider(): ModelProvider | undefined {
           if(!isObject(result))throw Error("Invalid response payload");
           failureReason = "unsafe-payload";
           if(containsConfiguredSecret(JSON.stringify(result)))throw Error("Unsafe response payload");
-          debugEvent("gemini.result",{trace,operation:"compose",count:1});
+          debugEvent("gemini.result",{trace,operation:"compose",count:1,elapsedMs:Date.now()-started});
           return result as unknown as import("./types.ts").GroundedResponse;
         } catch(error) {
-          debugEvent("gemini.failed",{trace,operation:"compose",status:safeStatus(error),reason:failureReason});
+          debugEvent("gemini.failed",{trace,operation:"compose",status:safeStatus(error),reason:safeStatus(error)===429?"rate-limit":signal?.aborted?"timeout":failureReason,elapsedMs:Date.now()-started});
           throw Error("Grounded response unavailable");
         }
       },
@@ -500,6 +498,7 @@ export function configuredProvider(): ModelProvider | undefined {
       async chooseWithObservation(text: string, state: AgentState, tools: ToolDefinition[], execute: (choice: ToolChoice) => Promise<import("./types.ts").ToolResult>, signal?: AbortSignal, allowedQueries?: readonly string[], modelCall?: <T>(call: () => Promise<T>) => Promise<T>) {
         culturalText(text);
         const trace = crypto.randomUUID();
+        const started = Date.now();
         debugEvent("gemini.request", { trace, operation: "observe-tools" });
         try {
           const observed = await boundedToolLoop(gemini, decisionModel!, JSON.stringify({
@@ -509,10 +508,10 @@ export function configuredProvider(): ModelProvider | undefined {
             destination: state.city,
           }), tools, execute, signal, allowedQueries, modelCall);
           recordProviderHealth("healthy");
-          debugEvent("gemini.result", { trace, count: observed.observations.length });
+          debugEvent("gemini.result", { trace, operation: "observe-tools", count: observed.observations.length, elapsedMs: Date.now() - started });
           return observed;
         } catch (error) {
-          debugEvent("gemini.failed", { trace, status: safeStatus(error) });
+          debugEvent("gemini.failed", { trace, operation: "observe-tools", status: safeStatus(error), reason: safeStatus(error) === 429 ? "rate-limit" : signal?.aborted ? "timeout" : "transport", elapsedMs: Date.now() - started });
           // The existing deterministic Qloo path is retained by the orchestrator.
           throw Error("Model tool observation unavailable");
         }

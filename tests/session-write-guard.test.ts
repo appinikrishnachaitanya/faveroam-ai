@@ -17,7 +17,7 @@ test("durable sessions fail closed when a later revision cannot be persisted", (
 
 test("session store checks revisioned write before changing in-memory state", () => {
   const store=source("src/agent/store.ts");
-  const update=store.indexOf("const committed = await persistActiveSession(next.state, revision)");
+  const update=store.indexOf("committed = await persistActiveSession(next.state, revision)");
   const guard=store.indexOf("assertSessionWriteCommitted(durableIds.has(id), committed)");
   const memoryCommit=store.indexOf("sessions.set(id, next.state)");
   assert.ok(update>=0 && guard>update && memoryCommit>guard);

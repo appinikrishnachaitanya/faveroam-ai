@@ -41,6 +41,7 @@ import DiscoveryConcierge from "./components/discovery-concierge";
 import PassportNavigation from "./components/passport-navigation";
 import { reviewMatches } from "../src/passport/matching";
 import AccountControl from "./components/account";
+import BrandMark from "./components/brand-mark";
 import ReusableTastes from "./components/taste-profile";
 import DayOutPlan from "./components/day-out";
 import TasteIntelligence from "./components/intelligence";
@@ -171,7 +172,7 @@ export default function Home() {
     recoveryRequest.current?.abort();
     const controller = new AbortController();
     recoveryRequest.current = controller;
-    const requestSignal = AbortSignal.any([controller.signal, AbortSignal.timeout(12000), ...(signal ? [signal] : [])]);
+    const requestSignal = AbortSignal.any([controller.signal, AbortSignal.timeout(20_000), ...(signal ? [signal] : [])]);
     setRecoveryStatus("checking");
     try {
       const response = await fetch("/api/agent/session", {
@@ -183,7 +184,8 @@ export default function Home() {
       if (!response.ok) { setRecoveryStatus(response.status === 410 ? "expired" : "unavailable"); return; }
       const data = await response.json();
       if (!data.passport?.agent || data.passport.agent.sessionId !== passport.agent.sessionId) throw Error();
-      setResult(current => current?.agent?.sessionId === passport.agent?.sessionId ? data.passport : current);
+      setResult(current => current?.agent?.sessionId === passport.agent?.sessionId &&
+        data.passport.agent.revision > (current?.agent?.revision ?? -1) ? data.passport : current);
       setRecoveryStatus(undefined);
     } catch { if (!signal?.aborted && !controller.signal.aborted && recoveryRequest.current === controller) setRecoveryStatus("unavailable"); }
   }
@@ -692,7 +694,7 @@ export default function Home() {
       <header className="workspace-topbar">
         <a className="brand" href="/" aria-label="TastePassport home" onClick={event=>{if(result){event.preventDefault();requestNewPassport();}}}>
           <span className="brand-symbol">
-            <Icon name="star" size={22} />
+            <BrandMark size={34} />
           </span>
           <span>
             TastePassport <small>AI</small>
@@ -700,6 +702,7 @@ export default function Home() {
         </a>
         <span className="topbar-caption">Move anywhere. Keep your vibe.</span>
         <nav className="header-controls" aria-label="Passport actions">
+          {accountSignedIn && <span className="header-greeting" aria-label={accountFirstName ? `Signed in as ${accountFirstName}` : "Signed in"}>{accountFirstName ? `Hi, ${accountFirstName}` : "Welcome back"}</span>}
           <AccountControl
             onAccountChange={(signedIn,firstName)=>{setAccountSignedIn(signedIn);setAccountFirstName(signedIn?firstName?.trim()??"":"");}}
             onPassportSaved={sessionId=>{if(sessionId)rememberSavedSession(window.sessionStorage,sessionId);else clearSavedSession(window.sessionStorage);setSavedSessionId(sessionId);}}
@@ -749,7 +752,6 @@ export default function Home() {
         </nav>
       </header>
       <div className="progressive-content" id="passport-content" tabIndex={-1}>
-        {accountSignedIn && <p className="account-welcome" role="status">{accountFirstName?`Hi, ${accountFirstName}.`:"Welcome back."} {result?`Your ${result.city} Passport is ready to explore.`:"Ready to take your tastes somewhere new?"}</p>}
         {<ReusableTastes signedIn={accountSignedIn} passport={result} city={city} draft={draft} disabled={busy} draftVersion={tasteDraftVersion} showLibrary={!result && step === 1}
           saveRequested={saveTastePrompt} onContinue={fresh} onCancel={()=>setSaveTastePrompt(false)}
           onSelect={profile=>{resetMatches("idle");setDraft(profile.selected.map(s=>s.name));setConceptSeeds(profile.selected.filter(s=>s.id.startsWith("urn:tag:")).map(s=>s.name));setInitialMode(profile.discoveryMode);setConstraints(profile.constraints);setRequestedActivities(profile.activeCategories.filter(s=>!profile.hiddenCategories.includes(s)).slice(0,5));setEditing(true);}}
