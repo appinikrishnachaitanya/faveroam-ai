@@ -127,6 +127,7 @@ await call("Emulation.setDeviceMetricsOverride", {
   deviceScaleFactor: 1,
   mobile: false,
 });
+await call("Storage.clearDataForOrigin", { origin: new URL(appUrl).origin, storageTypes: "local_storage,session_storage" });
 await call("Page.navigate", { url: appUrl });
 await waitFor("Boolean(document.querySelector('#taste-input'))");
 await new Promise((r) => setTimeout(r, 500));
@@ -174,7 +175,7 @@ await input("#destination", "Toronto", "HTMLSelectElement");
 for (const taste of ["A.R. Rahman", "Interstellar", "Indian cuisine"])
   await clickText(taste);
 // Activities are now explicit; tastes alone must not force these chapters.
-for(const activity of ['Dining','Coffee','Music','Places & culture'])
+for(const activity of ['Food','Coffee & cafés','Music','Places & culture'])
   await evaluate(`[...document.querySelectorAll('.activity-options button')].find(b=>b.textContent.trim()===${JSON.stringify(activity)}).click()`);
 assert.equal(
   await evaluate("document.querySelectorAll('.taste-chip').length"),
@@ -260,7 +261,7 @@ await input("#day-out-Eat", await evaluate("document.querySelector('#day-out-Eat
 const outingAfter = await evaluate("[...document.querySelectorAll('.day-out-stops select')].map(s=>s.value)");
 assert.deepEqual(outingAfter.slice(0, 2), outingBefore.slice(0, 2));
 assert.notEqual(outingAfter[2], outingBefore[2]);
-assert.ok(await evaluate("document.querySelector('.day-out-plan').textContent.includes('not a timed route or a reservation')"));
+assert.ok(await evaluate("document.querySelector('.day-out-plan').textContent.includes('not verified opening hours or reservations')"));
 // Inspect the actual download payload without writing Qloo data into the repository.
 await evaluate("window.__outingBlob=null;window.__originalCreateObjectURL=URL.createObjectURL;URL.createObjectURL=(blob)=>{window.__outingBlob=blob;return window.__originalCreateObjectURL(blob)}");
 await evaluate("document.querySelector('.download-plan').click()");
@@ -303,7 +304,7 @@ await clickText("Sign in");
 await waitFor("Boolean(document.querySelector('.account-dialog[open]'))");
 assert.ok(
   await evaluate(
-    "document.querySelector('.account-dialog').textContent.includes('Accounts are coming online')",
+    "Boolean(document.querySelector('.account-dialog [aria-label=\"Close account\"]'))",
   ),
 );
 await evaluate(
@@ -353,9 +354,9 @@ assert.deepEqual(
 await evaluate("document.querySelector('.why-section').open=true");
 assert.equal(await evaluate("document.querySelector('.qloo-evidence')===null"),true);
 await evaluate("document.querySelector('.why-section').open=false");
-await clickText('Your connections');
+await clickText('Taste insights');
 assert.ok(
-  await evaluate("document.querySelectorAll('.connection-routes button').length>0 && document.querySelectorAll('.connected-results li').length>0"),
+  await evaluate("Boolean(document.querySelector('.taste-analysis'))"),
 );
 await clickText('Discover');
 const first = await evaluate(
@@ -496,6 +497,8 @@ await evaluate(
   "document.querySelector('[aria-label=\"Close Taste Concierge\"]').click()",
 );
 await clickText("New Passport");
+await waitFor("Boolean(document.querySelector('.taste-profile-dialog[open]')) || Boolean(document.querySelector('#taste-input'))");
+if (await evaluate("Boolean(document.querySelector('.taste-profile-dialog[open]'))")) await clickText("Continue without saving");
 await waitFor("Boolean(document.querySelector('#taste-input'))");
 assert.equal(
   await evaluate("document.querySelectorAll('.taste-chip').length"),

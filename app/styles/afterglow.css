@@ -71,7 +71,7 @@ body { background: #f6f2e8; }
   .progressive-app .passport-workspace { display: block; }
   .progressive-app .passport-sidebar { position: static; width: 100%; padding: 8px; margin-bottom: 24px; border: 1px solid var(--ui-border); border-radius: 16px; background: var(--ui-surface); }
   .progressive-app .passport-sidebar-title { display: none; }
-  .progressive-app .passport-navigation { display: flex; flex-wrap: wrap; gap: 6px; }
+  .progressive-app .passport-navigation { display: flex; flex-direction: row; flex-wrap: wrap; gap: 6px; }
   .progressive-app .passport-navigation button { flex: 1 1 auto; justify-content: center; min-height: 48px; width: auto; border-radius: 11px; }
 }
 .progressive-app .passport-cover { background: radial-gradient(ellipse at 85% 20%, #efd8a580, transparent 52%), #f8f3e6; border-color: var(--ui-border); color: var(--ui-ink); }
