@@ -182,9 +182,10 @@ export default function Home() {
       if (signal?.aborted || controller.signal.aborted || recoveryRequest.current !== controller) return;
       if (!response.ok) { setRecoveryStatus(response.status === 410 ? "expired" : "unavailable"); return; }
       const data = await response.json();
+      if (signal?.aborted || controller.signal.aborted || recoveryRequest.current !== controller) return;
       if (!data.passport?.agent || data.passport.agent.sessionId !== passport.agent.sessionId) throw Error();
       setResult(current => current?.agent?.sessionId === passport.agent?.sessionId &&
-        data.passport.agent.revision > (current?.agent?.revision ?? -1) ? data.passport : current);
+        data.passport.agent.revision >= (current?.agent?.revision ?? -1) ? data.passport : current);
       setRecoveryStatus(undefined);
     } catch { if (!signal?.aborted && !controller.signal.aborted && recoveryRequest.current === controller) setRecoveryStatus("unavailable"); }
   }

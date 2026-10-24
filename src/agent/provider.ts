@@ -1,3 +1,4 @@
+import { modelFailureReason } from "./model-failure.ts";
 import { RESPONSE_POLICY } from "./response.ts";
 import { CONVERSATION_POLICY, UNTRUSTED_DATA_POLICY } from "./prompts.ts";
 import { containsConfiguredSecret } from "./secrets.ts";
@@ -77,6 +78,7 @@ export function configuredProvider(): ModelProvider | undefined {
         trace,
         operation,
       });
+      let failureReason = "transport";
       try {
         // Guided actions can add adjacent agent replies. Group equal roles for a
         // valid native conversation without changing or expanding its content.
@@ -113,6 +115,7 @@ export function configuredProvider(): ModelProvider | undefined {
             },
           },
         }), signal);
+        failureReason = "validation";
         const calls = response.functionCalls ?? [];
         if (calls.length > 3 || (required && !calls.length))
           throw Error("Invalid provider tool selection");
@@ -130,7 +133,7 @@ export function configuredProvider(): ModelProvider | undefined {
         recordProviderHealth("healthy");
         return choices;
       } catch (error) {
-        debugEvent("gemini.failed", { trace, operation, status: safeStatus(error), reason: safeStatus(error) === 429 ? "rate-limit" : signal?.aborted ? "timeout" : "transport", elapsedMs: Date.now() - started });
+        debugEvent("gemini.failed", { trace, operation, status: safeStatus(error), reason: failureReason === "transport" ? modelFailureReason(error, signal) : failureReason, elapsedMs: Date.now() - started });
         recordProviderHealth("unavailable");
         throw Error("Model provider unavailable");
       }
@@ -214,7 +217,7 @@ export function configuredProvider(): ModelProvider | undefined {
           debugEvent("gemini.result",{trace,operation:"compose",count:1,elapsedMs:Date.now()-started});
           return result as unknown as import("./types.ts").GroundedResponse;
         } catch(error) {
-          debugEvent("gemini.failed",{trace,operation:"compose",status:safeStatus(error),reason:safeStatus(error)===429?"rate-limit":signal?.aborted?"timeout":failureReason,elapsedMs:Date.now()-started});
+          debugEvent("gemini.failed",{trace,operation:"compose",status:safeStatus(error),reason:failureReason === "transport" ? modelFailureReason(error, signal) : failureReason,elapsedMs:Date.now()-started});
           throw Error("Grounded response unavailable");
         }
       },
@@ -511,7 +514,7 @@ export function configuredProvider(): ModelProvider | undefined {
           debugEvent("gemini.result", { trace, operation: "observe-tools", count: observed.observations.length, elapsedMs: Date.now() - started });
           return observed;
         } catch (error) {
-          debugEvent("gemini.failed", { trace, operation: "observe-tools", status: safeStatus(error), reason: safeStatus(error) === 429 ? "rate-limit" : signal?.aborted ? "timeout" : "transport", elapsedMs: Date.now() - started });
+          debugEvent("gemini.failed", { trace, operation: "observe-tools", status: safeStatus(error), reason: modelFailureReason(error, signal), elapsedMs: Date.now() - started });
           // The existing deterministic Qloo path is retained by the orchestrator.
           throw Error("Model tool observation unavailable");
         }

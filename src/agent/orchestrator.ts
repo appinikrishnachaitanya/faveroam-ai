@@ -183,7 +183,8 @@ export async function runTurn(
     const isGroundedShortlist = Boolean(input.message && isShortlistRequest(input.message) &&
       result.state.history?.at(-1)?.recommendationIds?.length);
     const simpleReply = input.message && /^(?:hi|hello|hey|thanks(?: bro)?|thank you(?: bro)?|cheers)[!,.\s]*$/i.test(input.message.trim());
-    if (input.message && provider?.compose && input.reset !== "conversation" && !result.action && !isGroundedShortlist && !simpleReply && result.state.providerHealth !== "unavailable") {
+    const answeredWithoutRetrieval = request.route === "current-results" || Boolean(result.state.pending) || isGreetingOrTypo(input.message ?? "");
+    if (input.message && provider?.compose && input.reset !== "conversation" && !result.action && !isGroundedShortlist && !simpleReply && !answeredWithoutRetrieval && result.state.providerHealth !== "unavailable") {
       let responseFailure = "transport";
       try {
         const context=responseContext(result,input);

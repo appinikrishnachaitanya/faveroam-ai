@@ -142,7 +142,7 @@ export function debugEvent(event: DebugEvent, meta: DebugMeta = {}) {
         "explain",
       ]),
       reason: allowed(meta.reason, [
-        "transport", "timeout", "rate-limit", "empty-response", "max-tokens", "safety", "invalid-json", "invalid-protocol", "unsafe-payload", "validation",
+        "transport", "timeout", "cancelled", "provider", "rate-limit", "empty-response", "max-tokens", "safety", "invalid-json", "invalid-protocol", "unsafe-payload", "validation",
       ]),
       tool: allowed(meta.tool, [
         "interpret_cultural_intent",

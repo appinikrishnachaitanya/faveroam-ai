@@ -151,7 +151,7 @@ for (const selector of ['#origin', '#destination', '#taste-input']) {
       control.borderTopWidth==='0px' && frame.boxShadow==='none' && parseFloat(frame.borderTopWidth)>0;
   })()`), 'Compound fields must show one frame, without an inner outline or glow');
 }
-for (const width of [320, 390, 640, 768, 1024, 1440]) {
+for (const width of [320, 390, 640, 768, 999, 1000, 1099, 1100, 1440]) {
   await call("Emulation.setDeviceMetricsOverride", { width, height: 900, deviceScaleFactor: 1, mobile: true });
   assert.equal(await evaluate("document.documentElement.scrollWidth>innerWidth"), false);
   await verifyHeaderLayout();
@@ -358,7 +358,7 @@ assert.equal(await evaluate("document.querySelector('.qloo-evidence')===null"),t
 await evaluate("document.querySelector('.why-section').open=false");
 await clickText('Taste insights');
 assert.ok(
-  await evaluate("Boolean(document.querySelector('.taste-analysis'))"),
+  await evaluate("(()=>{const panel=document.querySelector('.taste-analysis');return Boolean(panel?.querySelector('#analysis-title')) && panel.querySelectorAll('.analysis-action').length>=2 && Boolean(panel.querySelector('.analysis-selection-summary'));})()"),
 );
 await clickText('Discover');
 const first = await evaluate(

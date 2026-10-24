@@ -36,7 +36,7 @@ export class TurnGuard {
         call(),
         new Promise<never>((_, reject) => {
           timer = setTimeout(() => {
-            this.cancellation.abort();
+            this.cancellation.abort(new DOMException("Turn timeout", "TimeoutError"));
             reject(Error("Turn timeout"));
           }, remaining);
         }),
@@ -54,7 +54,7 @@ export class TurnGuard {
     let timer: ReturnType<typeof setTimeout> | undefined;
     try {
       return await Promise.race([call(), new Promise<never>((_, reject) => {
-        timer = setTimeout(() => { this.cancellation.abort(); reject(Error("Turn timeout")); }, remaining);
+        timer = setTimeout(() => { this.cancellation.abort(new DOMException("Turn timeout", "TimeoutError")); reject(Error("Turn timeout")); }, remaining);
       })]);
     } finally { clearTimeout(timer); }
   }
@@ -68,7 +68,7 @@ export class TurnGuard {
     let timer: ReturnType<typeof setTimeout> | undefined;
     try {
       return await Promise.race([call(signal), new Promise<never>((_,reject)=>{
-        timer=setTimeout(()=>{controller.abort();reject(Error("Response timeout"));},remaining);
+        timer=setTimeout(()=>{controller.abort(new DOMException("Response timeout", "TimeoutError"));reject(Error("Response timeout"));},remaining);
       })]);
     } finally { clearTimeout(timer); }
   }
