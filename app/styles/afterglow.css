@@ -66,6 +66,30 @@ body { background: #f6f2e8; }
 .progressive-app .analysis-intro h2,
 .progressive-app .together-heading h3 { color: #173a30; }
 .progressive-app .passport-workspace-content { min-width: 0; }
+/* One navigation pattern on every workspace screen, with the existing mobile menu. */
+@media (min-width: 1000px) {
+  .progressive-app .passport-workspace { display: block; }
+  .progressive-app .passport-sidebar { position: static; width: 100%; padding: 8px; margin-bottom: 24px; border: 1px solid var(--ui-border); border-radius: 16px; background: var(--ui-surface); }
+  .progressive-app .passport-sidebar-title { display: none; }
+  .progressive-app .passport-navigation { display: flex; flex-wrap: wrap; gap: 6px; }
+  .progressive-app .passport-navigation button { flex: 1 1 auto; justify-content: center; min-height: 48px; width: auto; border-radius: 11px; }
+}
+.progressive-app .passport-cover { background: radial-gradient(ellipse at 85% 20%, #efd8a580, transparent 52%), #f8f3e6; border-color: var(--ui-border); color: var(--ui-ink); }
+.progressive-app .passport-cover h1 { color: #173a30; }
+.progressive-app .passport-cover h1 em { color: #8b642b; }
+.progressive-app .passport-cover .micro-label,
+.progressive-app .passport-cover .cover-journey,
+.progressive-app .passport-cover .cover-copy > p { color: #53634f; }
+.progressive-app .passport-cover .passport-taste-preview span { background: #fffdf7; color: #244736; border-color: #d4cfbb; }
+.progressive-app .passport-cover .cover-connection { background: #fffdf7; color: #244736; border-color: #c6ccb8; }
+.progressive-app .onboarding-story { background-color: #f8f3e6; border-color: var(--ui-border); }
+.progressive-app .day-out-stops { padding-left: 0; list-style: none; }
+.progressive-app .day-out-stops > li { border-left: 3px solid #acb99b; }
+.progressive-app .reusable-tastes { background: #fffdf7; border-color: var(--ui-border); }
+.progressive-app .discovery-card h4 { line-height: 1.25; }
+.progressive-app .discovery-card .card-description { color: #52604e; }
+.progressive-app .together-cards article { display: flex; flex-direction: column; gap: 10px; }
+.progressive-app .together-cards article a { margin-top: auto; }
 .progressive-app .assistant-launch:focus-visible,
 .concierge-drawer button:focus-visible { outline: 3px solid #b78339; outline-offset: 3px; }
 @media (max-width: 1000px) { .header-greeting { max-width: 110px; overflow: hidden; text-overflow: ellipsis; } }
@@ -77,5 +101,8 @@ body { background: #f6f2e8; }
   .progressive-app .brand-symbol svg { width: 28px; height: 28px; }
   .concierge-drawer { height: 100dvh; border-radius: 0; }
   .concierge-body { overflow-x: hidden; }
+  .progressive-app .passport-cover { padding: 22px 18px; }
+  .progressive-app .assistant-launch { right: 16px; bottom: max(16px, env(safe-area-inset-bottom)); min-height: 48px; font-size: 14px; padding: 12px 18px; }
+  .concierge-drawer .composer { padding-bottom: max(12px, env(safe-area-inset-bottom)); }
 }
 @media (prefers-reduced-motion: reduce) { .progressive-app .assistant-launch { transition: none; } }
