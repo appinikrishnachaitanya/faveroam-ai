@@ -1,6 +1,9 @@
 /* Tokens: shared TastePassport presentation. */
 
 :root {
+  --space-page: clamp(16px, 3vw, 32px);
+  --space-panel: clamp(16px, 2vw, 24px);
+  --space-section: 24px;
   --ui-ink: #173a30;
   --ui-muted: #596a5c;
   --ui-action: #194934;
