@@ -327,7 +327,7 @@ test("provider failure falls back to deterministic refinement", async () => {
   const r = await runTurn(state(), { message: "Find more dining" }, d);
   assert.equal(r.mode, "deterministic");
   assert.deepEqual(r.changed, ["Eat"]);
-  assert.match(r.message, /temporarily unavailable/);
+  assert.match(r.message, /available search options/);
 });
 test("guard bounds calls, prevents duplicates and expires stalled operations", async () => {
   const guard = new TurnGuard(1);

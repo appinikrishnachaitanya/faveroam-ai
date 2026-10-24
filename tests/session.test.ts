@@ -353,7 +353,7 @@ test("quiet lookup failure preserves discoveries instead of silently weakening a
   assert.equal(r.state.intent?.sections[0], "Eat");
   assert.ok(!r.state.hiddenCategories?.includes("Eat"));
   assert.equal(r.state.providerHealth, "unavailable");
-  assert.match(r.message, /Taste Concierge is temporarily unavailable/);
+  assert.match(r.message, /available search options/);
   assert.equal(attempts, 0);
   assert.deepEqual(r.changed, []);
   assert.match(r.message,/could not verify.*quiet-atmosphere/);

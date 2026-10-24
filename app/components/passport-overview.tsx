@@ -39,7 +39,7 @@ export function PassportCover({
             <span key={s.id}>{s.name}</span>
           ))}
         </div>
-        <button className="cover-connection" onClick={onConnections}>
+        <button type="button" className="cover-connection" onClick={onConnections}>
           Explore taste insights <Icon name="arrow" size={15} />
         </button>
       </div>

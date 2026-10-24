@@ -557,13 +557,12 @@ async function executeTurn(
       state.providerHealth = "healthy";
       event("Cultural intent recognized", "complete");
     } catch {
-      fallback =
-        "Taste Concierge is temporarily unavailable. You can still refine your Passport. ";
+      fallback = "I’ll try the available search options for this request. ";
       state.providerHealth = "unavailable";
       recordProviderHealth("unavailable");
       debugEvent("agent.fallback", { mode: "deterministic" });
       event(
-        "Taste Concierge is temporarily unavailable. Guided refinement is available.",
+        "Trying the available search options",
         "attention",
       );
     }

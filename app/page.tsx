@@ -1069,8 +1069,8 @@ export default function Home() {
                 </p>
                 {!conciergeAvailable && (
                   <p className="helper">
-                    Live chat is unavailable. Use Adjust filters to keep
-                    exploring.
+                    You can also use Adjust filters to choose your category,
+                    budget and atmosphere.
                   </p>
                 )}
                 {!visibleMessages.length && (

@@ -116,7 +116,8 @@
   .intelligence-intro-mark { display: none; }
   .progressive-app .intelligence-modes { grid-template-columns: 1fr; }
   .progressive-app .intelligence-modes button { min-height: 90px; }
-  .progressive-app .together-heading img { display: none; }
+  .progressive-app .together-heading { flex-direction: column; align-items: flex-start; }
+  .progressive-app .together-heading img { display: block; width: 150px; max-width: 100%; align-self: center; }
   .progressive-app .intelligence-apply { width: 100%; }
 }
 @media (prefers-reduced-motion: reduce) {

@@ -27,6 +27,11 @@
 }
 
 @media (prefers-reduced-motion: no-preference) {
+  .journey-illustration,
+  .cover-illustration,
+  .together-heading img {
+    animation: passport-arrive 700ms var(--motion-ease-out) 100ms backwards;
+  }
   .move-onboarding .onboarding-heading,
   .passport-cover .cover-copy,
   .discovery-concierge,

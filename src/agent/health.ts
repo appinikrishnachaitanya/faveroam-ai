@@ -9,4 +9,4 @@ export function providerHealth(configured: boolean): ProviderHealth {
   return last && Date.now() - last.at < 60_000 ? last.status : "configured";
 }
 export const conciergeUnavailable =
-  "Taste Concierge is temporarily unavailable. You can still refine your Passport.";
+  "Your discoveries are ready to explore. Use Adjust filters to choose a category, budget or atmosphere.";
