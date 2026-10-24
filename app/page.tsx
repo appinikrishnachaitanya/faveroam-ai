@@ -41,7 +41,6 @@ import DiscoveryConcierge from "./components/discovery-concierge";
 import PassportNavigation from "./components/passport-navigation";
 import { reviewMatches } from "../src/passport/matching";
 import AccountControl from "./components/account";
-import BrandMark from "./components/brand-mark";
 import ReusableTastes from "./components/taste-profile";
 import DayOutPlan from "./components/day-out";
 import TasteIntelligence from "./components/intelligence";
@@ -694,7 +693,7 @@ export default function Home() {
       <header className="workspace-topbar">
         <a className="brand" href="/" aria-label="TastePassport home" onClick={event=>{if(result){event.preventDefault();requestNewPassport();}}}>
           <span className="brand-symbol">
-            <BrandMark size={34} />
+            <Icon name="star" size={22} />
           </span>
           <span>
             TastePassport <small>AI</small>
