@@ -1,4 +1,5 @@
 import { matchesDishRequirements } from "../passport/dish-evidence.ts";
+import {removeCancelledRequirements} from './cancelled-requirements.ts';
 import { responseContext, responseReceipt, validateResponse } from "./response.ts";
 import { refinementSettings, restoreRefinementSettings } from "./refinement-settings.ts";
 import { conversationFocus, updateConversationMemory } from "./memory.ts";
@@ -694,6 +695,7 @@ async function executeTurn(
     for (const section of targets)
       state.categoryModes[section] = intent.familiarity;
   if (intent.kind === "refine") {
+    if(input.message)removeCancelledRequirements(state,intent,input.message,targets);
     // Migrate generic content kinds out of older unresolved taste drafts.
     for(const section of targets) {
       if(state.categoryConcepts[section])state.categoryConcepts[section]=state.categoryConcepts[section].filter(concept=>!isOutputCategoryConcept(concept,[section]));

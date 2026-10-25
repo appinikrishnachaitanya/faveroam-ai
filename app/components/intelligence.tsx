@@ -143,7 +143,7 @@ export default function TasteIntelligence({
           ...passport.agent,
           action: "together",
           token: resolution.token,
-          ids: Object.values(ids),
+          ids: [...new Set(Object.values(ids))],
           sections: selectedSections,
         }),
       );
@@ -393,13 +393,13 @@ export default function TasteIntelligence({
                 disabled={
                   busy ||
                   loading ||
-                  Object.keys(ids).length !== resolution.items.length ||
-                  new Set(Object.values(ids)).size !== resolution.items.length
+                  !Object.values(ids).length || !selectedSections.length
                 }
                 onClick={() => void commonGround()}
               >
                 Find something for both of us
               </button>
+              <p className="helper">Uses {new Set(Object.values(ids)).size} selected interest{new Set(Object.values(ids)).size===1?'':'s'}. Interests without a selected match are not included. Choose a match above to include them.</p>
             </div>
           )}
           {together && (

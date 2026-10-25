@@ -6,7 +6,7 @@ import { editDistance } from "../text/edit-distance.ts";
 function themeMeaning(name:string):string {
   return name.toLowerCase()
     .replace(/\b(?:cuisine|foods?|style|dishes?|specialt(?:y|ies)|restaurants?|kitchen|cooking|local|homestyle|savouries|savories|variety|selection|of|and|accompaniments?)\b/g,'')
-    .replace(/[^\p{L}\p{N}]/gu,'');
+    .replace(/[^\p{L}\p{N}]+/gu,' ').trim().split(/\s+/).sort().join('');
 }
 
 export function themeCategories(theme:TasteTag|undefined,active:Section[]):Section[] {

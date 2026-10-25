@@ -127,11 +127,11 @@ async function handlePOST(request: Request) {
         400,
       );
     const choices = unseal(b.token);
-    const partner = choices.flatMap((item) =>
+    const partner = [...new Map(choices.flatMap((item) =>
       item.candidates.filter(
         (c) => b.ids.includes(c.id) && !c.id.startsWith("urn:tag:"),
       ),
-    );
+    ).map(candidate=>[candidate.id,candidate])).values()];
     if (partner.length !== b.ids.length)
       return json(
         { error: "Choose returned entity matches for the comparison." },
