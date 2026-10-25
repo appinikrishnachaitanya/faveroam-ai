@@ -227,6 +227,21 @@
 .taste-confirmation {
   max-width: 1000px;
 }
+.progressive-app .taste-confirmation {
+  padding: clamp(20px, 3vw, 40px);
+  border: 1px solid var(--ui-border);
+  border-radius: 24px;
+  background: var(--ui-surface);
+}
+.taste-confirmation .onboarding-heading {
+  margin: 0 0 28px;
+}
+.taste-confirmation .confirmation-card { min-width: 0; }
+.taste-confirmation .confirmation-card-heading { gap: 12px; }
+@media (max-width: 640px) {
+  .progressive-app .taste-confirmation { padding: 20px 16px; border-radius: 18px; }
+  .taste-confirmation .confirmation-card { padding: 20px 16px; }
+}
 
 .confirmation-list {
   gap: 18px;

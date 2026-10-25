@@ -194,6 +194,11 @@ assert.equal(
   await evaluate("document.querySelectorAll('.confirmation-card').length"),
   3,
 );
+for (const width of [320, 390, 768, 1440]) {
+  await call("Emulation.setDeviceMetricsOverride", {width,height:1100,deviceScaleFactor:1,mobile:width<768});
+  assert.ok(await evaluate("(()=>{const panel=document.querySelector('.taste-confirmation');const style=getComputedStyle(panel);return parseFloat(style.paddingLeft)>=16 && parseFloat(style.paddingRight)>=16 && document.documentElement.scrollWidth<=innerWidth;})()"), `Review Interests must have content gutters at ${width}px`);
+  assert.ok(await evaluate("(()=>{const buttons=[...document.querySelectorAll('.confirmation-actions > button')];return buttons.every(button=>button.getBoundingClientRect().height>=48) && Math.abs(buttons[0].getBoundingClientRect().height-buttons[1].getBoundingClientRect().height)<2;})()"), `Review actions must have equal touch-friendly heights at ${width}px`);
+}
 for (let i = 0; i < 3; i++) {
   const selected = await evaluate(
     `(()=>{const s=document.querySelectorAll('.inline-match select')[${i}];return [...s.options].find(o=>o.value${i === 1 ? "&&o.textContent.includes('2014')" : i === 2 ? "&&o.value==='urn:tag:cuisine:qloo:indian'" : ""}).value})()`,

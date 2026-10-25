@@ -504,8 +504,7 @@ body { background: #f6f2e8; }
   border-radius: 20px;
   background: var(--ui-surface);
 }
-.progressive-app .move-onboarding,
-.progressive-app .taste-confirmation { padding-inline: 0; }
+.progressive-app .move-onboarding { padding-inline: 0; }
 .progressive-app .onboarding-story { padding: 24px; border-radius: 20px; }
 .progressive-app .passport-workspace-content > section,
 .progressive-app .passport-workspace-content > div { min-width: 0; }
