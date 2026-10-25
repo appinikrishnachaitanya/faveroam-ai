@@ -125,6 +125,7 @@ async function handlePOST(request: Request) {
         } catch {}
       };
       try {
+        send({type:'activity',event:{label:'Picking up your Passport',status:'active'}});
         const reply = await inSession(
           body.sessionId as string,
           body.revision as number,

@@ -1,5 +1,6 @@
 "use client";
 import { refinementErrorMessage } from "../src/agent/customer-error";
+import {generatePassport} from '../src/workspace/generation-browser';
 import { sectionLabel } from "../src/passport/labels";
 import { useEffect, useRef, useState } from "react";
 import { validDestination } from "../src/workspace/location";
@@ -80,6 +81,14 @@ async function post<T>(path: string, body: unknown): Promise<T> {
   return data;
 }
 export default function Home() {
+  const [chatProgress,setChatProgress]=useState('');
+  const [generationPreviews,setGenerationPreviews]=useState<Partial<Record<Section,import('../src/passport/model').Card[]>>>({});
+  const previewRevealed=useRef(false);
+  useEffect(()=>{
+    if(previewRevealed.current||!Object.values(generationPreviews).some(cards=>cards?.length))return;
+    previewRevealed.current=true;
+    document.querySelector('.generation-previews')?.scrollIntoView({behavior:'instant',block:'start'});
+  },[generationPreviews]);
   const [tasteDraftVersion,setTasteDraftVersion]=useState(0);
   const [saveTastePrompt,setSaveTastePrompt]=useState(false);
   const [showSaved, setShowSaved] = useState(false);
@@ -379,6 +388,7 @@ export default function Home() {
     setRetryInput(input);
     setError("");
     setPhase("refining");
+    setChatProgress('Looking at your request…');
     setUpdating(
       input.feedback
         ? [
@@ -393,6 +403,7 @@ export default function Home() {
         result.agent,
         input,
         (event) => {
+          setChatProgress(event.label);
           const match = event.label.match(
             /(?:Updating|Ranking) your (Eat|Coffee|Music|Culture|Lifestyle) passport/,
           );
@@ -601,13 +612,15 @@ export default function Home() {
     if (!resolution || !complete || busy || !city) return;
     setError("");
     setResult(undefined);
+    setGenerationPreviews({});
+    previewRevealed.current=false;
     setUpdating([]);
     setPhase("exploring");
     say(
       `I’m exploring ${city} using your confirmed tastes and chosen activities.`,
     );
     try {
-      const r = await post<Passport>("/api/passport", {
+      const r = await generatePassport({
         city,
         token: resolution.token,
         ids: signals.map((s) => s.id),
@@ -616,7 +629,7 @@ export default function Home() {
         mode: initialMode,
         // Onboarding progress is not assistant chat history.
         history: [],
-      });
+      },(section,cards)=>setGenerationPreviews(current=>({...current,[section]:cards})));
       const passport = r;
       setResult(passport);
       setPhase("ready");
@@ -844,6 +857,7 @@ export default function Home() {
           </div>
         )}
         {busy && <JourneyLoading phase={phase} detail={progress} />}
+        {phase==='exploring'&&Object.values(generationPreviews).some(cards=>cards?.length)&&<section className="generation-previews" aria-label="Discoveries ready to preview"><h2>Your first discoveries are ready</h2><p>Browse these while we finish your Passport. Saving and refinement will be available when it’s ready.</p><div>{sectionOrder.filter(section=>generationPreviews[section]?.length).map(section=><article key={section}><h3>{sectionLabel(section)}</h3><ol>{generationPreviews[section]!.map(card=><li key={card.id}><strong>{card.name}</strong>{card.address&&<small>{card.address}</small>}</li>)}</ol></article>)}</div></section>}
         {result && (
           <section
             className="living-passport"
@@ -1084,6 +1098,7 @@ export default function Home() {
 
             {assistantTab === "ask" ? (
               <div id="ask-panel" role="tabpanel" aria-labelledby="ask-tab">
+                {phase==='refining'&&<div className="chat-progress" role="status" aria-live="polite"><span aria-hidden="true">•••</span><p>{chatProgress}</p></div>}
                 <p className="concierge-intro">
                   Ask a follow-up, refine one category, or get help choosing your next stop.
                 </p>

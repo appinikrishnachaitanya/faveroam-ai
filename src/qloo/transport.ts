@@ -56,6 +56,13 @@ export function paced<T>(
   ttl = 300_000,
   signal?: AbortSignal,
 ): Promise<T> {
+  // A completed lookup must not wait behind an unrelated slow network request.
+  if (signal?.aborted) return Promise.reject(signal.reason ?? Error("Qloo request cancelled"));
+  const cached = cache.get(key);
+  if (cached && cached.until > Date.now()) {
+    debugEvent("qloo.cache_hit");
+    return Promise.resolve(cached.value as T);
+  }
   const job = queue.then(async () => {
     signal?.throwIfAborted();
     const hit = cache.get(key);

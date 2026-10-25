@@ -9,7 +9,9 @@ import { validDestination } from "../../../src/workspace/location";
 import { catalogCity } from "../../../src/workspace/destinations";
 import { sectionTypes, type Section } from "../../../src/passport/model";
 import { storageConfigured } from "../../../src/account/server";
-async function handlePOST(request: Request) {
+import {threeChoices} from '../../../src/passport/shortlist';
+import type {Card} from '../../../src/passport/model';
+async function handlePOST(request: Request, onCategory?: (section:Section,cards:Card[])=>void) {
   const rejected = browserRequestError(request);
   if (rejected) return rejected;
   try {
@@ -44,7 +46,7 @@ async function handlePOST(request: Request) {
       throw new QlooError("Choose up to five supported activities.",400);
     if (b.mode !== undefined && !["familiar", "balanced", "explore"].includes(b.mode))
       throw new QlooError("Choose a supported discovery style.", 400);
-    const result = await passport(city!, b.token, b.ids, constraints, b.activities as Section[] | undefined, b.mode);
+    const result = await passport(city!, b.token, b.ids, constraints, b.activities as Section[] | undefined, b.mode,onCategory);
     const state = createSession(result, constraints);
     state.activeCategories = result.requestedActivities;
     state.discoveryMode = b.mode ?? "familiar";
@@ -90,5 +92,20 @@ async function handlePOST(request: Request) {
 }
 
 export function POST(request: Request) {
+  if(request.headers.get('accept')?.includes('application/x-ndjson')) {
+    const encoder=new TextEncoder();let closed=false;
+    return new Response(new ReadableStream({
+      cancel(){closed=true;},
+      async start(controller){
+        const send=(value:unknown)=>{if(!closed)controller.enqueue(encoder.encode(JSON.stringify(value)+'\n'));};
+        try {
+          send({type:'progress'});
+          const response=await debugRequest('passport',()=>handlePOST(request,(section,cards)=>send({type:'category',section,cards:threeChoices(cards).map(choice=>choice.card)})));
+          const data=await response.json();send(response.ok?{type:'result',passport:data}:{type:'error',message:data.error});
+        }catch{send({type:'error',message:'Could not finish your Passport. Your tastes are still here; please try again.'});}
+        finally{if(!closed){closed=true;controller.close();}}
+      },
+    }),{headers:{'Content-Type':'application/x-ndjson','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
+  }
   return debugRequest("passport", () => handlePOST(request));
 }

@@ -67,6 +67,7 @@ export async function passport(
   constraints: Constraint[] = [],
   activities: import("./model.ts").Section[] = [],
   mode: import("./evidence.ts").Familiarity = "familiar",
+  onCategory?: (section: import('./model.ts').Section, cards: Card[]) => void,
 ) {
   if (!["familiar", "balanced", "explore"].includes(mode))
     throw new QlooError("Choose a supported discovery style.", 400);
@@ -95,6 +96,7 @@ export async function passport(
     local.intent={kind:"refine",seeds:[],concepts:[],constraints,sections:[section],strategy:"discover"};
     try {
       const cards=await discoverSection(local,section,constraints,ids.filter(id=>!id.startsWith("urn:tag:")),false,deadline);
+      onCategory?.(section,cards);
       if (cards.length > 0 && cards.length < 3) local.notices.push(`Only ${cards.length} eligible ${section} ${cards.length === 1 ? "match was" : "matches were"} returned for these tastes and requirements. Try Balanced or Explore to broaden taste similarity; explicit filters stay in place.`);
       if (!cards.length) local.notices.push(`No eligible ${section} matches were returned. Try a different activity or refinement.`);
       return {cards,notices:local.notices};
