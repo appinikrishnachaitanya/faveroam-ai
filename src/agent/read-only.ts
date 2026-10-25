@@ -91,6 +91,24 @@ export function readOnlyFollowUp(state:AgentState,query:string):string {
     return "One of those choices is no longer in your current discoveries. Ask for a new shortlist before comparing. Your Passport is unchanged.";
   const focused=presented.flatMap(id=>state.cards.find(card=>card.id===id) ?? []);
   const explicitlyNamed = findMentionedCard(query, state.cards.filter(card => !state.hiddenCategories?.includes(card.section)));
+
+  // "Why that one?" / "Why did you pick it?" must answer only about the
+  // single selected card, not about all recently presented cards. Use the
+  // lastSelectedIds from conversation memory to scope the answer.
+  const isWhySelected = /\b(?:why|what made you|how come|tell me more about)\b.*\b(?:that one|it|this one|your pick|your choice|that)\b/i.test(query) ||
+    /\b(?:why (?:that|this|it)|why did you (?:pick|choose|select|recommend))\b/i.test(query);
+  if (isWhySelected && !explicitlyNamed) {
+    const memory = state.conversationMemory as { lastSelectedIds?: string[] } | undefined;
+    const selectedId = memory?.lastSelectedIds?.[0];
+    if (selectedId) {
+      const selectedCard = state.cards.find(c => c.id === selectedId && !state.hiddenCategories?.includes(c.section));
+      if (selectedCard) return cardSpecificAnswer(selectedCard, query);
+    }
+    // Fall back to the first presented card in the last focused section.
+    const lastFocused = focused[0];
+    if (lastFocused) return cardSpecificAnswer(lastFocused, query);
+  }
+
   const section=explicitlyNamed?.section ?? contextSection(state,query);
 
   const cards=comparing && focused.length && !categoryInText(query) ? focused : section?state.cards.filter(c=>c.section===section && !(state.hiddenCategories??[]).includes(c.section)):[];
