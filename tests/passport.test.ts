@@ -18,7 +18,7 @@ test('conservative category filtering omits services and unknown landmarks',()=>
  assert.equal(classify({...entity,tags:[{name:'Art Museum'}]}),'Culture');
  assert.equal(classify({...entity,tags:[{name:'Bookstore'}]}),'Lifestyle');
  assert.equal(classify({...entity,name:'Consulate',tags:[{name:'Restaurant'}]}),undefined);
- assert.equal(classify({...entity,tags:[{name:'Landmark'}]}),undefined);
+ assert.equal(classify({...entity,tags:[{name:'Landmark'}]}),'Culture');
 });
 test('normalization only includes returned affinity and usable metadata',()=>{
  assert.equal(card(entity,'Music').affinity,undefined);const c=card({...entity,query:{affinity:0.7},properties:{address:'Protocol address',short_description:'Protocol description'}},'Culture');assert.equal(c.affinity,0.7);assert.equal(c.address,'Protocol address');

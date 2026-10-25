@@ -19,6 +19,8 @@ export default function DayOutPlan({
   passport,
   disabled,
   signedIn = false,
+  saveRequest = 0,
+  onSaveRequestHandled,
   expanded,
   editPlan,
   onFindActivity,
@@ -26,6 +28,8 @@ export default function DayOutPlan({
   passport: Passport;
   disabled: boolean;
   signedIn?: boolean;
+  saveRequest?: number;
+  onSaveRequestHandled?: () => void;
   expanded?: boolean;
   editPlan?: {plan:SavedPlan;nonce:number};
   onFindActivity?: (id:string)=>void;
@@ -133,20 +137,20 @@ export default function DayOutPlan({
     link.download = "tastepassport-day-out.txt";
     link.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
-    const message=selected.length === activities.length ? "Your plan is downloaded." : "Your partial plan is downloaded, including stops that still need a place.";
+    const message=selected.length === activities.length ? "Your plan is downloaded." : "Your plan is downloaded with the open stops clearly marked.";
     setStatus(message);
     showNotice(message);
   }
   async function savePlan() {
-    const error=exportError();
-    if(error){setStatus(error);showNotice(error,"error");return;}
     if (!signedIn) {
       setStatus(
-        "Sign in to save this plan. Your chosen date and stops will stay here.",
+        "Sign in, then choose Save to Upcoming plans. Your chosen date and stops will stay here.",
       );
       window.dispatchEvent(new Event("tastepassport:open-account"));
       return;
     }
+    const error=exportError();
+    if(error){setStatus(error);showNotice(error,"error");return;}
     if (!passport.agent) return;
     setSaving(true);
     try {
@@ -171,6 +175,12 @@ export default function DayOutPlan({
       setSaving(false);
     }
   }
+  useEffect(()=>{
+    if(saveRequest>0){
+      onSaveRequestHandled?.();
+      void savePlan();
+    }
+  },[saveRequest]);
 
   return (
     <details className="secondary-reveal day-out-reveal" open={expanded}>
@@ -316,7 +326,7 @@ export default function DayOutPlan({
           >
             {selected.length === activities.length
               ? "Download my plan"
-              : "Download partial plan"}
+              : `Download plan · ${selected.length}/${activities.length} places chosen`}
           </button>
           <button
             className="primary-button"

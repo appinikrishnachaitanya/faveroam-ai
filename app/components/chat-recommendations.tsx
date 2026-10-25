@@ -4,7 +4,7 @@ import { sectionLabel } from "../../src/passport/labels";
 import type { Card } from "../../src/passport/model";
 import { isPlaceSection } from "../../src/passport/model";
 import { formatReturnedRating } from "../../src/passport/rating-display";
-import { chatReason } from "../../src/agent/chat-shortlist";
+import { chatReason, chatTasteEvidence } from "../../src/agent/chat-shortlist";
 import { Icon } from "./passport";
 
 export default function ChatRecommendations({cards,city,busy,savedIds,onAsk,onSave}:{
@@ -22,10 +22,16 @@ export default function ChatRecommendations({cards,city,busy,savedIds,onAsk,onSa
       const place=isPlaceSection(card.section);
       const location=card.address ?? card.intelligence?.location?.address;
       const saved=savedIds.includes(card.id);
+      const taste=chatTasteEvidence(card);
       return <article key={card.id}>
         <span className="chat-choice-category">{index+1} · {card.section==="Music"?"Artist discovery":sectionLabel(card.section)}</span>
         <h3>{card.name}</h3>
         {(location || rating) && <p className="chat-choice-details">{location}{location && rating?" · ":""}{rating?`★ ${rating}/5`:""}</p>}
+        {taste.names.length>0 && <div className="chat-taste-path" aria-label="Taste connection">
+          <span><small>Your confirmed tastes</small><strong>{taste.names.join(' + ')}</strong></span>
+          {taste.associated ? <><span className="chat-taste-link"><Icon name="arrow" size={14}/>Returned audience association</span><span><small>Your discovery</small><strong>{card.name}</strong></span><small>An audience connection, rather than proof of shared style or food preferences.</small></>
+            : <small>Used in this search. No individual audience connection was returned for this result.</small>}
+        </div>}
         <p className="chat-choice-reason">{chatReason(card)}</p>
         <div className="chat-choice-actions">
           <button type="button" disabled={busy} onClick={()=>onAsk(`Why did you recommend ${card.name}?`)}>Why this one?</button>

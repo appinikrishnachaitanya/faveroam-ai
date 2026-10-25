@@ -62,14 +62,21 @@ export async function resolveCulturalSeeds(
       } catch { /* Native lookup below is the bounded supported fallback. */ }
       items.push({query,candidates:matches.length ? matches : await findTags(query,deadline)});
     } else {
+      let resolved = [] as ReturnType<typeof candidates>;
       try {
         const entities = await guard.run("entity_search", { query }, () =>
           search(query,deadline),
         );
-        items.push({ query, candidates: candidates(entities) });
+        resolved = candidates(entities);
       } catch (e) {
-        if (e instanceof QlooError && e.status === 404) items.push({ query, candidates: [] });
-        else throw e;
+        if (!(e instanceof QlooError && e.status === 404)) throw e;
+      }
+      if (resolved.length) {
+        items.push({ query, candidates: resolved });
+      } else {
+        // Free-form dishes/cuisines often live in Qloo's tag taxonomy rather
+        // than the entity catalog. Try that taxonomy before returning empty.
+        items.push({ query, candidates: await findTags(query, deadline) });
       }
     }
   }
@@ -141,6 +148,10 @@ export async function discoverSection(
     params["signal.interests.tags"] = sectionTags(state, section).filter(tag => !excludedTags.has(tag.id)).map((t) => t.id).join(",");
   if (section === "Eat") {
     const dishes = tags.filter((tag) => tag.id.startsWith("urn:tag:specialty_dish:place:"));
+    const foodVenueTypes = tags.filter((tag) =>
+      /urn:tag:(?:genre|category):place:/.test(tag.id) &&
+      /ice\s*cream|gelato|dessert|frozen yogurt/i.test(`${tag.id} ${tag.name}`.replace(/[_-]+/g, " ")),
+    );
     const cuisine = dishes.length ? dishes : tags.filter(
       (t) =>
         !t.id.includes(":ambience:") &&
@@ -152,8 +163,9 @@ export async function discoverSection(
       ? tags.filter((t) => t.id.includes(":ambience:"))
       : [];
     params["filter.tags"] = [
-      "urn:tag:genre:place:restaurant",
-      ...cuisine.map((t) => t.id),
+      ...(foodVenueTypes.length
+        ? foodVenueTypes.map((tag) => tag.id)
+        : ["urn:tag:genre:place:restaurant", ...cuisine.map((t) => t.id)]),
       ...atmosphere.map((t) => t.id),
       ...tags.filter(t => t.id.startsWith("urn:tag:dietary_option:")).map(t => t.id),
     ].join(",");
@@ -226,10 +238,11 @@ export async function discoverSection(
     params["filter.exclude.entities"] = excluded.slice(-50).join(",");
   if (section === "Culture" && activityGenres?.length) {
     for (const genre of activityGenres) {
-      const options = await findTags(genre === "cinema" ? "movie theater" : genre, signal);
+      const options = await findTags(genre === "cinema" ? "movie theater" : genre === "landmark" ? "tourist attractions" : genre, signal);
+      const returnedTagText=(tag:{id:string;name:string})=>`${tag.id} ${tag.name}`.replace(/_/g," ");
       const match = options.find((tag) =>
         /urn:tag:(?:genre|category):place:/.test(tag.id) &&
-        (genre === "cinema" ? /cinema|movie theater|movie theatre/i : /nightclub|night club/i).test(tag.name),
+        (genre === "cinema" ? /cinema|movie theater|movie theatre/i : genre === "landmark" ? /landmark|tourist attraction|sightseeing/i : /nightclub|night club/i).test(returnedTagText(tag)),
       );
       if (match) activityFilters.push(match.id);
     }
@@ -406,7 +419,37 @@ export async function discoverSection(
   }
   const requestedActivities = state.activityGenres?.[section] ?? [];
   const dishRequirements=section === "Eat" ? sectionTags(state,section) : [];
-  const mixed = mixPools(pools).filter(card=>matchesDishRequirements(card,dishRequirements)).filter(card => !requestedActivities.length || requestedActivities.some(genre => activityMatches(card, genre === "cinema" ? "Cinema" : "Nightlife")));
+  let mixed = mixPools(pools);
+  const verifiedDishMatches = mixed.filter(card => matchesDishRequirements(card, dishRequirements));
+  const dishTags = dishRequirements.filter(tag => tag.id.startsWith("urn:tag:specialty_dish:"));
+  if (section === "Eat" && !rank && dishTags.length && !verifiedDishMatches.length) {
+    // One bounded broadening step: keep the requested dish as Qloo taste
+    // evidence, but stop requiring each listing to repeat that dish tag.
+    // Cards are labelled below because this cannot verify a current menu.
+    const filters = (params["filter.tags"] ?? "").split(",").filter(Boolean)
+      .filter(id => !id.startsWith("urn:tag:specialty_dish:"));
+    if (!filters.length) filters.push("urn:tag:genre:place:restaurant");
+    const fallbackParams = { ...params, "filter.tags": filters.join(","), "operator.filter.tags": "intersection" };
+    try {
+      const result = await insights(fallbackParams, signal);
+      const valid = validateDiscoveries(result.body, state.city, section, appliedConstraints, excluded);
+      const broader = withEvidence(valid, result.entities, result.params, sources, state.city, mode, "adjacent");
+      for (const card of broader) if (card.evidence) {
+        card.evidence.strategyNote = "Dish match not verified: Qloo found a broader taste match, but this listing did not return evidence that the venue serves the requested dish. Check its current menu.";
+      }
+      if (broader.length) {
+        state.notices.push(`No listing returned verified ${dishTags.map(tag => tag.name).join(" or ")} menu evidence. Showing broader Qloo taste matches; check each venue's current menu.`);
+        mixed = broader;
+      } else {
+        mixed = verifiedDishMatches;
+      }
+    } catch {
+      mixed = verifiedDishMatches;
+    }
+  } else if (dishTags.length) {
+    mixed = verifiedDishMatches;
+  }
+  mixed = mixed.filter(card => !requestedActivities.length || requestedActivities.some(genre => activityMatches(card, genre === "cinema" ? "Cinema" : "Nightlife")));
   const avoidMainstream = constraints.includes("mainstream") && ["Eat","Coffee"].includes(section);
   const eligible = avoidMainstream ? mixed.filter(card=>!knownChain(card)) : mixed;
   if (avoidMainstream && eligible.length < mixed.length)

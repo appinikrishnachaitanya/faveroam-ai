@@ -53,7 +53,7 @@
 }
 @media (max-width: 760px) {
   .progressive-app:has(.signout-button) { --header-height: 116px; }
-  .progressive-app .workspace-topbar:has(.signout-button) { height: var(--header-height); grid-template-columns: 1fr; padding-block: 8px; gap: 4px; }
+  .progressive-app .workspace-topbar:has(.signout-button) { height: auto; min-height: var(--header-height); grid-template-columns: 1fr; padding-block: 8px; gap: 4px; }
   .workspace-topbar:has(.signout-button) .header-controls { width: 100%; justify-content: space-between; gap: 4px; }
   .header-controls .account-control:has(.signout-button) { gap: 4px; }
   .header-controls .account-control:has(.signout-button) button { font-size: 13px; padding-inline: 8px; }

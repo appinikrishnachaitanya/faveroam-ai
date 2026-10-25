@@ -120,7 +120,7 @@ async function handlePOST(request: Request) {
       b.ids.length < 1 ||
       b.ids.length > 5 ||
       new Set(b.ids).size !== b.ids.length ||
-      !sectionOrder.includes(b.section)
+      !(Array.isArray(b.sections) ? b.sections.length >= 1 && b.sections.length <= 3 && new Set(b.sections).size === b.sections.length && b.sections.every((section: unknown) => typeof section === "string" && sectionOrder.includes(section as Section)) : sectionOrder.includes(b.section))
     )
       return json(
         { error: "Confirm the other person’s interests first." },
@@ -153,7 +153,7 @@ async function handlePOST(request: Request) {
         notice:
           "No shared cultural tags were returned. Your existing Passport is preserved.",
       });
-    const section = b.section as Section;
+    const sections = (Array.isArray(b.sections) ? b.sections : [b.section]) as Section[];
     const rejected = state.feedback.filter((f) => !f.accepted).map((f) => f.id);
     try {
       const tags = comparison.shared.map((t) => ({
@@ -166,15 +166,30 @@ async function handlePOST(request: Request) {
       joint.selected = [...new Map([...state.selected, ...partner].map(c => [c.id,c])).values()];
       joint.tags = [...new Map([...state.tags, ...tags].map(c => [c.id,c])).values()];
       joint.categoryTags ??= {};
-      joint.categoryTags[section] = [...new Set([...(joint.categoryTags[section] ?? []), ...tags.map(t => t.id)])];
-      const cards = (await discoverSection(joint, section, state.categoryConstraints[section] ?? [], [...a, ...partner.map(c => c.id), ...rejected], false, signal)).slice(0,6);
+      // A previous Ask session may have left a one-off activity such as
+      // nightlife in Culture. Together is a fresh multi-category comparison.
+      joint.intent = {
+        kind: "refine",
+        seeds: [],
+        concepts: [],
+        constraints: joint.categoryConstraints[sections[0]] ?? [],
+        sections,
+        strategy: "discover",
+      };
+      if (joint.activityGenres) delete joint.activityGenres.Culture;
+      const cards: Awaited<ReturnType<typeof discoverSection>> = [];
+      for (const section of sections) {
+        joint.categoryTags[section] = [...new Set([...(joint.categoryTags[section] ?? []), ...tags.map(t => t.id)])];
+        const result = await discoverSection(joint, section, state.categoryConstraints[section] ?? [], [...a, ...partner.map(c => c.id), ...rejected], false, signal);
+        cards.push(...result.filter(card => card.section === section).slice(0, 3));
+      }
       return json({
         comparison,
         partner: partner.map((p) => p.name),
         cards,
         notice: cards.length
-          ? "Suggestions use both profiles and the shared tags returned by the comparison. This does not guarantee both people will like every result."
-          : "No matching places for your shared tastes and current filters. Your Passport is preserved.",
+          ? "Each category was searched using both confirmed taste profiles and the shared themes returned by the comparison. These are starting ideas, not a compatibility score or a guarantee you will both like every result."
+          : "No matches appeared for these shared tastes and current preferences. Your Passport is preserved.",
       });
     } catch {
       return json({

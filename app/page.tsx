@@ -34,6 +34,8 @@ import {
 } from "./components/onboarding";
 import ConciergeDrawer from "./components/concierge";
 import ChatRecommendations from "./components/chat-recommendations";
+import ChatComparison from "./components/chat-comparison";
+import ChatReply from "./components/chat-reply";
 import ConceptClarification from "./components/concept-clarification";
 import DiscoveryConcierge from "./components/discovery-concierge";
 import PassportNavigation from "./components/passport-navigation";
@@ -51,7 +53,7 @@ import { sectionOrder } from "../src/workspace/state";
 import TasteAnalysis from "./components/taste-analysis";
 import { rememberGuestPassport, restoreGuestPassport, clearGuestPassport } from "../src/workspace/guest-recovery";
 import { rememberActiveSession, restoreActiveSession, clearActiveSession, rememberSavedSession, restoreSavedSession, clearSavedSession } from "../src/workspace/active-session";
-import { showNotice } from "../src/account/browser";
+import { accountRequest, showNotice } from "../src/account/browser";
 import { saveOnboardingDraft, restoreOnboardingDraft, clearOnboardingDraft } from "../src/workspace/draft-recovery";
 import type { Familiarity } from "../src/passport/evidence";
 import type { SavedPlan } from "../src/account/plans";
@@ -59,6 +61,7 @@ interface Message {
   role: "agent" | "user";
   text: string;
   recommendationIds?: string[];
+  comparisonIds?: string[];
 }
 const welcome: Message = {
   role: "agent",
@@ -102,6 +105,8 @@ export default function Home() {
     "discover" | "plan" | "preferences" | "together" | "connections"
   >("discover");
   const [accountSignedIn, setAccountSignedIn] = useState(false);
+  const [accountFirstName, setAccountFirstName] = useState("");
+  const [savePlanRequest, setSavePlanRequest] = useState(0);
   const [savedSessionId, setSavedSessionId] = useState<string>();
   const saveQueue = useRef<Promise<void>>(Promise.resolve());
 
@@ -166,7 +171,7 @@ export default function Home() {
     recoveryRequest.current?.abort();
     const controller = new AbortController();
     recoveryRequest.current = controller;
-    const requestSignal = AbortSignal.any([controller.signal, AbortSignal.timeout(12000), ...(signal ? [signal] : [])]);
+    const requestSignal = AbortSignal.any([controller.signal, AbortSignal.timeout(20_000), ...(signal ? [signal] : [])]);
     setRecoveryStatus("checking");
     try {
       const response = await fetch("/api/agent/session", {
@@ -177,8 +182,10 @@ export default function Home() {
       if (signal?.aborted || controller.signal.aborted || recoveryRequest.current !== controller) return;
       if (!response.ok) { setRecoveryStatus(response.status === 410 ? "expired" : "unavailable"); return; }
       const data = await response.json();
+      if (signal?.aborted || controller.signal.aborted || recoveryRequest.current !== controller) return;
       if (!data.passport?.agent || data.passport.agent.sessionId !== passport.agent.sessionId) throw Error();
-      setResult(current => current?.agent?.sessionId === passport.agent?.sessionId ? data.passport : current);
+      setResult(current => current?.agent?.sessionId === passport.agent?.sessionId &&
+        data.passport.agent.revision >= (current?.agent?.revision ?? -1) ? data.passport : current);
       setRecoveryStatus(undefined);
     } catch { if (!signal?.aborted && !controller.signal.aborted && recoveryRequest.current === controller) setRecoveryStatus("unavailable"); }
   }
@@ -412,6 +419,30 @@ export default function Home() {
         return next;
       });
       setProviderHealth(reply.state.providerHealth ?? "unconfigured");
+      if (reply.action === "plan-day" || reply.action === "save-plan") {
+        setAssistantOpen(false);
+        selectWorkspaceView("plan");
+        if(reply.action === "save-plan")setSavePlanRequest(current=>current+1);
+      }
+      if(reply.action === "open-preferences" || reply.action === "open-vibe" || reply.action === "open-discover" || reply.action === "open-together" || reply.action === "open-insights") {
+        setAssistantOpen(false);
+        setShowSaved(reply.action === "open-vibe");
+        selectWorkspaceView(reply.action === "open-preferences"?"preferences":reply.action === "open-together"?"together":reply.action === "open-insights"?"connections":"discover");
+      }
+      if (reply.action === "save-passport") {
+        if (!accountSignedIn) {
+          window.dispatchEvent(new Event("tastepassport:save-passport"));
+        } else {
+          try {
+            await accountRequest("/api/account/passports",{action:"save",sessionId:reply.state.id,revision:reply.state.revision});
+            rememberSavedSession(window.sessionStorage,reply.state.id);
+            setSavedSessionId(reply.state.id);
+            showNotice("Your Passport is saved to your account.");
+          } catch (saveError) {
+            showNotice(saveError instanceof Error?saveError.message:"Your Passport could not be saved. Please try again.","error");
+          }
+        }
+      }
       if (input.reset) {
         setMessages([welcome]);
         setComposer("");
@@ -623,6 +654,7 @@ export default function Home() {
     setShowSaved(false);
     setWorkspaceView("discover");
     setEditingPlan(undefined);
+    setSavePlanRequest(0);
     setAdaptation("");
     setCity("");
     setOrigin("");
@@ -670,8 +702,9 @@ export default function Home() {
         </a>
         <span className="topbar-caption">Move anywhere. Keep your vibe.</span>
         <nav className="header-controls" aria-label="Passport actions">
+          {accountSignedIn && <span className="header-greeting" aria-label={accountFirstName ? `Signed in as ${accountFirstName}` : "Signed in"}>{accountFirstName ? `Hi, ${accountFirstName}` : "Welcome back"}</span>}
           <AccountControl
-            onAccountChange={setAccountSignedIn}
+            onAccountChange={(signedIn,firstName)=>{setAccountSignedIn(signedIn);setAccountFirstName(signedIn?firstName?.trim()??"":"");}}
             onPassportSaved={sessionId=>{if(sessionId)rememberSavedSession(window.sessionStorage,sessionId);else clearSavedSession(window.sessionStorage);setSavedSessionId(sessionId);}}
             onEditPlan={plan=>{setEditingPlan(current=>({plan,nonce:(current?.nonce??0)+1}));setWorkspaceView("plan");}}
             passport={result}
@@ -719,7 +752,7 @@ export default function Home() {
         </nav>
       </header>
       <div className="progressive-content" id="passport-content" tabIndex={-1}>
-        {<ReusableTastes signedIn={accountSignedIn} passport={result} city={city} draft={draft} disabled={busy} draftVersion={tasteDraftVersion}
+        {<ReusableTastes signedIn={accountSignedIn} passport={result} city={city} draft={draft} disabled={busy} draftVersion={tasteDraftVersion} showLibrary={!result && step === 1}
           saveRequested={saveTastePrompt} onContinue={fresh} onCancel={()=>setSaveTastePrompt(false)}
           onSelect={profile=>{resetMatches("idle");setDraft(profile.selected.map(s=>s.name));setConceptSeeds(profile.selected.filter(s=>s.id.startsWith("urn:tag:")).map(s=>s.name));setInitialMode(profile.discoveryMode);setConstraints(profile.constraints);setRequestedActivities(profile.activeCategories.filter(s=>!profile.hiddenCategories.includes(s)).slice(0,5));setEditing(true);}}
           onBusy={value=>{if(value)setPhase("exploring");else setPhase(current=>current==="exploring"?"idle":current);}}
@@ -850,7 +883,7 @@ export default function Home() {
               hidden={workspaceView !== "discover"}
             >
               {!showSaved && <DiscoveryConcierge busy={busy} onAsk={request=>{if(request)setComposer(request);setAssistantTab("ask");setAssistantOpen(true);}} onNavigate={selectWorkspaceView} />}
-              {result.session && (
+              {result.session && !showSaved && (
                 <FamiliarityControl
                   session={result.session}
                   disabled={busy}
@@ -873,7 +906,7 @@ export default function Home() {
                 </div>
               </section>
             )}
-             {result.session && (
+             {result.session && !showSaved && (
               <RefinementRecovery
                 session={result.session}
                 disabled={busy}
@@ -925,6 +958,8 @@ export default function Home() {
                 passport={result}
                 disabled={busy}
                 signedIn={accountSignedIn}
+                saveRequest={savePlanRequest}
+                onSaveRequestHandled={()=>setSavePlanRequest(0)}
               />
             </div>
             <div
@@ -1034,8 +1069,8 @@ export default function Home() {
                 </p>
                 {!conciergeAvailable && (
                   <p className="helper">
-                    Live chat is unavailable. Use Adjust filters to keep
-                    exploring.
+                    You can also use Adjust filters to choose your category,
+                    budget and atmosphere.
                   </p>
                 )}
                 {!visibleMessages.length && (
@@ -1078,8 +1113,9 @@ export default function Home() {
                       <span className="message-label">
                         {m.role === "agent" ? "TASTEPASSPORT" : "YOU"}
                       </span>
-                      <p>{m.role==='agent' && m.recommendationIds?.length ? m.text.split(/\n\nHere are \d+ choices to consider:|\n\n1\. /)[0] : m.text}</p>
-                      {m.role === "agent" && Array.isArray(m.recommendationIds) && m.recommendationIds.length ? <ChatRecommendations city={result.city}
+                      {m.role === "agent" ? <ChatReply text={m.text} hasCards={Boolean(m.recommendationIds?.some(id=>result.cards.some(card=>card.id===id && !result.session?.hiddenCategories?.includes(card.section))))}/> : <p>{m.text}</p>}
+                      {m.role === "agent" && m.comparisonIds?.length ? <ChatComparison cards={m.comparisonIds.flatMap(id=>result.cards.find(card=>card.id===id && !result.session?.hiddenCategories?.includes(card.section)) ?? [])} /> : null}
+                      {m.role === "agent" && !m.comparisonIds?.length && Array.isArray(m.recommendationIds) && m.recommendationIds.length ? <ChatRecommendations city={result.city}
                         cards={m.recommendationIds.flatMap(id=>result.cards.find(card=>card.id===id && !result.session?.hiddenCategories?.includes(card.section)) ?? [])}
                         busy={busy} savedIds={result.session?.savedCards?.map(card=>card.id) ?? []}
                         onAsk={question=>void refine({message:question})}

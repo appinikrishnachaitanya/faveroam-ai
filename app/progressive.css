@@ -395,6 +395,18 @@ body {
   gap: 15px;
   margin: 20px 0;
 }
+.confirmation-actions .confirmation-back {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--paper);
+  min-height: 48px;
+  padding: 0 20px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.confirmation-actions .confirmation-back:hover:not(:disabled) {
+  background: #e9eee5;
+}
 .confirmation-help {
   text-align: right;
 }
@@ -1342,9 +1354,6 @@ body {
   }
   .progressive-app .brand small {
     display: none;
-  }
-  .save-passport {
-    display: none !important;
   }
   .account-dialog {
     inset: auto 0 0;

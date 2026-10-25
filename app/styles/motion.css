@@ -27,6 +27,11 @@
 }
 
 @media (prefers-reduced-motion: no-preference) {
+  .journey-illustration,
+  .cover-illustration,
+  .together-heading img {
+    animation: passport-arrive 700ms var(--motion-ease-out) 100ms backwards;
+  }
   .move-onboarding .onboarding-heading,
   .passport-cover .cover-copy,
   .discovery-concierge,
@@ -59,6 +64,9 @@
     animation: passport-fade 180ms ease-out;
   }
   .conversation > .message { animation: passport-arrive 220ms var(--motion-ease-out); }
+  .chat-recommendations article, .chat-comparison-grid article {
+    transition: transform var(--motion-quick) var(--motion-ease-out), box-shadow var(--motion-quick) var(--motion-ease-out), border-color var(--motion-quick) var(--motion-ease-out);
+  }
   :is(.toast-notice, .adaptation-notice, .passport-recovery, .conversation-recovery) {
     /* Individual translate preserves the toast's existing centering transform. */
     animation: passport-arrive 240ms var(--motion-ease-out);
@@ -70,6 +78,7 @@
   .brand-symbol { transition: rotate 220ms var(--motion-ease-out); }
 
   @media (hover: hover) and (pointer: fine) {
+    .chat-recommendations article:hover, .chat-comparison-grid article:hover { transform:translateY(-2px); box-shadow:0 9px 22px #183e3219; border-color:#8cab82; }
     :is(.primary-button, .cover-connection, .discovery-next-steps button):hover:not(:disabled) > svg:last-child { translate: 3px 0; }
     .brand:hover .brand-symbol { rotate: -7deg; }
   }

@@ -1,5 +1,5 @@
 import { conversationFocus, conversationSummary } from "./memory.ts";
-import { chatShortlist } from "./chat-shortlist.ts";
+import { lastPresentedIds } from "./chat-shortlist.ts";
 import { culturalText } from "./intent.ts";
 import type { AgentState, ConversationContext } from "./types.ts";
 
@@ -24,6 +24,13 @@ export function conversationContext(state: AgentState): ConversationContext {
   // Keep complete messages; never crop away a negation to meet the budget.
   while (recent.reduce((sum, turn) => sum + turn.text.length, 0) > RECENT_CONTEXT_CHARACTERS) recent.shift();
   const firstUser = recent.findIndex(turn => turn.role === "user");
+  const visible=state.cards.filter(card=>!state.hiddenCategories?.includes(card.section));
+  // Category-grouped inventories must not crowd later categories out of context.
+  // Include a representative of every chapter and the actual last shown cards
+  // before filling the remaining bounded preview.
+  const representatives=[...new Set(visible.map(card=>card.section))].flatMap(section=>visible.find(card=>card.section===section) ?? []);
+  const referenced=lastPresentedIds(state).flatMap(id=>visible.find(card=>card.id===id) ?? []);
+  const preview=[...new Map([...representatives,...referenced,...visible].map(card=>[card.id,card])).values()].slice(0,20);
   return {
     city: safe(state.city, 100) ?? "",
     summary: conversationSummary(state),
@@ -33,7 +40,7 @@ export function conversationContext(state: AgentState): ConversationContext {
       return name ? [name] : [];
     }),
     lastSections: conversationFocus(state),
-    activeRecommendations: [...new Map([...chatShortlist(state),...state.cards].map(card=>[card.id,card])).values()].slice(0,15).flatMap(card => {
+    activeRecommendations: preview.flatMap(card => {
       const name = safe(card.name, 100);
       if (!name) return [];
       return [{

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { Passport, Resolution } from "../../src/workspace/state";
 import { activeCategories } from "../../src/passport/active-categories";
 import { sectionOrder } from "../../src/workspace/state";
+import { CategoryMultiSelect } from "./category-multi-select";
 import type { AgentInput } from "../../src/agent/types";
 import type { Card, Section } from "../../src/passport/model";
 import type { TasteComparison } from "../../src/qloo/compare";
@@ -60,9 +61,14 @@ export default function TasteIntelligence({
   onPreferences?: () => void;
 }) {
   const [section, setSection] = useState<Section>(()=>sectionOrder.find(s=>passport.cards.some(c=>c.section===s)) ?? "Eat");
+  const [selectedSections,setSelectedSections]=useState<Section[]>(()=>[sectionOrder.find(s=>passport.cards.some(c=>c.section===s)) ?? "Eat"]);
   const available=activeCategories(passport.session,passport.cards);
   const availableKey=available.join(",");
   useEffect(()=>{if(available.length&&!available.includes(section))setSection(available[0]);},[availableKey,section]);
+  useEffect(()=>setSelectedSections(current=>{
+    const kept=current.filter(category=>available.includes(category));
+    return kept.length?kept:available.slice(0,1);
+  }),[availableKey]);
   const prefs = passport.session?.queryPreferences?.[section];
   const [goal, setGoal] = useState<DiscoveryGoal>(
     () => prefs?.goal ?? "discover",
@@ -138,7 +144,7 @@ export default function TasteIntelligence({
           action: "together",
           token: resolution.token,
           ids: Object.values(ids),
-          section,
+          sections: selectedSections,
         }),
       );
     } catch (e) {
@@ -154,32 +160,13 @@ export default function TasteIntelligence({
   return (
     <section className="taste-intelligence" aria-label={view === "together" ? "Together" : "Your discovery preferences"}>
       <div className="intelligence-content">
-        <div className="intelligence-intro"><div><span className="micro-label">{view === "together" ? "TOGETHER" : "MAKE IT YOURS"}</span><h2>{view === "together" ? "Find your next yes, together." : "Your city. Your kind of day."}</h2><p>{view === "together" ? "One thing they love is enough to find a shared starting point." : "Fine-tune one category in Discover. Your other discoveries stay put."}</p></div><span className="intelligence-intro-mark" aria-hidden="true"><Icon name={view === "together" ? "People" : "sliders"} size={44}/></span></div>
-        <label className="intelligence-section">
-          What are we looking for?
-          <select
-            value={section}
-            disabled={busy || loading}
-            onChange={(e) => {
-              setSection(e.target.value as Section);
-              const next =
-                passport.session?.queryPreferences?.[e.target.value as Section];
-              setGoal(next?.goal ?? "discover");
-              setPrice(next?.priceMax?.toString() ?? "4");
-              setRating(next?.businessRatingMin?.toString() ?? "");
-              setArea(next?.locationQuery ?? "");
-              setAvoidArea(next?.excludeLocation ?? "");
-              setSource(next?.requiredExternalSources?.[0] ?? "");
-              setReviews(next?.tripAdvisorReviewCountMin?.toString() ?? "");
-              setTogether(undefined);
-            }}
-          >
-            {available
-              .map((s) => (
-                <option key={s} value={s}>{sectionLabel(s)}</option>
-              ))}
-          </select>
-        </label>
+        <div className="intelligence-intro"><div><span className="micro-label">{view === "together" ? "TOGETHER" : "MAKE IT YOURS"}</span><h2>{view === "together" ? "Find your next yes, together." : "Your city. Your kind of day."}</h2><p>{view === "together" ? "One thing they love is enough to find a shared starting point." : "Choose one or more categories to refresh together. Your other discoveries stay put."}</p></div><span className="intelligence-intro-mark" aria-hidden="true"><Icon name={view === "together" ? "People" : "sliders"} size={44}/></span></div>
+        <CategoryMultiSelect label={view === "together" ? "Categories to find together" : "Categories to update"}
+          available={available} selected={selectedSections} disabled={busy||loading} onChange={next=>{
+            setSelectedSections(next);
+            const focus=next[0];setSection(focus);
+            const pref=passport.session?.queryPreferences?.[focus];setGoal(pref?.goal??"discover");setPrice(pref?.priceMax?.toString()??"4");setRating(pref?.businessRatingMin?.toString()??"");setArea(pref?.locationQuery??"");setAvoidArea(pref?.excludeLocation??"");setSource(pref?.requiredExternalSources?.[0]??"");setReviews(pref?.tripAdvisorReviewCountMin?.toString()??"");setTogether(undefined);
+          }}/>
         <form
           hidden={view !== "preferences"}
           className="intelligence-preferences"
@@ -187,19 +174,19 @@ export default function TasteIntelligence({
             e.preventDefault();
             onRefine({
               discovery: {
-                section,
+                sections: selectedSections,
                 preferences: {
                   goal,
-                  ...(price ? { priceMax: Number(price) } : {}),
-                  ...(rating ? { businessRatingMin: Number(rating) } : {}),
-                  ...(area.trim()
+                  ...(selectedSections.every(isPlaceSection) && price ? { priceMax: Number(price) } : {}),
+                  ...(selectedSections.every(isPlaceSection) && rating ? { businessRatingMin: Number(rating) } : {}),
+                  ...(selectedSections.every(isPlaceSection) && area.trim()
                     ? { locationQuery: area.trim(), radius: 0 }
                     : {}),
-                  ...(avoidArea.trim()
+                  ...(selectedSections.every(isPlaceSection) && avoidArea.trim()
                     ? { excludeLocation: avoidArea.trim() }
                     : {}),
-                  ...(source ? { requiredExternalSources: [source] } : {}),
-                  ...(reviews
+                  ...(selectedSections.every(isPlaceSection) && source ? { requiredExternalSources: [source] } : {}),
+                  ...(selectedSections.every(isPlaceSection) && reviews
                     ? { tripAdvisorReviewCountMin: Number(reviews) }
                     : {}),
                 },
@@ -226,7 +213,7 @@ export default function TasteIntelligence({
             ))}
           </div>
           <p className="sr-only">{modes.find((m) => m.id === goal)?.detail} Choose Update suggestions to apply it.</p>
-          {isPlaceSection(section) && (
+          {selectedSections.every(isPlaceSection) && (
             <div className="intelligence-filters"><div className="preference-section-heading"><span className="micro-label">MAKE IT PRACTICAL</span><strong>Set your limits</strong></div>
               <label>
                 Maximum budget
@@ -264,7 +251,7 @@ export default function TasteIntelligence({
               </label>
             </div>
           )}
-          {isPlaceSection(section) && (
+          {selectedSections.every(isPlaceSection) && (
             <details className="advanced-taste-filters">
               <summary>Location and more preferences</summary>
               <p className="helper">
@@ -346,8 +333,8 @@ export default function TasteIntelligence({
           </button>
         </form>
         <section className="together-reveal" hidden={view !== "together"} aria-label="Find common ground">
-          <div className="together-preference-summary"><div><strong>{sectionLabel(section)} in {passport.city}</strong><p className="helper">Your current preferences for this category carry into the shared search{prefs?.priceMax && prefs.priceMax < 4 ? ` · ${priceLabel(prefs.priceMax)} or less` : ""}{prefs?.businessRatingMin ? ` · rating ${prefs.businessRatingMin}+` : ""}.</p></div><button type="button" className="quiet-button" onClick={onPreferences}>Review preferences</button></div>
-          <div className="together-heading"><div><span className="micro-label">A LITTLE OF YOU. A LITTLE OF THEM.</span><h3>What are they into?</h3><p>Pick an artist, film, book or brand they love. We’ll find cultural common ground and suggest {sectionLabel(section).toLowerCase()} in {passport.city}.</p></div><img src="/illustrations/together-passports.svg" width="440" height="260" alt="" aria-hidden="true" loading="lazy" /></div>
+          <div className="together-preference-summary"><div><strong>{selectedSections.map(sectionLabel).join(", ")} in {passport.city}</strong><p className="helper">The matching categories’ existing filters carry into the shared search. No single score is used to claim compatibility.</p></div><button type="button" className="quiet-button" onClick={onPreferences}>Review preferences</button></div>
+          <div className="together-heading"><div><span className="micro-label">A LITTLE OF YOU. A LITTLE OF THEM.</span><h3>What are they into?</h3><p>Add an artist, film, book or brand they love. We’ll find cultural common ground and look for ideas in the categories you selected.</p></div><img src="/illustrations/together-passports.svg" width="440" height="260" alt="" aria-hidden="true" loading="lazy" /></div>
           <p className="helper">Start with one. Add more if you like. Your Passport and preferences stay yours.</p>
           {!hasEntityProfile && <p role="status">Add a named artist, film, book or brand to your Passport to use Together.</p>}
           <form
@@ -437,8 +424,12 @@ export default function TasteIntelligence({
                     "No separate themes available"}
                 </p>
               </details>
-              <div className="together-cards">
-                {together.cards.slice(0,6).map((card) => (
+              <div className="together-categories">
+                {selectedSections.map(category=>{
+                  const cards=together.cards.filter(card=>card.section===category).slice(0,3);
+                  if(!cards.length)return null;
+                  return <section className="together-category" key={category}><h4>{sectionLabel(category)} you could enjoy together</h4><div className="together-cards">
+                {cards.map((card) => (
                   <article key={card.id}>
                     <span className="shared-result-status">{card.evidence?.strategyNote?.startsWith("Broader local") ? "Broader local option" : card.evidence?.result.tags.some(tag=>together.comparison.shared.some(shared=>shared.id===tag.id)) ? "Shared theme on this result" : "From your shared-interest search"}</span>
                     <h4>{card.name}</h4>
@@ -451,6 +442,8 @@ export default function TasteIntelligence({
                     </details>
                   </article>
                 ))}
+                  </div></section>;
+                })}
               </div>
             </section>
           )}

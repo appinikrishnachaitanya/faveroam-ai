@@ -43,6 +43,8 @@ export function evidenceFacts(card: Card): string[] {
     params = card.evidence?.params ?? {},
     facts: string[] = [];
   const signals = card.evidence?.inputs?.filter(input => input.role === "entity-signal") ?? [];
+  if (card.evidence?.strategyNote?.startsWith("Dish match not verified:"))
+    facts.push(card.evidence.strategyNote);
   if (card.evidence?.pool === "direct" && signals.length)
     facts.push(`This search used ${signals.map(input => input.name).join(", ")}.${screenTasteConnection(card) ? "" : " Search inputs are not proof of an individual connection."}`);
   else if (card.evidence?.pool === "adjacent")

@@ -15,9 +15,12 @@ export function tagCandidates(result: ToolResult, query: string): Candidate[] {
         /^urn:tag:[\w:-]+$/.test(t.id) &&
         typeof t.name === "string",
     )
-    .sort((a,b) =>
-      Number(String(b.id).includes(":place:")) - Number(String(a.id).includes(":place:"))
-    )
+    .sort((a,b) => {
+      const priority=(id:string) => /^urn:tag:specialty_dish:place:/.test(id) ? 4
+        : /^urn:tag:(?:category|genre):place:/.test(id) ? 3
+        : id.includes(":place:") ? 2 : 1;
+      return priority(String(b.id))-priority(String(a.id));
+    })
     .filter(t => {
       // Qloo may return the same user-visible concept through several tag
       // namespaces. A dialog with five identical labels is not actionable.
@@ -72,14 +75,14 @@ export function validatedSection(e: Entity): Section | undefined {
     !/tiffin|delivery kitchen|meal delivery|catering service/.test(
       description,
     ) &&
-    /\b(?:museum|art gallery|gallery|theater|theatre|concert hall|cinema|nightclub|night club|live music venue|music venue)\b/.test(
+    /\b(?:museum|art gallery|gallery|theater|theatre|concert hall|cinema|nightclub|night club|live music venue|music venue|tourist attraction|landmark|sightseeing)\b/.test(
       names,
     )
   )
     return "Culture";
-  if (/tourist attraction|landmark/.test(names)) return;
+  if (/tourist attraction|landmark|sightseeing/.test(names)) return "Culture";
   if (/coffee|cafe|café|tea house/.test(names)) return "Coffee";
-  if (/restaurant|dining|bakery|bistro|food court|pizza/.test(names))
+  if (/restaurant|dining|bakery|bistro|food court|pizza|ice cream|gelato|dessert shop|gelateria|frozen yogurt/.test(names))
     return "Eat";
   if (/bookstore|book shop|record store|boutique|shopping|yoga/.test(names))
     return "Lifestyle";

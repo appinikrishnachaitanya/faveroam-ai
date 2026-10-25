@@ -10,7 +10,7 @@ const stops:OutingExportStop[]=[
 ];
 test('complete export preserves chosen activities, order, times, date and venue details',()=>{
  const text=dayOutText('London',stops,'2026-10-24','Europe/London');
- assert.match(text,/Complete plan · 3\/3 stops chosen/);
+ assert.match(text,/Complete day plan/);
  assert.match(text,/Planned for 2026-10-24/);assert.match(text,/Europe\/London/);
  assert.match(text,/1\. 11:00 · Culture — Gallery/);
  assert.match(text,/2\. 14:00 · Cinema — Prince Charles Cinema/);
@@ -21,14 +21,14 @@ test('complete export preserves chosen activities, order, times, date and venue 
 test('partial export retains the open Food stop and its scheduled place in the itinerary',()=>{
  const partial=stops.map(stop=>stop.activity==='Eat'?{...stop,card:undefined}:stop);
  const text=dayOutText('London',partial,'2026-10-24','Europe/London');
- assert.match(text,/Partial plan · 2\/3 stops chosen/);
+ assert.match(text,/Day plan · 2 of 3 stops have a place/);
  assert.match(text,/2\. 14:00 · Cinema — Prince Charles Cinema/);
  assert.match(text,/3\. 18:30 · Food — Place not chosen \(open stop\)/);
  assert.doesNotMatch(text,/Dinner venue/);
 });
 test('moving an open stop preserves its label and time in the exported order',()=>{
  const text=dayOutText('London',[{activity:'Eat',time:'10:00'},stops[1],{activity:'Nightlife',time:'22:00'}]);
- assert.match(text,/Partial plan · 1\/3 stops chosen/);
+ assert.match(text,/Day plan · 1 of 3 stops have a place/);
  assert.match(text,/1\. 10:00 · Food — Place not chosen/);
  assert.match(text,/2\. 14:00 · Cinema — Prince Charles Cinema/);
  assert.match(text,/3\. 22:00 · Nightlife — Place not chosen/);

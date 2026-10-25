@@ -102,7 +102,7 @@ test("cheaper is a category-scoped relative price refinement that retains exclus
   assert.deepEqual(reply.state.queryPreferences?.Eat?.excludeTags,["urn:tag:business:place:chain"]);
   assert.deepEqual(reply.state.cards.filter(c=>c.section==="Music"),s.cards.filter(c=>c.section==="Music"));
   const deps=dependencies();
-  deps.provider={interpret:async()=>interpret("hi"),choose:async()=>[]};
+  deps.provider={interpret:async()=>({kind:"refine",sections:["Eat"],seeds:[],concepts:[],constraints:["expensive"],strategy:"discover"}),choose:async()=>[]};
   const modelReply=await runTurn(s,{message:"cheaper"},deps);
   assert.deepEqual(modelReply.changed,["Eat"]);
   assert.equal(modelReply.state.queryPreferences?.Eat?.priceMax,3);
@@ -327,7 +327,7 @@ test("provider failure falls back to deterministic refinement", async () => {
   const r = await runTurn(state(), { message: "Find more dining" }, d);
   assert.equal(r.mode, "deterministic");
   assert.deepEqual(r.changed, ["Eat"]);
-  assert.match(r.message, /temporarily unavailable/);
+  assert.match(r.message, /available search options/);
 });
 test("guard bounds calls, prevents duplicates and expires stalled operations", async () => {
   const guard = new TurnGuard(1);

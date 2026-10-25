@@ -23,6 +23,15 @@ test("terminal request state cannot resume tool execution", () => {
   machine.move("interpreting"); machine.move("executing"); machine.move("checking"); machine.move("completed");
   assert.throws(()=>machine.move("executing"),/terminal/);
 });
+test("model planning is capped at three calls while one optional response call is separate",async()=>{
+ const guard=new TurnGuard();
+ assert.equal(await guard.model(async()=>"interpret"),"interpret");
+ assert.equal(await guard.model(async()=>"taxonomy-1"),"taxonomy-1");
+ assert.equal(await guard.model(async()=>"taxonomy-2"),"taxonomy-2");
+ await assert.rejects(guard.model(async()=>"taxonomy-3"),/budget/);
+ assert.equal(await guard.respond(async()=>"compose"),"compose");
+ await assert.rejects(guard.respond(async()=>"compose again"),/budget/);
+});
 test("read-only requests have execution metadata and cannot spend provider/tool calls",async()=>{
   const reply = await runTurn(initial(),{message:"list coffee"},{...noCalls,provider:{interpret:unused,choose:unused}});
   assert.equal(reply.execution?.route,"current-results");

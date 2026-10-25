@@ -1,10 +1,18 @@
 import type { Section } from "./model.ts";
 import { displayTags } from "../qloo/explanation.ts";
 import type { TasteTag } from "../qloo/analysis.ts";
+import { editDistance } from "../text/edit-distance.ts";
+
+function themeMeaning(name:string):string {
+  return name.toLowerCase()
+    .replace(/\b(?:cuisine|foods?|style|dishes?|specialt(?:y|ies)|restaurants?|kitchen|cooking|local|homestyle|savouries|savories|variety|selection|of|and|accompaniments?)\b/g,'')
+    .replace(/[^\p{L}\p{N}]/gu,'');
+}
 
 export function themeCategories(theme:TasteTag|undefined,active:Section[]):Section[] {
   if(!theme)return active;
   const text=theme.id+' '+theme.name;
+  if(/^urn:tag:style:qloo:/.test(theme.id))return active.filter(section=>section==='Movies'||section==='Shows').length ? active.filter(section=>section==='Movies'||section==='Shows') : ['Movies'];
   if(/coffee|caf[eé]/i.test(text))return ['Coffee'];
   if(/:cuisine:|:specialty_dish:|:dietary_option:|:dietary_attribute:/i.test(text))return ['Eat'];
   if(/:(?:music|artist):/i.test(text))return ['Music'];
@@ -16,7 +24,11 @@ export function themeCategories(theme:TasteTag|undefined,active:Section[]):Secti
 /** Present diverse returned families first; never synthesize cultural themes. */
 export function curatedThemes(tags:TasteTag[],limit=6):TasteTag[] {
   const grouped=new Map<string,TasteTag[]>();
+  const meanings:string[]=[];
   for(const tag of displayTags(tags)){
+    const key=themeMeaning(tag.name);
+    if(!key || meanings.some(previous=>key===previous || Math.min(key.length,previous.length)>=8 && editDistance(key,previous)<=1))continue;
+    meanings.push(key);
     const family=tag.id.split(':').slice(2,4).join(':');
     grouped.set(family,[...(grouped.get(family)??[]),tag]);
   }
@@ -28,7 +40,7 @@ export function curatedThemes(tags:TasteTag[],limit=6):TasteTag[] {
 
 /** Stay within the selected interests' returned taxonomy. Audience association
  * alone does not make an unrelated dish or venue a useful film theme. */
-export function relevantThemes(tags:TasteTag[], interests:readonly {id:string;types:string[]}[]):TasteTag[] {
+export function relevantThemes(tags:TasteTag[], interests:readonly {id:string;types:string[];name?:string}[]):TasteTag[] {
   const domains = new Set(interests.flatMap(interest => interest.id.startsWith('urn:tag:')
     ? [/^urn:tag:(?:cuisine|specialty_dish|dietary_option|dietary_attribute):/.test(interest.id) ? 'place' : interest.id.split(':')[3]] : interest.types.map(type=>type.replace('urn:entity:',''))));
   const allowed = new Set<string>();
@@ -39,10 +51,29 @@ export function relevantThemes(tags:TasteTag[], interests:readonly {id:string;ty
     else if (domain) allowed.add(domain);
   }
   const seen = new Set<string>();
+  const meaning=themeMeaning;
+  const selectedIds=new Set(interests.map(interest=>interest.id));
+  const selectedNames=new Set(interests.flatMap(interest=>interest.name?[meaning(interest.name)]:[]));
+  // Qloo's film styles use the shared "qloo" taxonomy, not "media".
+  // Keep that documented family for screen interests without admitting shared
+  // audience keywords, plot actions, or unrelated place metadata.
+  const screenInterests=allowed.has('media');
   return displayTags(tags).filter(tag => {
+    if(selectedIds.has(tag.id) || selectedNames.has(meaning(tag.name)))return false;
     const domain = /^urn:tag:(?:cuisine|specialty_dish|dietary_option|dietary_attribute):/.test(tag.id) ? 'place' : tag.id.split(':')[3];
     const label = tag.name.toLowerCase().replace(/[^\p{L}\p{N}]+/gu,' ').trim();
-    if (!allowed.has(domain) || /^(?:classics?|entertainment|ambitious|indie|popular|general|other|place|restaurant|bar)$/.test(label) || seen.has(label)) return false;
-    seen.add(label); return true;
+    const screenStyle=screenInterests && /^urn:tag:style:qloo:/.test(tag.id);
+    const key=meaning(tag.name);
+    if ((!allowed.has(domain) && !screenStyle) || /^(?:classics?|entertainment|ambitious|indie|popular|general|other|place|restaurant|bar|takeout restaurant|fast food restaurant|coffee shop)$/.test(label) || !key || seen.has(key)) return false;
+    seen.add(key); return true;
   });
+}
+
+export function themeKind(theme:TasteTag):string {
+  if(/^urn:tag:style:qloo:/.test(theme.id))return 'Film & TV style';
+  if(/:(?:music|artist):/.test(theme.id))return 'Music';
+  if(/:(?:media|movie|film|tv_show):/.test(theme.id))return 'Film & TV';
+  if(/:(?:book|literature):/.test(theme.id))return 'Books';
+  if(/^urn:tag:(?:cuisine|specialty_dish|dietary_option|dietary_attribute):/.test(theme.id))return 'Food & drink';
+  return 'Taste connection';
 }

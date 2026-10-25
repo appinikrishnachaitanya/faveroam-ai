@@ -6,6 +6,7 @@ import type { Card, Section } from "../../src/passport/model";
 import { familiarities } from "../../src/passport/evidence";
 import { activeCategories } from "../../src/passport/active-categories";
 import { sectionOrder } from "../../src/workspace/state";
+import { CategoryMultiSelect } from "./category-multi-select";
 export function FamiliarityControl({
   session,
   disabled,
@@ -15,18 +16,25 @@ export function FamiliarityControl({
   disabled: boolean;
   onChange: (input: AgentInput) => void;
 }) {
-  const [section, setSection] = useState<Section>(()=>sectionOrder.find(s=>session.cards.some(c=>c.section===s)) ?? "Eat");
+  const [selectedSections, setSelectedSections] = useState<Section[]>(()=>[sectionOrder.find(s=>session.cards.some(c=>c.section===s)) ?? "Eat"]);
   const available=activeCategories(session,session.cards);
-  const effectiveSection=available.includes(section)?section:available[0] ?? "Eat";
-  const applied = session.categoryModes[effectiveSection] ?? session.discoveryMode;
+  const availableKey=available.join(",");
+  useEffect(()=>setSelectedSections(current=>{
+    const kept=current.filter(section=>available.includes(section));
+    return kept.length ? kept : available.slice(0,1);
+  }),[availableKey]);
+  const selected=selectedSections.filter(section=>available.includes(section));
+  const appliedModes=selected.map(section=>session.categoryModes[section] ?? session.discoveryMode);
+  const applied=appliedModes.length && appliedModes.every(mode=>mode===appliedModes[0])?appliedModes[0]:undefined;
   return (
     <section className="familiarity-panel" aria-labelledby="familiarity-title">
       <div className="panel-heading">
         <div>
           <span className="micro-label">YOUR KIND OF DISCOVERY</span>
-          <h2 id="familiarity-title">How should your {sectionLabel(effectiveSection).toLowerCase()} suggestions feel?</h2>
+          <h2 id="familiarity-title">How should these suggestions feel?</h2>
+          <p>Choose up to three categories, then a style. Only those suggestions refresh.</p>
         </div>
-        {available.length>1 && <div className="mode-category-tabs" role="group" aria-label="Choose a Passport category">{available.map(category=><button type="button" key={category} disabled={disabled} aria-pressed={effectiveSection===category} onClick={()=>setSection(category)}>{sectionLabel(category)}</button>)}</div>}
+        {available.length>1 && <CategoryMultiSelect label="Categories to update" available={available} selected={selected} onChange={setSelectedSections} disabled={disabled}/>}
 
       </div>
       <div className="familiarity-axis">
@@ -43,7 +51,7 @@ export function FamiliarityControl({
             key={mode}
             aria-pressed={applied === mode}
             disabled={disabled}
-            onClick={() => onChange({ familiarity: { mode, section:effectiveSection } })}
+            onClick={() => onChange({ familiarity: { mode, sections:selected } })}
           >
             <span className="mode-orbit" aria-hidden="true" />
             <strong>
@@ -55,10 +63,10 @@ export function FamiliarityControl({
             </strong>
             <small>
               {mode === "familiar"
-                ? "Start with what you love"
+                ? "Stay closer to confirmed tastes"
                 : mode === "balanced"
-                  ? "A little familiar, a little new"
-                  : "Find your next favorite"}
+                  ? "Mix close matches with broader connections"
+                  : "Broaden the cultural connections"}
             </small>
           </button>
         ))}
@@ -69,7 +77,7 @@ export function FamiliarityControl({
           : applied === "balanced"
             ? "Mix closer matches with broader cultural discoveries."
             : "Explore further while keeping a connection to your tastes."}{" "}
-        Changes refresh {sectionLabel(effectiveSection)} in Discover. My Vibe keeps the specific discoveries you saved; results can overlap when coverage is limited.
+        This setting changes {selected.map(sectionLabel).join(", ")} suggestions only. My Vibe is the list of discoveries you saved.
       </p>
     </section>
   );

@@ -24,7 +24,7 @@ export function conceptSections(concept: string, targets: Section[]): Section[] 
   const text = concept.toLowerCase();
   const scoped: Section[] = /coffee|caf[eé]/.test(text) ? ['Coffee']
     : /cuisine|biryani|vegetarian|seafood|dish|restaurant|pizza|sushi|thai|indian|italian|mexican/.test(text) ? ['Eat']
-    : /museum|gallery|theatre|cinema|nightclub|nightlife|live music|concert/.test(text) ? ['Culture']
+    : /museum|gallery|theatre|cinema|nightclub|nightlife|live music|concert|landmark|tourist attraction|ice ?cream|gelato|dessert/.test(text) ? (/ice ?cream|gelato|dessert/.test(text) ? ['Eat'] : ['Culture'])
     : /bookstore|book shop/.test(text) ? ['Lifestyle'] : targets;
   return scoped.filter(section => targets.includes(section));
 }

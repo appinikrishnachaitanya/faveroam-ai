@@ -7,8 +7,9 @@ import { accountRequest, showNotice } from "../../src/account/browser";
 import { Icon } from "./passport";
 import ConfirmDelete from "./confirm-delete";
 
-export default function ReusableTastes({signedIn,passport,city,draft,disabled,onApply,onBusy,onSelect,draftVersion,saveRequested,onContinue,onCancel}:{
+export default function ReusableTastes({signedIn,passport,city,draft,disabled,onApply,onBusy,onSelect,draftVersion,showLibrary,saveRequested,onContinue,onCancel}:{
   signedIn:boolean;passport?:Passport;city:string;draft:string[];disabled:boolean;draftVersion:number;
+  showLibrary:boolean;
   onApply:(passport:Passport)=>void;onBusy:(busy:boolean)=>void;onSelect:(profile:TasteProfile)=>void;
   saveRequested:boolean;onContinue:()=>void;onCancel:()=>void;
 }) {
@@ -84,7 +85,7 @@ export default function ReusableTastes({signedIn,passport,city,draft,disabled,on
   }
   const existingName=profiles.some(row=>row.name===name.trim());
   return <>
-    {signedIn&&!passport&&(profiles.length>0||error) && <section className="reusable-tastes" aria-label="Reusable taste profile">
+    {showLibrary&&signedIn&&!passport&&(profiles.length>0||error) && <section className="reusable-tastes" aria-label="Reusable taste profile">
       <div className="profile-heading"><div><span className="micro-label">YOUR TASTES. YOUR NEXT CITY.</span><h2>Pick up where you left off.</h2></div><span>{profiles.length} saved</span></div>
       <p>Choose a saved profile to load its tastes into the form below. Add or change tastes, then select Find my taste matches to confirm them. You can also discover immediately with the saved preferences.</p>
       <div className="profile-fields"><label>Saved taste profile<select value={selectedId} disabled={disabled||loading} onChange={event=>{

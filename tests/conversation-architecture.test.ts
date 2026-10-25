@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import { runTurn, type AgentDependencies } from "../src/agent/orchestrator.ts";
 import { interpret, validateIntent } from "../src/agent/intent.ts";
 import { normalizeSession } from "../src/agent/session.ts";
+import { chatParagraphs } from "../src/agent/chat-presentation.ts";
+import { groundedModelIntent } from "../src/agent/conversation-grounding.ts";
 import type { AgentState } from "../src/agent/types.ts";
 function fixture():AgentState {
  return normalizeSession({id:"conversation",revision:0,expires:Date.now()+60000,city:"Toronto",selected:[],tags:[],constraints:[],categoryConstraints:{},categoryTags:{},queryPreferences:{Eat:{priceMax:2,businessRatingMin:4.5}},cards:[{id:"food",name:"Existing restaurant",section:"Eat",types:["urn:entity:place"],detail:"",address:"1 Example Road"},{id:"music",name:"Existing artist",section:"Music",types:["urn:entity:artist"],detail:""}],previous:[],feedback:[],notices:[],intent:{kind:"refine",seeds:[],concepts:[],constraints:[],sections:["Eat","Music"],strategy:"discover"}});
@@ -68,7 +70,7 @@ test("a returned-theme action preserves other categories and existing category p
   original.queryPreferences!.Eat!.includeTags = ["urn:tag:cuisine:restaurant:indian"];
   const calls: string[] = [];
   const reply = await runTurn(original, {
-    discovery: { section: "Eat", preferences: { includeTags: ["urn:tag:cuisine:restaurant:indian", "urn:tag:genre:place:casual_dining"] } },
+    discovery: { sections: ["Eat"], preferences: { includeTags: ["urn:tag:cuisine:restaurant:indian", "urn:tag:genre:place:casual_dining"] } },
   }, {
     ...readonly,
     discover: async (state, section) => {
@@ -96,4 +98,82 @@ test("an explicit Balanced choice clears a previous Surprise goal in that catego
   }});
   assert.equal(result.state.categoryModes.Eat,"balanced");
   assert.equal(original.queryPreferences!.Eat!.goal,"surprise");
+});
+test("one Discover mode applies to each selected category and preserves the rest", async()=>{
+ const original=fixture();original.activeCategories=["Eat","Music"];
+ original.categoryModes={Eat:"familiar",Music:"explore",Movies:"familiar"};
+ const seen:string[]=[];
+ const reply=await runTurn(original,{familiarity:{mode:"balanced",sections:["Eat","Music"]}},{...readonly,discover:async(state,section)=>{
+   seen.push(section);
+   assert.equal(state.categoryModes?.Eat,"balanced");
+   assert.equal(state.categoryModes?.Music,"balanced");
+   return state.cards.filter(card=>card.section===section);
+ }});
+ assert.deepEqual(seen,["Eat","Music"]);
+ assert.deepEqual(reply.changed,["Eat","Music"]);
+ assert.equal(reply.state.categoryModes.Movies,"familiar");
+});
+test("explicit save and planner requests are validated actions with no phantom search",async()=>{
+ const initial=fixture();
+ const provider=(action:"save-passport"|"plan-day")=>({interpret:async()=>({kind:"unknown" as const,action,seeds:[],concepts:[],constraints:[],sections:[],strategy:"discover" as const}),choose:async()=>[]});
+ const saved=await runTurn(initial,{message:"Save my Passport"},{...readonly,provider:provider("save-passport")});
+ assert.equal(saved.action,"save-passport");
+ assert.deepEqual(saved.changed,[]);
+ assert.deepEqual(saved.state.cards,initial.cards);
+ const planned=await runTurn(initial,{message:"Plan a day out"},{...readonly,provider:provider("plan-day")});
+ assert.equal(planned.action,"plan-day");
+ assert.deepEqual(planned.changed,[]);
+ const rejected=await runTurn(initial,{message:"show food"},{...readonly,provider:provider("save-passport")});
+ assert.equal(rejected.action,undefined);
+});
+test("a beverage typo can ground Gemini's corrected concept without inventing a drink",()=>{
+ const model={kind:"refine" as const,seeds:[],concepts:["beverages"],constraints:[],sections:["Coffee" as const],strategy:"discover" as const};
+ assert.deepEqual(groundedModelIntent("Find bevarages in London",model).concepts,["beverages"]);
+ assert.deepEqual(groundedModelIntent("Find bevarages in London",{...model,concepts:["tea"]}).concepts,[]);
+});
+test("a verified beverage venue category can refine Coffee without a duplicate-label picker",async()=>{
+ const initial=fixture();initial.activeCategories=["Coffee"];
+ const reply=await runTurn(initial,{message:"Find bevarages in London"},{
+  tools:async()=>[{name:"qloo_find_tags",inputSchema:{type:"object",properties:{query:{type:"string"}}}}],
+  workflow:async()=>({status:"ok",results:[
+   {id:"urn:tag:offerings:place:beverages",name:"Beverages"},
+   {id:"urn:tag:category:place:beverages",name:"Beverages"},
+  ]}),
+  discover:async(state,section)=>{
+   assert.equal(section,"Coffee");
+   assert.deepEqual(state.categoryTags?.Coffee,["urn:tag:category:place:beverages"]);
+   return [{id:"drink-place",name:"Returned drink venue",section,types:["urn:entity:place"],detail:""}];
+  },
+  provider:{interpret:async()=>({kind:"refine",seeds:[],concepts:["beverages"],constraints:[],sections:["Coffee"],strategy:"discover"}),choose:async()=>[]},
+ });
+ assert.deepEqual(reply.changed,["Coffee"]);
+ assert.equal(reply.state.pending,undefined);
+});
+test("a model authentication failure does not pretend to understand a broad drink request",async()=>{
+ const original=fixture();
+ const reply=await runTurn(original,{message:"bevarages"},{...readonly,provider:{interpret:async()=>{throw Error("provider unavailable")},choose:async()=>[]}});
+ assert.match(reply.message,/Live conversation is unavailable/);
+ assert.deepEqual(reply.changed,[]);
+ assert.deepEqual(reply.state.cards,original.cards);
+});
+test("chat cards replace repeated numbered prose and retain a readable introduction",()=>{
+ assert.deepEqual(chatParagraphs("Here are 3 starting choices from your London Passport:\n\n1. A (Food)\nReason\n\n2. B",true),["Here are 3 starting choices from your London Passport."]);
+ assert.deepEqual(chatParagraphs("I found these for you.\n\nHere are 3 choices to consider:\n\n1. A",true),["I found these for you."]);
+ assert.deepEqual(chatParagraphs("First point.\n\nSecond point.",false),["First point.","Second point."]);
+});
+test("a cross-interest shortlist keeps grounded card IDs when a response model is available",async()=>{
+ const reply=await runTurn(fixture(),{message:"Pick three things across my interests"},{...readonly,
+  provider:{interpret:async()=>{throw Error("Shortlist should use current cards")},choose:async()=>[],compose:async()=>{throw Error("Shortlist should not be recomposed")}},
+ });
+ assert.deepEqual(reply.state.history?.at(-1)?.recommendationIds,["food","music"]);
+ assert.deepEqual(reply.changed,[]);
+ assert.deepEqual(chatParagraphs(reply.message,true),["Here are 2 starting choices from your Toronto Passport."]);
+});
+test("a failed response-writing call preserves a useful grounded reply",async()=>{
+ const reply=await runTurn(fixture(),{message:"List my Food options"},{...readonly,
+  provider:{interpret:async()=>{throw Error("Read-only answer should use current state")},choose:async()=>[],compose:async()=>{throw Error("Response model unavailable")}},
+ });
+ assert.match(reply.message,/Existing restaurant/);
+ assert.doesNotMatch(reply.message,/Taste Concierge is temporarily unavailable/);
+ assert.deepEqual(reply.changed,[]);
 });

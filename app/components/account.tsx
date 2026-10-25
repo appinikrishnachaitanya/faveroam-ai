@@ -32,7 +32,7 @@ export default function AccountControl({
   disabled: boolean;
   onRestore: (passport: Passport) => void;
   onSignOut: () => void;
-  onAccountChange?: (signedIn: boolean) => void;
+  onAccountChange?: (signedIn: boolean, firstName?: string) => void;
   onPassportSaved?: (sessionId?: string) => void;
   onEditPlan?: (plan: SavedPlan) => void;
 }) {
@@ -110,7 +110,7 @@ export default function AccountControl({
       accountIdentity.current = identity;
       setAccount(data);
       if (identityChanged) {
-        onAccountChange?.(Boolean(data.user));
+        onAccountChange?.(Boolean(data.user),data.user?.firstName);
         accountChanged();
       }
       if (data.user && loadLibrary) {
@@ -146,6 +146,13 @@ export default function AccountControl({
       setMessage("");
       setOpen(true);
     };
+    const openSavePassport = () => {
+      setPendingSave(true);
+      setVerificationPending(false);
+      setTab("login");
+      setMessage("");
+      setOpen(true);
+    };
     const plansUpdated = (event: Event) => {
       const plan = (event as CustomEvent<{plan?:SavedPlan}>).detail?.plan;
       if (!plan?.id) { void refreshPlans(); return; }
@@ -154,6 +161,7 @@ export default function AccountControl({
       setPlansError("");
     };
     window.addEventListener("tastepassport:open-account", openAccount);
+    window.addEventListener("tastepassport:save-passport", openSavePassport);
     window.addEventListener("tastepassport:plans-updated", plansUpdated);
     const notice = new URLSearchParams(window.location.search).get("account");
     if (notice) {
@@ -170,6 +178,7 @@ export default function AccountControl({
     return () => {
       window.removeEventListener("focus", onFocus);
       window.removeEventListener("tastepassport:open-account", openAccount);
+      window.removeEventListener("tastepassport:save-passport", openSavePassport);
       window.removeEventListener("tastepassport:plans-updated", plansUpdated);
     };
   }, []);
@@ -218,7 +227,9 @@ export default function AccountControl({
       await refresh(true);
       showNotice(savedCurrentPassport ? "Your saved Passport was updated." : "Your Passport is saved.");
     } catch (e) {
-      setMessage(e instanceof Error ? e.message : "Could not save.");
+      const text=e instanceof Error ? e.message : "Could not save.";
+      setMessage(text);
+      showNotice(text,"error");
     } finally {
       setBusy(false);
     }
@@ -266,6 +277,7 @@ export default function AccountControl({
           setVerificationPending(false);
           setOpen(false);
           showNotice(passwordChanged ? "Your password was updated." : "Welcome back. Your saved Passports and plans are ready.");
+          if (pendingSave && passport?.agent) await save();
         } else {
           setOpen(true);
           setMessage(

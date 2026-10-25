@@ -153,7 +153,7 @@ export function RefinementRecovery({
                 {label}
               </button>
             ))}
-            <button className="quiet-button" disabled={disabled} onClick={()=>onApply({recovery:{section,action:"retry"}})}>Retry the attempted search</button>
+            <button className="quiet-button" disabled={disabled} onClick={()=>onApply({recovery:{section,action:"retry"}})}>Try {sectionLabel(section).toLowerCase()} again</button>
           </div>
         </section>
       ))}

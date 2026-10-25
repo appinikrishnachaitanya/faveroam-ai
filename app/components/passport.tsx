@@ -339,6 +339,9 @@ export function DiscoveryCard({
       {card.evidence?.strategyNote?.startsWith("Broader local") && (
         <p className="helper">Broader local suggestion</p>
       )}
+      {card.evidence?.strategyNote?.startsWith("Dish match not verified:") && (
+        <p className="helper">Dish not verified · check the menu</p>
+      )}
       <ResultMetrics card={card} />
       <details className="why-section">
         <summary>

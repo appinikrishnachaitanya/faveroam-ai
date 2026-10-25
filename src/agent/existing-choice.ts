@@ -17,6 +17,8 @@ export function isExistingChoiceRequest(text: string): boolean {
   if (/\b(?:new|different|elsewhere|replace|refresh|update|refine|remove|hide|change|adjust)\b/.test(q)) return false;
   if (/\b(?:pick|choose|select|recommend)\b[\s\S]*\b(?:one|1|single)\b/.test(q)) return true;
   if (/^which (?:one |of (?:these|those) )?has the (?:highest|best) rating\??$/.test(q.trim())) return true;
+  if (/^(?:and )?which(?: one)?(?: is)? (?:the )?(?:best|better|top one)(?: choice)?[?!.,\s]*$/.test(q.trim()) || /^(?:what(?:'s| is) )?(?:your )?(?:best )?pick[?!.,\s]*$/.test(q.trim())) return true;
+  if (/\bcompare\b/.test(q) && /\b(?:two|both|first and second|these|those)\b/.test(q)) return true;
   if (/\bwhich\b[\s\S]*\b(?:should|would)\b[\s\S]*\b(?:pick|choose|recommend|try|visit|go)\b/.test(q)) return true;
   return reference.test(q) && /\b(?:pick|choose|select|recommend|best|top|highest[ -]rated|best[ -]rated|cheapest|most affordable|lowest price)\b/.test(q);
 }
@@ -33,6 +35,7 @@ function hasGenre(card: Card, genre: RegExp): boolean {
 export interface ExistingChoice {
   cards: Card[];
   message: string;
+  comparison?: boolean;
 }
 export function chooseExisting(state: AgentState, text: string): ExistingChoice {
   const q = selectionLanguage(refinementScope(text).positive);
@@ -43,13 +46,29 @@ export function chooseExisting(state: AgentState, text: string): ExistingChoice 
   const implicitShown = /^which (?:one |of (?:these|those) )?has the (?:highest|best) rating\??$/.test(q.trim());
   const available = state.cards.filter(card => !state.hiddenCategories?.includes(card.section) &&
     !state.feedback.some(feedback => feedback.id === card.id && !feedback.accepted));
-  const source = (above || implicitShown) && ids !== undefined
+  const contextualBest = /^(?:and )?which(?: one)?(?: is)? (?:the )?(?:best|better|top one)(?: choice)?[?!.,\s]*$/.test(q.trim()) || /^(?:what(?:'s| is) )?(?:your )?(?:best )?pick[?!.,\s]*$/.test(q.trim());
+  const source = (above || implicitShown || contextualBest || /\bcompare\b/.test(q)) && ids !== undefined
     ? ids.flatMap(id => available.find(card => card.id === id) ?? [])
     : available;
+  const contextualSections = state.intent?.sections?.filter(section => available.some(card => card.section === section)) ?? [];
   let eligible = source.filter(card => (!sections?.length || sections.includes(card.section)) && (!genre || hasGenre(card, genre)));
+  if (!sections?.length && ids === undefined && contextualSections.length === 1 && /\bcompare\b/.test(q))
+    eligible = eligible.filter(card => card.section === contextualSections[0]);
   const rating = (card: Card) => isPlaceSection(card.section)
     ? card.intelligence?.quality.businessRating : card.intelligence?.quality.qlooRating;
-  const highestRated = /\b(?:highest|best|top)[ -]rated\b|\b(?:best|highest) rating\b/.test(q);
+  const comparison = /\bcompare\b/.test(q);
+  if (comparison) {
+    if (ids !== undefined && ids.slice(0, 2).some(id => !available.some(card => card.id === id)))
+      return {cards: [], message: "One of those choices is no longer in your current discoveries. Ask for a new shortlist before comparing. Your Passport is unchanged."};
+    const cards = eligible.slice(0, 2);
+    return cards.length < 2
+      ? {cards: [], message: source.length < 2 && ids !== undefined ? "One of those choices is no longer in your current discoveries. Ask for a new shortlist before comparing. Your Passport is unchanged." : "I need two current choices to compare. Ask me to show a few options first; your Passport is unchanged."}
+      : {cards, comparison: true, message: `Comparing ${cards[0].name} and ${cards[1].name}. I’ll use only details returned for these listings; where a detail is missing, I’ll leave it open rather than guess.`};
+  }
+  const genericBest = /\b(?:which(?: one)?(?: is)? )?(?:the )?best\??$/.test(q.trim()) || contextualBest;
+  const explicitRating = /\b(?:highest|best|top)[ -]rated\b|\b(?:best|highest) rating\b/.test(q);
+  const allRated = eligible.length > 0 && eligible.every(card => rating(card) !== undefined);
+  const highestRated = explicitRating || (genericBest && allRated);
   const cheapest = /\b(?:cheapest|least expensive|lowest price|most affordable)\b/.test(q);
   // A request for an unverified condition must not become an unsupported guarantee.
   if (/\b(?:quiet|quietest|peaceful|vegetarian|vegan|halal|gluten|accessible|wheelchair|open now|tonight|tickets?|available|nearest|closest)\b/.test(q)) {
@@ -75,7 +94,7 @@ export function chooseExisting(state: AgentState, text: string): ExistingChoice 
     .sort((a, b) => rating(b)! - rating(a)!);
   else if (cheapest) eligible = eligible.filter(card => card.intelligence?.commercial.priceLevel !== undefined)
     .sort((a, b) => a.intelligence!.commercial.priceLevel! - b.intelligence!.commercial.priceLevel!);
-  const count = /\b(?:three|3)\b/.test(q) ? 3 : /\b(?:two|2)\b/.test(q) ? 2 : 1;
+  const count = /\b(?:three|3)\b/.test(q) ? 3 : /\b(?:two|2|both|first and second)\b/.test(q) ? 2 : 1;
   const seen = new Set<string>();
   const cards = eligible.filter(card => !seen.has(card.id) && Boolean(seen.add(card.id))).slice(0, count);
   if (!cards.length) {
@@ -87,6 +106,7 @@ export function chooseExisting(state: AgentState, text: string): ExistingChoice 
   const lead = cards.length === 1 ? `My pick${above ? " from those options" : " from your current discoveries"} is ${cards[0].name}.`
     : `I’d start with ${cards.map(card => card.name).join(" and ")} from these options.`;
   const basis = highestRated ? `It has the highest returned ${isPlaceSection(cards[0].section) ? "business " : ""}rating among the matching choices: ${formatReturnedRating(rating(cards[0]))}/5.`
+    : genericBest ? "I used the order of your current taste-matched results because comparable ratings were not available for every option."
     : cheapest ? "It has the lowest returned price level among the matching choices; check the current prices before going."
     : "I’m using the existing taste ranking to help you choose, rather than starting another search.";
   const reasons = cards.map(card => `${card.name}: ${chatReason(card)}`).join("\n");

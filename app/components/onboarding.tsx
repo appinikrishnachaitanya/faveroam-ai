@@ -419,10 +419,11 @@ export function TasteConfirmation({
         </div>
       </fieldset>
       <div className="confirmation-actions">
-        <button className="quiet-button" onClick={onBack} disabled={disabled}>
+        <button type="button" className="quiet-button confirmation-back" onClick={onBack} disabled={disabled}>
           Back
         </button>
         <button
+          type="button"
           className="primary-button"
           onClick={onSubmit}
           disabled={disabled || !complete}
@@ -432,7 +433,7 @@ export function TasteConfirmation({
       </div>
       {!complete && (
         <p className="helper confirmation-help">
-          Confirm at least one different tastes to continue.
+          Confirm at least one interest to continue.
         </p>
       )}
     </section>
