@@ -12,11 +12,15 @@ function selectionLanguage(text: string): string {
     .replace(/\bfor\s+mr\b/g, "for me");
 }
 const reference = /\b(?:above|these|those|them|already|current|existing|shown|listed|from (?:the|your) (?:list|results|suggestions))\b/;
+function ratingQuestion(q:string) {
+  if(/\b(?:find|search|discover|update|change|refine|replace|remove|add|set|apply|adjust)\b/.test(q))return false;
+  return /^(?:which|what)\b/i.test(q) && /\b(?:highest|best|top)(?:[ -]rated|\s+(?:returned\s+)?rating)\b/i.test(q);
+}
 export function isExistingChoiceRequest(text: string): boolean {
   const q = selectionLanguage(refinementScope(text).positive);
   if (/\b(?:new|different|elsewhere|replace|refresh|update|refine|remove|hide|change|adjust)\b/.test(q)) return false;
   if (/\b(?:pick|choose|select|recommend)\b[\s\S]*\b(?:one|1|single)\b/.test(q)) return true;
-  if (/^which (?:one |of (?:these|those) )?has the (?:highest|best) rating\??$/.test(q.trim())) return true;
+  if (ratingQuestion(q)) return true;
   if (/^(?:and )?which(?: one)?(?: is)? (?:the )?(?:best|better|top one)(?: choice)?[?!.,\s]*$/.test(q.trim()) || /^(?:what(?:'s| is) )?(?:your )?(?:best )?pick[?!.,\s]*$/.test(q.trim())) return true;
   if (/\bcompare\b/.test(q) && /\b(?:two|both|first and second|these|those)\b/.test(q)) return true;
   if (/\bwhich\b[\s\S]*\b(?:should|would)\b[\s\S]*\b(?:pick|choose|recommend|try|visit|go)\b/.test(q)) return true;
@@ -43,7 +47,7 @@ export function chooseExisting(state: AgentState, text: string): ExistingChoice 
   const genre = requestedGenre(q);
   const ids = lastReferencedIds(state);
   const above = reference.test(q);
-  const implicitShown = /^which (?:one |of (?:these|those) )?has the (?:highest|best) rating\??$/.test(q.trim());
+  const implicitShown = ratingQuestion(q);
   const available = state.cards.filter(card => !state.hiddenCategories?.includes(card.section) &&
     !state.feedback.some(feedback => feedback.id === card.id && !feedback.accepted));
   const contextualBest = /^(?:and )?which(?: one)?(?: is)? (?:the )?(?:best|better|top one)(?: choice)?[?!.,\s]*$/.test(q.trim()) || /^(?:what(?:'s| is) )?(?:your )?(?:best )?pick[?!.,\s]*$/.test(q.trim());

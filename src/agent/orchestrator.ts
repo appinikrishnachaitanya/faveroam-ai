@@ -13,7 +13,7 @@ import { isOutputCategoryConcept } from './output-category.ts';
 import { conversationContext } from "./context.ts";
 import { decisionSummary } from "./decision-summary.ts";
 import { passportAnswer, passportAnswerCards, cardSpecificAnswer, isListRequest, listPassportCards, listPassportResults, previewRefinedResults } from "./answers.ts";
-import { isReadOnlyFollowUp, readOnlyFollowUp } from "./read-only.ts";
+import { isReadOnlyFollowUp, readOnlyFollowUp, isPreferenceQuestion } from "./read-only.ts";
 import { debugEvent } from "./debug.ts";
 import {
   normalizeSession,
@@ -343,7 +343,7 @@ async function executeTurn(
     // classification. Otherwise "rating for second" can become a filter and
     // destroy the original shortlist or unrelated category state.
     if (route === "current-results" && isReadOnlyFollowUp(input.message)) {
-      delete state.pending;
+      if(!isPreferenceQuestion(input.message))delete state.pending;
       const named=findMentionedCard(input.message,state.cards.filter(card=>!state.hiddenCategories?.includes(card.section)));
       return reply(readOnlyFollowUp(state,input.message),named?[named]:undefined);
     }

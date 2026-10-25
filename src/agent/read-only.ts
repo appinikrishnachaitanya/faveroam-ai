@@ -9,11 +9,19 @@ import { sectionOrder } from "../workspace/state.ts";
 import { cardSpecificAnswer, serviceLimitationAnswer } from "./answers.ts";
 import { formatReturnedRating } from "../passport/rating-display.ts";
 import { priceLabel } from "../passport/pricing.ts";
+import {passportAnswer} from './answers.ts';
+
+export function isPreferenceQuestion(input:string):boolean {
+  return /\b(?:filters?|preferences?|requirements?|constraints?)\b/i.test(input) &&
+    /^(?:what|which|show|list|tell|remind|can you (?:show|list|tell)|could you (?:show|list|tell))/i.test(input.trim()) &&
+    !/\b(?:change|update|remove|add|set|apply|clear|reset|adjust)\b/i.test(input);
+}
 
 /** Interpret references against currently returned, ordered Passport cards.
  * An information request never grants permission to run Qloo or change filters.
  */
 export function isReadOnlyFollowUp(input: string): boolean {
+  if(isPreferenceQuestion(input))return true;
   if (serviceLimitationAnswer(input)) return true;
   const q=input.trim().toLowerCase();
   // An information request cannot silently change results; equally, a real
@@ -68,6 +76,11 @@ function compact(card:Card):string {
   return `${card.name}${card.address?` — ${card.address}`:""}${rating!==undefined?` · ★ ${rating}/5 (Qloo-reported)`:" · Business rating unavailable"}${budget?` · Typical price: ${budget} (${card.intelligence?.commercial?.priceLevel}/4)`:" · Price category unavailable"}`;
 }
 export function readOnlyFollowUp(state:AgentState,query:string):string {
+  if(isPreferenceQuestion(query)) {
+    const named=categoryInText(query);
+    const sections=named?[named]:sectionOrder.filter(section=>state.activeCategories?.includes(section)||state.queryPreferences?.[section]||state.categoryTags?.[section]?.length);
+    return passportAnswer(state,{kind:'refine',question:'preferences',sections,concepts:[],seeds:[],constraints:[],strategy:'discover'},query);
+  }
   const limitation = serviceLimitationAnswer(query);
   if (limitation) {
     const named=findMentionedCard(query,state.cards.filter(card=>!state.hiddenCategories?.includes(card.section)));
