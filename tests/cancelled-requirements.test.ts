@@ -16,3 +16,14 @@ test('cancelling one cuisine preserves unrelated atmosphere tags',()=>{
  const intent:Intent={kind:'refine',sections:['Eat'],concepts:[],seeds:[],constraints:[],strategy:'discover'};
  removeCancelledRequirements(state,intent,'Remove Indian cuisine',['Eat']);assert.deepEqual(state.categoryTags!.Eat,[quiet.id]);assert.deepEqual(state.categoryConcepts!.Eat,['Quiet']);
 });
+
+test('exact removal request bypasses optional model calls and does not restore cuisine on an empty search',async()=>{
+ const {runTurn}=await import('../src/agent/orchestrator.ts');
+ const chinese={...cuisine,id:'urn:tag:cuisine:place:chinese',name:'Chinese cuisine'};
+ const quiet={id:'urn:tag:ambience:place:quiet',name:'Quiet atmosphere',detail:'',types:['urn:tag']};
+ const state=normalizeSession({id:'test',revision:0,expires:Date.now()+10000,city:'London',selected:[],tags:[chinese,quiet],constraints:[],categoryConstraints:{},categoryTags:{Eat:[chinese.id]},categoryConcepts:{Eat:['Chinese cuisine']},queryPreferences:{Eat:{includeTags:[chinese.id]}},cards:[{id:'old',name:'Old Chinese result',section:'Eat',types:['urn:entity:place'],detail:''}],previous:[],feedback:[],notices:[],activeCategories:['Eat']});
+ let searches=0;
+ const forbidden=async():Promise<never>=>{throw Error('Model must not be called for explicit removal');};
+ const reply=await runTurn(state,{message:'Remove Chinese cuisine completely. Find peaceful restaurants only.'},{provider:{interpret:forbidden,choose:forbidden,compose:forbidden},tools:async()=>[],workflow:async()=>({status:'ok',results:[quiet]}),discover:async current=>{searches++;assert.ok(!current.categoryTags!.Eat!.includes(chinese.id));assert.ok(!current.queryPreferences!.Eat!.includeTags!.includes(chinese.id));return [];}});
+ assert.ok(searches>0);assert.ok(!reply.state.categoryTags!.Eat!.includes(chinese.id));assert.ok(!reply.state.queryPreferences!.Eat!.includeTags!.includes(chinese.id));assert.equal(reply.state.pending,undefined);
+});

@@ -1,5 +1,5 @@
 import { matchesDishRequirements } from "../passport/dish-evidence.ts";
-import {removeCancelledRequirements} from './cancelled-requirements.ts';
+import {removeCancelledRequirements,isRequirementRemoval} from './cancelled-requirements.ts';
 import { responseContext, responseReceipt, validateResponse } from "./response.ts";
 import { refinementSettings, restoreRefinementSettings } from "./refinement-settings.ts";
 import { conversationFocus, updateConversationMemory } from "./memory.ts";
@@ -183,7 +183,7 @@ export async function runTurn(
     // Composing it again can discard those IDs and leave only a plain-text list.
     const isGroundedShortlist = Boolean(input.message && isShortlistRequest(input.message) &&
       result.state.history?.at(-1)?.recommendationIds?.length);
-    const simpleReply = input.message && /^(?:hi|hello|hey|thanks(?: bro)?|thank you(?: bro)?|cheers)[!,.\s]*$/i.test(input.message.trim());
+    const simpleReply = input.message && (/^(?:hi|hello|hey|thanks(?: bro)?|thank you(?: bro)?|cheers)[!,.\s]*$/i.test(input.message.trim()) || isRequirementRemoval(input.message));
     const answeredWithoutRetrieval = request.route === "current-results" || Boolean(result.state.pending) || isGreetingOrTypo(input.message ?? "");
     if (input.message && provider?.compose && input.reset !== "conversation" && !result.action && !isGroundedShortlist && !simpleReply && !answeredWithoutRetrieval && result.state.providerHealth !== "unavailable") {
       let responseFailure = "transport";
@@ -548,7 +548,7 @@ async function executeTurn(
     rememberedRank = Boolean(pending.rankMcp);
     if (rememberedRank && deps.provider) mode = "model-mcp";
     delete state.pending;
-  } else if (deps.provider && input.message) {
+  } else if (deps.provider && input.message && !isRequirementRemoval(input.message)) {
     event("Interpreting your cultural request", "active");
     try {
       intent = validateIntent(
@@ -1423,6 +1423,8 @@ async function executeTurn(
     state.failedSearches ??= {};
     state.failedSearches[section] = refinementSettings(state, section);
     restoreRefinementSettings(state, section, refinementSettings(original, section));
+    // A failed replacement search must not resurrect an explicitly cancelled requirement.
+    if(input.message && isRequirementRemoval(input.message))removeCancelledRequirements(state,intent,input.message,[section]);
   }
   for (const section of changed) if (state.failedSearches) delete state.failedSearches[section];
   state.relaxed = state.relaxed?.filter(item => changed.includes(item.section));

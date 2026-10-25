@@ -367,7 +367,7 @@ export default function TasteIntelligence({
               ))}
             </div>
             {partner.length < 3 && <button type="button" className="quiet-button" disabled={busy||loading} onClick={()=>setPartner(current=>[...current,""])}>Add another interest</button>}
-            <button className={resolution ? "quiet-button" : "primary-button"} disabled={busy || loading || !hasEntityProfile}>
+            <button type="submit" className={resolution ? "quiet-button" : "primary-button"} disabled={busy || loading || !partner.some(value=>value.trim())}>
               {loading ? "Finding common ground…" : resolution ? "Look up interests again" : "Find their interests"}
             </button>
           </form>
