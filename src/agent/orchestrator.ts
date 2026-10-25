@@ -788,7 +788,7 @@ async function executeTurn(
   if (asksCheaper) {
     for (const section of targets) {
       const current = state.queryPreferences[section] ?? {};
-      const currentMax = current.priceMax ?? 4; // 4 = unconstrained / most expensive
+      const currentMax = current.priceMax ?? 3; // First cheaper request caps at moderate; later requests tighten it.
       const newMax = Math.max(1, currentMax - 1);
       state.queryPreferences[section] = patchPreferences(current, { priceMax: newMax });
     }

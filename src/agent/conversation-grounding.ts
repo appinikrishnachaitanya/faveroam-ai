@@ -18,9 +18,6 @@ export function accidentalKeystrokes(value: string): boolean {
   if (alphabetic.some(token => (token.match(/[aeiou]/g)?.length ?? 0) / token.length < 0.12)) return true;
   // Repeated single char or pure digit strings are not cultural inputs.
   if (/^(.)\1{4,}$/.test(normalized.trim())) return true;
-  // Very short all-consonant sequences (3+ chars, no vowels) are gibberish.
-  const short = normalized.match(/\b[b-df-hj-np-tv-z]{3,}\b/gi) ?? [];
-  if (short.some(token => token.length >= 4)) return true;
   return false;
 }
 
@@ -47,9 +44,7 @@ export function tasteInputFeedback(value: string): string | undefined {
   // Looks like a URL or email
   if (/https?:\/\/|@\S+\.\S+/.test(trimmed))
     return "Please share a cultural taste, not a link or email address.";
-  // Pure numbers
-  if (/^\d+$/.test(trimmed))
-    return "Numbers alone aren't a taste. Tell me an artist, cuisine, or genre you love.";
+  // Numeric titles such as 1984 and 1917 are legitimate catalog searches.
   return undefined;
 }
 /** Keep Gemini's structured intent and ground its cultural concepts in the
