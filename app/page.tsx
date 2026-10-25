@@ -96,6 +96,26 @@ export default function Home() {
   const [draft, setDraft] = useState<string[]>([]);
   const [draftHydrated, setDraftHydrated] = useState(false);
   const [editingPlan, setEditingPlan] = useState<{plan:SavedPlan;nonce:number}>();
+  // Keep editingPlan in sync after a save so the DayOut component never
+  // re-populates from a stale plan (the root cause of the time-revert bug).
+  useEffect(() => {
+    const onPlansUpdated = (event: Event) => {
+      const saved = (event as CustomEvent<{plan:SavedPlan}>).detail?.plan;
+      if (!saved) return;
+      setEditingPlan(current => {
+        if (!current) return current;
+        // Only update if this is the same plan (same city + same date or same id).
+        const sameplan =
+          current.plan.id === saved.id ||
+          (current.plan.city === saved.city && current.plan.scheduled_date === saved.scheduled_date);
+        if (!sameplan) return current;
+        // Bump nonce so DayOut's useEffect re-fires with the fresh plan.
+        return { plan: saved, nonce: (current.nonce) + 1 };
+      });
+    };
+    window.addEventListener("tastepassport:plans-updated", onPlansUpdated);
+    return () => window.removeEventListener("tastepassport:plans-updated", onPlansUpdated);
+  }, []);
   const [phase, setPhase] = useState<Phase>("idle");
   const [resolution, setResolution] = useState<Resolution>();
   const [chosen, setChosen] = useState<Record<number, string>>({});

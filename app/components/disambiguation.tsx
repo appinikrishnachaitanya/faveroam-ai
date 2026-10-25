@@ -2,7 +2,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import type { Candidate } from "../../src/passport/model";
 import { typeLabel } from "../../src/workspace/state";
-import { rankCandidates } from "../../src/passport/matching";
+import { rankCandidates, filterIrrelevantCandidates } from "../../src/passport/matching";
 import { Icon } from "./passport";
 export function CandidateChoices({
   query,
@@ -21,7 +21,7 @@ export function CandidateChoices({
   return (
     <fieldset className="candidate-options">
       <legend className="sr-only">Matches for {query}</legend>
-      {rankCandidates(query,candidates).map((c) => (
+      {rankCandidates(query, filterIrrelevantCandidates(query, candidates)).map((c) => (
         <label
           key={c.id}
           className={`candidate-option ${selected === c.id ? "chosen" : ""}`}

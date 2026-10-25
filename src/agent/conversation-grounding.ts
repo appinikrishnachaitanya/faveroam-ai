@@ -15,7 +15,42 @@ export function accidentalKeystrokes(value: string): boolean {
   const normalized = categoryLanguage(value).toLowerCase();
   if (/qwertyuiop|asdfghjkl|zxcvbnm|qazwsxedc/i.test(normalized)) return true;
   const alphabetic = normalized.match(/[a-z]{12,}/g) ?? [];
-  return alphabetic.some(token => (token.match(/[aeiou]/g)?.length ?? 0) / token.length < 0.12);
+  if (alphabetic.some(token => (token.match(/[aeiou]/g)?.length ?? 0) / token.length < 0.12)) return true;
+  // Repeated single char or pure digit strings are not cultural inputs.
+  if (/^(.)\1{4,}$/.test(normalized.trim())) return true;
+  // Very short all-consonant sequences (3+ chars, no vowels) are gibberish.
+  const short = normalized.match(/\b[b-df-hj-np-tv-z]{3,}\b/gi) ?? [];
+  if (short.some(token => token.length >= 4)) return true;
+  return false;
+}
+
+/**
+ * A helpful message guiding users when their taste input appears to be gibberish
+ * or meaningless text. Returns undefined for valid-looking input.
+ */
+export function tasteInputFeedback(value: string): string | undefined {
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  const lower = trimmed.toLowerCase();
+  // Keyboard row mash
+  if (/qwertyuiop|asdfghjkl|zxcvbnm|qazwsxedc/i.test(lower))
+    return "That looks like keyboard noise. Try a real interest — like a musician, director, cuisine, or book you love.";
+  // Repeated character
+  if (/^(.)\1{3,}$/.test(trimmed))
+    return "That doesn't look like a taste. Add something you genuinely enjoy — an artist, film, food style, or place type.";
+  // Long consonant-only string
+  if (/^[b-df-hj-np-tv-z]{5,}$/i.test(trimmed))
+    return "I didn't recognise that as a cultural interest. Try an artist name, cuisine (e.g. 'Japanese'), a film, or a type of place you enjoy.";
+  // Too short to be meaningful
+  if (trimmed.replace(/[^a-z0-9]/gi, "").length < 2)
+    return "That's too short to match. Add a full name or topic — for example 'Radiohead', 'Thai cuisine', or 'documentary films'.";
+  // Looks like a URL or email
+  if (/https?:\/\/|@\S+\.\S+/.test(trimmed))
+    return "Please share a cultural taste, not a link or email address.";
+  // Pure numbers
+  if (/^\d+$/.test(trimmed))
+    return "Numbers alone aren't a taste. Tell me an artist, cuisine, or genre you love.";
+  return undefined;
 }
 /** Keep Gemini's structured intent and ground its cultural concepts in the
  * latest user message. Deterministic interpretation is for offline fallback. */

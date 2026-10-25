@@ -703,11 +703,51 @@ async function executeTurn(
       if(preferences?.includeTags)preferences.includeTags=preferences.includeTags.filter(id=>!obsolete.has(id));
     }
     intent.concepts=intent.concepts.filter(concept=>!isOutputCategoryConcept(concept,targets));
-    if (!intent.concepts.length && targets.length === 1)
+
+    // Detect exclusive cuisine/concept replacement phrases. When the user says
+    // "Chinese only", "just Chinese food", or "I don't need chicken — only Indian",
+    // the new set of concepts REPLACES all previous ones for that section rather
+    // than merging with them. This prevents stale requirements (e.g. Chicken
+    // Biryani, Indian, Vegetarian) from surviving after the user cancels them.
+    const exclusiveReplacement = input.message
+      ? /\b(?:just|only|solely|exclusively)\b/i.test(input.message) ||
+        /\bdon['']t\s+(?:need|want)\b.*\b(?:just|only|instead)\b/i.test(input.message) ||
+        /\bchange\s+(?:it\s+)?to\b/i.test(input.message)
+      : false;
+
+    // Detect explicit cancellation of previously active concepts.
+    const cancelledKeywords = input.message
+      ? (input.message.match(/\b(?:don['']t\s+(?:need|want)|not|no|remove|cancel|forget|drop|exclude)\s+([^,.!?;]{1,40})/gi) ?? [])
+        .map(m => m.replace(/^(?:don['']t\s+(?:need|want)|not|no|remove|cancel|forget|drop|exclude)\s+/i, "").trim().toLowerCase())
+      : [];
+
+    if (!intent.concepts.length && targets.length === 1 && !exclusiveReplacement)
       intent.concepts = [...(state.categoryConcepts[targets[0]] ?? [])];
-    for (const section of targets)
-      if (intent.concepts.some(concept=>conceptSections(concept, targets).includes(section)))
-        state.categoryConcepts[section] = intent.concepts.filter(concept=>conceptSections(concept, targets).includes(section));
+
+    for (const section of targets) {
+      const incomingForSection = intent.concepts.filter(concept=>conceptSections(concept, targets).includes(section));
+      if (incomingForSection.length > 0) {
+        if (exclusiveReplacement) {
+          // Hard replace: the new set is the only set.
+          state.categoryConcepts[section] = incomingForSection;
+          // Also wipe any cuisine tags that are being replaced.
+          if (section === "Eat") {
+            state.categoryTags[section] = (state.categoryTags[section] ?? []).filter(id => {
+              const tag = state.tags.find(t => t.id === id);
+              return !tag || !/cuisine|restaurant/i.test(`${tag.id} ${tag.name} ${tag.detail}`);
+            });
+          }
+        } else {
+          // Normal merge: new concepts replace the section's list.
+          state.categoryConcepts[section] = incomingForSection;
+        }
+      } else if (cancelledKeywords.length > 0 && state.categoryConcepts[section]) {
+        // Remove any explicitly cancelled keywords from existing concepts.
+        state.categoryConcepts[section] = state.categoryConcepts[section].filter(concept =>
+          !cancelledKeywords.some(kw => concept.toLowerCase().includes(kw) || kw.includes(concept.toLowerCase()))
+        );
+      }
+    }
   }
   if (!targets.includes("Culture")) delete intent.activityGenres;
   if (intent.activityGenres?.length) intent.concepts = [];
@@ -739,12 +779,25 @@ async function executeTurn(
   if (input.message && /\bcheaper\b|less expensive/i.test(input.message) &&
       interpret(input.message, state.city).query?.priceMax === undefined && intent.query)
     delete intent.query.priceMax;
-  if (input.message && intent.constraints.includes("expensive") && intent.query?.priceMax === undefined) {
+
+  // "Make those cheaper" / "less expensive" must always produce a strictly
+  // lower priceMax than the current setting, regardless of whether the model
+  // put "expensive" in constraints. We detect the phrase directly here so it
+  // is never silently ignored and never repeats the same results.
+  const asksCheaper = Boolean(input.message && /\bcheaper\b|less expensive|more (?:affordable|budget)/i.test(input.message));
+  if (asksCheaper) {
     for (const section of targets) {
       const current = state.queryPreferences[section] ?? {};
-      const priceMax = /cheaper|less expensive/i.test(input.message)
-        ? Math.max(1, (current.priceMax ?? 3) - 1)
-        : Math.min(2, current.priceMax ?? 2);
+      const currentMax = current.priceMax ?? 4; // 4 = unconstrained / most expensive
+      const newMax = Math.max(1, currentMax - 1);
+      state.queryPreferences[section] = patchPreferences(current, { priceMax: newMax });
+    }
+    // Ensure the model constraint is aligned so the qloo query picks it up.
+    if (!intent.constraints.includes("expensive")) intent.constraints = [...intent.constraints, "expensive"];
+  } else if (input.message && intent.constraints.includes("expensive") && intent.query?.priceMax === undefined) {
+    for (const section of targets) {
+      const current = state.queryPreferences[section] ?? {};
+      const priceMax = Math.min(2, current.priceMax ?? 2);
       state.queryPreferences[section] = patchPreferences(current, { priceMax });
     }
   }

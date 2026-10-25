@@ -27,7 +27,24 @@ export function curatedThemes(tags:TasteTag[],limit=6):TasteTag[] {
   const meanings:string[]=[];
   for(const tag of displayTags(tags)){
     const key=themeMeaning(tag.name);
-    if(!key || meanings.some(previous=>key===previous || Math.min(key.length,previous.length)>=8 && editDistance(key,previous)<=1))continue;
+    if(!key) continue;
+    // Stronger deduplication: reject a theme if its meaning key is:
+    //   1. identical to an existing one, or
+    //   2. a substring of an existing one (e.g. "coffee" ⊂ "indiancoffee"),
+    //   3. has an existing one as a substring of it, or
+    //   4. within edit distance 2 of an existing key of similar length.
+    const isDuplicate = meanings.some(previous => {
+      if (key === previous) return true;
+      // Substring containment in either direction catches "coffee"/"indian coffee".
+      if (key.length >= 4 && previous.includes(key)) return true;
+      if (previous.length >= 4 && key.includes(previous)) return true;
+      // Edit-distance near-match with proportional threshold.
+      const minLen = Math.min(key.length, previous.length);
+      const threshold = minLen >= 10 ? 2 : minLen >= 6 ? 1 : 0;
+      if (threshold > 0 && editDistance(key, previous) <= threshold) return true;
+      return false;
+    });
+    if (isDuplicate) continue;
     meanings.push(key);
     const family=tag.id.split(':').slice(2,4).join(':');
     grouped.set(family,[...(grouped.get(family)??[]),tag]);

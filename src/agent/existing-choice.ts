@@ -51,7 +51,28 @@ export function chooseExisting(state: AgentState, text: string): ExistingChoice 
     ? ids.flatMap(id => available.find(card => card.id === id) ?? [])
     : available;
   const contextualSections = state.intent?.sections?.filter(section => available.some(card => card.section === section)) ?? [];
-  let eligible = source.filter(card => (!sections?.length || sections.includes(card.section)) && (!genre || hasGenre(card, genre)));
+
+  // When the user asks for a "nightclub alternative" or "cinema alternative",
+  // restrict eligible cards to the same activityGenre as the currently selected
+  // venue so that cinemas never appear in nightclub results and vice versa.
+  // We detect the genre from the query and from the last-selected card's tags.
+  const queryImpliesNightclub = /\bnightclub|nightlife|club\b/i.test(q);
+  const queryImpliesCinema = /\bcinema|movie theater|movie theatre\b/i.test(q);
+  const isAlternativeRequest = /\b(?:alternative|instead|different|another|other|next best|second best|second choice)\b/i.test(q);
+
+  let eligible = source.filter(card => {
+    if (sections?.length && !sections.includes(card.section)) return false;
+    if (genre && !hasGenre(card, genre)) return false;
+    // If query implies a specific venue genre, filter to only that genre.
+    if (isAlternativeRequest && card.section === "Culture") {
+      const tagIds = (card.evidence?.result.tags ?? []).map(t => (t.id ?? "").toLowerCase() + " " + (t.name ?? "").toLowerCase()).join(" ");
+      const isNightclub = /nightclub|night club|nightlife/.test(tagIds);
+      const isCinema = /cinema|movie theater|movie theatre/.test(tagIds);
+      if (queryImpliesNightclub && !isNightclub) return false;
+      if (queryImpliesCinema && !isCinema) return false;
+    }
+    return true;
+  });
   if (!sections?.length && ids === undefined && contextualSections.length === 1 && /\bcompare\b/.test(q))
     eligible = eligible.filter(card => card.section === contextualSections[0]);
   const rating = (card: Card) => isPlaceSection(card.section)
