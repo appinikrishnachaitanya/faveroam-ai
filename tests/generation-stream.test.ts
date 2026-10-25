@@ -13,3 +13,10 @@ test('a partial preview never becomes an editable Passport when the stream fails
  globalThis.fetch=async()=>new Response('{"type":"category","section":"Eat","cards":[]}\n');
  try{await assert.rejects(generatePassport({},()=>{}),/did not finish/);}finally{globalThis.fetch=original;}
 });
+test('invalid categories and mismatched preview cards are rejected before rendering',async()=>{
+ const original=globalThis.fetch;
+ try{for(const event of [{type:'category',section:'Unknown',cards:[]},{type:'category',section:'Eat',cards:[{id:'movie',name:'Movie',section:'Movies'}]}]){
+   globalThis.fetch=async()=>new Response(JSON.stringify(event)+'\n');
+   await assert.rejects(generatePassport({},()=>assert.fail('Invalid preview was rendered')),/Invalid Passport preview/);
+ }}finally{globalThis.fetch=original;}
+});
