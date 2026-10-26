@@ -10,5 +10,7 @@ test('theme exploration adds a soft taste signal while retaining explicit requir
 });
 test('theme signals must use resolved taxonomy identifiers',()=>{
  assert.throws(()=>validatePreferences({inspirationTags:['invented text']}));
+ assert.throws(()=>validatePreferences({inspirationTags:['urn:tag:genre:place:art_gallery'],inspirationName:'bad\nname'}));
+ assert.equal(validatePreferences({inspirationTags:['urn:tag:genre:place:art_gallery'],inspirationName:'Gallery evenings'}).inspirationName,'Gallery evenings');
  assert.deepEqual(validatePreferences({inspirationTags:[]}).inspirationTags,[]);
 });

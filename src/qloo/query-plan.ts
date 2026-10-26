@@ -6,6 +6,8 @@ export type DiscoveryGoal =
   | "hidden-gems"
   | "safe-bets"
   | "surprise";
+export const audienceAgeBands = ["24_and_younger", "25_to_29", "30_to_34", "35_to_44", "45_to_54", "55_and_older"] as const;
+export type AudienceAgeBand = typeof audienceAgeBands[number];
 export interface QueryPreferences {
   goal?: DiscoveryGoal;
   priceMin?: number;
@@ -32,6 +34,9 @@ export interface QueryPreferences {
   metro?: string;
   includeTags?: string[];
   inspirationTags?: string[];
+  inspirationName?: string;
+  /** Explicit audience lens. "all" clears a previously selected lens. */
+  audienceAge?: AudienceAgeBand | "all";
   excludeTags?: string[];
   excludeEntities?: string[];
   tagOperator?: "union" | "intersection";
@@ -102,6 +107,9 @@ export function validatePreferences(input: unknown): QueryPreferences {
       const match=value.match(/^POINT\((-?\d+(?:\.\d+)?) (-?\d+(?:\.\d+)?)\)$/);
       if (!match || Math.abs(Number(match[1])) > 180 || Math.abs(Number(match[2])) > 90) throw Error("Invalid location point.");
       result[key]=value;
+    } else if (key === "inspirationName") {
+      if(typeof value!=="string"||!value.trim()||value.length>100||/[\r\n<>]/.test(value))throw Error("Invalid inspiration name.");
+      result[key]=value.trim();
     } else if (
       [
         "locationQuery",
@@ -145,6 +153,7 @@ export function validatePreferences(input: unknown): QueryPreferences {
       result[key] = [...new Set(value)];
     } else {
       const choices: Record<string, string[]> = {
+        audienceAge: ["all", ...audienceAgeBands],
         goal: ["discover", "trending", "hidden-gems", "safe-bets", "surprise"],
         qualityBias: ["low", "medium", "high"],
         trendBias: ["low", "medium", "high"],
@@ -174,6 +183,8 @@ export function validatePreferences(input: unknown): QueryPreferences {
       result[min] > result[max]
     )
       throw Error("Minimum exceeds maximum.");
+  if (result.inspirationName && !Array.isArray(result.inspirationTags))
+    throw Error("Choose a returned theme before naming it.");
   return result as QueryPreferences;
 }
 export function preferenceParams(
@@ -237,6 +248,7 @@ export function preferenceParams(
         : String(value);
   // "Any budget" is not a requirement to have a known price field.
   if (p.priceMax === 4 && p.priceMin === undefined) delete params["filter.price_level.max"];
+  if (p.audienceAge && p.audienceAge !== "all") params["signal.demographics.age"] = p.audienceAge;
   return params;
 }
 /** The compatibility entry point also validates legacy callers before network I/O. */
@@ -271,6 +283,7 @@ export function validateInsightParams(input: Record<string, string>): {
       if (!["union", "intersection"].includes(value))
         reason = "Invalid tag operator";
     if(key === "filter.exists" && !["properties.image","properties.description"].includes(value))throw Error("Unsupported required property.");
+    if(key === "signal.demographics.age" && !audienceAgeBands.includes(value as AudienceAgeBand))throw Error("Unsupported audience age band.");
     if (
       key === "bias.quality" &&
       !["low", "medium", "high"].includes(value) &&

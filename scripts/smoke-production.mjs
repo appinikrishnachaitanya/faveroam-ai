@@ -53,6 +53,13 @@ try {
     body: "{}", signal: AbortSignal.timeout(10000), redirect: "error",
   });
   assert.equal(invalid.status, 400);
+  const invalidShare = await fetch(new URL('/api/share?token=invalid', base), { signal: AbortSignal.timeout(10000), redirect: 'error' });
+  assert.equal(invalidShare.status, 404);
+  const blockedShare = await fetch(new URL('/api/share', base), {
+    method: 'POST', headers: { Origin: 'https://other.example', 'Content-Type': 'application/json' },
+    body: '{}', signal: AbortSignal.timeout(10000), redirect: 'error',
+  });
+  assert.equal(blockedShare.status, 403);
   const missing = await fetch(new URL("/deployment-smoke-missing-page", base), { signal: AbortSignal.timeout(10000), redirect: "error" });
   assert.equal(missing.status, 404);
   console.log("Production smoke PASS: health, rendered home, security headers, origin checks, input validation and 404; no provider calls.");

@@ -1,5 +1,6 @@
 "use client";
 import { sectionLabel } from "../../src/passport/labels";
+import AudienceContext from './audience-context';
 import { Icon } from "./passport";
 import { CategoryMultiSelect } from "./category-multi-select";
 import { useEffect, useRef, useState } from 'react';
@@ -59,8 +60,8 @@ export default function TasteAnalysis({passport,busy,onRefine}:{passport:Passpor
   const heat=visible.heatmap?.kind==='heatmap'?visible.heatmap:undefined;
   const areas=heat ? buildAreaGuide(heat.points,passport.cards) : [];
   function exploreTheme() {
-    if (!themeId || busy || !effectiveThemeSections.length) return;
-    onRefine({discovery:{sections:effectiveThemeSections,preferences:{inspirationTags:[themeId]}}});
+    if (!selectedTheme || busy || !effectiveThemeSections.length) return;
+    onRefine({discovery:{sections:effectiveThemeSections,preferences:{inspirationTags:[selectedTheme.id],inspirationName:selectedTheme.name}}});
   }
   function nearby(point:{latitude:number;longitude:number}) {
     onRefine({discovery:{sections:['Eat'],preferences:{locationPoint:`POINT(${point.longitude} ${point.latitude})`,radius:1500}}});
@@ -125,5 +126,6 @@ export default function TasteAnalysis({passport,busy,onRefine}:{passport:Passpor
       </article>)}</div> : <p>No local places are available to preview yet. Find food in Discover, then return to explore where to start.</p>}
       <p className="helper">“Find food around here” searches within 1.5 km of the named place and keeps your food preferences. Check routes and hours before going.</p>
     </div>}
+    <AudienceContext interests={passport.selected.filter(interest=>interestIds.includes(interest.id))} records={visible.demographics?.kind==='demographics'?visible.demographics.records:undefined} loading={loading==='demographics'} disabled={busy||Boolean(loading)} onLoad={()=>void load('demographics')}/>
   </section>;
 }

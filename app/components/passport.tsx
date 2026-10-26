@@ -295,6 +295,7 @@ function EntityPhoto({url,name,section}:{url?:string;name:string;section:Section
 export function DiscoveryCard({
   session,
   card,
+  selected = [],
   feedback,
   onFeedback,
   live = false,
@@ -304,6 +305,7 @@ export function DiscoveryCard({
   live?: boolean;
   disabled?: boolean;
   card: Card;
+  selected?: {id:string}[];
   feedback?: Feedback;
   onFeedback: (id: string, value: Feedback) => void | Promise<void>;
 }) {
@@ -343,12 +345,13 @@ export function DiscoveryCard({
       {card.evidence?.strategyNote?.startsWith("Dish match not verified:") && (
         <p className="helper">Dish not verified · check the menu</p>
       )}
-      <ResultMetrics card={card} />
+      <ResultMetrics card={card} selected={selected} />
       <details className="why-section">
         <summary>
           Why this suggestion? <Icon name="plus" size={12} />
         </summary>
         {evidenceFacts(card).slice(0, 4).map((fact) => <p key={fact}>{fact}</p>)}
+        <p className="helper">Taste evidence % counts confirmed tastes with an individual returned contribution or matching returned tag on this card. It is not a prediction of enjoyment.</p>
         <div className="why-signals">
           {(
             card.evidence?.inputs
@@ -515,6 +518,7 @@ export function PassportSections({
                   session={result.agent}
                   key={c.id}
                   card={c}
+                  selected={result.selected}
                   feedback={feedback[c.id]}
                   onFeedback={onFeedback}
                   live={Boolean(result.agent)}

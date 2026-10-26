@@ -124,6 +124,7 @@ export async function runTurn(
   guard = new TurnGuard(),
 ): Promise<AgentReply> {
   const request = new RequestMachine(routeRequest(input));
+  let qlooOperations=0;
   debugEvent("agent.route", { action: request.route });
   const provider = deps.provider;
   const wrapped: AgentDependencies = {
@@ -148,10 +149,12 @@ export async function runTurn(
     } } : {}),
     workflow: async (...args) => {
       request.move("executing");
+      qlooOperations++;
       return deps.workflow(...args);
     },
     discover: async (...args) => {
       request.move("executing");
+      qlooOperations++;
       return deps.discover(...args);
     },
   };
@@ -212,6 +215,14 @@ export async function runTurn(
       result.state.recovery?.length ? (result.changed.length ? "partial" : "blocked") : "completed");
     debugEvent("agent.completed", { action: request.snapshot().phase, count: result.changed.length, elapsedMs: request.snapshot().elapsedMs });
     const completed = { ...result, execution: request.snapshot() };
+    const lastMessage=completed.state.history?.at(-1);
+    if(lastMessage?.role==='agent' && input.message)lastMessage.checks={
+      route:request.route,
+      model:completed.mode==='model-mcp'?'Gemini interpreted request':'Used current Passport or guided interpretation',
+      qlooOperations,
+      validation:'Server checked the response and any allowed Passport changes',
+      kept:refinementScope(input.message).preserved,
+    };
     updateConversationMemory(original, completed, input);
     return completed;
   } catch (error) {

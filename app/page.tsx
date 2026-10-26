@@ -53,6 +53,9 @@ import {
 } from "./components/passport-overview";
 import { sectionOrder } from "../src/workspace/state";
 import TasteAnalysis from "./components/taste-analysis";
+import PassportMap from './components/passport-map';
+import FirstWeek from './components/first-week';
+import ShareTasteCard from './components/share-taste-card';
 import { rememberGuestPassport, restoreGuestPassport, clearGuestPassport } from "../src/workspace/guest-recovery";
 import { rememberActiveSession, restoreActiveSession, clearActiveSession, rememberSavedSession, restoreSavedSession, clearSavedSession } from "../src/workspace/active-session";
 import { accountRequest, showNotice } from "../src/account/browser";
@@ -64,11 +67,13 @@ interface Message {
   text: string;
   recommendationIds?: string[];
   comparisonIds?: string[];
+  checks?: {route:string;model:string;qlooOperations:number;validation:string;kept:Section[]};
 }
 const welcome: Message = {
   role: "agent",
   text: "Move anywhere. Keep your vibe. Tell me your new city and one to five cultural tastes you love. We’ll build a bridge between your world and your next chapter.",
 };
+const verifyShareToken=(value:string)=>/^[a-zA-Z0-9_-]{32}$/.test(value);
 async function post<T>(path: string, body: unknown): Promise<T> {
   const response = await fetch(path, {
     method: "POST",
@@ -95,7 +100,19 @@ export default function Home() {
   const [origin, setOrigin] = useState("");
   const [initialMode, setInitialMode] = useState<Familiarity>("familiar");
   const [requestedActivities, setRequestedActivities] = useState<Section[]>([]);
+  const [sharedPartnerTastes,setSharedPartnerTastes]=useState<string[]>([]);
+  const sharedOfferShown=useRef(false);
+  useEffect(()=>{
+    const token=new URLSearchParams(window.location.search).get('together');
+    if(!token||!verifyShareToken(token))return;
+    const controller=new AbortController();
+    void fetch(`/api/share?token=${encodeURIComponent(token)}`,{signal:controller.signal,cache:'no-store'}).then(response=>response.ok?response.json():undefined).then(data=>{
+      if(!controller.signal.aborted&&Array.isArray(data?.snapshot?.interests))setSharedPartnerTastes(data.snapshot.interests.slice(0,3).map((interest:{name:string})=>interest.name));
+    }).catch(()=>{});
+    return ()=>controller.abort();
+  },[]);
   const [assistantOpen, setAssistantOpen] = useState(false);
+  const [showMap,setShowMap]=useState(false);
   const [assistantTab, setAssistantTab] = useState<"ask" | "manual">("ask");
   const [composer, setComposer] = useState("");
   const [messages, setMessages] = useState<Message[]>([welcome]);
@@ -130,6 +147,7 @@ export default function Home() {
   const [chosen, setChosen] = useState<Record<number, string>>({});
   const [removed, setRemoved] = useState<number[]>([]);
   const [result, setResult] = useState<Passport>();
+  useEffect(()=>{if(result&&sharedPartnerTastes.length&&!sharedOfferShown.current){sharedOfferShown.current=true;setShowSaved(false);setWorkspaceView('together');}},[result,sharedPartnerTastes]);
   const [workspaceView, setWorkspaceView] = useState<
     "discover" | "plan" | "preferences" | "together" | "connections"
   >("discover");
@@ -523,8 +541,8 @@ export default function Home() {
       }),
     );
   }
-  async function resolve() {
-    const queries = draft.map((s) => s.trim()).filter(Boolean);
+  async function resolve(sample?:string[]) {
+    const queries = (sample??draft).map((s) => s.trim()).filter(Boolean);
     if (
       queries.length < 1 ||
       queries.length > 5 ||
@@ -541,7 +559,7 @@ export default function Home() {
     try {
       const r = await post<Resolution>("/api/agent/resolve", {
         seeds: queries,
-        concepts: conceptSeeds,
+        concepts: sample ? ["Indian cuisine"] : conceptSeeds,
       });
       setResolution(r);
       setChosen(reviewMatches(r.items));
@@ -817,7 +835,13 @@ export default function Home() {
               );
               resetMatches();
             }}
-            onSubmit={resolve}
+            onSubmit={()=>void resolve()}
+            onSample={sampleCity=>{
+              const tastes=['A.R. Rahman','Interstellar','Indian cuisine'];
+              setCity(sampleCity);setOrigin('');setDraft(tastes);
+              setConceptSeeds(['Indian cuisine']);setRequestedActivities(['Eat','Music','Movies']);
+              void resolve(tastes);
+            }}
             activities={requestedActivities}
             onActivities={setRequestedActivities}
           />
@@ -968,6 +992,11 @@ export default function Home() {
                 />
               ) : (
                 <>
+                  <button className="quiet-button map-toggle" type="button" aria-expanded={showMap} onClick={()=>setShowMap(value=>!value)}>{showMap?'Hide map':'See places on a map'}</button>
+                  {showMap&&<PassportMap cards={result.cards.filter(card=>!result.session?.hiddenCategories.includes(card.section))} onSelect={card=>{
+                    setShowMap(false);
+                    window.setTimeout(()=>[...document.querySelectorAll<HTMLElement>('[data-entity-id]')].find(element=>element.dataset.entityId===card.id)?.scrollIntoView({behavior:'smooth',block:'center'}),50);
+                  }}/>}
                   <PassportSections
                     disabled={busy}
                     result={{
@@ -982,6 +1011,7 @@ export default function Home() {
                     updates={updates}
                     updating={updating}
                   />
+                  <ShareTasteCard key={`share:${result.agent?.sessionId??result.city}`} passport={result}/>
                 </>
               )}
             </div>
@@ -1001,6 +1031,7 @@ export default function Home() {
                 saveRequest={savePlanRequest}
                 onSaveRequestHandled={()=>setSavePlanRequest(0)}
               />
+              <FirstWeek key={`first-week:${result.session?.id??result.city}`} passport={result}/>
             </div>
             <div
               className="workspace-panel"
@@ -1011,6 +1042,7 @@ export default function Home() {
                 key={`intelligence:${result.session?.id ?? result.city}`}
                 view={workspaceView === "together" ? "together" : "preferences"}
                 onPreferences={()=>selectWorkspaceView("preferences")}
+                partnerSample={sharedPartnerTastes}
                 passport={result}
                 busy={busy}
                 onRefine={(input) => {setWorkspaceView("discover");setShowSaved(false);void refine(input);}}
@@ -1155,6 +1187,7 @@ export default function Home() {
                         {m.role === "agent" ? "TASTEPASSPORT" : "YOU"}
                       </span>
                       {m.role === "agent" ? <ChatReply text={m.text} hasCards={Boolean(m.recommendationIds?.some(id=>result.cards.some(card=>card.id===id && !result.session?.hiddenCategories?.includes(card.section))))}/> : <p>{m.text}</p>}
+                      {m.role==='agent'&&m.checks&&<details className="chat-checks"><summary>What I checked</summary><ul><li>Request route: {m.checks.route}</li><li>{m.checks.model}</li><li>{m.checks.qlooOperations} Qloo retrieval or tool operation{m.checks.qlooOperations===1?'':'s'} in this turn; each may use more than one network request.</li><li>{m.checks.validation}</li><li>{m.checks.kept.length?`Kept unchanged: ${m.checks.kept.map(sectionLabel).join(', ')}.`:'No sections were explicitly protected in this request.'}</li></ul></details>}
                       {m.role === "agent" && m.comparisonIds?.length ? <ChatComparison cards={m.comparisonIds.flatMap(id=>result.cards.find(card=>card.id===id && !result.session?.hiddenCategories?.includes(card.section)) ?? [])} /> : null}
                       {m.role === "agent" && !m.comparisonIds?.length && Array.isArray(m.recommendationIds) && m.recommendationIds.length ? <ChatRecommendations city={result.city}
                         cards={m.recommendationIds.flatMap(id=>result.cards.find(card=>card.id===id && !result.session?.hiddenCategories?.includes(card.section)) ?? [])}

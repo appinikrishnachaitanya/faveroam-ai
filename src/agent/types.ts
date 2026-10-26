@@ -59,6 +59,7 @@ export interface ConversationMessage {
   recommendationIds?: string[];
   referenceIds?: string[];
   comparisonIds?: string[];
+  checks?: {route:string; model:string; qlooOperations:number; validation:string; kept:Section[]};
 }
 export interface AgentState {
   id: string;

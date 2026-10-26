@@ -1,0 +1,49 @@
+.sample-passport { margin-top:14px; border:1px solid var(--ui-border); border-radius:12px; padding:8px 16px; font-weight:650; }
+.map-toggle { margin:14px 0; border:1px solid var(--ui-border); border-radius:10px; }
+.passport-map-panel { margin:16px 0 26px; padding:clamp(16px,2vw,24px); border:1px solid var(--ui-border); border-radius:18px; background:var(--ui-surface); }
+.passport-map-panel > p { max-width:75ch; line-height:1.6; color:var(--ui-muted); }
+.passport-map-canvas { width:100%; height:clamp(300px,48vw,520px); border-radius:12px; margin:16px 0; overflow:hidden; }
+.passport-map-marker { width:34px; height:34px; border-radius:50%; border:2px solid #fff; background:#234b35; color:#fff; box-shadow:0 3px 8px #10261e55; font-size:15px; font-weight:700; }
+.passport-map-marker:hover { background:#8d592c; transform:scale(1.08); }
+.passport-map-legend { display:flex; flex-wrap:wrap; gap:8px 20px; padding-left:20px; font-size:13px; }
+.passport-map-fallback { margin:16px 0; }
+.schematic-map { position:relative; height:300px; margin-top:12px; border-radius:12px; background:linear-gradient(135deg,#e4eee6,#f6e9d0); border:1px solid var(--ui-border); }
+.schematic-map button { position:absolute; transform:translate(-50%,-50%); border:0; background:#234b35; color:#fff; border-radius:50%; width:30px; height:30px; }
+@media(max-width:640px){.passport-map-canvas{height:350px}.passport-map-panel{padding:16px}}
+.first-week-panel { margin-top:32px; padding:clamp(16px,2.5vw,28px); border:1px solid var(--ui-border); border-radius:18px; background:var(--ui-surface); }
+.first-week-panel h3 { font-size:clamp(22px,3vw,32px); margin:8px 0; }
+.first-week-panel > p { max-width:68ch; line-height:1.6; color:var(--ui-muted); }
+.first-week-controls { display:flex; flex-wrap:wrap; gap:12px; align-items:end; margin:20px 0; }
+.first-week-controls label,.week-stops label { display:grid; gap:8px; font-weight:650; }
+.first-week-controls input,.week-stops input,.week-stops select { min-height:44px; max-width:100%; padding:8px 12px; border:1px solid var(--ui-border); border-radius:10px; background:#fff; }
+.week-days { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,110px),1fr)); gap:8px; margin:22px 0; }
+.week-days button { display:grid; gap:4px; min-height:66px; padding:10px; text-align:left; border:1px solid var(--ui-border); border-radius:11px; background:#fff; }
+.week-days button[aria-pressed="true"] { background:var(--ui-action); color:#fff; }
+.week-days small { font-size:12px; }
+.week-stops { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr)); gap:12px; margin:16px 0; }
+.week-stops label { padding:14px; border:1px solid var(--ui-border); border-radius:12px; }
+.together-two-profiles { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr)); gap:12px; margin:18px 0; }
+.together-two-profiles > div,.shared-hangout { border:1px solid var(--ui-border); border-radius:13px; padding:16px; background:var(--ui-surface); }
+.together-two-profiles p,.shared-hangout p { margin-top:8px; line-height:1.55; }
+.shared-hangout { margin:20px 0; }
+.shared-hangout h4 { margin:10px 0; font-size:18px; }
+.shared-hangout ol { padding-left:22px; line-height:1.55; }
+.shared-hangout li+li { margin-top:7px; }
+.common-tags small { font-size:11px; opacity:.85; }
+.chat-checks { margin-top:12px; padding:10px 12px; border:1px solid var(--ui-border); border-radius:10px; font-size:12px; }
+.chat-checks summary { cursor:pointer; font-weight:650; }
+.chat-checks ul { padding-left:18px; margin:10px 0 0; line-height:1.5; }
+.share-taste-card { margin:28px 0; padding:clamp(16px,2.5vw,28px); border:1px solid var(--ui-border); border-radius:18px; background:linear-gradient(120deg,#fffaf0,#ebf1e9); }
+.share-taste-card h3 { margin:8px 0; font-size:clamp(22px,3vw,31px); }
+.share-taste-card p { line-height:1.6; max-width:70ch; }
+.share-theme-preview,.share-actions { display:flex; flex-wrap:wrap; gap:8px; margin:16px 0; }
+.share-theme-preview span { padding:7px 12px; border-radius:99px; border:1px solid var(--ui-border); background:#fff; }
+.share-link-result { display:flex; flex-wrap:wrap; gap:10px; align-items:end; padding:16px; border:1px solid var(--ui-border); border-radius:12px; }
+.share-link-result label { display:grid; gap:5px; flex:1 1 280px; min-width:0; }
+.share-link-result input { min-height:44px; width:100%; min-width:0; padding:8px; border:1px solid var(--ui-border); border-radius:8px; }
+.shared-passport-page { max-width:820px; margin:clamp(20px,5vw,70px) auto; padding:clamp(18px,4vw,36px); background:var(--ui-surface); border-radius:20px; line-height:1.6; }
+.shared-passport-page > a:first-child { display:block; margin-bottom:28px; }
+.shared-passport-page h1 { margin:8px 0 20px; font-size:clamp(30px,5vw,54px); }
+.shared-passport-page h2 { margin-top:28px; font-size:24px; }
+.shared-passport-page ul { padding-left:22px; }
+.shared-passport-page .primary-button { display:inline-flex; margin:20px 0; padding:12px 18px; text-decoration:none; }
