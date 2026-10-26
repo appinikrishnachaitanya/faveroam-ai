@@ -2,8 +2,9 @@ import type {Passport} from './state';
 import type {Card,Section} from '../passport/model';
 import {sectionOrder} from './state';
 /** Preview events are read-only; the final session is authoritative for editing. */
-export async function generatePassport(body:unknown,onCategory:(section:Section,cards:Card[])=>void):Promise<Passport>{
- const response=await fetch('/api/passport',{method:'POST',headers:{'Content-Type':'application/json',Accept:'application/x-ndjson'},body:JSON.stringify(body),signal:AbortSignal.timeout(95000)});
+export async function generatePassport(body:unknown,onCategory:(section:Section,cards:Card[])=>void,cancellation?:AbortSignal):Promise<Passport>{
+ const signal=cancellation?AbortSignal.any([cancellation,AbortSignal.timeout(95000)]):AbortSignal.timeout(95000);
+ const response=await fetch('/api/passport',{method:'POST',headers:{'Content-Type':'application/json',Accept:'application/x-ndjson'},body:JSON.stringify(body),signal});
  if(!response.ok||!response.body)throw Error('Could not connect to build your Passport. Please try again.');
  const reader=response.body.getReader(),decoder=new TextDecoder();let buffer='',result:Passport|undefined;
  const consume=(line:string)=>{if(!line.trim())return;const event=JSON.parse(line);if(!event||typeof event!=='object')throw Error('Invalid Passport response.');if(event.type==='error')throw Error(typeof event.message==='string'?event.message:'Could not complete your Passport.');if(event.type==='category'){

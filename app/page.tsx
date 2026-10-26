@@ -1,6 +1,7 @@
 "use client";
 import { refinementErrorMessage } from "../src/agent/customer-error";
 import {generatePassport} from '../src/workspace/generation-browser';
+import GenerationPreview from './components/generation-preview';
 import { sectionLabel } from "../src/passport/labels";
 import { useEffect, useRef, useState } from "react";
 import { validDestination } from "../src/workspace/location";
@@ -83,12 +84,8 @@ async function post<T>(path: string, body: unknown): Promise<T> {
 export default function Home() {
   const [chatProgress,setChatProgress]=useState('');
   const [generationPreviews,setGenerationPreviews]=useState<Partial<Record<Section,import('../src/passport/model').Card[]>>>({});
-  const previewRevealed=useRef(false);
-  useEffect(()=>{
-    if(previewRevealed.current||!Object.values(generationPreviews).some(cards=>cards?.length))return;
-    previewRevealed.current=true;
-    document.querySelector('.generation-previews')?.scrollIntoView({behavior:'instant',block:'start'});
-  },[generationPreviews]);
+  const generationRequest=useRef<AbortController|null>(null);
+  useEffect(()=>()=>generationRequest.current?.abort(),[]);
   const [tasteDraftVersion,setTasteDraftVersion]=useState(0);
   const [saveTastePrompt,setSaveTastePrompt]=useState(false);
   const [showSaved, setShowSaved] = useState(false);
@@ -126,6 +123,9 @@ export default function Home() {
     return () => window.removeEventListener("tastepassport:plans-updated", onPlansUpdated);
   }, []);
   const [phase, setPhase] = useState<Phase>("idle");
+  useEffect(()=>{
+    if(phase==='exploring')document.getElementById('generation-heading')?.focus();
+  },[phase]);
   const [resolution, setResolution] = useState<Resolution>();
   const [chosen, setChosen] = useState<Record<number, string>>({});
   const [removed, setRemoved] = useState<number[]>([]);
@@ -609,11 +609,11 @@ export default function Home() {
     );
   }
   async function generate() {
-    if (!resolution || !complete || busy || !city) return;
+    if (!resolution || !complete || busy || !city || generationRequest.current) return;
+    const controller=new AbortController();generationRequest.current=controller;
     setError("");
     setResult(undefined);
     setGenerationPreviews({});
-    previewRevealed.current=false;
     setUpdating([]);
     setPhase("exploring");
     say(
@@ -629,7 +629,8 @@ export default function Home() {
         mode: initialMode,
         // Onboarding progress is not assistant chat history.
         history: [],
-      },(section,cards)=>setGenerationPreviews(current=>({...current,[section]:cards})));
+      },(section,cards)=>{if(generationRequest.current===controller&&!controller.signal.aborted)setGenerationPreviews(current=>({...current,[section]:cards}));},controller.signal);
+      if(generationRequest.current!==controller||controller.signal.aborted)return;
       const passport = r;
       setResult(passport);
       setPhase("ready");
@@ -639,6 +640,7 @@ export default function Home() {
           : "No suitable discoveries were returned this time. Try editing your tastes or try again.",
       );
     } catch (e) {
+      if(generationRequest.current!==controller||controller.signal.aborted)return;
       setError(
         e instanceof Error ? e.message : "Could not build your passport.",
       );
@@ -646,6 +648,8 @@ export default function Home() {
       say(
         "Exploration couldn’t complete. Your confirmed tastes are preserved for a retry.",
       );
+    } finally {
+      if(generationRequest.current===controller)generationRequest.current=null;
     }
   }
   function recordFeedback(id: string, value: Feedback) {
@@ -667,6 +671,7 @@ export default function Home() {
     else fresh();
   }
   function fresh() {
+    generationRequest.current?.abort();generationRequest.current=null;setGenerationPreviews({});
     recoveryRequest.current?.abort();
     clearGuestPassport(window.sessionStorage);
     clearActiveSession(window.sessionStorage);
@@ -707,7 +712,7 @@ export default function Home() {
     setConceptDialog(false);
     resetMatches("idle");
   }
-  const step = result ? 3 : resolution && !editing ? 2 : 1;
+  const step = result || phase==='exploring' ? 3 : resolution && !editing ? 2 : 1;
   const progress =
     phase === "refining"
       ? updating.length
@@ -856,8 +861,8 @@ export default function Home() {
             )}
           </div>
         )}
-        {busy && <JourneyLoading phase={phase} detail={progress} />}
-        {phase==='exploring'&&Object.values(generationPreviews).some(cards=>cards?.length)&&<section className="generation-previews" aria-label="Discoveries ready to preview"><h2>Your first discoveries are ready</h2><p>Browse these while we finish your Passport. Saving and refinement will be available when it’s ready.</p><div>{sectionOrder.filter(section=>generationPreviews[section]?.length).map(section=><article key={section}><h3>{sectionLabel(section)}</h3><ol>{generationPreviews[section]!.map(card=><li key={card.id}><strong>{card.name}</strong>{card.address&&<small>{card.address}</small>}</li>)}</ol></article>)}</div></section>}
+        {busy && phase!=='exploring' && <JourneyLoading phase={phase} detail={progress} />}
+        {phase==='exploring'&&<GenerationPreview city={city} previews={generationPreviews} onCancel={()=>{generationRequest.current?.abort();generationRequest.current=null;setGenerationPreviews({});setPhase('confirming');}}/>}
         {result && (
           <section
             className="living-passport"
