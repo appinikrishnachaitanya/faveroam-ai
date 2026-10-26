@@ -14,9 +14,9 @@ No deployment is implied by a successful push.
 | First Week account persistence | Implemented in code | Save/reopen/update/delete; run updated `setup.sql` and verify with a signed-in account |
 | Navigation render cost | Improved in code | Stable callbacks, memoized account/navigation, map released off Discover; loaded-browser profiling remains |
 | New local illustrations | Implemented | Insights, My Vibe, Vibe Dial and First Week; review responsive balance |
-| Map and shared geography | Implemented in code | Attributed tiles and explicit place anchor/radius; live tiles remain unverified, median clustering deferred |
+| Map and shared geography | Implemented in code | Attributed tiles and explicit place anchor/radius; DBSCAN/medoid clusters implemented; live tiles remain unverified |
 | Two Roots, One City | Implemented in code | Live-provider journey remains; candidate pools can be sparse |
-| My Rituals | Deferred | Not part of the current requested changes |
+| My Rituals | Implemented in code | Run the complete setup.sql reset; real authenticated acceptance remains |
 | Stop repair, undo, and comparison UI | Implemented in code | Full browser acceptance remains |
 | Sharing, account, and calendar acceptance | Partial | Validate live link lifecycle, real account ownership, and ICS import |
 | Final release gates | Pending | Full tests/build/smoke/browser checks, remote CI, and deployed revision verification |
@@ -251,3 +251,27 @@ Chat open/close ranged from 24–128 ms; composer DOM identity was preserved.
 These are fixture checks without provider calls or map coordinates, not field
 performance measurements or map-tile/authentication acceptance. Full automated
 suite: 483 passed; production build and TypeScript check passed.
+
+## Release feature completion (supersedes deferred items above)
+
+DBSCAN/real-medoid geographic clustering and the explicitly scoped My Rituals MVP
+are now implemented. First Week save error classification, ongoing-week visibility,
+calendar integrity and the planning/library/mobile/cover layouts were corrected.
+Discover remains mounted during My places navigation; both tuning controls are
+collapsed so the results remain accessible. Sharing offers Share and Download PNG,
+with read-only links separately available.
+
+See [release changes, migration, rollback and acceptance limits](RELEASE_20261026.md).
+The user explicitly chose a single setup.sql reset, including all policies. It is manual and has not been executed by this agent.
+Final automated checkpoint: 497 tests passed; build and TypeScript passed.
+Four-width synthetic browser acceptance passed, including map fallback/selection,
+clustering, direct PNG download, guest ritual entry, chat retention and library
+overflow/contrast. Live Supabase/Qloo/tile checks remain open.
+
+Common Ground now prioritises specific themes, names both confirmed profiles, and
+only shows individual links when actual positive contributions support both
+people. Shared themes are soft signals. The joint and individual search pools are
+retained for a fuller First Week rather than truncated to previews. The default
+area is Anywhere in this city; an anchor/radius is an explicit choice. Existing
+user geography remains enforced. New quality regressions and synthetic shared-
+week browser checks pass; live relevance remains unverified.

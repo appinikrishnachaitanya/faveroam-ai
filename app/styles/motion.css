@@ -91,6 +91,7 @@
 
 /* Repeat interactions must show content immediately, without replaying a transcript
    or staggering previously loaded cards each time a panel is mounted. */
+.progressive-app .discovery-concierge,
 .progressive-app .concierge-drawer[open],
 .progressive-app .conversation > .message,
 .progressive-app :is(.account-dialog, .account-library-dialog, .match-dialog, .feedback-dialog, .taste-profile-dialog)[open],

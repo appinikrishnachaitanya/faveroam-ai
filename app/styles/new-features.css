@@ -132,3 +132,22 @@
 @media(max-width:800px){.shared-page-hero{grid-template-columns:1fr;padding:30px 0}.shared-cover{min-height:250px;transform:none;box-shadow:8px 9px 0 #dfdcbf}.shared-page-grid{grid-template-columns:1fr}.shared-discovery-list{grid-template-columns:1fr}.shared-page-invitation{grid-template-columns:1fr;gap:16px}.shared-page-invitation .primary-button{justify-self:start}}
 @media(max-width:480px){.shared-passport-page{margin:0;padding:16px;border-radius:0}.shared-hero-copy h1{font-size:clamp(32px,10vw,44px)}.shared-cover{min-height:220px}.shared-page-section{padding:18px}.shared-page-invitation .primary-button{width:100%;justify-content:center;white-space:normal;text-align:center}}
 @media(prefers-reduced-motion:reduce){.shared-passport-page .primary-button{transition:none}.shared-passport-page .primary-button:hover{transform:none}}
+.place-clusters { padding:20px; margin:16px 0; border:1px solid var(--ui-border); border-radius:18px; background:var(--ui-surface); }
+.place-clusters h3 { margin:0 0 8px; }
+.cluster-options { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr)); gap:10px; margin-top:14px; }
+.cluster-option { display:flex; flex-direction:column; align-items:flex-start; gap:8px; padding:16px; border:1px solid var(--ui-border); border-radius:12px; background:var(--ui-surface); color:var(--ui-ink); text-align:start; overflow-wrap:anywhere; min-width:0; }
+.cluster-option[aria-pressed=true] { border-color:var(--ui-action); box-shadow:inset 0 0 0 1px var(--ui-action); }
+.cluster-option span,.cluster-option small { line-height:1.5; }
+.rituals-panel { margin:20px 0 30px; padding:clamp(16px,3vw,28px); border:1px solid var(--ui-border); border-radius:22px; background:var(--ui-surface); color:var(--ui-ink); text-align:start; }
+.rituals-panel h2,.rituals-panel h3 { margin:10px 0; line-height:1.25; overflow-wrap:anywhere; }
+.rituals-panel p,.rituals-panel small { line-height:1.6; overflow-wrap:anywhere; }
+.ritual-form { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr)); gap:16px; margin:24px 0; padding:20px; border:1px solid var(--ui-border); border-radius:16px; }
+.ritual-form h3,.ritual-form .ritual-actions { grid-column:1/-1; }
+.ritual-form label { display:flex; flex-direction:column; gap:8px; min-width:0; font-size:14px; }
+.ritual-form :is(input,select) { width:100%; max-width:100%; min-width:0; min-height:46px; padding:10px; border:1px solid var(--ui-border); border-radius:10px; background:var(--ui-surface); color:var(--ui-ink); }
+.ritual-actions { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:14px; }
+.ritual-actions .primary-button { width:auto; margin:0; }
+.ritual-list { display:grid; gap:16px; }
+.ritual-list article,.ritual-proposal { padding:20px; border:1px solid var(--ui-border); border-radius:16px; min-width:0; }
+.ritual-note { padding:14px; border-radius:10px; background:var(--ui-tint); color:var(--ui-ink); margin:14px 0; }
+@media(max-width:480px){.ritual-actions>*{flex:1 1 100%;justify-content:center}.ritual-form{padding:14px}.ritual-list article{padding:16px}}

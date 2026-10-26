@@ -55,6 +55,8 @@ import {
 } from "./components/passport-overview";
 import { sectionOrder } from "../src/workspace/state";
 import TasteAnalysis from "./components/taste-analysis";
+import {clusterPlaces} from '../src/passport/place-clusters';
+import Rituals from "./components/rituals";
 import PassportMap, {mappedPlaces} from './components/passport-map';
 import FirstWeek from './components/first-week';
 import ShareTasteCard from './components/share-taste-card';
@@ -118,6 +120,10 @@ export default function Home() {
   const [assistantVisited, setAssistantVisited] = useState(false);
   useEffect(() => { if (assistantOpen) setAssistantVisited(true); }, [assistantOpen]);
   const [visitedViews, setVisitedViews] = useState<Set<string>>(() => new Set(["discover"]));
+  const [planMode,setPlanMode]=useState<"week"|"day">("week");
+  const [ritualCardId,setRitualCardId]=useState<string>();
+  const ritualInitialHandled=useCallback(()=>setRitualCardId(undefined),[]);
+  const [selectedCluster,setSelectedCluster]=useState<string>();
   const [showMap,setShowMap]=useState(true);
   const [assistantTab, setAssistantTab] = useState<"ask" | "manual">("ask");
   const [composerPrompt, setComposerPrompt] = useState({text:"",version:0});
@@ -502,6 +508,7 @@ export default function Home() {
       });
       setProviderHealth(reply.state.providerHealth ?? "unconfigured");
       if (reply.action === "plan-day" || reply.action === "save-plan") {
+        setPlanMode("day");
         setAssistantOpen(false);
         selectWorkspaceView("plan");
         if(reply.action === "save-plan")setSavePlanRequest(current=>current+1);
@@ -509,6 +516,7 @@ export default function Home() {
       if(reply.action === "open-preferences" || reply.action === "open-vibe" || reply.action === "open-discover" || reply.action === "open-together" || reply.action === "open-insights") {
         setAssistantOpen(false);
         setShowSaved(reply.action === "open-vibe");
+        if(reply.action === "open-vibe")setVisitedViews(current=>new Set([...current,"saved"]));
         selectWorkspaceView(reply.action === "open-preferences"?"preferences":reply.action === "open-together"?"together":reply.action === "open-insights"?"connections":"discover");
       }
       if (reply.action === "save-passport") {
@@ -716,7 +724,11 @@ export default function Home() {
   useLayoutEffect(()=>{feedbackHandler.current=recordFeedback;});
   const stableFeedback = useCallback((id:string,value:Feedback)=>feedbackHandler.current(id,value),[]);
   const visibleResult = useMemo(()=>result?{...result,cards:result.cards.filter(card=>!result.session?.hiddenCategories.includes(card.section))}:undefined,[result]);
+  const placeClusters=useMemo(()=>clusterPlaces(visibleResult?.cards??[]),[visibleResult]);
+  const activeCluster=placeClusters.find(cluster=>cluster.id===selectedCluster);
+  const clusteredResult=useMemo(()=>visibleResult&&activeCluster?{...visibleResult,cards:activeCluster.cards}:visibleResult,[visibleResult,activeCluster]);
   const openMappedCard = useCallback((card:import('../src/passport/model').Card)=>{
+    setSelectedCluster(undefined);
     window.setTimeout(()=>[...document.querySelectorAll<HTMLElement>('[data-entity-id]')].find(element=>element.dataset.entityId===card.id)?.scrollIntoView({behavior:'smooth',block:'center'}),50);
   },[]);
   const panelActions = useRef({refine,selectWorkspaceView});
@@ -725,6 +737,7 @@ export default function Home() {
   const saveFromChat = useCallback((id:string)=>feedbackHandler.current(id,"like"),[]);
   const stableRefine = useCallback((input:AgentInput)=>{void panelActions.current.refine(input);},[]);
   const refineFromPanel = useCallback((input:AgentInput)=>{setShowSaved(false);panelActions.current.selectWorkspaceView('discover');void panelActions.current.refine(input);},[]);
+  useEffect(()=>{const handler=(event:Event)=>{const id=(event as CustomEvent<{id?:unknown}>).detail?.id;if(typeof id!=='string')return;setRitualCardId(id);setShowSaved(true);setVisitedViews(current=>new Set([...current,"saved"]));panelActions.current.selectWorkspaceView('discover');};window.addEventListener('faveroam:create-ritual',handler);return()=>window.removeEventListener('faveroam:create-ritual',handler);},[]);
   const stableSelectWorkspaceView=useCallback((next:typeof workspaceView)=>panelActions.current.selectWorkspaceView(next),[]);
   const openPreferences = useCallback(()=>panelActions.current.selectWorkspaceView('preferences'),[]);
   const planSaveHandled = useCallback(()=>setSavePlanRequest(0),[]);
@@ -734,8 +747,8 @@ export default function Home() {
   const stableFresh=useCallback(()=>freshHandler.current(),[]);
   const accountChangedHandler=useCallback((signedIn:boolean,firstName?:string)=>{setAccountSignedIn(signedIn);setAccountFirstName(signedIn?firstName?.trim()??'':'');},[]);
   const passportSavedHandler=useCallback((sessionId?:string)=>{if(sessionId)rememberSavedSession(window.sessionStorage,sessionId);else clearSavedSession(window.sessionStorage);setSavedSessionId(sessionId);},[]);
-  const editPlanHandler=useCallback((plan:SavedPlan)=>{setEditingPlan(current=>({plan,nonce:(current?.nonce??0)+1}));panelActions.current.selectWorkspaceView('plan');},[]);
-  const editWeekHandler=useCallback((week:SavedFirstWeek)=>{setEditingFirstWeek(current=>({week,nonce:(current?.nonce??0)+1}));panelActions.current.selectWorkspaceView('plan');},[]);
+  const editPlanHandler=useCallback((plan:SavedPlan)=>{setPlanMode("day");setEditingPlan(current=>({plan,nonce:(current?.nonce??0)+1}));panelActions.current.selectWorkspaceView('plan');},[]);
+  const editWeekHandler=useCallback((week:SavedFirstWeek)=>{setPlanMode("week");setEditingFirstWeek(current=>({week,nonce:(current?.nonce??0)+1}));panelActions.current.selectWorkspaceView('plan');},[]);
   const restoreAccountPassport=useCallback((passport:Passport)=>{
     freshHandler.current();setResult(passport);setCity(passport.city);setDraft(passport.selected.map(seed=>seed.name));
     setRequestedActivities((passport.session?.activeCategories??[]).filter(section=>!passport.session?.hiddenCategories.includes(section)));
@@ -748,6 +761,7 @@ export default function Home() {
   const openAssistant=useCallback(()=>setAssistantOpen(true),[]);
   const navigateWorkspace=useCallback((destination:'discover'|'saved'|'plan'|'preferences'|'together'|'connections')=>{
     setShowSaved(destination==='saved');
+    if(destination==='saved')setVisitedViews(current=>new Set([...current,'saved']));
     stableSelectWorkspaceView(destination==='saved'?'discover':destination);
     requestAnimationFrame(()=>document.getElementById('passport-workspace-content')?.focus({preventScroll:true}));
   },[stableSelectWorkspaceView]);
@@ -1007,11 +1021,11 @@ export default function Home() {
               {!showSaved && <DiscoveryConcierge city={result.city} firstName={accountSignedIn?accountFirstName:undefined} busy={busy} onAsk={openAssistantFromDiscover} onNavigate={stableSelectWorkspaceView} onShare={shareFromDiscover}/>}
               {!showSaved && <VibeDial key={`vibe:${result.agent?.sessionId??result.city}`} passport={result} busy={busy} onApply={stableRefine}/>}
               {result.session && !showSaved && (
-                <FamiliarityControl
+                <details className="vibe-tuning-disclosure familiarity-disclosure"><summary>Fine-tune discoveries <span>Optional · familiar, balanced or explore</span></summary><FamiliarityControl
                   session={result.session}
                   disabled={busy}
                   onChange={(input) => {setShowSaved(false);setWorkspaceView("discover");void refine(input);}}
-                />
+                /></details>
               )}
               </>}
             </div>
@@ -1044,21 +1058,19 @@ export default function Home() {
               </p>
             ) : null}
             <div hidden={workspaceView !== "discover"}>
-              {showSaved ? (
-                <SavedDiscoveries
+              <div hidden={!showSaved}>{visitedViews.has('saved') && <><Rituals passport={result} signedIn={accountSignedIn} initialCardId={ritualCardId} onInitialHandled={ritualInitialHandled}/><SavedDiscoveries
                   cards={result.session?.savedCards ?? []}
                   feedback={feedback}
                   onFeedback={stableFeedback}
                   disabled={busy}
-                />
-              ) : (
-                <>
+                /></>}</div>
+                <div hidden={showSaved}>
                   {mappedPlaces(result.cards.filter(card=>!result.session?.hiddenCategories.includes(card.section))).length>0&&<button className="quiet-button map-toggle" type="button" aria-expanded={showMap} onClick={()=>setShowMap(value=>!value)}>{showMap?'Hide map':'Show map'}</button>}
-                  {visibleResult&&mappedPlaces(visibleResult.cards).length>0&&<div hidden={!showMap}><PassportMap cards={visibleResult.cards} active={workspaceView==='discover'&&showMap} onSelect={openMappedCard}/></div>}
-                  {visibleResult&&<PassportSections disabled={busy} result={visibleResult} feedback={feedback} onFeedback={stableFeedback} updates={updates} updating={updating}/>}
+                  {visibleResult&&mappedPlaces(visibleResult.cards).length>0&&<div hidden={!showMap}><PassportMap cards={visibleResult.cards} active={workspaceView==='discover'&&!showSaved&&showMap} selectedCluster={activeCluster?.id} onClusterSelect={setSelectedCluster} onSelect={openMappedCard}/></div>}
+                  {activeCluster&&<div className="active-area-banner" role="status"><p>Showing {activeCluster.cards.length} returned places around {activeCluster.anchor.name}.</p><button type="button" className="quiet-button" onClick={()=>setSelectedCluster(undefined)}>Show all discoveries</button></div>}
+                  {visibleResult&&<PassportSections disabled={busy} result={clusteredResult!} feedback={feedback} onFeedback={stableFeedback} updates={updates} updating={updating}/>}
                   <ShareTasteCard key={`share:${result.agent?.sessionId??result.city}`} passport={result}/>
-                </>
-              )}
+                </div>
             </div>
             <div
               id="view-plan"
@@ -1066,7 +1078,8 @@ export default function Home() {
               hidden={workspaceView !== "plan"}
             >
               {visitedViews.has("plan") && <>
-              <DayOutPlan
+              <div className="planner-mode-switch" role="group" aria-label="Choose your plan"><button type="button" aria-pressed={planMode==='week'} onClick={()=>setPlanMode('week')}>First Week</button><button type="button" aria-pressed={planMode==='day'} onClick={()=>setPlanMode('day')}>A day out</button></div>
+              <div hidden={planMode!=='day'}><DayOutPlan
                 key={`day-out:${result.session?.id ?? result.city}`}
                 editPlan={editingPlan}
                 expanded={workspaceView === "plan"}
@@ -1076,8 +1089,8 @@ export default function Home() {
                 signedIn={accountSignedIn}
                 saveRequest={savePlanRequest}
                 onSaveRequestHandled={planSaveHandled}
-              />
-              <FirstWeek key={`first-week:${result.session?.id??result.city}`} passport={result} signedIn={accountSignedIn} editWeek={editingFirstWeek} onEditWeekHandled={editWeekHandled}/>
+              /></div>
+              <div hidden={planMode!=='week'}><FirstWeek key={`first-week:${result.session?.id??result.city}`} passport={result} signedIn={accountSignedIn} editWeek={editingFirstWeek} onEditWeekHandled={editWeekHandled}/></div>
               </>}
             </div>
             <div

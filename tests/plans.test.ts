@@ -109,3 +109,9 @@ test("an unavailable plan feed does not hide saved weeks or plans from the other
  assert.match(html,/Saved First Weeks are unavailable/);
  assert.match(html,/Protocol coffee/);
 });
+test("a saved First Week remains upcoming while it has future days even after its start date",()=>{
+ const today=cityDate('London');
+ const week={id:'ongoing',city:'London',start_date:'2000-01-01',time_zone:'Europe/London',days:[{date:today,title:'Still exploring',stops:[]}],created_at:now.toISOString(),updated_at:now.toISOString()};
+ const html=renderToStaticMarkup(createElement(UpcomingPlans,{plans:[],weeks:[week],busy:false,error:'',onDelete:()=>{},onRetry:()=>{}}));
+ assert.match(html,/First Week in London/);assert.match(html,/Still exploring/);
+});

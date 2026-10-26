@@ -1,0 +1,70 @@
+/* Planner and library layout: explicit grids override inherited full-width CTAs. */
+.first-week-panel,.upcoming-plans,.plan-details,.week-stops { min-width:0; }
+.first-week-panel { container-type:inline-size; }
+.first-week-heading { align-items:flex-start; }
+.first-week-heading p { max-width:64ch; line-height:1.65; margin-top:12px; }
+.first-week-controls { display:grid; grid-template-columns:minmax(160px,240px) minmax(0,1fr); align-items:end; gap:16px; padding:20px; border:1px solid var(--ui-border); border-radius:16px; background:var(--ui-tint); }
+.first-week-controls label { min-width:0; font-size:14px; }
+.first-week-controls input { display:block; width:100%; min-width:0; font-size:16px; color:var(--ui-ink); }
+.first-week-controls .primary-button { width:auto; margin:0; min-height:48px; justify-content:center; }
+.first-week-controls>.quiet-button { grid-column:1/-1; justify-self:start; }
+.week-save-summary { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:16px; padding:20px; margin-block:20px; background:#fff4df; border:1px solid #dfc38b; border-radius:16px; }
+.week-save-summary>div { min-width:0; }
+.week-save-summary p { margin-top:6px; line-height:1.6; }
+.week-save-summary .first-week-actions { display:flex; align-items:stretch; gap:10px; margin:0; }
+.week-save-summary .primary-button { width:auto; margin:0; min-height:46px; justify-content:center; }
+.week-save-summary .quiet-button { padding:10px 16px; border:1px solid var(--ui-border); border-radius:10px; background:var(--ui-surface); }
+.week-status { margin:16px 0; padding:16px; border-radius:12px; border:1px solid var(--ui-border); background:var(--ui-tint); line-height:1.6; overflow-wrap:anywhere; }
+.week-days { grid-template-columns:repeat(auto-fit,minmax(min(100%,105px),1fr)); align-items:stretch; }
+.week-days button { min-width:0; align-content:start; gap:8px; padding:14px; color:var(--ui-ink); }
+.week-days button :is(strong,small,span) { overflow-wrap:anywhere; line-height:1.4; }
+.progressive-app .week-days button[aria-pressed=true] :is(strong,small,span) { color:#fffefa; }
+.week-day-date { font-size:12px; }
+.week-stops { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr)); gap:16px; }
+.week-stops .week-stop-editor { align-content:start; padding:18px; gap:14px; }
+.week-stops label { padding:0; border:0; font-size:14px; }
+.week-stops :is(input,select) { font-size:16px; }
+.week-stop-actions { display:grid; grid-template-columns:1fr 1fr; gap:8px; align-self:end; }
+.week-stop-actions button { padding:10px; border:1px solid var(--ui-border); border-radius:10px; font-size:13px; white-space:normal; }
+.saved-plan { display:grid; grid-template-columns:64px minmax(0,1fr); gap:20px; align-items:start; margin-block:16px; padding:24px; background:linear-gradient(145deg,#fffefa,#f8f5ed); box-shadow:0 5px 18px #101c3509; }
+.saved-plan .plan-date { width:64px; min-width:0; }
+.saved-plan .plan-date>span { color:#fffefa; }
+.plan-details h3 { margin:4px 0 12px; line-height:1.25; font-size:clamp(21px,2vw,27px); overflow-wrap:anywhere; }
+.plan-details>p { line-height:1.6; }
+.plan-details .plan-actions { display:flex; flex-wrap:wrap; gap:8px; align-items:stretch; padding-top:16px; border-top:1px solid var(--ui-border); }
+.plan-actions .quiet-button { border:1px solid var(--ui-border); border-radius:10px; background:var(--ui-surface); }
+.plan-actions .text-button { text-underline-offset:3px; }
+.saved-week-days summary { min-height:44px; padding:8px 0; line-height:1.5; overflow-wrap:anywhere; }
+.account-library-dialog { padding:clamp(18px,3vw,32px); }
+.account-library-tabs { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); }
+.account-library-tabs button { padding:10px; white-space:normal; }
+@container(max-width:520px){.first-week-controls{grid-template-columns:minmax(0,1fr);padding:16px}.week-save-summary{padding:16px}.week-save-summary>.first-week-actions{width:100%;display:grid;grid-template-columns:1fr}.week-save-summary .first-week-actions>*{width:100%;margin:0}.first-week-heading img{display:none}}
+@media(max-width:480px){.saved-plan{grid-template-columns:minmax(0,1fr);padding:18px;gap:14px}.saved-plan .plan-date{flex-direction:row;width:max-content;align-items:center;border-radius:10px}.plan-date>span{width:auto;align-self:stretch;display:flex;align-items:center}.plan-date>strong{font-size:22px}.plan-details .plan-actions{display:grid;grid-template-columns:1fr}.plan-details .plan-actions>button{width:100%;justify-content:center}.account-library-dialog{padding:18px}.week-save-summary .first-week-actions>*{flex:none}}
+/* Compact discovery introduction: flex-basis becomes height in a column. */
+.progressive-app .discovery-welcome { min-width:0; }
+.discovery-welcome .discovery-concierge-copy { min-width:0; }
+.discovery-welcome h2 { overflow-wrap:anywhere; }
+.discovery-welcome-actions .primary-button { width:auto; margin:0; justify-content:center; }
+.vibe-tuning-disclosure { padding:0; margin:16px 0; }
+.vibe-tuning-disclosure>summary { padding:16px 18px; cursor:pointer; font-weight:700; line-height:1.5; }
+.vibe-tuning-disclosure>summary>span { display:inline; margin-inline-start:10px; font-weight:400; color:var(--ui-muted); font-size:13px; }
+.vibe-tuning-disclosure[open] { padding:0 18px 18px; }
+.vibe-tuning-disclosure[open]>summary { margin-inline:-18px; border-bottom:1px solid var(--ui-border); margin-bottom:18px; }
+@media(max-width:850px){.progressive-app .discovery-welcome .discovery-concierge-copy{flex:0 1 auto;width:100%}.discovery-welcome .discovery-quick-actions{flex:0 1 auto;width:100%;min-width:0}}
+@media(max-width:600px){.progressive-app .discovery-welcome{padding:18px;gap:18px}.discovery-welcome-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.discovery-welcome-actions button{width:100%;min-width:0;white-space:normal;padding:10px;font-size:13px}.discovery-welcome .discovery-quick-actions{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.discovery-quick-actions button{flex-direction:column;align-items:flex-start;justify-content:flex-start;gap:8px;font-size:12px;padding:12px 10px;min-width:0;line-height:1.5}.discovery-quick-actions button span{min-width:0;overflow-wrap:anywhere}.vibe-tuning-disclosure>summary>span{display:block;margin-inline-start:0}.share-options .share-actions{display:grid;grid-template-columns:1fr 1fr}.share-options .share-actions button{width:100%;min-width:0;padding:10px;justify-content:center}}
+.planner-mode-switch { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; padding:6px; border:1px solid var(--ui-border); background:var(--ui-tint); border-radius:14px; margin-bottom:20px; }
+.planner-mode-switch button { min-height:48px; border:0; border-radius:10px; padding:10px 16px; font:inherit; font-weight:650; background:transparent; color:var(--ui-ink); }
+.planner-mode-switch button[aria-pressed=true] { background:#17243b; color:#fffefa; }
+.first-week-panel { margin-top:0; }
+.first-week-controls .primary-button { justify-self:start; min-width:min(100%,210px); }
+.familiarity-disclosure { padding:0; border:1px solid var(--ui-border); border-radius:14px; background:var(--ui-surface); }
+.familiarity-disclosure[open] { padding:0 18px 18px; }
+.progressive-app .saved-plan .plan-date>span { color:#fffefa; font-size:12px; line-height:1.4; min-width:3em; }
+@container(max-width:520px){.first-week-controls .primary-button{width:100%;justify-self:stretch}}
+@media(max-width:600px){.discovery-welcome-actions .primary-button{white-space:nowrap}.discovery-welcome-actions .primary-button svg{display:none}.passport-workspace-content{padding-bottom:80px}}
+.progressive-app .discovery-welcome p { color:#47566b; }
+.two-profile-summary,.shared-theme-explanations { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr)); gap:12px; margin-block:16px; }
+.two-profile-summary p,.shared-theme-explanations article,.common-ground-evidence>article { padding:16px; border:1px solid var(--ui-border); border-radius:14px; background:var(--ui-surface); min-width:0; overflow-wrap:anywhere; line-height:1.6; }
+.two-profile-summary strong { display:block; margin-bottom:8px; }
+.shared-theme-explanations h4 { margin-bottom:10px; }
+.common-ground-evidence>article { margin-block:12px; }

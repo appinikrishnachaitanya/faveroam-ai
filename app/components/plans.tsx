@@ -18,7 +18,7 @@ export default function UpcomingPlans({ plans, weeks=[], busy, error, editableCi
 }) {
   const upcoming = plans.filter((p) => p.scheduled_date >= cityDate(p.city))
     .sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date) || (a.stop_times?.[0] ?? "").localeCompare(b.stop_times?.[0] ?? ""));
-  const upcomingWeeks=weeks.filter(week=>week.start_date>=cityDate(week.city));
+  const upcomingWeeks=weeks.filter(week=>week.days.some(day=>day.date>=cityDate(week.city))).sort((a,b)=>a.start_date.localeCompare(b.start_date));
   return <section className="upcoming-plans" aria-label="Your upcoming plans">
     <p className="helper">Your own outings, saved by date and suggested local time. Check opening hours and travel before going; these are not bookings.</p>
     {error&&<div role="alert"><p>{error}</p><button className="quiet-button" disabled={busy} onClick={onRetry}>Try again</button></div>}

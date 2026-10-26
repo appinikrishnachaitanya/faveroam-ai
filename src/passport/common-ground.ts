@@ -10,9 +10,9 @@ export function sharedHangout(cards:Card[],comparison:TasteComparison){
  return direct?{card:direct,exactTheme:true}:places[0]?{card:places[0],exactTheme:false}:undefined;
 }
 export function commonGroundStarters(comparison:TasteComparison,first:string,second:string):string[]{
- const shared=comparison.shared[0]?.name;
+ const shared=meaningfulSharedThemes(comparison).find(theme=>!theme.broad)?.name;
  return [
-   shared?`${shared} is a shared theme. What does each of you enjoy about it?`:`What first sparked your interest in ${first} and ${second}?`,
+   shared?`The comparison returned “${shared}”. Does that connect to what you enjoy in ${first} or ${second}?`:`What first sparked your interest in ${first}, and their interest in ${second}?`,
    comparison.aOnly[0]&&comparison.bOnly[0]?`What would you show each other first: ${comparison.aOnly[0].name} or ${comparison.bOnly[0].name}?`:'What is one favourite you would introduce to each other?',
    'Which returned place would you both want to check out first?',
  ];
@@ -32,4 +32,34 @@ export function nearbySharedPlaces(cards:Card[],anchor:Card|undefined,radiusMetr
   const metres=6371000*2*Math.atan2(Math.sqrt(h),Math.sqrt(Math.max(0,1-h)));
   return metres<=radiusMetres;
  });
+}
+
+/** Presentation specificity only: broad adjectives are not personal explanations. */
+export function meaningfulSharedThemes(comparison:TasteComparison){
+ const broad=(name:string)=>/^(dynamic|passionate|innovative|ambitious|creative|entertainment|popular)$/i.test(name.trim());
+ const specific=comparison.shared.filter(theme=>!broad(theme.name));
+ return (specific.length?specific:comparison.shared.slice(0,2)).slice(0,6).map(theme=>({...theme,broad:broad(theme.name)}));
+}
+export function togetherPlanningCards(cards:Card[],city:string,limit=12):Card[]{
+ return [...new Map(cards.filter(card=>isPlaceSection(card.section)&&card.evidence?.source==='Qloo'&&card.evidence.result.id===card.id&&card.evidence.locality==='physical-city'&&card.evidence.destination===city).map(card=>[card.id,card])).values()].slice(0,limit);
+}
+export function commonGroundLinks(cards:Card[],you:readonly {id:string;name:string}[],partner:readonly {id:string;name:string}[]){
+ return cards.flatMap(card=>{
+  const ids=new Set(card.intelligence?.taste?.contributingSignals?.filter(signal=>signal.contribution>0).map(signal=>signal.id)??[]);
+  const a=you.filter(seed=>ids.has(seed.id)).map(seed=>seed.name),b=partner.filter(seed=>ids.has(seed.id)).map(seed=>seed.name);
+  return a.length&&b.length?[{card,you:a,partner:b}]:[];
+ }).slice(0,3);
+}
+
+/** Combine profiles using returned shared themes as SOFT audience signals. */
+export function jointProfileState(state:import('../agent/types').AgentState,partner:import('./model').Candidate[],comparison:TasteComparison,section:import('./model').Section){
+ const joint=structuredClone(state);
+ const themes=meaningfulSharedThemes(comparison).slice(0,4).map(theme=>({id:theme.id,name:theme.name,types:['urn:tag'],detail:'Returned common ground'}));
+ joint.selected=[...new Map([...state.selected,...partner].map(seed=>[seed.id,seed])).values()];
+ joint.tags=[...new Map([...state.tags,...themes].map(tag=>[tag.id,tag])).values()];
+ joint.categoryTags??={};
+ joint.queryPreferences??={};joint.queryPreferences[section]={...joint.queryPreferences[section],inspirationTags:themes.map(tag=>tag.id)};
+ joint.intent={kind:'refine',seeds:[],concepts:[],constraints:state.categoryConstraints[section]??[],sections:[section],strategy:'discover'};
+ if(joint.activityGenres)delete joint.activityGenres.Culture;
+ return joint;
 }

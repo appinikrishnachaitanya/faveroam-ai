@@ -40,21 +40,22 @@ export function firstWeek(cards:Card[],city:string,startDate:string,roots?:WeekR
    return {activity,card,time:['10:00','14:00','18:00'][stopIndex],...(audience?{audience}:{})};
  })}));
 }
-function escapeIcs(value:string){return value.replace(/\\/g,'\\\\').replace(/\r?\n/g,'\\n').replace(/[,;]/g,char=>`\\${char}`);}
+function escapeIcs(value:string){return value.replace(/\\/g,'\\\\').replace(/\r\n|\r|\n/g,'\\n').replace(/[,;]/g,char=>`\\${char}`);}
 export function firstWeekIcs(days:WeekDay[],timeZone:string):string {
  days.forEach(day=>addCalendarDays(day.date,0));
  const events=days.flatMap(day=>day.stops.flatMap(stop=>stop.card?[{
    date:day.date.replaceAll('-',''),time:stop.time.replace(':',''),stop,
  }]:[]));
- if(!/^[A-Za-z_]+(?:\/[A-Za-z0-9_+.-]+)+$/.test(timeZone))throw Error('Invalid time zone.');
+ if(timeZone!=='UTC'&&!/^[A-Za-z_]+(?:\/[A-Za-z0-9_+.-]+)+$/.test(timeZone))throw Error('Invalid time zone.');
+ new Intl.DateTimeFormat('en',{timeZone}).format();
  if(events.some(event=>!/^(?:[01]\d|2[0-3])[0-5]\d$/.test(event.time)))throw Error('Choose a valid stop time.');
  const stamp=new Date().toISOString().replace(/[-:]/g,'').replace(/\.\d{3}Z$/,'Z');
  return ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//FaveRoam//First Week//EN','CALSCALE:GREGORIAN',...events.flatMap(({date,time,stop},index)=>[
-   'BEGIN:VEVENT',`UID:${date}-${time}-${index}@tastepassport`, `DTSTAMP:${stamp}`,
+   'BEGIN:VEVENT',`UID:${date}-${time}-${encodeURIComponent(stop.card!.id)}-${index}@faveroam`, `DTSTAMP:${stamp}`,
    `DTSTART;TZID=${timeZone}:${date}T${time}00`,
    `DTEND;TZID=${timeZone}:${new Date(new Date(`${date.slice(0,4)}-${date.slice(4,6)}-${date.slice(6)}T${time.slice(0,2)}:${time.slice(2)}:00Z`).getTime()+3600000).toISOString().replace(/[-:]/g,'').slice(0,15)}`,
    `SUMMARY:${escapeIcs(stop.card!.name)}`,
    `DESCRIPTION:${escapeIcs(`${outingActivities.find(item=>item.id===stop.activity)?.label??stop.activity}. Check hours and availability before going.`)}`,
    ...(stop.card!.address?[`LOCATION:${escapeIcs(stop.card!.address!)}`]:[]),'END:VEVENT',
- ]),'END:VCALENDAR'].join('\r\n')+'\r\n';
+ ]),'END:VCALENDAR'].map(line=>{let folded='',size=0;for(const char of line){const bytes=new TextEncoder().encode(char).length;if(size+bytes>75){folded+='\r\n ';size=1;}folded+=char;size+=bytes;}return folded;}).join('\r\n')+'\r\n';
 }

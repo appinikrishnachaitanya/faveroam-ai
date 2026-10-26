@@ -130,3 +130,13 @@ body,.progressive-app,.progressive-app button,.progressive-app input,.progressiv
 .progressive-app .concierge-drawer textarea { text-align:start; }
 @media(max-width:640px){.insight-illustration{flex-basis:80px;width:80px}.first-week-heading img{flex-basis:78px;width:78px}.vibe-collection-illustration{flex-basis:76px;width:76px}.vibe-dial-heading img{flex-basis:62px;width:62px}.progressive-app .analysis-intro{gap:10px}.vibe-dial-heading{gap:8px}.progressive-app .day-out-illustration{flex-basis:72px;width:72px}.progressive-app .result-heading{grid-template-columns:minmax(0,1fr)}}
 @media(prefers-reduced-motion:reduce){.first-week-heading img,.vibe-dial-heading img,.vibe-collection-illustration,.insight-illustration,.day-out-illustration,.together-heading>img{animation:none}}
+/* City cover owns every foreground colour; legacy green-on-dark rules must not leak in. */
+.progressive-app .passport-cover { background:radial-gradient(ellipse at 95% 0,#f9dfaa77,transparent 60%),#faf7ef; color:#17243b; border:1px solid #d8d5ca; box-shadow:0 8px 24px #101c3508; }
+.progressive-app .passport-cover h1,.progressive-app .passport-cover h2 { color:#17243b; }
+.progressive-app .passport-cover h1 em { color:#226b67; font-style:normal; }
+.progressive-app .passport-cover :is(.micro-label,.cover-journey),.progressive-app .passport-cover .cover-copy>p { color:#47566b; line-height:1.65; }
+.progressive-app .passport-cover .passport-taste-preview>span { color:#17243b; background:#fffefa; border-color:#c8cfd5; padding:8px 12px; line-height:1.4; }
+.progressive-app .passport-cover .cover-connection { color:#17243b; background:#f8dba7; border-color:#cfa264; padding:12px 18px; min-height:48px; justify-content:center; white-space:normal; gap:10px; }
+.progressive-app .passport-cover .cover-connection:hover { color:#17243b; background:#f3cc8b; border-color:#b9853d; }
+.progressive-app .passport-cover .cover-stamp { background:#fffefa; color:#17243b; border-color:#bdc6cb; }
+.progressive-app .passport-cover .cover-stamp :is(strong,span) { color:#17243b; }
