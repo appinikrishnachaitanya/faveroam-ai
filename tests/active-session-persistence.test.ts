@@ -78,5 +78,8 @@ test("fresh schema creates active sessions with server-only access and keeps des
   for (const table of ["saved_passports", "saved_plans", "taste_profiles", "active_passport_sessions"])
     assert.match(sql, new RegExp(`alter table public\\.${table} enable row level security`, "i"));
   assert.match(sql,/stop_times text\[\]/i);
-  assert.doesNotMatch(sql,/drop table if exists auth\.|drop table[^;]*cascade|\bcheck\s*\(/i);
+  assert.doesNotMatch(sql,/drop table if exists auth\.|drop table[^;]*cascade/i);
+  // Legacy snapshots/cities remain unconstrained; new ritual schedules have bounded values.
+  assert.doesNotMatch(sql.slice(0,sql.indexOf('create table if not exists public.saved_rituals')),/\bcheck\s*\(/i);
+  assert.match(sql,/weekday between 0 and 6/i);
 });

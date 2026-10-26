@@ -1,0 +1,142 @@
+@font-face { font-family:Inter; src:url('/fonts/inter-variable.woff2') format('woff2'); font-style:normal; font-weight:100 900; font-display:swap; }
+@font-face { font-family:Fraunces; src:url('/fonts/fraunces-variable.woff2') format('woff2'); font-style:normal; font-weight:100 900; font-display:swap; }
+/* FaveRoam presentation tokens; storage and application contracts stay stable. */
+:root {
+  --ui-ink:#17243b;
+  --ui-muted:#667286;
+  --ui-action:#101c35;
+  --ui-action-hover:#233956;
+  --ui-surface:#fffefa;
+  --ui-tint:#f8f6f1;
+  --ui-border:#e1e5e8;
+  --ink:#17243b;
+  --muted:#667286;
+  --paper:#f8f6f1;
+  --accent:#f3b65c;
+  --line:#e1e5e8;
+}
+body { background:#f8f6f1; color:#17243b; }
+.progressive-app .brand { color:#101c35; letter-spacing:-.04em; }
+.progressive-app .brand-symbol { background:#101c35; border-radius:12px; }
+.progressive-app .brand-symbol img { display:block; }
+.progressive-app .topbar-caption { color:#526078; }
+.progressive-app :focus-visible { outline:3px solid #277c78; outline-offset:4px; }
+@media (prefers-reduced-motion:reduce) {
+  *,*::before,*::after { animation-duration:.01ms!important; transition-duration:.01ms!important; scroll-behavior:auto!important; }
+}
+.week-stop-editor { min-width:0; display:grid; gap:12px; padding:18px; border:1px solid var(--ui-border); border-radius:14px; background:var(--ui-surface); }
+.week-stop-editor > span { font-weight:700; color:var(--ui-ink); }
+.week-stop-editor label { display:grid; gap:6px; min-width:0; }
+.week-stop-editor input,.week-stop-editor select { width:100%; min-width:0; min-height:44px; }
+.week-stop-actions { display:flex; flex-wrap:wrap; gap:8px; }
+.vibe-dial { padding:clamp(18px,3vw,28px); margin:22px 0; border:1px solid var(--ui-border); border-radius:18px; background:#fffefa; }
+.vibe-dial h3 { margin:8px 0; color:#101c35; font-size:24px; }
+.vibe-dial p { max-width:70ch; line-height:1.6; color:#526078; }
+.vibe-directions { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin:18px 0; }
+.vibe-directions button { min-width:0; min-height:88px; padding:16px; text-align:left; background:#f8f6f1; color:#17243b; border:1px solid #d7dde1; border-radius:12px; }
+.vibe-directions button[aria-pressed=true] { border:2px solid #277c78; background:#eaf4f1; }
+.vibe-directions strong,.vibe-directions small { display:block; overflow-wrap:anywhere; }
+.vibe-directions small { margin-top:8px; }
+.vibe-dial > small { display:block; margin-top:12px; color:#526078; }
+@media(max-width:600px){.vibe-directions{grid-template-columns:1fr}}
+.progressive-app h1,.progressive-app h2,.progressive-app .onboarding-heading h1,.shared-hero-copy h1 { font-family:'Fraunces',Georgia,serif; font-weight:550; color:#101c35; letter-spacing:-.035em; }
+.progressive-app .passport-cover { background:#101c35; color:#f8f6f1; }
+.progressive-app .passport-cover h1,.progressive-app .passport-cover h2 { color:#f8f6f1; }
+.progressive-app .passport-sidebar { background:#fffefa; border-color:#e1e5e8; }
+.progressive-app .passport-navigation button { color:#17243b; border-radius:10px; }
+.progressive-app .passport-navigation button[aria-current=page] { background:#fce5bd; color:#101c35; }
+.progressive-app .discovery-card { border-color:#e1e5e8; background:#fffefa; box-shadow:0 5px 18px #101c3509; }
+.progressive-app .move-onboarding { max-width:1180px; display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); align-items:start; gap:clamp(24px,4vw,60px); margin:32px auto; }
+.progressive-app .move-onboarding .onboarding-heading { margin:16px 0; }
+.progressive-app .move-onboarding .onboarding-heading h1 { font-size:clamp(38px,4.2vw,62px); }
+.progressive-app .move-form { margin:0; padding:clamp(20px,3vw,36px); background:#fffefa; border-color:#e1e5e8; }
+.progressive-app .onboarding-story { display:block; }
+.progressive-app .journey-illustration { width:100%; height:auto; max-height:260px; object-fit:contain; }
+.landing-actions { display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin:22px 0; }
+.landing-actions .primary-button { width:auto; margin:0; background:#f3b65c; border-color:#f3b65c; color:#101c35; }
+.landing-actions .quiet-button { border:1px solid #667286; border-radius:12px; padding:12px 18px; }
+.shared-area-controls { display:flex; flex-wrap:wrap; gap:12px; margin:18px 0; padding:18px; background:#f8f6f1; border:1px solid #e1e5e8; border-radius:14px; }
+.shared-area-controls label { display:grid; gap:6px; flex:1 1 200px; min-width:0; }
+.shared-area-controls select { width:100%; min-width:0; min-height:44px; }
+.shared-area-controls p { flex-basis:100%; line-height:1.6; color:#526078; }
+@media(max-width:800px){.progressive-app .move-onboarding{grid-template-columns:1fr;gap:20px;margin:20px auto}.progressive-app .move-onboarding .onboarding-heading h1{font-size:clamp(36px,8vw,52px)}.progressive-app .journey-illustration{max-height:190px}.landing-actions{align-items:stretch}.landing-actions button{flex:1 1 160px}}
+
+body,.progressive-app,.progressive-app button,.progressive-app input,.progressive-app select,.progressive-app textarea { font-family:Inter,ui-sans-serif,system-ui,sans-serif; }
+.landing-actions .primary-button { white-space:nowrap; justify-content:center; font-size:14px; padding:12px 16px; }
+.progressive-app .onboarding-heading h1 em { color:#277c78; }
+
+/* Keep the same high-contrast indigo/amber system throughout the workspace,
+   including existing component styles that predate the FaveRoam palette. */
+:root { --ui-ink:#17243b; --ui-muted:#526078; --ui-action:#17243b; --ui-action-hover:#273c59; --ui-surface:#fffefa; --ui-tint:#f5f3ed; --ui-border:#d8dee4; --ui-accent:#8b5707; }
+.progressive-app :is(.passport-sidebar,.discovery-concierge,.day-out-plan,.first-week-panel,.taste-analysis,.analysis-result,.intelligence-preferences,.together-reveal,.shared-story,.partner-interests,.together-differences,.area-choices article,.taste-theme-list button,.week-stop-editor,.upcoming-plans,.saved-plan) { color:var(--ui-ink); }
+.progressive-app :is(.passport-sidebar,.day-out-plan,.first-week-panel,.analysis-result,.intelligence-preferences,.together-reveal,.together-differences,.area-choices article,.week-stop-editor,.upcoming-plans,.saved-plan) :is(h2,h3,h4,p,small,label,summary,legend,span) { color:var(--ui-ink); }
+.progressive-app :is(.analysis-result,.intelligence-preferences,.together-reveal,.together-differences,.week-stop-editor,.saved-plan) :is(.helper,small,.micro-label) { color:var(--ui-muted); }
+.progressive-app :is(input,select,textarea) { color:#17243b; background-color:#fffefa; border-color:#aab5c0; }
+.progressive-app :is(input,select,textarea)::placeholder { color:#667286; opacity:1; }
+.progressive-app :is(.taste-analysis,.intelligence-content,.day-out-plan,.first-week-panel,.account-dialog,.concierge-drawer) :is(button,a) { -webkit-tap-highlight-color:transparent; }
+.progressive-app .taste-analysis .taste-theme-list button[aria-pressed="true"] { color:#fffefa; background-color:#17243b; border-color:#17243b; }
+.progressive-app .taste-analysis .taste-theme-list button[aria-pressed="true"] small { color:#fff3d9; }
+.progressive-app .taste-analysis .taste-theme-list button:not([aria-pressed="true"]) { color:#17243b; background:#f4f1e9; border-color:#b5bec8; }
+.progressive-app .assistant-launch { background:#17243b; border-color:#17243b; color:#fffefa; box-shadow:0 8px 22px #101c3528; }
+.progressive-app .primary-button,.progressive-app .intelligence-apply { background:#f3b65c; border-color:#d69a3f; color:#17243b; box-shadow:0 5px 14px #101c3514; }
+.progressive-app .primary-button:hover:not(:disabled),.progressive-app .intelligence-apply:hover:not(:disabled) { background:#eaa43b; border-color:#b9781e; color:#17243b; }
+.progressive-app .intelligence-intro { border-color:#314563; background:radial-gradient(circle at 90% 5%,#f3b65c38 0 11%,transparent 35%),linear-gradient(117deg,#101c35,#283d5a); }
+.progressive-app .intelligence-modes button[aria-pressed="true"] { border-color:#17243b; background:linear-gradient(145deg,#17243b,#344966); color:#fffefa; }
+.progressive-app .analysis-intro { border:1px solid #d8dee4; border-radius:20px; padding:clamp(18px,3vw,30px); background:radial-gradient(circle at 92% 15%,#f3b65c4a,transparent 32%),linear-gradient(120deg,#fffefa,#f4f1e9); }
+.progressive-app .analysis-intro h2,.progressive-app .together-heading h3 { color:#17243b; }
+.progressive-app .shared-story { background:#eef1f5; border-left:4px solid #277c78; }
+.progressive-app .shared-story p { color:#35445b; }
+.progressive-app .vibe-intro,.progressive-app .outing-intro { border-color:#d8dee4; background:radial-gradient(ellipse at 95% 0,#f3b65c38,transparent 46%),linear-gradient(120deg,#fffefa,#f5f3ed); }
+.progressive-app .vibe-intro :is(h2,h3,p),.progressive-app .outing-intro :is(h2,h3,p) { color:#17243b; }
+.progressive-app .vibe-intro .micro-label,.progressive-app .outing-intro .micro-label { color:#526078; }
+.progressive-app .vibe-emblem,.progressive-app .outing-emblem { background:#eaf4f1; color:#195d58; border-color:#bad6d0; }
+.progressive-app .day-out-illustration { display:block; flex:0 0 clamp(90px,14vw,150px); width:clamp(90px,14vw,150px); height:auto; margin-left:auto; }
+.progressive-app .passport-navigation button[aria-current="page"] { background:#f3b65c; color:#17243b; border-color:#d69a3f; }
+.progressive-app .passport-menu-toggle { background:#17243b; color:#fffefa; }
+.progressive-app :is(.analysis-result,.intelligence-preferences,.together-reveal,.week-stop-editor,.saved-plan) :is(p,small,.helper,.micro-label,label,summary) { color:#35445b; }
+.progressive-app .analysis-result :is(h3,h4,strong) { color:#17243b; }
+.progressive-app .discovery-card,.progressive-app .together-cards article { transition:box-shadow .14s ease,border-color .14s ease; }
+.progressive-app .discovery-card:hover,.progressive-app .together-cards article:hover { transform:none; box-shadow:0 9px 22px #101c3512; }
+.progressive-app :is(button,input,select,textarea):disabled { opacity:.68; }
+.first-week-actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:14px; }
+.first-week-actions .primary-button { width:auto; margin:0; }
+.saved-week-days { display:grid; gap:8px; margin:14px 0; }
+.saved-week-days details { min-width:0; padding:10px 12px; border:1px solid var(--ui-border); border-radius:10px; background:#f5f3ed; }
+.saved-week-days summary { cursor:pointer; font-weight:700; }
+.saved-week-days ol { padding-inline-start:22px; }
+.saved-week-days li { padding:7px 0; overflow-wrap:anywhere; }
+.saved-week-days li strong,.saved-week-days li span { display:block; }
+.saved-week-days li span { color:var(--ui-muted); font-size:13px; }
+.insight-illustration { display:block; flex:0 0 clamp(100px,16vw,160px); width:clamp(100px,16vw,160px); height:auto; margin-left:auto; }
+.first-week-heading { display:flex; align-items:center; justify-content:space-between; gap:18px; margin-bottom:16px; }
+.first-week-heading > div { min-width:0; }
+.first-week-heading img { display:block; flex:0 0 clamp(90px,14vw,140px); width:clamp(90px,14vw,140px); height:auto; }
+.vibe-collection-illustration { display:block; flex:0 0 clamp(90px,14vw,135px); width:clamp(90px,14vw,135px); height:auto; margin-left:auto; }
+.vibe-dial-heading { display:flex; align-items:center; justify-content:space-between; gap:16px; }
+.vibe-dial-heading > div { min-width:0; }
+.vibe-dial-heading img { flex:0 0 clamp(70px,11vw,105px); width:clamp(70px,11vw,105px); height:auto; }
+.first-week-heading img,.vibe-dial-heading img,.vibe-collection-illustration,.insight-illustration,.day-out-illustration,.together-heading>img { animation:illustration-drift 8s ease-in-out infinite; }
+@keyframes illustration-drift { 0%,100% { transform:translateY(0) } 50% { transform:translateY(-4px) } }
+@media(max-width:640px){.first-week-actions{align-items:stretch}.first-week-actions>*{flex:1 1 100%}.saved-plan{grid-template-columns:1fr}.progressive-app .passport-navigation button[aria-current=page]{color:#17243b}}
+
+/* Keep text blocks on one predictable left edge across the customer flows. */
+.progressive-app :is(.discovery-concierge,.passport-workspace-content,.day-out-plan,.first-week-panel,.taste-intelligence,.taste-analysis,.share-taste-card,.concierge-drawer) :is(h1,h2,h3,h4,p,label,legend,summary) { text-align:start; }
+.progressive-app .card-header { justify-content:flex-start; }
+.progressive-app .card-header > .helper { flex:1 1 180px; max-width:none; min-width:0; text-align:start; overflow-wrap:anywhere; }
+.progressive-app .result-heading { display:grid; grid-template-columns:minmax(0,1fr) minmax(14rem,auto); justify-items:start; align-items:start; gap:6px 16px; }
+.progressive-app .result-heading h3 { display:flex; flex-wrap:wrap; align-items:center; gap:8px; min-width:0; margin:0; }
+.progressive-app .result-heading > p { max-width:65ch; margin:0; color:var(--ui-muted); font-size:14px; line-height:1.55; text-align:start; }
+.progressive-app .confirmation-help { max-width:750px; margin:12px auto 0; text-align:start; }
+.progressive-app .concierge-drawer textarea { text-align:start; }
+@media(max-width:640px){.insight-illustration{flex-basis:80px;width:80px}.first-week-heading img{flex-basis:78px;width:78px}.vibe-collection-illustration{flex-basis:76px;width:76px}.vibe-dial-heading img{flex-basis:62px;width:62px}.progressive-app .analysis-intro{gap:10px}.vibe-dial-heading{gap:8px}.progressive-app .day-out-illustration{flex-basis:72px;width:72px}.progressive-app .result-heading{grid-template-columns:minmax(0,1fr)}}
+@media(prefers-reduced-motion:reduce){.first-week-heading img,.vibe-dial-heading img,.vibe-collection-illustration,.insight-illustration,.day-out-illustration,.together-heading>img{animation:none}}
+/* City cover owns every foreground colour; legacy green-on-dark rules must not leak in. */
+.progressive-app .passport-cover { background:radial-gradient(ellipse at 95% 0,#f9dfaa77,transparent 60%),#faf7ef; color:#17243b; border:1px solid #d8d5ca; box-shadow:0 8px 24px #101c3508; }
+.progressive-app .passport-cover h1,.progressive-app .passport-cover h2 { color:#17243b; }
+.progressive-app .passport-cover h1 em { color:#226b67; font-style:normal; }
+.progressive-app .passport-cover :is(.micro-label,.cover-journey),.progressive-app .passport-cover .cover-copy>p { color:#47566b; line-height:1.65; }
+.progressive-app .passport-cover .passport-taste-preview>span { color:#17243b; background:#fffefa; border-color:#c8cfd5; padding:8px 12px; line-height:1.4; }
+.progressive-app .passport-cover .cover-connection { color:#17243b; background:#f8dba7; border-color:#cfa264; padding:12px 18px; min-height:48px; justify-content:center; white-space:normal; gap:10px; }
+.progressive-app .passport-cover .cover-connection:hover { color:#17243b; background:#f3cc8b; border-color:#b9853d; }
+.progressive-app .passport-cover .cover-stamp { background:#fffefa; color:#17243b; border-color:#bdc6cb; }
+.progressive-app .passport-cover .cover-stamp :is(strong,span) { color:#17243b; }

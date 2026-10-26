@@ -1,8 +1,8 @@
-# TastePassport AI
+# FaveRoam
 
-**Move anywhere. Keep your vibe.**
+**From what you love to where you belong.**
 
-TastePassport is an agent-powered cultural discovery app for people making a new city feel like home. Tell it what you already love—a film, an artist, a cuisine, a book—and it helps you find places and culture in your destination, refine those choices through conversation, find common ground with someone else, and shape a day out. You can explore without creating an account.
+FaveRoam is an agent-powered cultural discovery app for people making a new city feel like home. Tell it what you already love—a film, an artist, a cuisine, a book—and it helps you find places and culture in your destination, refine those choices through conversation, find common ground with someone else, and shape a day out. You can explore without creating an account.
 
 **[Try the Cloud Run demo](https://taste-passport-ai.cloud.run/)** · [Project guide](docs/PROJECT_GUIDE.md) · [MIT license](LICENSE)
 
@@ -10,18 +10,18 @@ TastePassport is an agent-powered cultural discovery app for people making a new
 
 Moving changes more than an address. A newcomer often knows what they love but not where those tastes might lead in a new city. A generic city guide starts with popularity. A general-purpose chatbot can offer plausible ideas, but its answer alone does not confirm which *Interstellar* or *A.R. Rahman* the person meant, retrieve Qloo's cultural associations, or carry verified preferences through later decisions.
 
-TastePassport starts with **confirmed cultural interests** and makes a useful next step from them. The user stays in control: they can correct a match, set a budget or other supported requirements, reject a suggestion, ask a follow-up, or choose the stops in an outing.
+FaveRoam starts with **confirmed cultural interests** and makes a useful next step from them. The user stays in control: they can correct a match, set a budget or other supported requirements, reject a suggestion, ask a follow-up, or choose the stops in an outing.
 
 ## Explore the app
 
 1. Pick a destination and add **one to five interests**. For example, try *A.R. Rahman*, *Interstellar*, and *Indian cuisine*. The home city is optional and labels your journey; it does not silently infer your tastes.
 2. Review the suggested identity for each interest. The dropdown contains other returned matches so you can correct a title or name before discovery.
 3. Choose the activities you want to explore. Open a recommendation to see what evidence is available: its type, place details where returned, and an explanation that distinguishes an audience-taste association from a proven personal preference.
-4. Ask TastePassport something specific, such as **“Find quieter Indian food within a moderate budget. Keep my movies unchanged.”** Check which section changed and whether the choices meet the request. Follow with **“Make those cheaper.”**
+4. Ask FaveRoam something specific, such as **“Find quieter Indian food within a moderate budget. Keep my movies unchanged.”** Check which section changed and whether the choices meet the request. Follow with **“Make those cheaper.”**
 5. Save a promising choice to **My Vibe**. Ask **“Save my Passport”** to save it to your signed-in account, or **“Plan a day out”** to open the editable planner. Try **Together** with another confirmed interest to look for shared cultural ground. Choose stops and times; reorder stops without silently replacing their venues.
 6. Optionally create an account to save a Passport, a dated plan, or a named taste profile for another destination.
 
-For a quick start, **Try a sample** fills a destination and three interests, then opens the normal identity-confirmation step. Discover opens a map automatically when returned places have real coordinates; its circles mark the vicinity of named venues, not verified neighbourhood borders. The assistant welcomes the user on Discover and offers concrete next actions. **Plan my first week** builds seven editable days from validated local cards, leaves unsupported stops open, and exports selected stops as a local-time `.ics` calendar. It does not claim opening hours or route feasibility.
+For a quick start, **Try a sample** fills a destination and three interests, then opens the normal identity-confirmation step. Discover opens a map automatically when returned places have real coordinates; its circles show deterministic groups of nearby returned venues, labelled around a real anchor. Selecting a group filters both the map and discovery list; no neighbourhood names or extra Qloo calls are invented. The assistant welcomes the user on Discover and offers concrete next actions. **Plan my first week** builds seven editable days from validated local cards, leaves unsupported stops open, and exports selected stops as a local-time `.ics` calendar. Signed-in users can save a full week, reopen and update it from Upcoming plans, and delete it. It does not claim opening hours or route feasibility.
 
 **Together** compares your confirmed interests with a second person's confirmed interests, shows returned shared and distinct themes, and suggests one first hangout from a returned local place. The conversation starters describe the overlap without claiming personal compatibility. Chat replies can expand **What I checked** for the route, protected sections, and retrieval/validation steps. A taste card can be downloaded or shared as a PNG (with SVG as an optional format). An expiring, revocable read-only link is available when share storage is configured; the recipient can use that link to prefill the second side of Together after making their own Passport. Image sharing remains available if link storage is down.
 
@@ -29,7 +29,7 @@ Live coverage varies by city and interest. The app should show a gap when Qloo d
 
 ## Why Qloo changes the answer
 
-| A standalone LLM answer | TastePassport's Qloo-grounded workflow |
+| A standalone LLM answer | FaveRoam's Qloo-grounded workflow |
 |---|---|
 | Suggests plausible places from general knowledge, which may be stale or hard to verify. | Retrieves named entities and supported metadata from Qloo, then checks output type, locality, exclusions and observable constraints. |
 | May guess which artist, film or food concept the user meant. | Presents returned candidates for explicit confirmation before using them as taste signals. |
@@ -37,7 +37,7 @@ Live coverage varies by city and interest. The app should show a gap when Qloo d
 | Treats a follow-up as a new prompt unless an application carries state. | Keeps a revision-checked Passport with confirmed interests, category preferences, feedback and conversation context. |
 | Can propose a group outing in prose. | Uses Qloo Compare for shared cultural associations and lets people assemble an outing from returned place choices. |
 
-This describes the **difference in workflow and evidence**, not a measured claim that every TastePassport result beats every LLM answer. Gemini is valuable for understanding language and selecting tools; Qloo supplies the cultural entities and discovery candidates that the app can inspect and preserve.
+This describes the **difference in workflow and evidence**, not a measured claim that every FaveRoam result beats every LLM answer. Gemini is valuable for understanding language and selecting tools; Qloo supplies the cultural entities and discovery candidates that the app can inspect and preserve.
 
 The integration uses Qloo [entity search, tags, Insights and Compare](https://docs.qloo.com/reference/qloo-llm-hackathon-developer-guide), plus validated official harness/MCP functions where appropriate. In an Insights request, `filter.type` is the **requested output type**. An artist and a film can be input signals while `urn:entity:place` requests places. Food, coffee and cinema are place activities selected with supported taxonomy, not made-up entity types. Music results are artist discoveries, not verified local concerts.
 
@@ -82,12 +82,14 @@ Discovery first checks identity and hard requirements, then ranks and diversifie
 
 | Part | Responsibility |
 |---|---|
-| Next.js 16, React, TypeScript, MapLibre GL | Onboarding, Discover, interactive place map, Ask TastePassport, My Vibe, Together, insights and the outing planners |
+| Next.js 16, React, TypeScript, MapLibre GL | Onboarding, Discover, interactive place map, Ask FaveRoam, My Vibe, Together, insights and the outing planners |
 | Qloo API and official harness/MCP | Resolve interests and concepts; retrieve cultural entities, places and shared associations |
 | Gemini via `@google/genai` | Interpret conversational requests and select permitted functions; compose responses from checked facts |
 | Server-side policy and session state | Validate requests, preserve unaffected preferences, reject unsupported results and coordinate revisions |
-| Supabase (optional for guests) | Email/password accounts, saved Passports, plans, taste profiles, destinations, persisted editing sessions and expiring share links |
+| Supabase (optional for guests) | Email/password accounts, saved Passports, day plans, seven-day First Weeks, taste profiles, destinations, persisted editing sessions and expiring share links |
 | Google Cloud Run | Host the public Next.js application |
+
+**My Rituals** turns a verified discovery into a named weekly or fortnightly routine. Signed-in users can mark it tried, keep it, change its schedule, replace its place, or remove it. Replacement uses saved confirmed interests and current category/geographic requirements, excludes rejected places, and requires approval of a returned alternative before changing the saved ritual. Guests can prepare a draft and are invited to sign in to persist it. Rituals do not send reminders or make bookings.
 
 Guest discovery needs Qloo but no account. If account storage is configured, the browser receives only an active-session pointer; canonical editing state stays on the server. Saved Passports hold bounded Qloo-backed discoveries and preferences, not chat history or provider credentials.
 
@@ -115,7 +117,9 @@ Open `http://localhost:3000`. Set these **server-side** values in `.env.local` o
 
 The `AGENT_MODEL_*` compatibility adapter is optional for other providers; native Gemini does not need it. Do not put any provider or service-role secret in a `NEXT_PUBLIC_` variable, a commit, logs or screenshots.
 
-For account features, create a Supabase project, enable email/password authentication and the desired email-confirmation setting, configure the local and deployed `/auth/callback` redirect URLs, then run [db-scripts/setup.sql](db-scripts/setup.sql) **manually once on a fresh project** in its SQL Editor. **That script deletes existing app-owned Passports, plans, profiles, active sessions and share links.** It preserves Auth users and existing destination rows. Do not run it in CI or on every deployment. For an existing installation, apply only the **non-destructive** [share-links.sql](db-scripts/share-links.sql) once to enable public taste links. Share links require configured Supabase storage; PNG/SVG image export does not. Without Supabase configuration, use the guest discovery flow.
+Use the single **[db-scripts/setup.sql](db-scripts/setup.sql)** script for the complete current schema and policies. As explicitly requested for this release, it resets app-owned saved data, including rituals and First Weeks, while preserving Supabase Auth users and existing destination rows. After running it, start a **New Passport** so it gets a new active session before saving. See [release verification and rollback notes](docs/RELEASE_20261026.md).
+
+For account features, create a Supabase project, enable email/password authentication and the desired email-confirmation setting, configure the local and deployed `/auth/callback` redirect URLs, then run [db-scripts/setup.sql](db-scripts/setup.sql) **manually in its SQL Editor**. The current script is a destructive reset: it deletes existing app-owned Passports, day plans, First Weeks, profiles, active sessions, share links and rituals. It preserves Auth users and existing destination rows. Do not run it in CI or on deployment. Share-link tables and policies are included in the same setup script. Share links require configured Supabase storage; PNG image export does not. Without Supabase configuration, use the guest discovery flow.
 
 ## Verify and deploy
 
@@ -131,10 +135,10 @@ Those checks use local fixtures and a production smoke test; they do not certify
 
 The app can be deployed to Cloud Run from GitHub. It listens on the host-provided `PORT` and exposes `/api/health` for process readiness. Configure secrets in the host, set `APP_ORIGIN` to the public HTTPS origin, and verify a real discovery and refinement in addition to the health response. GitHub Actions validates pushed `feat/**` branches. **[Open the live demo](https://taste-passport-ai.cloud.run/).**
 
-For a warmer hackathon demo, set one minimum Cloud Run instance after considering its idle cost: `gcloud run services update tastepassport-ai --project=hackathon-tastepassport-ai --region=us-central1 --min-instances=1`. Repeated identical Qloo lookups, including the sample's tastes, use the existing short-lived per-instance transport cache; it is not a shared distributed cache and a newly started instance can still be cold. Map tiles use CARTO Voyager and attribute CARTO and OpenStreetMap contributors. If tiles fail, the UI falls back to a schematic plot of returned coordinates.
+For a warmer hackathon demo, set one minimum Cloud Run instance after considering its idle cost: `gcloud run services update tastepassport-ai --project=hackathon-tastepassport-ai --region=us-central1 --min-instances=1`. Repeated identical Qloo lookups, including the sample's tastes, use the existing short-lived per-instance transport cache; it is not a shared distributed cache and a newly started instance can still be cold. Map tiles use CARTO light raster tiles (`light_all`) and attribute CARTO and OpenStreetMap contributors. If tiles fail, the UI falls back to a schematic plot of returned coordinates.
 
 ## Boundaries
 
-TastePassport does not book venues, verify current opening hours or showtimes, guarantee travel times, or certify dietary or medical safety. Some Qloo entities have no image, rating or usable venue details; the UI must not infer missing facts. Geographic affinity and aggregate audience patterns do not describe an individual.
+FaveRoam does not book venues, verify current opening hours or showtimes, guarantee travel times, or certify dietary or medical safety. Some Qloo entities have no image, rating or usable venue details; the UI must not infer missing facts. Geographic affinity and aggregate audience patterns do not describe an individual.
 
-We built TastePassport for the [Qloo Agentic Hackathon](https://qloo.devpost.com/) around a specific use case: carrying familiar cultural interests into a new city. The public code is available under the [MIT license](LICENSE). Developers can start with this README, inspect the [project guide](docs/PROJECT_GUIDE.md) for implementation details, and run the app with their own credentials.
+We built FaveRoam for the [Qloo Agentic Hackathon](https://qloo.devpost.com/) around a specific use case: carrying familiar cultural interests into a new city. The public code is available under the [MIT license](LICENSE). Developers can start with this README, inspect the [project guide](docs/PROJECT_GUIDE.md) for implementation details, and run the app with their own credentials.

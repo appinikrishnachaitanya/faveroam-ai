@@ -1,13 +1,13 @@
 "use client";
 import { sectionLabel } from "../../src/passport/labels";
-import { useState } from "react";
+import { memo, useState } from "react";
 import type { Passport } from "../../src/workspace/state";
 import type { Candidate, Card, Section } from "../../src/passport/model";
 import { bridgeRoutes } from "../../src/passport/evidence";
 import { evidenceFacts } from "../../src/qloo/explanation";
 import { DiscoveryCard, Icon } from "./passport";
 import type { Feedback } from "./passport";
-export function PassportCover({
+export const PassportCover = memo(function PassportCover({
   passport,
   origin,
   onConnections,
@@ -22,7 +22,7 @@ export function PassportCover({
   return (
     <header className="passport-cover">
       <div className="cover-copy">
-        <span className="micro-label">MOVE ANYWHERE. KEEP YOUR VIBE.</span>
+        <span className="micro-label">FROM WHAT YOU LOVE TO WHERE YOU BELONG.</span>
         <div className="cover-journey">
           <span>{origin || "Your interests"}</span>
           <Icon name="arrow" size={16} />
@@ -31,7 +31,7 @@ export function PassportCover({
         <h1 id="passport-title">
           Your {passport.city}
           <br />
-          <em>TastePassport</em>
+          <em>FaveRoam</em>
         </h1>
         <p>A new chapter, connected to the things you already love.</p>
         <div className="passport-taste-preview">
@@ -56,8 +56,8 @@ export function PassportCover({
       </div>
     </header>
   );
-}
-export function SavedDiscoveries({
+});
+export const SavedDiscoveries = memo(function SavedDiscoveries({
   cards,
   feedback,
   onFeedback,
@@ -77,6 +77,7 @@ export function SavedDiscoveries({
           <p>Your saved discoveries also help shape future refinements in this Passport. Save your Passport to keep this collection for your next visit.</p>
           <div className="vibe-summary"><span>{cards.length} saved {cards.length === 1 ? "discovery" : "discoveries"}</span><span>{new Set(cards.map(card=>card.section)).size} categories</span></div>
         </div>
+        <img className="vibe-collection-illustration" src="/illustrations/vibe-collection.svg" width="130" height="108" alt="" aria-hidden="true" loading="lazy"/>
       </header>
       {cards.length ? (
         <div className="discovery-grid">
@@ -103,7 +104,7 @@ export function SavedDiscoveries({
       )}
     </section>
   );
-}
+});
 export function ConnectionExplorer({ passport, onExplore, onAsk }: { passport: Passport; onExplore?: (section: Section) => void; onAsk?: (question: string) => void }) {
   const allRoutes = bridgeRoutes(passport.cards, passport.selected);
   const [interest, setInterest] = useState<string>();

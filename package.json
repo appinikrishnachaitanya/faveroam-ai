@@ -19,7 +19,9 @@
     "verify:accuracy": "node --use-env-proxy --env-file-if-exists=.env --env-file-if-exists=.env.local --conditions=react-server --import tsx scripts/verify-accuracy.ts",
     "smoke:production": "node scripts/smoke-production.mjs",
     "check:docs": "node scripts/check-doc-links.mjs",
-    "verify:relevance": "node --use-env-proxy --env-file-if-exists=.env --env-file-if-exists=.env.local --conditions=react-server --import tsx scripts/verify-relevance.ts"
+    "verify:relevance": "node --use-env-proxy --env-file-if-exists=.env --env-file-if-exists=.env.local --conditions=react-server --import tsx scripts/verify-relevance.ts",
+    "test:layout": "node scripts/verify-faveroam-layout.mjs",
+    "test:workspace": "node --import tsx scripts/verify-release-workspace.mjs"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.3",

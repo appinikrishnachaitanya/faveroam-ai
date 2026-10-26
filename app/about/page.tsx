@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 export const metadata: Metadata = {
-  title: "About us · TastePassport",
+  title: "About us · FaveRoam",
   description:
     "Your interests are the starting point for feeling at home in a new city.",
 };
@@ -10,7 +10,7 @@ export default function About() {
     <main className="about-page">
       <nav aria-label="About navigation">
         <Link className="about-brand" href="/">
-          TastePassport <small>AI</small>
+          FaveRoam <small>AI</small>
         </Link>
         <Link href="/">Start exploring →</Link>
       </nav>
@@ -22,7 +22,7 @@ export default function About() {
         </h1>
         <p>
           The artist you play on repeat. The film you love. The food you miss.
-          TastePassport connects those interests to places and experiences worth
+          FaveRoam connects those interests to places and experiences worth
           discovering.
         </p>
       </header>
@@ -30,11 +30,11 @@ export default function About() {
         <h2>More than another list of places.</h2>
         <p>
           Finding somewhere popular is easy. Finding somewhere that feels like
-          you takes a little more understanding. We built TastePassport to help
+          you takes a little more understanding. We built FaveRoam to help
           you explore a city through your own cultural interests.
         </p>
       </section>
-      <section className="about-steps" aria-label="How TastePassport works">
+      <section className="about-steps" aria-label="How FaveRoam works">
         <article>
           <span>01</span>
           <h2>Bring your interests</h2>
@@ -70,7 +70,7 @@ export default function About() {
         </p>
         <p>
           A saved outing is your personal plan. Always check current prices,
-          opening hours and availability. TastePassport does not place orders or
+          opening hours and availability. FaveRoam does not place orders or
           make reservations.
         </p>
       </section>
@@ -85,7 +85,7 @@ export default function About() {
         </Link>
       </section>
       <footer className="workspace-footer">
-        <Link href="/">TastePassport</Link>
+        <Link href="/">FaveRoam</Link>
         <Link href="/privacy">Privacy &amp; your data</Link>
       </footer>
     </main>

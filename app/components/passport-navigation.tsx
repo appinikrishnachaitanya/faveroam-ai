@@ -1,19 +1,19 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { memo, useEffect, useId, useRef, useState } from "react";
 import { Icon } from "./passport";
 
 export type PassportDestination = "discover" | "saved" | "plan" | "preferences" | "together" | "connections";
 const destinations: {id: PassportDestination; label: string; icon: string}[] = [
   {id:"discover",label:"Discover",icon:"globe"},
-  {id:"saved",label:"My Vibe",icon:"heart"},
-  {id:"plan",label:"Plan a day",icon:"pin"},
+  {id:"saved",label:"My places",icon:"heart"},
+  {id:"plan",label:"First Week",icon:"pin"},
   {id:"preferences",label:"Preferences",icon:"sliders"},
-  {id:"together",label:"Together",icon:"People"},
+  {id:"together",label:"Common Ground",icon:"People"},
   {id:"connections",label:"Taste insights",icon:"star"},
 ];
 
-export default function PassportNavigation({active,savedCount,onNavigate}:{
+function PassportNavigation({active,savedCount,onNavigate}:{
   active: PassportDestination;
   savedCount: number;
   onNavigate: (destination: PassportDestination) => void;
@@ -30,7 +30,7 @@ export default function PassportNavigation({active,savedCount,onNavigate}:{
         toggle.current?.focus();
       }
     }}>
-      <span className="passport-sidebar-title micro-label">YOUR PASSPORT</span>
+      <span className="passport-sidebar-title micro-label">YOUR CITY COMPANION</span>
       <div className="passport-mobile-heading">
         <button ref={toggle} type="button" className="passport-menu-toggle" aria-expanded={open}
           aria-controls={menuId} onClick={()=>setOpen(value=>!value)}>
@@ -54,3 +54,4 @@ export default function PassportNavigation({active,savedCount,onNavigate}:{
     </aside>
   );
 }
+export default memo(PassportNavigation);

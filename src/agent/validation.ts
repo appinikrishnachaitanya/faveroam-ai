@@ -62,6 +62,7 @@ export function validatedSection(e: Entity): Section | undefined {
     return;
   // Museums may also carry a tourist-attraction tag. Classification and the
   // user's optional touristy avoidance are separate decisions.
+  if (/\b(?:cinema|movie theater|movie theatre)\b/.test(names)) return "Culture";
   const dining =
     /restaurant|dining|bakery|bistro|food court|pizza|tiffin|delivery kitchen|catering/.test(
       names,

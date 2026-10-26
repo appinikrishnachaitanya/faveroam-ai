@@ -49,6 +49,12 @@ test('theme previews avoid near-identical labels while preserving different retu
  assert.deepEqual(curatedThemes(tags).map(t=>t.name),['Indian Platter','Indian Curries','Indian Breakfast']);
 });
 
+test('attributed Taste Insights cap one seed to two themes from the same taxonomy family',async()=>{
+ const {curatedThemes}=await import('../src/passport/taste-themes.ts');
+ const tags=['Indian Platter','Indian Curries','Indian Breakfast','Punjabi Meals'].map((name,index)=>({id:`urn:tag:specialty_dish:place:source-${index}`,name,sourceInterestId:'cuisine',sourceInterestName:'Indian cuisine'}));
+ assert.deepEqual(curatedThemes(tags,12).map(tag=>tag.name),['Indian Platter','Indian Curries']);
+});
+
 test('multi-interest themes are fetched and attributed independently with honest partial results',async()=>{
  const interests=[
    {id:'artist',name:'A.R. Rahman',types:['urn:entity:artist']},

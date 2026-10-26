@@ -5,8 +5,8 @@
   margin-top: 16px;
   z-index: 30;
   height: var(--header-height);
-  background: #fffdf4ed;
-  backdrop-filter: blur(16px);
+  background: #fffdf4;
+  /* Opaque surface avoids blurring the map/cards during overlay transitions. */
   border: 1px solid var(--ui-border);
   border-radius: 18px;
   box-shadow: 0 10px 28px #193e3112;

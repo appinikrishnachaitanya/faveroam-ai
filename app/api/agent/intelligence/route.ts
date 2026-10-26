@@ -1,4 +1,5 @@
 import { browserRequestError, readRequestText } from "../../../../src/http/request.ts";
+import {jointProfileState,togetherPlanningCards} from "../../../../src/passport/common-ground";
 import { themesPerInterest } from "../../../../src/passport/taste-themes";
 import { validSessionId } from "../../../../src/agent/session-lifetime.ts";
 import { trending } from "../../../../src/qloo/trending";
@@ -161,6 +162,8 @@ async function handlePOST(request: Request) {
     if (!comparison.shared.length)
       return json({
         comparison,
+        partner:partner.map(seed=>seed.name),
+        partnerSignals:partner.map(({id,name})=>({id,name})),
         cards: [],
         notice:
           "No shared cultural tags were returned. Your existing Passport is preserved.",
@@ -168,58 +171,41 @@ async function handlePOST(request: Request) {
     const sections = (Array.isArray(b.sections) ? b.sections : [b.section]) as Section[];
     const rejected = state.feedback.filter((f) => !f.accepted).map((f) => f.id);
     try {
-      const tags = comparison.shared.map((t) => ({
-        id: t.id,
-        name: t.name,
-        types: ["urn:tag"],
-        detail: "Returned common ground",
-      }));
-      const joint = structuredClone(state);
-      joint.selected = [...new Map([...state.selected, ...partner].map(c => [c.id,c])).values()];
-      joint.tags = [...new Map([...state.tags, ...tags].map(c => [c.id,c])).values()];
-      joint.categoryTags ??= {};
-      // A previous Ask session may have left a one-off activity such as
-      // nightlife in Culture. Together is a fresh multi-category comparison.
-      joint.intent = {
-        kind: "refine",
-        seeds: [],
-        concepts: [],
-        constraints: joint.categoryConstraints[sections[0]] ?? [],
-        sections,
-        strategy: "discover",
-      };
-      if (joint.activityGenres) delete joint.activityGenres.Culture;
       const cards: Awaited<ReturnType<typeof discoverSection>> = [];
-      for (const section of sections) {
-        joint.categoryTags[section] = [...new Set([...(joint.categoryTags[section] ?? []), ...tags.map(t => t.id)])];
-        const result = await discoverSection(joint, section, state.categoryConstraints[section] ?? [], [...a, ...partner.map(c => c.id), ...rejected], false, signal);
-        cards.push(...result.filter(card => card.section === section).slice(0, 3));
-      }
-      const placeSection=sections.find(section=>sectionTypes[section]==='place')??'Eat';
+      const failedSections:Section[]=[];
+      const jointResults=await Promise.all(sections.map(async section=>{
+        const joint=jointProfileState(state,partner,comparison,section);
+        try{return (await discoverSection(joint,section,state.categoryConstraints[section]??[],[...a,...partner.map(c=>c.id),...rejected],false,signal)).filter(card=>card.section===section).slice(0,12);}
+        catch{failedSections.push(section);return [];}
+      }));
+      cards.push(...jointResults.flat());
+      const placeSections=sections.filter(section=>sectionTypes[section]==='place');
       const exchange=await Promise.all([
         {person:'you',seeds:state.selected.filter(candidate=>a.includes(candidate.id)),themes:comparison.aOnly},
         {person:'them',seeds:partner,themes:comparison.bOnly},
       ].map(async profile=>{
-        if(!profile.themes.length)return {person:profile.person,theme:undefined,card:undefined};
-        const solo=structuredClone(state);
+        const personalCards:typeof cards=[];
         const themeCandidates=profile.themes.slice(0,3).map(theme=>({id:theme.id,name:theme.name,types:['urn:tag'],detail:'Returned individual comparison theme'}));
-        solo.selected=profile.seeds;
-        solo.tags=themeCandidates;
-        solo.categoryTags={[placeSection]:themeCandidates.map(theme=>theme.id)};
-        solo.intent={kind:'refine',seeds:[],concepts:[],constraints:state.categoryConstraints[placeSection]??[],sections:[placeSection],strategy:'discover'};
-        try{
-          const personal=await discoverSection(solo,placeSection,state.categoryConstraints[placeSection]??[],rejected,false,signal);
-          const card=personal.find(candidate=>candidate.evidence?.locality==='physical-city');
-          return {person:profile.person,theme:profile.themes[0]?.name,card};
-        }catch{return {person:profile.person,theme:profile.themes[0]?.name,card:undefined};}
+        for(const section of placeSections){
+          const solo=structuredClone(state);
+          solo.selected=profile.seeds;
+          solo.tags=[...new Map([...state.tags,...themeCandidates].map(tag=>[tag.id,tag])).values()];
+          solo.queryPreferences??={};solo.queryPreferences[section]={...solo.queryPreferences[section],inspirationTags:themeCandidates.map(theme=>theme.id)};
+          solo.intent={kind:'refine',seeds:[],concepts:[],constraints:state.categoryConstraints[section]??[],sections:[section],strategy:'discover'};
+          if(solo.activityGenres)delete solo.activityGenres.Culture;
+          try{personalCards.push(...togetherPlanningCards(await discoverSection(solo,section,state.categoryConstraints[section]??[],rejected,false,signal),state.city,8));}catch{failedSections.push(section);}
+        }
+        return {person:profile.person,theme:profile.themes[0]?.name,card:personalCards[0],cards:personalCards};
       }));
       return json({
         comparison,
         partner: partner.map((p) => p.name),
+        partnerSignals:partner.map(({id,name})=>({id,name})),
+        failedSections:[...new Set(failedSections)],
         cards,
         exchange,
         notice: cards.length
-          ? "Each category was searched using both confirmed taste profiles and the shared themes returned by the comparison. These are starting ideas, not a compatibility score or a guarantee you will both like every result."
+          ? "Each category was searched using both confirmed taste profiles with shared themes used as soft taste signals. Explicit category and geographic requirements stayed in place. These are starting ideas, not a compatibility score or a guarantee you will both like every result."
           : "No matches appeared for these shared tastes and current preferences. Your Passport is preserved.",
       });
     } catch {

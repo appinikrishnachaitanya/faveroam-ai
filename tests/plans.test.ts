@@ -103,3 +103,15 @@ test("upcoming plan library renders saved stops and calendar actions without exp
   assert.match(html, /not bookings/);
   assert.doesNotMatch(html, /private-session/);
 });
+test("an unavailable plan feed does not hide saved weeks or plans from the other feed",()=>{
+ const plan={id:"fixture-id",...planFromSession(state(),{...input,date:"2099-10-18"},now),created_at:now.toISOString()};
+ const html=renderToStaticMarkup(createElement(UpcomingPlans,{plans:[plan],weeks:[],busy:false,error:"Saved First Weeks are unavailable.",onDelete:()=>{},onRetry:()=>{}}));
+ assert.match(html,/Saved First Weeks are unavailable/);
+ assert.match(html,/Protocol coffee/);
+});
+test("a saved First Week remains upcoming while it has future days even after its start date",()=>{
+ const today=cityDate('London');
+ const week={id:'ongoing',city:'London',start_date:'2000-01-01',time_zone:'Europe/London',days:[{date:today,title:'Still exploring',stops:[]}],created_at:now.toISOString(),updated_at:now.toISOString()};
+ const html=renderToStaticMarkup(createElement(UpcomingPlans,{plans:[],weeks:[week],busy:false,error:'',onDelete:()=>{},onRetry:()=>{}}));
+ assert.match(html,/First Week in London/);assert.match(html,/Still exploring/);
+});

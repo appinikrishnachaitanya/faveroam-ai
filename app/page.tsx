@@ -3,7 +3,7 @@ import { refinementErrorMessage } from "../src/agent/customer-error";
 import {generatePassport} from '../src/workspace/generation-browser';
 import GenerationPreview from './components/generation-preview';
 import { sectionLabel } from "../src/passport/labels";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { validDestination } from "../src/workspace/location";
 import { AgentTurnError, sendAgentTurn } from "../src/agent/browser";
 import type { Intent } from "../src/agent/types";
@@ -38,6 +38,7 @@ import ConciergeDrawer from "./components/concierge";
 import ChatRecommendations from "./components/chat-recommendations";
 import ChatComparison from "./components/chat-comparison";
 import ChatReply from "./components/chat-reply";
+import VibeDial from './components/vibe-dial';
 import ChatComposer from "./components/chat-composer";
 import ConceptClarification from "./components/concept-clarification";
 import DiscoveryConcierge from "./components/discovery-concierge";
@@ -54,6 +55,8 @@ import {
 } from "./components/passport-overview";
 import { sectionOrder } from "../src/workspace/state";
 import TasteAnalysis from "./components/taste-analysis";
+import {clusterPlaces} from '../src/passport/place-clusters';
+import Rituals from "./components/rituals";
 import PassportMap, {mappedPlaces} from './components/passport-map';
 import FirstWeek from './components/first-week';
 import ShareTasteCard from './components/share-taste-card';
@@ -63,6 +66,7 @@ import { accountRequest, showNotice } from "../src/account/browser";
 import { saveOnboardingDraft, restoreOnboardingDraft, clearOnboardingDraft } from "../src/workspace/draft-recovery";
 import type { Familiarity } from "../src/passport/evidence";
 import type { SavedPlan } from "../src/account/plans";
+import type { SavedFirstWeek } from "../src/account/first-weeks";
 interface Message {
   role: "agent" | "user";
   text: string;
@@ -72,7 +76,7 @@ interface Message {
 }
 const welcome: Message = {
   role: "agent",
-  text: "Move anywhere. Keep your vibe. Tell me your new city and one to five cultural tastes you love. We’ll build a bridge between your world and your next chapter.",
+  text: "From what you love to where you belong. Tell me your new city and one to five cultural tastes you love. We’ll build a bridge between your world and your next chapter.",
 };
 const verifyShareToken=(value:string)=>/^[a-zA-Z0-9_-]{32}$/.test(value);
 async function post<T>(path: string, body: unknown): Promise<T> {
@@ -113,14 +117,24 @@ export default function Home() {
     return ()=>controller.abort();
   },[]);
   const [assistantOpen, setAssistantOpen] = useState(false);
+  const [assistantVisited, setAssistantVisited] = useState(false);
+  useEffect(() => { if (assistantOpen) setAssistantVisited(true); }, [assistantOpen]);
+  const [visitedViews, setVisitedViews] = useState<Set<string>>(() => new Set(["discover"]));
+  const [planMode,setPlanMode]=useState<"week"|"day">("week");
+  const [ritualCardId,setRitualCardId]=useState<string>();
+  const ritualInitialHandled=useCallback(()=>setRitualCardId(undefined),[]);
+  const [selectedCluster,setSelectedCluster]=useState<string>();
   const [showMap,setShowMap]=useState(true);
   const [assistantTab, setAssistantTab] = useState<"ask" | "manual">("ask");
   const [composerPrompt, setComposerPrompt] = useState({text:"",version:0});
-  const setComposer = (text:string) => setComposerPrompt(previous=>({text,version:previous.version+1}));
+  const composerDraft = useRef("");
+  const [showEarlierConversation, setShowEarlierConversation] = useState(false);
+  const setComposer = (text:string) => {composerDraft.current=text;setComposerPrompt(previous=>({text,version:previous.version+1}));};
   const [messages, setMessages] = useState<Message[]>([welcome]);
   const [draft, setDraft] = useState<string[]>([]);
   const [draftHydrated, setDraftHydrated] = useState(false);
   const [editingPlan, setEditingPlan] = useState<{plan:SavedPlan;nonce:number}>();
+  const [editingFirstWeek,setEditingFirstWeek]=useState<{week:SavedFirstWeek;nonce:number}>();
   // Keep editingPlan in sync after a save so the DayOut component never
   // re-populates from a stale plan (the root cause of the time-revert bug).
   useEffect(() => {
@@ -301,12 +315,12 @@ export default function Home() {
     phase === "refining" ||
     phase === "interpreting";
   const signals = result?.session?.selected ?? confirmed(resolution, chosen);
-  const feedback: Record<string, Feedback> = Object.fromEntries(
+  const feedback: Record<string, Feedback> = useMemo(()=>Object.fromEntries(
     (result?.session?.feedback ?? []).map((f) => [
       f.id,
       f.accepted ? "like" : "dislike",
     ]),
-  );
+  ),[result?.session?.feedback]);
   const sessionHistory = result?.session?.history ?? [];
   const conversationStart = sessionHistory.findIndex(
     (message) => message.role === "user",
@@ -324,6 +338,9 @@ export default function Home() {
         { role: "user" as const, text: retryInput.message },
       ]
     : committedMessages;
+  const displayedMessages = showEarlierConversation || visibleMessages.length <= 24
+    ? visibleMessages
+    : visibleMessages.slice(-24);
   const conciergeAvailable =
     providerHealth === "healthy" || providerHealth === "configured";
   const activeItems =
@@ -346,6 +363,10 @@ export default function Home() {
     result?.session?.history,
     result?.agent?.pending,
   ]);
+  useEffect(() => {
+    setVisitedViews(new Set(["discover"]));
+    setShowEarlierConversation(false);
+  }, [result?.session?.id]);
   function say(text: string) {
     setMessages((m) => [...m, { role: "agent", text }]);
   }
@@ -368,7 +389,8 @@ export default function Home() {
       )
     ) {
       setMessages((m) => [...m, { role: "user", text }]);
-      await refine({ message: text });
+      const visibleIds=/\bcompare\b/i.test(text)&&/\bvisible\b/i.test(text)?[...document.querySelectorAll<HTMLElement>('.passport-sections [data-entity-id]')].filter(element=>element.getClientRects().length>0).map(element=>element.dataset.entityId!).filter(Boolean).slice(0,40):undefined;
+      await refine({ message: text,...(visibleIds?{visibleIds}:{}) });
       return;
     }
     setPhase("interpreting");
@@ -409,6 +431,13 @@ export default function Home() {
       setPhase("error");
     }
   }
+  const submitConversationHandler = useRef(submitConversation);
+  useLayoutEffect(() => {
+    submitConversationHandler.current = submitConversation;
+  });
+  const sendComposerMessage = useCallback((text: string) => {
+    void submitConversationHandler.current(text);
+  }, []);
   async function refine(input: AgentInput) {
     if (!result?.agent || busy || activeTurn.current || recoveryStatus === "checking") return;
     const controller = new AbortController();
@@ -479,6 +508,7 @@ export default function Home() {
       });
       setProviderHealth(reply.state.providerHealth ?? "unconfigured");
       if (reply.action === "plan-day" || reply.action === "save-plan") {
+        setPlanMode("day");
         setAssistantOpen(false);
         selectWorkspaceView("plan");
         if(reply.action === "save-plan")setSavePlanRequest(current=>current+1);
@@ -486,6 +516,7 @@ export default function Home() {
       if(reply.action === "open-preferences" || reply.action === "open-vibe" || reply.action === "open-discover" || reply.action === "open-together" || reply.action === "open-insights") {
         setAssistantOpen(false);
         setShowSaved(reply.action === "open-vibe");
+        if(reply.action === "open-vibe")setVisitedViews(current=>new Set([...current,"saved"]));
         selectWorkspaceView(reply.action === "open-preferences"?"preferences":reply.action === "open-together"?"together":reply.action === "open-insights"?"connections":"discover");
       }
       if (reply.action === "save-passport") {
@@ -541,12 +572,11 @@ export default function Home() {
   }
 
   function selectWorkspaceView(next: typeof workspaceView) {
+    setVisitedViews(current => current.has(next) ? current : new Set([...current, next]));
     setWorkspaceView(next);
     requestAnimationFrame(() =>
       document.getElementById(`view-${next === "together" ? "preferences" : next}`)?.scrollIntoView({
-        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
-          ? "instant"
-          : "smooth",
+        behavior: "instant",
         block: "start",
       }),
     );
@@ -690,6 +720,57 @@ export default function Home() {
         feedback: { id, accepted: true, clear: feedback[id] === "like" },
       });
   }
+  const feedbackHandler = useRef(recordFeedback);
+  useLayoutEffect(()=>{feedbackHandler.current=recordFeedback;});
+  const stableFeedback = useCallback((id:string,value:Feedback)=>feedbackHandler.current(id,value),[]);
+  const visibleResult = useMemo(()=>result?{...result,cards:result.cards.filter(card=>!result.session?.hiddenCategories.includes(card.section))}:undefined,[result]);
+  const placeClusters=useMemo(()=>clusterPlaces(visibleResult?.cards??[]),[visibleResult]);
+  const activeCluster=placeClusters.find(cluster=>cluster.id===selectedCluster);
+  const clusteredResult=useMemo(()=>visibleResult&&activeCluster?{...visibleResult,cards:activeCluster.cards}:visibleResult,[visibleResult,activeCluster]);
+  const openMappedCard = useCallback((card:import('../src/passport/model').Card)=>{
+    setSelectedCluster(undefined);
+    window.setTimeout(()=>[...document.querySelectorAll<HTMLElement>('[data-entity-id]')].find(element=>element.dataset.entityId===card.id)?.scrollIntoView({behavior:'smooth',block:'center'}),50);
+  },[]);
+  const panelActions = useRef({refine,selectWorkspaceView});
+  useLayoutEffect(()=>{panelActions.current={refine,selectWorkspaceView};});
+  const askFromChat = useCallback((message:string)=>{void panelActions.current.refine({message});},[]);
+  const saveFromChat = useCallback((id:string)=>feedbackHandler.current(id,"like"),[]);
+  const stableRefine = useCallback((input:AgentInput)=>{void panelActions.current.refine(input);},[]);
+  const refineFromPanel = useCallback((input:AgentInput)=>{setShowSaved(false);panelActions.current.selectWorkspaceView('discover');void panelActions.current.refine(input);},[]);
+  useEffect(()=>{const handler=(event:Event)=>{const id=(event as CustomEvent<{id?:unknown}>).detail?.id;if(typeof id!=='string')return;setRitualCardId(id);setShowSaved(true);setVisitedViews(current=>new Set([...current,"saved"]));panelActions.current.selectWorkspaceView('discover');};window.addEventListener('faveroam:create-ritual',handler);return()=>window.removeEventListener('faveroam:create-ritual',handler);},[]);
+  const stableSelectWorkspaceView=useCallback((next:typeof workspaceView)=>panelActions.current.selectWorkspaceView(next),[]);
+  const openPreferences = useCallback(()=>panelActions.current.selectWorkspaceView('preferences'),[]);
+  const planSaveHandled = useCallback(()=>setSavePlanRequest(0),[]);
+  const editWeekHandled=useCallback(()=>setEditingFirstWeek(undefined),[]);
+  const freshHandler=useRef(fresh);
+  useLayoutEffect(()=>{freshHandler.current=fresh;});
+  const stableFresh=useCallback(()=>freshHandler.current(),[]);
+  const accountChangedHandler=useCallback((signedIn:boolean,firstName?:string)=>{setAccountSignedIn(signedIn);setAccountFirstName(signedIn?firstName?.trim()??'':'');},[]);
+  const passportSavedHandler=useCallback((sessionId?:string)=>{if(sessionId)rememberSavedSession(window.sessionStorage,sessionId);else clearSavedSession(window.sessionStorage);setSavedSessionId(sessionId);},[]);
+  const editPlanHandler=useCallback((plan:SavedPlan)=>{setPlanMode("day");setEditingPlan(current=>({plan,nonce:(current?.nonce??0)+1}));panelActions.current.selectWorkspaceView('plan');},[]);
+  const editWeekHandler=useCallback((week:SavedFirstWeek)=>{setPlanMode("week");setEditingFirstWeek(current=>({week,nonce:(current?.nonce??0)+1}));panelActions.current.selectWorkspaceView('plan');},[]);
+  const restoreAccountPassport=useCallback((passport:Passport)=>{
+    freshHandler.current();setResult(passport);setCity(passport.city);setDraft(passport.selected.map(seed=>seed.name));
+    setRequestedActivities((passport.session?.activeCategories??[]).filter(section=>!passport.session?.hiddenCategories.includes(section)));
+    setInitialMode(passport.session?.discoveryMode??'familiar');setConstraints(passport.session?.constraints??[]);setPhase('ready');setProviderHealth('unconfigured');
+    void fetch('/api/agent/capabilities').then(response=>response.json()).then(value=>setProviderHealth(value.health)).catch(()=>{});
+    setAdaptation('Your saved Passport is back. Refine a chapter for fresh suggestions.');
+  },[]);
+  const openAssistantFromDiscover=useCallback((request?:string)=>{if(request)setComposer(request);setAssistantTab('ask');setAssistantOpen(true);},[]);
+  const shareFromDiscover=useCallback(()=>document.getElementById('share-taste-title')?.scrollIntoView({behavior:'smooth',block:'center'}),[]);
+  const openAssistant=useCallback(()=>setAssistantOpen(true),[]);
+  const navigateWorkspace=useCallback((destination:'discover'|'saved'|'plan'|'preferences'|'together'|'connections')=>{
+    setShowSaved(destination==='saved');
+    if(destination==='saved')setVisitedViews(current=>new Set([...current,'saved']));
+    stableSelectWorkspaceView(destination==='saved'?'discover':destination);
+    requestAnimationFrame(()=>document.getElementById('passport-workspace-content')?.focus({preventScroll:true}));
+  },[stableSelectWorkspaceView]);
+  const openConnections=useCallback(()=>stableSelectWorkspaceView('connections'),[stableSelectWorkspaceView]);
+  const findPlanActivity = useCallback((id:string)=>{
+    const target=id==='Cinema'?'cinemas':id==='Nightlife'?'nightclubs':id==='Coffee'?'coffee shops':id==='Eat'?'restaurants':'museums';
+    const kept=id==='Coffee'?'dining, music and movies':id==='Eat'?'coffee, music and movies':'dining, coffee, music and movies';
+    void panelActions.current.refine({message:`Find local ${target} for this outing. Keep my ${kept} unchanged.`});
+  },[]);
   function closeFeedback() {
     setRejectionId(undefined);
     requestAnimationFrame(() => feedbackOpener.current?.focus());
@@ -720,6 +801,8 @@ export default function Home() {
     setShowSaved(false);
     setShowMap(true);
     setWorkspaceView("discover");
+    setVisitedViews(new Set(["discover"]));
+    setShowEarlierConversation(false);
     setEditingPlan(undefined);
     setSavePlanRequest(0);
     setAdaptation("");
@@ -759,42 +842,26 @@ export default function Home() {
         Skip to main content
       </a>
       <header className="workspace-topbar">
-        <a className="brand" href="/" aria-label="TastePassport home" onClick={event=>{if(result){event.preventDefault();requestNewPassport();}}}>
+        <a className="brand" href="/" aria-label="FaveRoam home" onClick={event=>{if(result){event.preventDefault();requestNewPassport();}}}>
           <span className="brand-symbol">
-            <Icon name="star" size={22} />
+            <img src="/brand/faveroam-mark.svg" width="28" height="28" alt="" />
           </span>
           <span>
-            TastePassport <small>AI</small>
+            FaveRoam
           </span>
         </a>
-        <span className="topbar-caption">Move anywhere. Keep your vibe.</span>
+        <span className="topbar-caption">From what you love to where you belong.</span>
         <nav className="header-controls" aria-label="Passport actions">
           {accountSignedIn && <span className="header-greeting" aria-label={accountFirstName ? `Signed in as ${accountFirstName}` : "Signed in"}>{accountFirstName ? `Hi, ${accountFirstName}` : "Welcome back"}</span>}
           <AccountControl
-            onAccountChange={(signedIn,firstName)=>{setAccountSignedIn(signedIn);setAccountFirstName(signedIn?firstName?.trim()??"":"");}}
-            onPassportSaved={sessionId=>{if(sessionId)rememberSavedSession(window.sessionStorage,sessionId);else clearSavedSession(window.sessionStorage);setSavedSessionId(sessionId);}}
-            onEditPlan={plan=>{setEditingPlan(current=>({plan,nonce:(current?.nonce??0)+1}));setWorkspaceView("plan");}}
+            onAccountChange={accountChangedHandler}
+            onPassportSaved={passportSavedHandler}
+            onEditPlan={editPlanHandler}
+            onEditWeek={editWeekHandler}
             passport={result}
             disabled={busy}
-            onSignOut={fresh}
-            onRestore={(passport) => {
-              fresh();
-              setResult(passport);
-              setCity(passport.city);
-              setDraft(passport.selected.map((s) => s.name));
-              setRequestedActivities((passport.session?.activeCategories ?? []).filter(section=>!passport.session?.hiddenCategories.includes(section)));
-              setInitialMode(passport.session?.discoveryMode ?? "familiar");
-              setConstraints(passport.session?.constraints ?? []);
-              setPhase("ready");
-              setProviderHealth("unconfigured");
-              void fetch("/api/agent/capabilities")
-                .then((response) => response.json())
-                .then((value) => setProviderHealth(value.health))
-                .catch(() => {});
-              setAdaptation(
-                "Your saved Passport is back. Refine a chapter for fresh suggestions.",
-              );
-            }}
+            onSignOut={stableFresh}
+            onRestore={restoreAccountPassport}
           />
           {result && (
             <div className="topbar-actions">
@@ -907,27 +974,21 @@ export default function Home() {
             <PassportCover
               passport={result}
               origin={origin}
-              onConnections={() => {
-                selectWorkspaceView("connections");
-              }}
+              onConnections={openConnections}
             />
             <div className="passport-workspace">
               <PassportNavigation active={workspaceView === "discover" && showSaved ? "saved" : workspaceView}
                 savedCount={result.session?.savedCards.length ?? 0}
-                onNavigate={destination=>{
-                  setShowSaved(destination === "saved");
-                  selectWorkspaceView(destination === "saved" ? "discover" : destination);
-                  requestAnimationFrame(()=>document.getElementById("passport-workspace-content")?.focus({preventScroll:true}));
-                }}/>
+                onNavigate={navigateWorkspace}/>
               <div id="passport-workspace-content" className="passport-workspace-content" tabIndex={-1}>
               <button
                 className="assistant-launch"
-                onClick={() => setAssistantOpen(true)}
+                onClick={openAssistant}
                 aria-expanded={assistantOpen}
                 aria-controls="taste-concierge"
               >
                 <Icon name="star" size={18} />
-                Ask TastePassport
+                Ask FaveRoam
               </button>
             {recoveryStatus && (
               <section className="passport-recovery" aria-label="Continue your Passport" role="status">
@@ -956,14 +1017,17 @@ export default function Home() {
               className="workspace-view-anchor"
               hidden={workspaceView !== "discover"}
             >
-              {!showSaved && <DiscoveryConcierge city={result.city} firstName={accountSignedIn?accountFirstName:undefined} busy={busy} onAsk={request=>{if(request)setComposer(request);setAssistantTab("ask");setAssistantOpen(true);}} onNavigate={selectWorkspaceView} onShare={()=>document.getElementById('share-taste-title')?.scrollIntoView({behavior:'smooth',block:'center'})}/>}
+              {visitedViews.has("discover") && <>
+              {!showSaved && <DiscoveryConcierge city={result.city} firstName={accountSignedIn?accountFirstName:undefined} busy={busy} onAsk={openAssistantFromDiscover} onNavigate={stableSelectWorkspaceView} onShare={shareFromDiscover}/>}
+              {!showSaved && <VibeDial key={`vibe:${result.agent?.sessionId??result.city}`} passport={result} busy={busy} onApply={stableRefine}/>}
               {result.session && !showSaved && (
-                <FamiliarityControl
+                <details className="vibe-tuning-disclosure familiarity-disclosure"><summary>Fine-tune discoveries <span>Optional · familiar, balanced or explore</span></summary><FamiliarityControl
                   session={result.session}
                   disabled={busy}
                   onChange={(input) => {setShowSaved(false);setWorkspaceView("discover");void refine(input);}}
-                />
+                /></details>
               )}
+              </>}
             </div>
             {workspaceView === "discover" && !showSaved && missingSections.length > 0 && (
               <section className="missing-discoveries" aria-label="Find more discoveries">
@@ -984,7 +1048,7 @@ export default function Home() {
               <RefinementRecovery
                 session={result.session}
                 disabled={busy}
-                onApply={(input) => void refine(input)}
+                onApply={stableRefine}
               />
             )}
             {result.session?.hiddenCategories.length ? (
@@ -994,70 +1058,55 @@ export default function Home() {
               </p>
             ) : null}
             <div hidden={workspaceView !== "discover"}>
-              {showSaved ? (
-                <SavedDiscoveries
+              <div hidden={!showSaved}>{visitedViews.has('saved') && <><Rituals passport={result} signedIn={accountSignedIn} initialCardId={ritualCardId} onInitialHandled={ritualInitialHandled}/><SavedDiscoveries
                   cards={result.session?.savedCards ?? []}
                   feedback={feedback}
-                  onFeedback={recordFeedback}
+                  onFeedback={stableFeedback}
                   disabled={busy}
-                />
-              ) : (
-                <>
+                /></>}</div>
+                <div hidden={showSaved}>
                   {mappedPlaces(result.cards.filter(card=>!result.session?.hiddenCategories.includes(card.section))).length>0&&<button className="quiet-button map-toggle" type="button" aria-expanded={showMap} onClick={()=>setShowMap(value=>!value)}>{showMap?'Hide map':'Show map'}</button>}
-                  {showMap&&mappedPlaces(result.cards.filter(card=>!result.session?.hiddenCategories.includes(card.section))).length>0&&<PassportMap cards={result.cards.filter(card=>!result.session?.hiddenCategories.includes(card.section))} onSelect={card=>{
-                    setShowMap(false);
-                    window.setTimeout(()=>[...document.querySelectorAll<HTMLElement>('[data-entity-id]')].find(element=>element.dataset.entityId===card.id)?.scrollIntoView({behavior:'smooth',block:'center'}),50);
-                  }}/>}
-                  <PassportSections
-                    disabled={busy}
-                    result={{
-                      ...result,
-                      cards: result.cards.filter(
-                        (c) =>
-                          !result.session?.hiddenCategories.includes(c.section),
-                      ),
-                    }}
-                    feedback={feedback}
-                    onFeedback={recordFeedback}
-                    updates={updates}
-                    updating={updating}
-                  />
+                  {visibleResult&&mappedPlaces(visibleResult.cards).length>0&&<div hidden={!showMap}><PassportMap cards={visibleResult.cards} active={workspaceView==='discover'&&!showSaved&&showMap} selectedCluster={activeCluster?.id} onClusterSelect={setSelectedCluster} onSelect={openMappedCard}/></div>}
+                  {activeCluster&&<div className="active-area-banner" role="status"><p>Showing {activeCluster.cards.length} returned places around {activeCluster.anchor.name}.</p><button type="button" className="quiet-button" onClick={()=>setSelectedCluster(undefined)}>Show all discoveries</button></div>}
+                  {visibleResult&&<PassportSections disabled={busy} result={clusteredResult!} feedback={feedback} onFeedback={stableFeedback} updates={updates} updating={updating}/>}
                   <ShareTasteCard key={`share:${result.agent?.sessionId??result.city}`} passport={result}/>
-                </>
-              )}
+                </div>
             </div>
             <div
               id="view-plan"
               className="workspace-panel"
               hidden={workspaceView !== "plan"}
             >
-              <DayOutPlan
+              {visitedViews.has("plan") && <>
+              <div className="planner-mode-switch" role="group" aria-label="Choose your plan"><button type="button" aria-pressed={planMode==='week'} onClick={()=>setPlanMode('week')}>First Week</button><button type="button" aria-pressed={planMode==='day'} onClick={()=>setPlanMode('day')}>A day out</button></div>
+              <div hidden={planMode!=='day'}><DayOutPlan
                 key={`day-out:${result.session?.id ?? result.city}`}
                 editPlan={editingPlan}
                 expanded={workspaceView === "plan"}
-                onFindActivity={id=>{const target=id==="Cinema"?"cinemas":id==="Nightlife"?"nightclubs":id==="Coffee"?"coffee shops":id==="Eat"?"restaurants":"museums";const kept=id==="Coffee"?"dining, music and movies":id==="Eat"?"coffee, music and movies":"dining, coffee, music and movies";void refine({message:`Find local ${target} for this outing. Keep my ${kept} unchanged.`});}}
+                onFindActivity={findPlanActivity}
                 passport={result}
                 disabled={busy}
                 signedIn={accountSignedIn}
                 saveRequest={savePlanRequest}
-                onSaveRequestHandled={()=>setSavePlanRequest(0)}
-              />
-              <FirstWeek key={`first-week:${result.session?.id??result.city}`} passport={result}/>
+                onSaveRequestHandled={planSaveHandled}
+              /></div>
+              <div hidden={planMode!=='week'}><FirstWeek key={`first-week:${result.session?.id??result.city}`} passport={result} signedIn={accountSignedIn} editWeek={editingFirstWeek} onEditWeekHandled={editWeekHandled}/></div>
+              </>}
             </div>
             <div
               className="workspace-panel"
               id="view-preferences"
               hidden={workspaceView !== "preferences" && workspaceView !== "together"}
             >
-              <TasteIntelligence
+              {(visitedViews.has("preferences") || visitedViews.has("together")) && <TasteIntelligence
                 key={`intelligence:${result.session?.id ?? result.city}`}
                 view={workspaceView === "together" ? "together" : "preferences"}
-                onPreferences={()=>selectWorkspaceView("preferences")}
+                onPreferences={openPreferences}
                 partnerSample={sharedPartnerTastes}
                 passport={result}
                 busy={busy}
-                onRefine={(input) => {setWorkspaceView("discover");setShowSaved(false);void refine(input);}}
-              />
+                onRefine={refineFromPanel}
+              />}
 
             </div>
             <div
@@ -1065,14 +1114,14 @@ export default function Home() {
               id="view-connections"
               hidden={workspaceView !== "connections"}
             >
-              <details
+              {visitedViews.has("connections") && <details
                 className="secondary-reveal cultural-reveal"
                 open={workspaceView === "connections"}
               >
                 <summary>
                   Explore your taste patterns <Icon name="arrow" size={16} />
                 </summary>
-                <TasteAnalysis key={`analysis:${result.session?.id ?? result.city}`} passport={result} busy={busy} onRefine={input=>{setWorkspaceView("discover");void refine(input);}}/>
+                <TasteAnalysis key={`analysis:${result.session?.id ?? result.city}`} passport={result} busy={busy} onRefine={refineFromPanel}/>
                 {process.env.NODE_ENV === "development" && (
                   <details className="all-query-routes">
                     <summary>Technical recommendation details</summary>
@@ -1084,7 +1133,7 @@ export default function Home() {
                   onRemove={removeSignal}
                   disabled={busy}
                 />
-              </details>
+              </details>}
             </div>
             {result.session &&
               process.env.NODE_ENV === "development" &&
@@ -1108,13 +1157,13 @@ export default function Home() {
         )}
       </div>
       <footer className="workspace-footer">
-        <span>Move anywhere. Keep your vibe.</span>
-        <nav aria-label="About TastePassport">
+        <span>From what you love to where you belong.</span>
+        <nav aria-label="About FaveRoam">
           <a href="/about">About us</a>
           <a href="/privacy">Privacy</a>
         </nav>
       </footer>
-      {result && (
+      {result && (assistantOpen || assistantVisited) && (
         <ConciergeDrawer
           open={assistantOpen}
           onClose={() => setAssistantOpen(false)}
@@ -1192,7 +1241,8 @@ export default function Home() {
                   role="log"
                   aria-live="polite"
                 >
-                  {visibleMessages.map((m, i) => (
+                  {visibleMessages.length > displayedMessages.length && !showEarlierConversation && <button type="button" className="text-button" onClick={() => setShowEarlierConversation(true)}>Show earlier messages ({visibleMessages.length - displayedMessages.length})</button>}
+                  {displayedMessages.map((m, i) => (
                     <div className={`message ${m.role}`} key={i}>
                       <span className="message-label">
                         {m.role === "agent" ? "TASTEPASSPORT" : "YOU"}
@@ -1203,13 +1253,13 @@ export default function Home() {
                       {m.role === "agent" && !m.comparisonIds?.length && Array.isArray(m.recommendationIds) && m.recommendationIds.length ? <ChatRecommendations city={result.city}
                         cards={m.recommendationIds.flatMap(id=>result.cards.find(card=>card.id===id && !result.session?.hiddenCategories?.includes(card.section)) ?? [])}
                         busy={busy} savedIds={result.session?.savedCards?.map(card=>card.id) ?? []}
-                        onAsk={question=>void refine({message:question})}
-                        onSave={id=>recordFeedback(id,"like")}/> : null}
-                      {m.role === "agent" && i === visibleMessages.findLastIndex(message => message.role === "agent") && <>
+                        onAsk={askFromChat}
+                        onSave={saveFromChat}/> : null}
+                      {m.role === "agent" && i === displayedMessages.findLastIndex(message => message.role === "agent") && <>
                         {result.session?.pending && <ConceptClarification pending={result.session.pending} disabled={busy}
                           onChoose={id=>void refine({tagChoice:id})} onSkip={()=>void refine({message:"Skip this concept"})}/>}
                         {!result.agent?.pending && Boolean(result.session?.recovery?.length) && result.session && <>
-                          <RefinementRecovery session={result.session} disabled={busy} onApply={input=>void refine(input)}/>
+                          <RefinementRecovery session={result.session} disabled={busy} onApply={stableRefine}/>
                           <button className="quiet-button" disabled={busy} onClick={()=>{setAssistantOpen(false);selectWorkspaceView("preferences");}}>Adjust preferences</button>
                         </>}
                       </>}
@@ -1217,7 +1267,7 @@ export default function Home() {
                   ))}
                 </div>
                 {visibleMessages.length>0 && !busy && !result.agent?.pending && <div className="chat-next-actions" aria-label="Continue your conversation">
-                  {["Pick three things across my interests","Compare the first and second choices","What filters are saved?"].map(question=><button type="button" key={question} onClick={()=>{setComposer(question);document.querySelector<HTMLTextAreaElement>("#conversation-input")?.focus();}}>{question}</button>)}
+                  {["Pick three things across my interests","Compare the first and second visible discoveries","What filters are saved?"].map(question=><button type="button" key={question} onClick={()=>{setComposer(question);document.querySelector<HTMLTextAreaElement>("#conversation-input")?.focus();}}>{question}</button>)}
                 </div>}
               </div>
             ) : (
@@ -1232,7 +1282,7 @@ export default function Home() {
                   <GuidedRefinement
                     session={result.session}
                     disabled={busy}
-                    onApply={(input) => void refine(input)}
+                    onApply={stableRefine}
                   />
                 )}
               </div>
@@ -1257,7 +1307,7 @@ export default function Home() {
                   <button type="button" className="quiet-button" onClick={()=>{setError("");setRetryInput(undefined);setAssistantOpen(false);}}>Keep exploring</button>
                 </div>
               </div>}
-              <ChatComposer prompt={composerPrompt} disabled={busy || recoveryStatus === "checking"} onSend={text=>void submitConversation(text)}/>
+              <ChatComposer prompt={composerPrompt} draftRef={composerDraft} disabled={busy || recoveryStatus === "checking"} onSend={sendComposerMessage}/>
             </>
           )}
           {visibleMessages.length > 0 && (

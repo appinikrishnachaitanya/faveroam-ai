@@ -21,6 +21,7 @@ const safeFetch: typeof fetch = async (url, init) => {
   try {
     const response = await fetch(url, {
       ...init,
+      cache: "no-store",
       signal: init?.signal
         ? AbortSignal.any([init.signal, AbortSignal.timeout(15_000)])
         : AbortSignal.timeout(15_000),

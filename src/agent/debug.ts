@@ -16,6 +16,8 @@ const routes = [
   "account",
   "account.passports",
   "account.plans",
+  "account.first_weeks",
+  "account.rituals",
   "account.preferences",
   "destinations",
   "auth.callback",
@@ -203,6 +205,7 @@ export function debugEvent(event: DebugEvent, meta: DebugMeta = {}) {
         "familiarity",
         "tag-choice",
         "message",
+        "skipped",
       ]),
       status:
         number(meta.status) !== undefined &&

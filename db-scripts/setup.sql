@@ -1,11 +1,15 @@
--- TastePassport fresh app-data setup. Run ONCE in your Supabase SQL Editor.
--- DESTRUCTIVE: deletes saved Passports, saved plans, taste profiles and active sessions.
+-- FaveRoam complete schema and policies. Run manually in Supabase SQL Editor.
+-- DESTRUCTIVE: deletes saved Passports, day plans, First Weeks, profiles,
+-- active sessions, share links, rituals, and replacement proposals.
 -- Auth users and existing destinations (including custom entries and ordering) remain.
 -- This is a manual operator action. Never run it during a build or deployment.
 begin;
 
+drop table if exists public.ritual_replacement_proposals;
+drop table if exists public.saved_rituals;
 drop table if exists public.active_passport_sessions;
 drop table if exists public.share_links;
+drop table if exists public.saved_first_weeks;
 drop table if exists public.saved_plans;
 drop table if exists public.taste_profiles;
 drop table if exists public.saved_passports;
@@ -70,6 +74,27 @@ create policy saved_plans_read_own on public.saved_plans
 create policy saved_plans_delete_own on public.saved_plans
   for delete to authenticated using ((select auth.uid()) = user_id);
 
+create table public.saved_first_weeks (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  city text not null,
+  start_date date not null,
+  time_zone text not null,
+  days jsonb not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (user_id, city, start_date)
+);
+create index saved_first_weeks_user_date_idx on public.saved_first_weeks (user_id, start_date);
+alter table public.saved_first_weeks enable row level security;
+revoke all on public.saved_first_weeks from anon, authenticated;
+grant select, delete on public.saved_first_weeks to authenticated;
+grant all on public.saved_first_weeks to service_role;
+create policy saved_first_weeks_read_own on public.saved_first_weeks
+  for select to authenticated using ((select auth.uid()) = user_id);
+create policy saved_first_weeks_delete_own on public.saved_first_weeks
+  for delete to authenticated using ((select auth.uid()) = user_id);
+
 create table public.taste_profiles (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
@@ -118,10 +143,47 @@ alter table public.share_links enable row level security;
 revoke all on public.share_links from anon, authenticated;
 grant select, insert, delete on public.share_links to service_role;
 
+create table if not exists public.saved_rituals (
+ id uuid primary key default gen_random_uuid(),
+ user_id uuid not null references auth.users(id) on delete cascade,
+ name text not null check (char_length(btrim(name)) between 1 and 80),
+ city text not null,
+ weekday integer not null check (weekday between 0 and 6),
+ recurrence text not null check (recurrence in ('weekly','fortnightly')),
+ status text not null default 'planned' check (status in ('planned','tried','kept')),
+ card jsonb not null,
+ context jsonb not null,
+ created_at timestamptz not null default now(),
+ updated_at timestamptz not null default now()
+);
+create index if not exists saved_rituals_owner_idx on public.saved_rituals(user_id,created_at desc);
+alter table public.saved_rituals enable row level security;
+revoke all on public.saved_rituals from anon, authenticated;
+-- Private context is server-only. API responses also omit it.
+grant select (id,user_id,name,city,weekday,recurrence,status,card,created_at,updated_at) on public.saved_rituals to authenticated;
+grant all on public.saved_rituals to service_role;
+drop policy if exists saved_rituals_read_own on public.saved_rituals;
+create policy saved_rituals_read_own on public.saved_rituals for select to authenticated using ((select auth.uid())=user_id);
+create table if not exists public.ritual_replacement_proposals (
+ id uuid primary key default gen_random_uuid(),
+ user_id uuid not null references auth.users(id) on delete cascade,
+ ritual_id uuid not null references public.saved_rituals(id) on delete cascade,
+ original_updated_at timestamptz not null,
+ alternatives jsonb not null,
+ context jsonb not null,
+ expires_at timestamptz not null,
+ unique(user_id,ritual_id)
+);
+alter table public.ritual_replacement_proposals enable row level security;
+revoke all on public.ritual_replacement_proposals from anon, authenticated;
+grant all on public.ritual_replacement_proposals to service_role;
+-- No browser-accessible policies: approval goes through the authenticated server.
+create index if not exists ritual_proposals_expiry_idx on public.ritual_replacement_proposals(expires_at);
+
 commit;
 
--- Expected: six public app tables. Destination rows survive the reset.
+-- Expected: nine public app tables. Destination rows survive the reset.
 select table_name from information_schema.tables
 where table_schema = 'public' and table_name in
-  ('destinations', 'saved_passports', 'saved_plans', 'taste_profiles', 'active_passport_sessions', 'share_links')
+  ('destinations', 'saved_passports', 'saved_plans', 'saved_first_weeks', 'taste_profiles', 'active_passport_sessions', 'share_links', 'saved_rituals', 'ritual_replacement_proposals')
 order by table_name;

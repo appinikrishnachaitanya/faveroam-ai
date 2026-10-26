@@ -3,7 +3,7 @@ import { sectionLabel } from "../../src/passport/labels";
 import AudienceContext from './audience-context';
 import { Icon } from "./passport";
 import { CategoryMultiSelect } from "./category-multi-select";
-import { useEffect, useRef, useState } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import type { Passport } from '../../src/workspace/state';
 import { activeCategories } from "../../src/passport/active-categories";
 import { curatedThemes, themeCategories, relevantThemes, themeKind } from "../../src/passport/taste-themes";
@@ -13,7 +13,7 @@ import { buildAreaGuide } from '../../src/passport/area-guide';
 import { formatReturnedRating } from '../../src/passport/rating-display';
 import type { AnalysisKind, AnalysisResult } from '../../src/qloo/analysis';
 
-export default function TasteAnalysis({passport,busy,onRefine}:{passport:Passport;busy:boolean;onRefine:(input:AgentInput)=>void}) {
+export default memo(function TasteAnalysis({passport,busy,onRefine}:{passport:Passport;busy:boolean;onRefine:(input:AgentInput)=>void}) {
   const [results,setResults]=useState<Partial<Record<AnalysisKind,AnalysisResult>>>({});
   const scope=[passport.agent?.sessionId ?? '',passport.city,...passport.selected.map(i=>i.id)].join('|');
   const latestScope=useRef(scope);
@@ -45,8 +45,10 @@ export default function TasteAnalysis({passport,busy,onRefine}:{passport:Passpor
       setResultScope(scope);
       setResults(current=>({...current,[kind]:data.analysis}));
       if(kind==='taste'){
-        const missing=[...(Array.isArray(data.themeStatus?.unavailable)?data.themeStatus.unavailable:[]),...(Array.isArray(data.themeStatus?.noConnections)?data.themeStatus.noConnections:[])];
-        if(missing.length)setThemeNotice(`We found themes for some favorites. No usable theme came back for: ${missing.join(', ')}.`);
+        const unavailable=Array.isArray(data.themeStatus?.unavailable)?data.themeStatus.unavailable:[];
+        const noConnections=Array.isArray(data.themeStatus?.noConnections)?data.themeStatus.noConnections:[];
+        const notes=[...(unavailable.length?[`A theme lookup could not finish for ${unavailable.join(', ')}.`]:[]),...(noConnections.length?[`No distinct theme was returned for ${noConnections.join(', ')}.`]:[])];
+        if(notes.length)setThemeNotice(`${notes.join(' ')} The interests with results are labelled on each theme.`);
       }
       if(kind==='taste')setThemeId('');
     }catch (e) {if(latestScope.current===scope)setError(e instanceof Error && /session|latest version|changed/i.test(e.message) ? 'Your Passport was updated. Reopen Taste Insights and try again.' : 'Taste Insights could not load right now. Please try again; your Passport is unchanged.');}
@@ -74,7 +76,7 @@ export default function TasteAnalysis({passport,busy,onRefine}:{passport:Passpor
     onRefine({discovery:{sections:['Eat'],preferences:{locationPoint:`POINT(${point.longitude} ${point.latitude})`,radius:1500}}});
   }
   return <section className="taste-analysis" aria-labelledby="analysis-title">
-    <div className="analysis-intro"><span className="analysis-emblem" aria-hidden="true"><Icon name="star" size={28}/></span><div><span className="micro-label">MAKE THE CITY FEEL MORE LIKE YOU</span><h2 id="analysis-title">Find your next direction.</h2><p>Turn what you love into a new direction. Find a theme, or pick a starting place and explore food nearby.</p></div></div>
+    <div className="analysis-intro"><span className="analysis-emblem" aria-hidden="true"><Icon name="star" size={28}/></span><div><span className="micro-label">MAKE THE CITY FEEL MORE LIKE YOU</span><h2 id="analysis-title">Find your next direction.</h2><p>Turn what you love into a new direction. Find a theme, or pick a starting place and explore food nearby.</p></div><img className="insight-illustration" src="/illustrations/taste-threads.svg" width="160" height="110" alt="" aria-hidden="true" loading="lazy"/></div>
     <ol className="insight-steps" aria-label="How Taste Insights works"><li><span>01</span>Choose your tastes</li><li><span>02</span>Find a connection</li><li><span>03</span>Explore it in Discover</li></ol>
     <fieldset className="analysis-interest-picker" disabled={busy||Boolean(loading)}>
       <legend>Choose the interests to explore</legend>
@@ -97,7 +99,7 @@ export default function TasteAnalysis({passport,busy,onRefine}:{passport:Passpor
     {error&&<p role="alert">{error}</p>}
     {themeNotice&&<p className="theme-source-notice" role="status">{themeNotice}</p>}
     {loading&&<p role="status">Looking for patterns in your confirmed tastes…</p>}
-    {taste&&<div className="analysis-result"><span className="micro-label">THE THREADS BETWEEN YOUR FAVORITES</span><h3>Your taste themes</h3><p>Based on {passport.selected.filter(interest=>interestIds.includes(interest.id)).map(interest=>interest.name).join(" + ")}. These are cultural associations, not personality predictions.</p>
+    {taste&&<div className="analysis-result"><span className="micro-label">THE THREADS BETWEEN YOUR FAVORITES</span><h3>Your taste themes</h3><p>We checked each selected favorite separately. The label on every theme shows which one it came from; these are audience associations, not personality predictions.</p>
       {themes.length ? <>
         <div className="taste-theme-list" role="group" aria-label="Choose a taste theme">
           {primaryThemes.map(tag => <button key={`${tag.sourceInterestId??'combined'}:${tag.id}`} type="button"
@@ -136,4 +138,4 @@ export default function TasteAnalysis({passport,busy,onRefine}:{passport:Passpor
     </div>}
     <AudienceContext interests={passport.selected.filter(interest=>interestIds.includes(interest.id))} records={visible.demographics?.kind==='demographics'?visible.demographics.records:undefined} loading={loading==='demographics'} disabled={busy||Boolean(loading)} onLoad={()=>void load('demographics')}/>
   </section>;
-}
+});

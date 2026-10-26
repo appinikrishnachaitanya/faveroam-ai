@@ -37,7 +37,7 @@ export function constraintsFrom(text: string): Constraint[] {
     values.push("touristy");
   if (/\b(?:quiet|quieter|peaceful|peacefully|not loud|less noisy|less crowded|too crowded|not crowded)\b/i.test(text))
     values.push("crowded");
-  if (/niche|less mainstream|too mainstream|not mainstream/i.test(text))
+  if (/niche|less mainstream|too mainstream|not mainstream|\bindependent\b|\b(?:no|avoid|without|exclude)\s+(?:big\s+|large\s+)?chains?\b/i.test(text))
     values.push("mainstream");
   if (/\b(?:budget|affordable|cheaper|too expensive|not expensive|not too pricey|cheap(?:er)? eats?|inexpensive|economical)\b/i.test(text))
     values.push("expensive");

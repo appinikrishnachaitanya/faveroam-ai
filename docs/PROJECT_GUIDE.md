@@ -1,18 +1,18 @@
-# TastePassport AI — project guide
+# FaveRoam — project guide
 
 This is the single reference for the product, Qloo integration, agent design, development, deployment, demo, and submission. The [root README](../README.md) is the short entry point for judges.
 
 ## Product and customer journey
 
-Moving cities changes daily routines, but a generic city guide starts from popularity rather than the music, films, food, and other culture a newcomer already loves. TastePassport lets a person bring one to five confirmed interests to a supported destination, discover Qloo-returned places and cultural entities, adapt a Passport through conversation, and turn choices into an outing. Discovery is available to guests.
+Moving cities changes daily routines, but a generic city guide starts from popularity rather than the music, films, food, and other culture a newcomer already loves. FaveRoam lets a person bring one to five confirmed interests to a supported destination, discover Qloo-returned places and cultural entities, adapt a Passport through conversation, and turn choices into an outing. Discovery is available to guests.
 
 1. Pick a destination and one to five interests. An optional home city labels the Passport cover; it does not fetch origin-city recommendations or infer a background.
 2. Confirm ambiguous named entities. Taxonomy concepts such as cuisine and dietary options use returned Qloo tags rather than invented identifiers.
 3. Choose discovery categories. The application requests output entity types appropriate to each category, then validates and ranks returned candidates. Place cards can contain available address, image, business rating, and price metadata. Cultural content is not presented as a local event.
-4. Refine one or more sections with Ask TastePassport or guided controls. Explicit constraints and untouched categories remain intact. My Vibe saves liked cards within the Passport; rejected cards guide future relevant retrieval.
+4. Refine one or more sections with Ask FaveRoam or guided controls. Explicit constraints and untouched categories remain intact. My Vibe saves liked cards within the Passport; rejected cards guide future relevant retrieval.
 5. Compare confirmed profiles through Together. Qloo Compare returns shared cultural associations that inform joint discovery; a match is not a claim of personal compatibility.
 6. Build an outing from actual place options, select a date and suggested local times, reorder stops without replacing venues, and swap a stop deliberately. The planner does not book or verify hours, routes, or showtimes.
-7. Optionally sign in. Named taste profiles can be reused in another city; saved Passports retain the current discoveries and My Vibe; upcoming plans are separate. An already-saved active Passport updates after successful edits. A fresh Passport in the same city does not overwrite an older saved one until explicitly saved or reopened.
+7. Optionally sign in. Named taste profiles can be reused in another city; saved Passports retain current discoveries and My Vibe; day outings and seven-day First Weeks are saved separately. First Weeks can be reopened, updated, downloaded, and deleted in Upcoming plans. An already-saved active Passport updates after successful edits. A fresh Passport in the same city does not overwrite an older saved one until explicitly saved or reopened.
 
 The default demo journey is Bengaluru → Toronto with A.R. Rahman, *Interstellar*, and Indian cuisine. Confirm the exact artist and film; then ask for cheaper vegetarian Indian food while keeping Music and Movies unchanged. Follow with “make those cheaper,” inspect the actual decision receipt, and plan dinner plus a cinema. Use only results returned by the live app when recording; change the script if a provider returns different choices.
 
@@ -22,7 +22,7 @@ Gemini interprets requests and writes grounded replies. Qloo supplies real cultu
 
 The hackathon [developer guide](https://docs.qloo.com/reference/qloo-llm-hackathon-developer-guide) describes the hackathon host `https://hackathon.api.qloo.com`. The server sends `X-Api-Key` from `QLOO_API_KEY`; credentials and raw provider responses never belong in the public repository. The main operations are:
 
-| Qloo operation | Use in TastePassport |
+| Qloo operation | Use in FaveRoam |
 |---|---|
 | `/search` and entity details | Resolve named inputs and enrich returned entities before identity confirmation. |
 | `/v2/tags` and `/v2/tags/types` | Resolve supported cuisine, dietary, dish, ambience, and venue concepts; the latter also supports diagnostics. |
@@ -39,7 +39,7 @@ Cards retain available Qloo metadata, query inputs, and returned contribution ev
 
 ## Agent architecture
 
-TastePassport is one stateful agent with bounded tool use. A Next.js API route owns the turn; Gemini uses the native `@google/genai` SDK with Vertex AI Express Mode; server policy owns authorization and state changes.
+FaveRoam is one stateful agent with bounded tool use. A Next.js API route owns the turn; Gemini uses the native `@google/genai` SDK with Vertex AI Express Mode; server policy owns authorization and state changes.
 
 ```mermaid
 flowchart LR
@@ -73,9 +73,9 @@ Taste Insights can turn a returned theme into a soft taste signal for a subseque
 
 ## Accounts, state and database
 
-Guest discovery needs Qloo but no account. With Supabase configured, Auth supports optional sign-in and profile ownership. `saved_passports` stores a bounded snapshot with My Vibe, feedback, and per-category preferences; it excludes chat history and credentials. `taste_profiles` stores portable confirmed tastes and compatible preferences for another destination. `saved_plans` stores dated outing stops/times. Server-only `active_passport_sessions` preserves the editable session across process restarts. `destinations` is an editable catalogue, not a city check constraint on saved rows.
+Guest discovery needs Qloo but no account. With Supabase configured, Auth supports optional sign-in and profile ownership. `saved_passports` stores a bounded snapshot with My Vibe, feedback, and per-category preferences; it excludes chat history and credentials. `taste_profiles` stores portable confirmed tastes and compatible preferences for another destination. `saved_plans` stores dated outing stops/times; `saved_first_weeks` stores seven-day plans with compact snapshots of verified places. Server-only `active_passport_sessions` preserves the editable session across process restarts. `destinations` is an editable catalogue, not a city check constraint on saved rows.
 
-The only schema file is [db-scripts/setup.sql](../db-scripts/setup.sql). **It is destructive to app-owned saved Passports, plans, taste profiles, and active sessions.** It preserves Supabase Auth users and existing destination rows, then inserts starter destinations only when absent. Run it manually in the Supabase SQL Editor for a fresh/reset environment. Do not run it during deployment or CI. Set `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, and server-only `SUPABASE_SERVICE_ROLE_KEY`; set `APP_ORIGIN` to the deployed HTTPS origin. Test registration, email confirmation, login, save/restore, deletion, and ownership with real accounts before including those actions in a demo.
+The canonical schema bootstrap is [db-scripts/setup.sql](../db-scripts/setup.sql). **It is destructive to app-owned saved Passports, plans, taste profiles, share links, and active sessions.** It preserves Supabase Auth users and existing destination rows, then inserts starter destinations only when absent. Run it manually in the Supabase SQL Editor to reset an existing installation to the current schema; do not run it during deployment or CI. The setup script also includes First Week, ritual and sharing policies. Start a New Passport after resetting active sessions. Set `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, and server-only `SUPABASE_SERVICE_ROLE_KEY`; set `APP_ORIGIN` to the deployed HTTPS origin. Test registration, email confirmation, login, save/restore, deletion, and ownership with real accounts before including those actions in a demo.
 
 The browser stores only a per-tab active-session pointer for signed-in refresh. The server reloads canonical state; the pointer cannot create a lost session. A separate per-tab marker permits automatic snapshot updates only after that exact session was explicitly saved or reopened. Deleting the saved Passport clears the marker while keeping the current active view. Guest tab recovery holds a bounded local Passport view but requires a valid server session before edits or saves.
 
@@ -119,7 +119,7 @@ Per-turn budgets and session locks limit individual operations; this app does no
 
 The [hackathon page](https://qloo.devpost.com/) asks for an agentic tool/app where Qloo’s cultural graph makes the result materially better than a generic LLM. Frame the project around **cultural continuity for a newcomer**, not the number of endpoints or cards. The published judging areas described in the project materials are technological implementation, design, potential impact, and quality of the idea. The submission should show a functional public demo, public code repository with an open-source license, and a clear project description; verify the current rules and field requirements on Devpost before final submission.
 
-Suggested project name: **TastePassport AI — The Cultural Belonging Agent**. Elevator pitch: **Move anywhere. Keep your vibe. A Qloo-powered agent that carries your cultural tastes into a new city, adapts to feedback, and helps you find common ground.**
+Suggested project name: **FaveRoam — The Cultural Belonging Agent**. Elevator pitch: **From what you love to where you belong. A Qloo-powered agent that carries your cultural tastes into a new city, adapts to feedback, and helps you find common ground.**
 
 For the project story: explain the relocation problem, the guest journey, actual Qloo endpoint roles, native Gemini function calling plus server-side validation, Together and planning outcomes, the difficulty of ambiguous names and constraint preservation, and what was learned about evidence-backed explanations. List Next.js, React, TypeScript, Node.js, Qloo, Gemini, `@google/genai`, MCP, Supabase, PostgreSQL, and the actual hosting platform used by the submitted build. State limitations honestly; do not claim measured superiority from an illustrative model-only comparison. The repository includes [MIT](../LICENSE).
 
@@ -136,4 +136,4 @@ Use actual app screenshots for media (identity confirmation, discovery, agent re
 
 ## Boundaries and remaining acceptance
 
-TastePassport does not book, verify live opening hours, certify menu ingredients/allergens, provide guaranteed route timing, or turn content recommendations into real events. Geographic audience affinity and aggregate demographics do not describe an individual. Returned image availability and category coverage vary by provider and destination. Failed searches keep earlier choices only when clearly distinguished from un-applied constraints. Before submission, rerun a signed-out hosted journey with real Qloo and Gemini, account save/restore if demonstrated, a complete outing, public source/license access, and the exact deployment commit.
+FaveRoam does not book, verify live opening hours, certify menu ingredients/allergens, provide guaranteed route timing, or turn content recommendations into real events. Geographic audience affinity and aggregate demographics do not describe an individual. Returned image availability and category coverage vary by provider and destination. Failed searches keep earlier choices only when clearly distinguished from un-applied constraints. Before submission, rerun a signed-out hosted journey with real Qloo and Gemini, account save/restore if demonstrated, a complete outing, public source/license access, and the exact deployment commit.

@@ -106,6 +106,8 @@ export function classify(e: Entity): Section | undefined {
     )
   )
     return;
+  // A cinema can have a café amenity; its main activity remains cultural.
+  if (/cinema|movie theater|movie theatre/.test(tags)) return "Culture";
   if (/coffee|cafe|café|espresso|tea house/.test(tags)) return "Coffee";
   if (/restaurant|dining|cuisine|food|bistro|bakery|pizza/.test(tags))
     return "Eat";
