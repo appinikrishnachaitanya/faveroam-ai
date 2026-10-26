@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { memo, useEffect, useId, useRef, useState } from "react";
 import { Icon } from "./passport";
 
 export type PassportDestination = "discover" | "saved" | "plan" | "preferences" | "together" | "connections";
@@ -13,7 +13,7 @@ const destinations: {id: PassportDestination; label: string; icon: string}[] = [
   {id:"connections",label:"Taste insights",icon:"star"},
 ];
 
-export default function PassportNavigation({active,savedCount,onNavigate}:{
+function PassportNavigation({active,savedCount,onNavigate}:{
   active: PassportDestination;
   savedCount: number;
   onNavigate: (destination: PassportDestination) => void;
@@ -54,3 +54,4 @@ export default function PassportNavigation({active,savedCount,onNavigate}:{
     </aside>
   );
 }
+export default memo(PassportNavigation);

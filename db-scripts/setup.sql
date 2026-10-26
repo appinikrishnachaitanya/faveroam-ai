@@ -1,11 +1,13 @@
 -- TastePassport fresh app-data setup. Run ONCE in your Supabase SQL Editor.
--- DESTRUCTIVE: deletes saved Passports, saved plans, taste profiles and active sessions.
+-- DESTRUCTIVE: deletes saved Passports, day plans, First Weeks, profiles,
+-- active sessions, and share links. Auth users and destination rows remain.
 -- Auth users and existing destinations (including custom entries and ordering) remain.
 -- This is a manual operator action. Never run it during a build or deployment.
 begin;
 
 drop table if exists public.active_passport_sessions;
 drop table if exists public.share_links;
+drop table if exists public.saved_first_weeks;
 drop table if exists public.saved_plans;
 drop table if exists public.taste_profiles;
 drop table if exists public.saved_passports;
@@ -70,6 +72,27 @@ create policy saved_plans_read_own on public.saved_plans
 create policy saved_plans_delete_own on public.saved_plans
   for delete to authenticated using ((select auth.uid()) = user_id);
 
+create table public.saved_first_weeks (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  city text not null,
+  start_date date not null,
+  time_zone text not null,
+  days jsonb not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (user_id, city, start_date)
+);
+create index saved_first_weeks_user_date_idx on public.saved_first_weeks (user_id, start_date);
+alter table public.saved_first_weeks enable row level security;
+revoke all on public.saved_first_weeks from anon, authenticated;
+grant select, delete on public.saved_first_weeks to authenticated;
+grant all on public.saved_first_weeks to service_role;
+create policy saved_first_weeks_read_own on public.saved_first_weeks
+  for select to authenticated using ((select auth.uid()) = user_id);
+create policy saved_first_weeks_delete_own on public.saved_first_weeks
+  for delete to authenticated using ((select auth.uid()) = user_id);
+
 create table public.taste_profiles (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
@@ -120,8 +143,8 @@ grant select, insert, delete on public.share_links to service_role;
 
 commit;
 
--- Expected: six public app tables. Destination rows survive the reset.
+-- Expected: seven public app tables. Destination rows survive the reset.
 select table_name from information_schema.tables
 where table_schema = 'public' and table_name in
-  ('destinations', 'saved_passports', 'saved_plans', 'taste_profiles', 'active_passport_sessions', 'share_links')
+  ('destinations', 'saved_passports', 'saved_plans', 'saved_first_weeks', 'taste_profiles', 'active_passport_sessions', 'share_links')
 order by table_name;

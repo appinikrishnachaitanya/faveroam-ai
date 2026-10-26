@@ -64,6 +64,7 @@ import { accountRequest, showNotice } from "../src/account/browser";
 import { saveOnboardingDraft, restoreOnboardingDraft, clearOnboardingDraft } from "../src/workspace/draft-recovery";
 import type { Familiarity } from "../src/passport/evidence";
 import type { SavedPlan } from "../src/account/plans";
+import type { SavedFirstWeek } from "../src/account/first-weeks";
 interface Message {
   role: "agent" | "user";
   text: string;
@@ -122,6 +123,7 @@ export default function Home() {
   const [draft, setDraft] = useState<string[]>([]);
   const [draftHydrated, setDraftHydrated] = useState(false);
   const [editingPlan, setEditingPlan] = useState<{plan:SavedPlan;nonce:number}>();
+  const [editingFirstWeek,setEditingFirstWeek]=useState<{week:SavedFirstWeek;nonce:number}>();
   // Keep editingPlan in sync after a save so the DayOut component never
   // re-populates from a stale plan (the root cause of the time-revert bug).
   useEffect(() => {
@@ -701,8 +703,33 @@ export default function Home() {
   useLayoutEffect(()=>{panelActions.current={refine,selectWorkspaceView};});
   const stableRefine = useCallback((input:AgentInput)=>{void panelActions.current.refine(input);},[]);
   const refineFromPanel = useCallback((input:AgentInput)=>{setShowSaved(false);panelActions.current.selectWorkspaceView('discover');void panelActions.current.refine(input);},[]);
+  const stableSelectWorkspaceView=useCallback((next:typeof workspaceView)=>panelActions.current.selectWorkspaceView(next),[]);
   const openPreferences = useCallback(()=>panelActions.current.selectWorkspaceView('preferences'),[]);
   const planSaveHandled = useCallback(()=>setSavePlanRequest(0),[]);
+  const editWeekHandled=useCallback(()=>setEditingFirstWeek(undefined),[]);
+  const freshHandler=useRef(fresh);
+  useLayoutEffect(()=>{freshHandler.current=fresh;});
+  const stableFresh=useCallback(()=>freshHandler.current(),[]);
+  const accountChangedHandler=useCallback((signedIn:boolean,firstName?:string)=>{setAccountSignedIn(signedIn);setAccountFirstName(signedIn?firstName?.trim()??'':'');},[]);
+  const passportSavedHandler=useCallback((sessionId?:string)=>{if(sessionId)rememberSavedSession(window.sessionStorage,sessionId);else clearSavedSession(window.sessionStorage);setSavedSessionId(sessionId);},[]);
+  const editPlanHandler=useCallback((plan:SavedPlan)=>{setEditingPlan(current=>({plan,nonce:(current?.nonce??0)+1}));setWorkspaceView('plan');},[]);
+  const editWeekHandler=useCallback((week:SavedFirstWeek)=>{setEditingFirstWeek(current=>({week,nonce:(current?.nonce??0)+1}));setWorkspaceView('plan');},[]);
+  const restoreAccountPassport=useCallback((passport:Passport)=>{
+    freshHandler.current();setResult(passport);setCity(passport.city);setDraft(passport.selected.map(seed=>seed.name));
+    setRequestedActivities((passport.session?.activeCategories??[]).filter(section=>!passport.session?.hiddenCategories.includes(section)));
+    setInitialMode(passport.session?.discoveryMode??'familiar');setConstraints(passport.session?.constraints??[]);setPhase('ready');setProviderHealth('unconfigured');
+    void fetch('/api/agent/capabilities').then(response=>response.json()).then(value=>setProviderHealth(value.health)).catch(()=>{});
+    setAdaptation('Your saved Passport is back. Refine a chapter for fresh suggestions.');
+  },[]);
+  const openAssistantFromDiscover=useCallback((request?:string)=>{if(request)setComposer(request);setAssistantTab('ask');setAssistantOpen(true);},[]);
+  const shareFromDiscover=useCallback(()=>document.getElementById('share-taste-title')?.scrollIntoView({behavior:'smooth',block:'center'}),[]);
+  const openAssistant=useCallback(()=>setAssistantOpen(true),[]);
+  const navigateWorkspace=useCallback((destination:'discover'|'saved'|'plan'|'preferences'|'together'|'connections')=>{
+    setShowSaved(destination==='saved');
+    stableSelectWorkspaceView(destination==='saved'?'discover':destination);
+    requestAnimationFrame(()=>document.getElementById('passport-workspace-content')?.focus({preventScroll:true}));
+  },[stableSelectWorkspaceView]);
+  const openConnections=useCallback(()=>stableSelectWorkspaceView('connections'),[stableSelectWorkspaceView]);
   const findPlanActivity = useCallback((id:string)=>{
     const target=id==='Cinema'?'cinemas':id==='Nightlife'?'nightclubs':id==='Coffee'?'coffee shops':id==='Eat'?'restaurants':'museums';
     const kept=id==='Coffee'?'dining, music and movies':id==='Eat'?'coffee, music and movies':'dining, coffee, music and movies';
@@ -789,30 +816,14 @@ export default function Home() {
         <nav className="header-controls" aria-label="Passport actions">
           {accountSignedIn && <span className="header-greeting" aria-label={accountFirstName ? `Signed in as ${accountFirstName}` : "Signed in"}>{accountFirstName ? `Hi, ${accountFirstName}` : "Welcome back"}</span>}
           <AccountControl
-            onAccountChange={(signedIn,firstName)=>{setAccountSignedIn(signedIn);setAccountFirstName(signedIn?firstName?.trim()??"":"");}}
-            onPassportSaved={sessionId=>{if(sessionId)rememberSavedSession(window.sessionStorage,sessionId);else clearSavedSession(window.sessionStorage);setSavedSessionId(sessionId);}}
-            onEditPlan={plan=>{setEditingPlan(current=>({plan,nonce:(current?.nonce??0)+1}));setWorkspaceView("plan");}}
+            onAccountChange={accountChangedHandler}
+            onPassportSaved={passportSavedHandler}
+            onEditPlan={editPlanHandler}
+            onEditWeek={editWeekHandler}
             passport={result}
             disabled={busy}
-            onSignOut={fresh}
-            onRestore={(passport) => {
-              fresh();
-              setResult(passport);
-              setCity(passport.city);
-              setDraft(passport.selected.map((s) => s.name));
-              setRequestedActivities((passport.session?.activeCategories ?? []).filter(section=>!passport.session?.hiddenCategories.includes(section)));
-              setInitialMode(passport.session?.discoveryMode ?? "familiar");
-              setConstraints(passport.session?.constraints ?? []);
-              setPhase("ready");
-              setProviderHealth("unconfigured");
-              void fetch("/api/agent/capabilities")
-                .then((response) => response.json())
-                .then((value) => setProviderHealth(value.health))
-                .catch(() => {});
-              setAdaptation(
-                "Your saved Passport is back. Refine a chapter for fresh suggestions.",
-              );
-            }}
+            onSignOut={stableFresh}
+            onRestore={restoreAccountPassport}
           />
           {result && (
             <div className="topbar-actions">
@@ -925,22 +936,16 @@ export default function Home() {
             <PassportCover
               passport={result}
               origin={origin}
-              onConnections={() => {
-                selectWorkspaceView("connections");
-              }}
+              onConnections={openConnections}
             />
             <div className="passport-workspace">
               <PassportNavigation active={workspaceView === "discover" && showSaved ? "saved" : workspaceView}
                 savedCount={result.session?.savedCards.length ?? 0}
-                onNavigate={destination=>{
-                  setShowSaved(destination === "saved");
-                  selectWorkspaceView(destination === "saved" ? "discover" : destination);
-                  requestAnimationFrame(()=>document.getElementById("passport-workspace-content")?.focus({preventScroll:true}));
-                }}/>
+                onNavigate={navigateWorkspace}/>
               <div id="passport-workspace-content" className="passport-workspace-content" tabIndex={-1}>
               <button
                 className="assistant-launch"
-                onClick={() => setAssistantOpen(true)}
+                onClick={openAssistant}
                 aria-expanded={assistantOpen}
                 aria-controls="taste-concierge"
               >
@@ -974,7 +979,8 @@ export default function Home() {
               className="workspace-view-anchor"
               hidden={workspaceView !== "discover"}
             >
-              {!showSaved && <DiscoveryConcierge city={result.city} firstName={accountSignedIn?accountFirstName:undefined} busy={busy} onAsk={request=>{if(request)setComposer(request);setAssistantTab("ask");setAssistantOpen(true);}} onNavigate={selectWorkspaceView} onShare={()=>document.getElementById('share-taste-title')?.scrollIntoView({behavior:'smooth',block:'center'})}/>}
+              {!showSaved && <DiscoveryConcierge city={result.city} firstName={accountSignedIn?accountFirstName:undefined} busy={busy} onAsk={openAssistantFromDiscover} onNavigate={stableSelectWorkspaceView} onShare={shareFromDiscover}/>}
+              {!showSaved && <VibeDial key={`vibe:${result.agent?.sessionId??result.city}`} passport={result} busy={busy} onApply={stableRefine}/>}
               {result.session && !showSaved && (
                 <FamiliarityControl
                   session={result.session}
@@ -1022,9 +1028,8 @@ export default function Home() {
               ) : (
                 <>
                   {mappedPlaces(result.cards.filter(card=>!result.session?.hiddenCategories.includes(card.section))).length>0&&<button className="quiet-button map-toggle" type="button" aria-expanded={showMap} onClick={()=>setShowMap(value=>!value)}>{showMap?'Hide map':'Show map'}</button>}
-                  {showMap&&visibleResult&&mappedPlaces(visibleResult.cards).length>0&&<PassportMap cards={visibleResult.cards} onSelect={openMappedCard}/>}
+                  {workspaceView==='discover'&&showMap&&visibleResult&&mappedPlaces(visibleResult.cards).length>0&&<PassportMap cards={visibleResult.cards} onSelect={openMappedCard}/>}
                   {visibleResult&&<PassportSections disabled={busy} result={visibleResult} feedback={feedback} onFeedback={stableFeedback} updates={updates} updating={updating}/>}
-                  <VibeDial key={`vibe:${result.agent?.sessionId??result.city}`} passport={result} busy={busy} onApply={stableRefine}/>
                   <ShareTasteCard key={`share:${result.agent?.sessionId??result.city}`} passport={result}/>
                 </>
               )}
@@ -1045,7 +1050,7 @@ export default function Home() {
                 saveRequest={savePlanRequest}
                 onSaveRequestHandled={planSaveHandled}
               />
-              <FirstWeek key={`first-week:${result.session?.id??result.city}`} passport={result}/>
+              <FirstWeek key={`first-week:${result.session?.id??result.city}`} passport={result} signedIn={accountSignedIn} editWeek={editingFirstWeek} onEditWeekHandled={editWeekHandled}/>
             </div>
             <div
               className="workspace-panel"

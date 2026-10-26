@@ -8,16 +8,18 @@ No deployment is implied by a successful push.
 
 | Milestone | Status | Acceptance still needed |
 | --- | --- | --- |
-| Repository and existing feature audit | Completed | Live provider/auth acceptance is separate |
-| Public name, tagline, metadata, original logo assets | In progress | Complete remaining public exports and visual review |
-| Premium typography and responsive landing/workspace | Pending | 375/768/1440 browser checks and contrast review |
-| Previous regression findings | In progress | Map tiles, visible-order comparisons, independent/quiet constraints, classification, nearby shared results |
-| Two Roots, One City | Pending | Extend existing Common Ground and WeekDay representation; approved, rejected and locked activities |
-| Vibe Dial | Pending | Up to three explicit evidence-backed choices, scoped changes and receipt |
-| My Rituals | Pending | Durable account persistence and safe guest behavior |
-| Single-stop repair, undo, comparison UI | Pending | Preserve all other activities and show evidence |
-| Sharing/auth/calendar acceptance | Pending | Expiry/revoke, guest transition, reload, ICS import |
-| Final regression and release gates | Pending | Automated and actual browser/live acceptance |
+| Existing feature audit and original brand assets | Completed | Public submission media review is separate |
+| Responsive landing and workspace palette | Implemented | Landing checked at 375/768/1440; full workspace needs real-device review |
+| Taste Insights theme quality | Implemented in code | Per-interest attribution/caps and honest partial-result wording; live Qloo diversity remains |
+| First Week account persistence | Implemented in code | Save/reopen/update/delete; run updated `setup.sql` and verify with a signed-in account |
+| Navigation render cost | Improved in code | Stable callbacks, memoized account/navigation, map released off Discover; loaded-browser profiling remains |
+| New local illustrations | Implemented | Insights, My Vibe, Vibe Dial and First Week; review responsive balance |
+| Map and shared geography | Implemented in code | Attributed tiles and explicit place anchor/radius; live tiles remain unverified, median clustering deferred |
+| Two Roots, One City | Implemented in code | Live-provider journey remains; candidate pools can be sparse |
+| My Rituals | Deferred | Not part of the current requested changes |
+| Stop repair, undo, and comparison UI | Implemented in code | Full browser acceptance remains |
+| Sharing, account, and calendar acceptance | Partial | Validate live link lifecycle, real account ownership, and ICS import |
+| Final release gates | Pending | Full tests/build/smoke/browser checks, remote CI, and deployed revision verification |
 
 ## Existing capabilities to extend
 
@@ -26,13 +28,13 @@ Qloo entity/tag resolution and Insights, Compare, Supabase account persistence,
 MapLibre with schematic fallback, seven-day planning, opaque expiring share links,
 and actual decision receipts already exist. Avoid parallel implementations.
 
-## Current changes
+## Original implementation notes
 
 Public-facing application name and tagline updated without renaming internal
 identifiers, lowercase event names, database tables, routes or environment keys.
 Original SVG mark, light/dark wordmarks and 3:2 cover added under `public/brand`.
 Presentation tokens introduce the requested navy, amber and off-white palette.
-This is a brand foundation milestone, not completion of the redesign or features.
+This was the initial brand foundation; later milestones below record the expanded work.
 
 ## Foundation validation
 
@@ -101,10 +103,8 @@ counts new and retained entity IDs; unsuccessful changes are not called successf
 No usable returned themes means the quiz is omitted. Choices are memoized and do
 not add provider calls until the user explicitly applies a direction.
 
-470 tests and the production build/type check passed. Live provider acceptance is
-still pending. Landing/workspace redesign requires the requested design preview
-before application. Map tiles, visible-card references, shared-place geography,
-sharing acceptance, rituals and durable weekly persistence remain open.
+470 tests and the production build/type check passed at that earlier milestone.
+Later sections record the responsive redesign, map, sharing, and First Week work.
 
 ## Combined design, interaction and sharing milestone
 
@@ -129,11 +129,39 @@ sharing acceptance, rituals and durable weekly persistence remain open.
 - Chromium landing checks passed at 375, 768 and 1440 pixels: no horizontal overflow,
   local fonts, branding and the city CTA. These are not full authenticated/live discovery tests.
 
-Deferred/unfinished: real-provider map/category acceptance, signed-in save/reload,
-rituals, durable weekly persistence, full Two Roots live journey and deployment.
+Still awaiting live acceptance: map tiles and provider-driven results, signed-in
+save/reload including First Weeks, full Two Roots flow and deployed revision.
+My Rituals is deferred, and median neighbourhood clustering remains deliberately
+parked.
 
 Final local gates for this combined milestone: 473 tests passed, documentation
 links passed, production build passed, typecheck passed, production smoke passed.
+
+## Insights, saved weeks, illustrations and responsiveness
+
+- Taste Insights now treats themes as individual-interest results, names the source
+  interest on each theme, limits a seed to a short list from a taxonomy family,
+  and distinguishes an unavailable lookup from a successful lookup with no theme.
+- New local SVG illustrations appear in Taste Insights, My Vibe, Vibe Dial and
+  First Week. Passport and Common Ground continue to use their existing original
+  artwork. No external image calls were added.
+- Added `saved_first_weeks` to `db-scripts/setup.sql`. Signed-in users can save and
+  upsert seven days by destination/start date, reopen or update the saved week,
+  download its `.ics`, and delete it from Upcoming plans. Requests carry IDs only;
+  the server reconstructs venue data from the active session and stores a compact
+  snapshot. An owner may edit an existing saved week after its source session has
+  been refreshed; prior venues are accepted only from that owner’s stored week.
+- Stabilized account and navigation callbacks to avoid rerendering large hidden
+  account/panel subtrees on each workspace update. MapLibre is released when the
+  user leaves Discover. This is a code-level reduction; no real-device latency
+  benchmark has been measured.
+- Updated workspace palette and text contrast on primary action, insight, account,
+  map, planner and Common Ground surfaces. Responsive full-workspace visual review
+  is still required; the automated screenshot check covers the landing screen.
+
+The user approved loss of existing app data. The updated `setup.sql` is still a
+manual destructive reset; run it in Supabase before deploying to create the new
+table. It must never run in CI or during deployment.
 
 Changed-file inventory:
 

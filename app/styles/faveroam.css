@@ -64,3 +64,59 @@ body { background:#f8f6f1; color:#17243b; }
 body,.progressive-app,.progressive-app button,.progressive-app input,.progressive-app select,.progressive-app textarea { font-family:Inter,ui-sans-serif,system-ui,sans-serif; }
 .landing-actions .primary-button { white-space:nowrap; justify-content:center; font-size:14px; padding:12px 16px; }
 .progressive-app .onboarding-heading h1 em { color:#277c78; }
+
+/* Keep the same high-contrast indigo/amber system throughout the workspace,
+   including existing component styles that predate the FaveRoam palette. */
+:root { --ui-ink:#17243b; --ui-muted:#526078; --ui-action:#17243b; --ui-action-hover:#273c59; --ui-surface:#fffefa; --ui-tint:#f5f3ed; --ui-border:#d8dee4; --ui-accent:#8b5707; }
+.progressive-app :is(.passport-sidebar,.discovery-concierge,.day-out-plan,.first-week-panel,.taste-analysis,.analysis-result,.intelligence-preferences,.together-reveal,.shared-story,.partner-interests,.together-differences,.area-choices article,.taste-theme-list button,.week-stop-editor,.upcoming-plans,.saved-plan) { color:var(--ui-ink); }
+.progressive-app :is(.passport-sidebar,.day-out-plan,.first-week-panel,.analysis-result,.intelligence-preferences,.together-reveal,.together-differences,.area-choices article,.week-stop-editor,.upcoming-plans,.saved-plan) :is(h2,h3,h4,p,small,label,summary,legend,span) { color:var(--ui-ink); }
+.progressive-app :is(.analysis-result,.intelligence-preferences,.together-reveal,.together-differences,.week-stop-editor,.saved-plan) :is(.helper,small,.micro-label) { color:var(--ui-muted); }
+.progressive-app :is(input,select,textarea) { color:#17243b; background-color:#fffefa; border-color:#aab5c0; }
+.progressive-app :is(input,select,textarea)::placeholder { color:#667286; opacity:1; }
+.progressive-app :is(.taste-analysis,.intelligence-content,.day-out-plan,.first-week-panel,.account-dialog,.concierge-drawer) :is(button,a) { -webkit-tap-highlight-color:transparent; }
+.progressive-app .taste-analysis .taste-theme-list button[aria-pressed="true"] { color:#fffefa; background-color:#17243b; border-color:#17243b; }
+.progressive-app .taste-analysis .taste-theme-list button[aria-pressed="true"] small { color:#fff3d9; }
+.progressive-app .taste-analysis .taste-theme-list button:not([aria-pressed="true"]) { color:#17243b; background:#f4f1e9; border-color:#b5bec8; }
+.progressive-app .assistant-launch { background:#17243b; border-color:#17243b; color:#fffefa; box-shadow:0 8px 22px #101c3528; }
+.progressive-app .primary-button,.progressive-app .intelligence-apply { background:#f3b65c; border-color:#d69a3f; color:#17243b; box-shadow:0 5px 14px #101c3514; }
+.progressive-app .primary-button:hover:not(:disabled),.progressive-app .intelligence-apply:hover:not(:disabled) { background:#eaa43b; border-color:#b9781e; color:#17243b; }
+.progressive-app .intelligence-intro { border-color:#314563; background:radial-gradient(circle at 90% 5%,#f3b65c38 0 11%,transparent 35%),linear-gradient(117deg,#101c35,#283d5a); }
+.progressive-app .intelligence-modes button[aria-pressed="true"] { border-color:#17243b; background:linear-gradient(145deg,#17243b,#344966); color:#fffefa; }
+.progressive-app .analysis-intro { border:1px solid #d8dee4; border-radius:20px; padding:clamp(18px,3vw,30px); background:radial-gradient(circle at 92% 15%,#f3b65c4a,transparent 32%),linear-gradient(120deg,#fffefa,#f4f1e9); }
+.progressive-app .analysis-intro h2,.progressive-app .together-heading h3 { color:#17243b; }
+.progressive-app .shared-story { background:#eef1f5; border-left:4px solid #277c78; }
+.progressive-app .shared-story p { color:#35445b; }
+.progressive-app .vibe-intro,.progressive-app .outing-intro { border-color:#d8dee4; background:radial-gradient(ellipse at 95% 0,#f3b65c38,transparent 46%),linear-gradient(120deg,#fffefa,#f5f3ed); }
+.progressive-app .vibe-intro :is(h2,h3,p),.progressive-app .outing-intro :is(h2,h3,p) { color:#17243b; }
+.progressive-app .vibe-intro .micro-label,.progressive-app .outing-intro .micro-label { color:#526078; }
+.progressive-app .vibe-emblem,.progressive-app .outing-emblem { background:#eaf4f1; color:#195d58; border-color:#bad6d0; }
+.progressive-app .day-out-illustration { display:block; flex:0 0 clamp(90px,14vw,150px); width:clamp(90px,14vw,150px); height:auto; margin-left:auto; }
+.progressive-app .passport-navigation button[aria-current="page"] { background:#f3b65c; color:#17243b; border-color:#d69a3f; }
+.progressive-app .passport-menu-toggle { background:#17243b; color:#fffefa; }
+.progressive-app :is(.analysis-result,.intelligence-preferences,.together-reveal,.week-stop-editor,.saved-plan) :is(p,small,.helper,.micro-label,label,summary) { color:#35445b; }
+.progressive-app .analysis-result :is(h3,h4,strong) { color:#17243b; }
+.progressive-app .discovery-card,.progressive-app .together-cards article { transition:box-shadow .14s ease,border-color .14s ease; }
+.progressive-app .discovery-card:hover,.progressive-app .together-cards article:hover { transform:none; box-shadow:0 9px 22px #101c3512; }
+.progressive-app :is(button,input,select,textarea):disabled { opacity:.68; }
+.first-week-actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:14px; }
+.first-week-actions .primary-button { width:auto; margin:0; }
+.saved-week-days { display:grid; gap:8px; margin:14px 0; }
+.saved-week-days details { min-width:0; padding:10px 12px; border:1px solid var(--ui-border); border-radius:10px; background:#f5f3ed; }
+.saved-week-days summary { cursor:pointer; font-weight:700; }
+.saved-week-days ol { padding-inline-start:22px; }
+.saved-week-days li { padding:7px 0; overflow-wrap:anywhere; }
+.saved-week-days li strong,.saved-week-days li span { display:block; }
+.saved-week-days li span { color:var(--ui-muted); font-size:13px; }
+.insight-illustration { display:block; flex:0 0 clamp(100px,16vw,160px); width:clamp(100px,16vw,160px); height:auto; margin-left:auto; }
+.first-week-heading { display:flex; align-items:center; justify-content:space-between; gap:18px; margin-bottom:16px; }
+.first-week-heading > div { min-width:0; }
+.first-week-heading img { display:block; flex:0 0 clamp(90px,14vw,140px); width:clamp(90px,14vw,140px); height:auto; }
+.vibe-collection-illustration { display:block; flex:0 0 clamp(90px,14vw,135px); width:clamp(90px,14vw,135px); height:auto; margin-left:auto; }
+.vibe-dial-heading { display:flex; align-items:center; justify-content:space-between; gap:16px; }
+.vibe-dial-heading > div { min-width:0; }
+.vibe-dial-heading img { flex:0 0 clamp(70px,11vw,105px); width:clamp(70px,11vw,105px); height:auto; }
+.first-week-heading img,.vibe-dial-heading img,.vibe-collection-illustration,.insight-illustration,.day-out-illustration,.together-heading>img { animation:illustration-drift 8s ease-in-out infinite; }
+@keyframes illustration-drift { 0%,100% { transform:translateY(0) } 50% { transform:translateY(-4px) } }
+@media(max-width:640px){.first-week-actions{align-items:stretch}.first-week-actions>*{flex:1 1 100%}.saved-plan{grid-template-columns:1fr}.progressive-app .passport-navigation button[aria-current=page]{color:#17243b}}
+@media(max-width:640px){.insight-illustration{flex-basis:80px;width:80px}.first-week-heading img{flex-basis:78px;width:78px}.vibe-collection-illustration{flex-basis:76px;width:76px}.vibe-dial-heading img{flex-basis:62px;width:62px}.progressive-app .analysis-intro{gap:10px}.vibe-dial-heading{gap:8px}.progressive-app .day-out-illustration{flex-basis:72px;width:72px}}
+@media(prefers-reduced-motion:reduce){.first-week-heading img,.vibe-dial-heading img,.vibe-collection-illustration,.insight-illustration,.day-out-illustration,.together-heading>img{animation:none}}

@@ -25,7 +25,12 @@ export function themeCategories(theme:TasteTag|undefined,active:Section[]):Secti
 export function curatedThemes(tags:TasteTag[],limit=6):TasteTag[] {
   const grouped=new Map<string,TasteTag[]>();
   const meanings:string[]=[];
+  const perSource=new Map<string,number>();
+  const perSourceFamily=new Map<string,number>();
   for(const tag of displayTags(tags)){
+    const source=tag.sourceInterestId;
+    const family=tag.id.split(':').slice(2,4).join(':');
+    if(source&&((perSource.get(source)??0)>=3 || (perSourceFamily.get(`${source}:${family}`)??0)>=2))continue;
     const key=themeMeaning(tag.name);
     if(!key) continue;
     // Stronger deduplication: reject a theme if its meaning key is:
@@ -46,7 +51,7 @@ export function curatedThemes(tags:TasteTag[],limit=6):TasteTag[] {
     });
     if (isDuplicate) continue;
     meanings.push(key);
-    const family=tag.id.split(':').slice(2,4).join(':');
+    if(source){perSource.set(source,(perSource.get(source)??0)+1);perSourceFamily.set(`${source}:${family}`,(perSourceFamily.get(`${source}:${family}`)??0)+1);}
     grouped.set(family,[...(grouped.get(family)??[]),tag]);
   }
   const result:TasteTag[]=[];

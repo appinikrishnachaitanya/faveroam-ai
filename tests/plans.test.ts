@@ -103,3 +103,9 @@ test("upcoming plan library renders saved stops and calendar actions without exp
   assert.match(html, /not bookings/);
   assert.doesNotMatch(html, /private-session/);
 });
+test("an unavailable plan feed does not hide saved weeks or plans from the other feed",()=>{
+ const plan={id:"fixture-id",...planFromSession(state(),{...input,date:"2099-10-18"},now),created_at:now.toISOString()};
+ const html=renderToStaticMarkup(createElement(UpcomingPlans,{plans:[plan],weeks:[],busy:false,error:"Saved First Weeks are unavailable.",onDelete:()=>{},onRetry:()=>{}}));
+ assert.match(html,/Saved First Weeks are unavailable/);
+ assert.match(html,/Protocol coffee/);
+});

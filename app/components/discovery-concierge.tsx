@@ -1,8 +1,9 @@
 "use client";
 
+import {memo} from 'react';
 import {Icon} from './passport';
 
-export default function DiscoveryConcierge({city,firstName,busy,onAsk,onNavigate,onShare}:{
+function DiscoveryConcierge({city,firstName,busy,onAsk,onNavigate,onShare}:{
   city:string;
   firstName?:string;
   busy:boolean;
@@ -27,3 +28,4 @@ export default function DiscoveryConcierge({city,firstName,busy,onAsk,onNavigate
     </div>
   </section>;
 }
+export default memo(DiscoveryConcierge);

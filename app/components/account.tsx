@@ -1,11 +1,12 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { Passport } from "../../src/workspace/state";
 import { Icon } from "./passport";
 import UpcomingPlans from "./plans";
 import ConfirmDelete from "./confirm-delete";
 import { mergeSavedPlan, type SavedPlan } from "../../src/account/plans";
+import { mergeSavedFirstWeek, type SavedFirstWeek } from "../../src/account/first-weeks";
 import { passwordRequirements, passwordValidationMessage } from "../../src/account/password-policy";
 import {
   accountRequest as request,
@@ -19,7 +20,7 @@ type Account = {
   user: { email?: string; firstName?: string; lastName?: string } | null;
 };
 type Entry = { id: string; city: string; updated_at: string };
-export default function AccountControl({
+function AccountControl({
   passport,
   disabled,
   onRestore,
@@ -27,6 +28,7 @@ export default function AccountControl({
   onAccountChange,
   onPassportSaved,
   onEditPlan,
+  onEditWeek,
 }: {
   passport?: Passport;
   disabled: boolean;
@@ -35,6 +37,7 @@ export default function AccountControl({
   onAccountChange?: (signedIn: boolean, firstName?: string) => void;
   onPassportSaved?: (sessionId?: string) => void;
   onEditPlan?: (plan: SavedPlan) => void;
+  onEditWeek?: (week: SavedFirstWeek) => void;
 }) {
   const [account, setAccount] = useState<Account>();
   const authEpoch = useRef(0);
@@ -59,8 +62,10 @@ export default function AccountControl({
     "passports",
   );
   const [plans, setPlans] = useState<SavedPlan[]>([]);
+  const [weeks,setWeeks]=useState<SavedFirstWeek[]>([]);
   const [plansError, setPlansError] = useState("");
-  const [deleteTarget, setDeleteTarget] = useState<{kind:"passport"|"plan";id:string;name:string}>();
+  const [weeksError,setWeeksError]=useState("");
+  const [deleteTarget, setDeleteTarget] = useState<{kind:"passport"|"plan"|"week";id:string;name:string}>();
   const savedCurrentPassport=Boolean(passport && entries.some(entry=>entry.city===passport.city));
   const plansVersion = useRef(0);
   async function refreshPlans() {
@@ -79,6 +84,16 @@ export default function AccountControl({
         );
     }
   }
+  const weeksVersion=useRef(0);
+  async function refreshWeeks(){
+    const epoch=authEpoch.current,version=++weeksVersion.current;
+    try{
+      const data=await request("/api/account/first-weeks");
+      if(epoch===authEpoch.current&&version===weeksVersion.current){setWeeks(data.weeks);setWeeksError("");}
+    }catch(error){
+      if(epoch===authEpoch.current&&version===weeksVersion.current)setWeeksError(error instanceof Error?error.message:"Could not load your First Weeks.");
+    }
+  }
   async function removePlan(id: string) {
     setBusy(true);
     try {
@@ -94,6 +109,12 @@ export default function AccountControl({
       setBusy(false);
     }
   }
+  async function removeWeek(id:string){
+    setBusy(true);
+    try{await request("/api/account/first-weeks",{id},"DELETE");setWeeks(current=>current.filter(week=>week.id!==id));showNotice("Your saved First Week was deleted.");}
+    catch(error){showNotice(error instanceof Error?error.message:"Could not delete the week.","error");}
+    finally{setBusy(false);}
+  }
   const dialog = useRef<HTMLDialogElement>(null);
   const opener = useRef<HTMLElement | null>(null);
   async function refresh(loadLibrary = false) {
@@ -106,6 +127,9 @@ export default function AccountControl({
       if (identityChanged) {
         setEntries([]);
         setPlans([]);
+        setWeeks([]);
+        setPlansError("");
+        setWeeksError("");
       }
       accountIdentity.current = identity;
       setAccount(data);
@@ -123,10 +147,13 @@ export default function AccountControl({
               "Your saved Passports could not load. Try opening them again.",
             );
         }
-        if (epoch === authEpoch.current) await refreshPlans();
+        if (epoch === authEpoch.current) await Promise.all([refreshPlans(),refreshWeeks()]);
       } else if (!data.user) {
         setEntries([]);
         setPlans([]);
+        setWeeks([]);
+        setPlansError("");
+        setWeeksError("");
       }
       return data;
     } catch {
@@ -160,9 +187,17 @@ export default function AccountControl({
       setPlans(current => mergeSavedPlan(current,plan));
       setPlansError("");
     };
+    const weeksUpdated=(event:Event)=>{
+      const week=(event as CustomEvent<{week?:SavedFirstWeek}>).detail?.week;
+      if(!week?.id){void refreshWeeks();return;}
+      ++weeksVersion.current;
+      setWeeks(current=>mergeSavedFirstWeek(current,week));
+      setWeeksError("");
+    };
     window.addEventListener("tastepassport:open-account", openAccount);
     window.addEventListener("tastepassport:save-passport", openSavePassport);
     window.addEventListener("tastepassport:plans-updated", plansUpdated);
+    window.addEventListener("tastepassport:first-weeks-updated",weeksUpdated);
     const notice = new URLSearchParams(window.location.search).get("account");
     if (notice) {
       if (notice !== "confirmed") setOpen(true);
@@ -180,6 +215,7 @@ export default function AccountControl({
       window.removeEventListener("tastepassport:open-account", openAccount);
       window.removeEventListener("tastepassport:save-passport", openSavePassport);
       window.removeEventListener("tastepassport:plans-updated", plansUpdated);
+      window.removeEventListener("tastepassport:first-weeks-updated",weeksUpdated);
     };
   }, []);
   useEffect(() => {
@@ -536,12 +572,15 @@ export default function AccountControl({
                 {libraryTab === "plans" ? (
                   <UpcomingPlans
                     plans={plans}
+                    weeks={weeks}
                     busy={busy}
-                    error={plansError}
+                    error={[plansError,weeksError].filter(Boolean).join(" ")}
                     editableCity={passport?.city}
                     onEdit={plan=>{setOpen(false);onEditPlan?.(plan);}}
+                    onEditWeek={week=>{setOpen(false);onEditWeek?.(week);}}
                     onDelete={(id) => setDeleteTarget({kind:"plan",id,name:"this saved outing"})}
-                    onRetry={() => void refreshPlans()}
+                    onDeleteWeek={id=>setDeleteTarget({kind:"week",id,name:"this saved First Week"})}
+                    onRetry={() => void Promise.all([refreshPlans(),refreshWeeks()])}
                   />
                 ) : (
                   <div className="saved-passport-list">
@@ -702,7 +741,8 @@ export default function AccountControl({
           document.body,
         )}
       {deleteTarget && <ConfirmDelete title={`Delete ${deleteTarget.name}?`} description="This cannot be undone. Your current Passport stays on screen." busy={busy}
-        onCancel={() => setDeleteTarget(undefined)} onConfirm={() => { const target=deleteTarget; setDeleteTarget(undefined); void (target.kind==="plan"?removePlan(target.id):remove(target.id)); }} />}
+        onCancel={() => setDeleteTarget(undefined)} onConfirm={() => { const target=deleteTarget; setDeleteTarget(undefined); void (target.kind==="plan"?removePlan(target.id):target.kind==="week"?removeWeek(target.id):remove(target.id)); }} />}
     </div>
   );
 }
+export default memo(AccountControl);

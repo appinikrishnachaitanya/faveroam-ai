@@ -77,6 +77,7 @@ export function SavedDiscoveries({
           <p>Your saved discoveries also help shape future refinements in this Passport. Save your Passport to keep this collection for your next visit.</p>
           <div className="vibe-summary"><span>{cards.length} saved {cards.length === 1 ? "discovery" : "discoveries"}</span><span>{new Set(cards.map(card=>card.section)).size} categories</span></div>
         </div>
+        <img className="vibe-collection-illustration" src="/illustrations/vibe-collection.svg" width="130" height="108" alt="" aria-hidden="true" loading="lazy"/>
       </header>
       {cards.length ? (
         <div className="discovery-grid">

@@ -24,7 +24,7 @@ export default memo(function VibeDial({passport,busy,onApply}:{passport:Passport
  },[busy,passport.cards,pending]);
  if(!directions.length)return null;
  const selected=directions.find(direction=>direction.theme.id===choice);
- return <section className="vibe-dial" aria-labelledby="vibe-dial-title"><span className="micro-label">ONE SMALL CHOICE, A NEW DIRECTION</span><h3 id="vibe-dial-title">Tune your Vibe Dial</h3><p>Pick a connection found in your returned discoveries. We’ll use its exact theme as inspiration, keeping your confirmed interests and explicit filters.</p>
+ return <section className="vibe-dial" aria-labelledby="vibe-dial-title"><div className="vibe-dial-heading"><div><span className="micro-label">ONE SMALL CHOICE, A NEW DIRECTION</span><h3 id="vibe-dial-title">Tune your Vibe Dial</h3><p>Pick a connection found in your returned discoveries. We’ll use its exact theme as inspiration, keeping your confirmed interests and explicit filters.</p></div><img src="/illustrations/vibe-dial.svg" width="100" height="78" alt="" aria-hidden="true" loading="lazy"/></div>
  <div className="vibe-directions" role="group" aria-label="Returned taste directions">{directions.map(direction=><button key={direction.theme.id} type="button" disabled={busy||Boolean(pending)} aria-pressed={choice===direction.theme.id} onClick={()=>setChoice(direction.theme.id)}><strong>{direction.theme.name}</strong><small>{direction.sections.map(sectionLabel).join(' · ')}</small></button>)}</div>
  <button type="button" className="primary-button" disabled={!selected||busy||Boolean(pending)} onClick={()=>{
    if(!selected)return;
