@@ -204,6 +204,7 @@ export function debugEvent(event: DebugEvent, meta: DebugMeta = {}) {
         "familiarity",
         "tag-choice",
         "message",
+        "skipped",
       ]),
       status:
         number(meta.status) !== undefined &&

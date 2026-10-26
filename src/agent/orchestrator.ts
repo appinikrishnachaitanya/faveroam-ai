@@ -188,7 +188,20 @@ export async function runTurn(
       result.state.history?.at(-1)?.recommendationIds?.length);
     const simpleReply = input.message && (/^(?:hi|hello|hey|thanks(?: bro)?|thank you(?: bro)?|cheers)[!,.\s]*$/i.test(input.message.trim()) || isRequirementRemoval(input.message));
     const answeredWithoutRetrieval = request.route === "current-results" || Boolean(result.state.pending) || isGreetingOrTypo(input.message ?? "");
-    if (input.message && provider?.compose && input.reset !== "conversation" && !result.action && !isGroundedShortlist && !simpleReply && !answeredWithoutRetrieval && result.state.providerHealth !== "unavailable") {
+    const lastTurn = result.state.history?.at(-1);
+    const hasGroundedUpdate = result.changed.length > 0 && Boolean(lastTurn?.recommendationIds?.length);
+    // Avoid a second generative round trip when the validated result already
+    // appears as cards with returned evidence. Keep synthesis for questions,
+    // comparisons, and explicit requests for reasons.
+    const asksForExplanation = Boolean(input.message && /[?]|\b(?:why|explain|reason|because|compare|highest|lowest|cheapest|best|which|open(?: now)?|tonight|when|how)\b/i.test(input.message));
+    const hasAppliedFilters = result.changed.some(section =>
+      Object.keys(result.state.queryPreferences?.[section] ?? {}).length > 0 ||
+      (result.state.categoryConstraints?.[section]?.length ?? 0) > 0,
+    );
+    const groundedCardsAreEnough = hasGroundedUpdate && !asksForExplanation && !hasAppliedFilters;
+    if (groundedCardsAreEnough)
+      debugEvent("agent.response", { action: "skipped", count: lastTurn?.recommendationIds?.length ?? 0 });
+    if (input.message && provider?.compose && input.reset !== "conversation" && !result.action && !isGroundedShortlist && !simpleReply && !answeredWithoutRetrieval && !groundedCardsAreEnough && result.state.providerHealth !== "unavailable") {
       let responseFailure = "transport";
       try {
         const context=responseContext(result,input);

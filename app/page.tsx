@@ -115,10 +115,13 @@ export default function Home() {
     return ()=>controller.abort();
   },[]);
   const [assistantOpen, setAssistantOpen] = useState(false);
+  const [visitedViews, setVisitedViews] = useState<Set<string>>(() => new Set(["discover"]));
   const [showMap,setShowMap]=useState(true);
   const [assistantTab, setAssistantTab] = useState<"ask" | "manual">("ask");
   const [composerPrompt, setComposerPrompt] = useState({text:"",version:0});
-  const setComposer = (text:string) => setComposerPrompt(previous=>({text,version:previous.version+1}));
+  const composerDraft = useRef("");
+  const [showEarlierConversation, setShowEarlierConversation] = useState(false);
+  const setComposer = (text:string) => {composerDraft.current=text;setComposerPrompt(previous=>({text,version:previous.version+1}));};
   const [messages, setMessages] = useState<Message[]>([welcome]);
   const [draft, setDraft] = useState<string[]>([]);
   const [draftHydrated, setDraftHydrated] = useState(false);
@@ -327,6 +330,9 @@ export default function Home() {
         { role: "user" as const, text: retryInput.message },
       ]
     : committedMessages;
+  const displayedMessages = showEarlierConversation || visibleMessages.length <= 24
+    ? visibleMessages
+    : visibleMessages.slice(-24);
   const conciergeAvailable =
     providerHealth === "healthy" || providerHealth === "configured";
   const activeItems =
@@ -349,6 +355,10 @@ export default function Home() {
     result?.session?.history,
     result?.agent?.pending,
   ]);
+  useEffect(() => {
+    setVisitedViews(new Set(["discover"]));
+    setShowEarlierConversation(false);
+  }, [result?.session?.id]);
   function say(text: string) {
     setMessages((m) => [...m, { role: "agent", text }]);
   }
@@ -413,6 +423,13 @@ export default function Home() {
       setPhase("error");
     }
   }
+  const submitConversationHandler = useRef(submitConversation);
+  useLayoutEffect(() => {
+    submitConversationHandler.current = submitConversation;
+  });
+  const sendComposerMessage = useCallback((text: string) => {
+    void submitConversationHandler.current(text);
+  }, []);
   async function refine(input: AgentInput) {
     if (!result?.agent || busy || activeTurn.current || recoveryStatus === "checking") return;
     const controller = new AbortController();
@@ -545,6 +562,7 @@ export default function Home() {
   }
 
   function selectWorkspaceView(next: typeof workspaceView) {
+    setVisitedViews(current => current.has(next) ? current : new Set([...current, next]));
     setWorkspaceView(next);
     requestAnimationFrame(() =>
       document.getElementById(`view-${next === "together" ? "preferences" : next}`)?.scrollIntoView({
@@ -765,6 +783,8 @@ export default function Home() {
     setShowSaved(false);
     setShowMap(true);
     setWorkspaceView("discover");
+    setVisitedViews(new Set(["discover"]));
+    setShowEarlierConversation(false);
     setEditingPlan(undefined);
     setSavePlanRequest(0);
     setAdaptation("");
@@ -979,6 +999,7 @@ export default function Home() {
               className="workspace-view-anchor"
               hidden={workspaceView !== "discover"}
             >
+              {visitedViews.has("discover") && <>
               {!showSaved && <DiscoveryConcierge city={result.city} firstName={accountSignedIn?accountFirstName:undefined} busy={busy} onAsk={openAssistantFromDiscover} onNavigate={stableSelectWorkspaceView} onShare={shareFromDiscover}/>}
               {!showSaved && <VibeDial key={`vibe:${result.agent?.sessionId??result.city}`} passport={result} busy={busy} onApply={stableRefine}/>}
               {result.session && !showSaved && (
@@ -988,6 +1009,7 @@ export default function Home() {
                   onChange={(input) => {setShowSaved(false);setWorkspaceView("discover");void refine(input);}}
                 />
               )}
+              </>}
             </div>
             {workspaceView === "discover" && !showSaved && missingSections.length > 0 && (
               <section className="missing-discoveries" aria-label="Find more discoveries">
@@ -1039,6 +1061,7 @@ export default function Home() {
               className="workspace-panel"
               hidden={workspaceView !== "plan"}
             >
+              {visitedViews.has("plan") && <>
               <DayOutPlan
                 key={`day-out:${result.session?.id ?? result.city}`}
                 editPlan={editingPlan}
@@ -1051,13 +1074,14 @@ export default function Home() {
                 onSaveRequestHandled={planSaveHandled}
               />
               <FirstWeek key={`first-week:${result.session?.id??result.city}`} passport={result} signedIn={accountSignedIn} editWeek={editingFirstWeek} onEditWeekHandled={editWeekHandled}/>
+              </>}
             </div>
             <div
               className="workspace-panel"
               id="view-preferences"
               hidden={workspaceView !== "preferences" && workspaceView !== "together"}
             >
-              <TasteIntelligence
+              {(visitedViews.has("preferences") || visitedViews.has("together")) && <TasteIntelligence
                 key={`intelligence:${result.session?.id ?? result.city}`}
                 view={workspaceView === "together" ? "together" : "preferences"}
                 onPreferences={openPreferences}
@@ -1065,7 +1089,7 @@ export default function Home() {
                 passport={result}
                 busy={busy}
                 onRefine={refineFromPanel}
-              />
+              />}
 
             </div>
             <div
@@ -1073,7 +1097,7 @@ export default function Home() {
               id="view-connections"
               hidden={workspaceView !== "connections"}
             >
-              <details
+              {visitedViews.has("connections") && <details
                 className="secondary-reveal cultural-reveal"
                 open={workspaceView === "connections"}
               >
@@ -1092,7 +1116,7 @@ export default function Home() {
                   onRemove={removeSignal}
                   disabled={busy}
                 />
-              </details>
+              </details>}
             </div>
             {result.session &&
               process.env.NODE_ENV === "development" &&
@@ -1122,9 +1146,9 @@ export default function Home() {
           <a href="/privacy">Privacy</a>
         </nav>
       </footer>
-      {result && (
+      {result && assistantOpen && (
         <ConciergeDrawer
-          open={assistantOpen}
+          open
           onClose={() => setAssistantOpen(false)}
         >
           <div
@@ -1200,7 +1224,8 @@ export default function Home() {
                   role="log"
                   aria-live="polite"
                 >
-                  {visibleMessages.map((m, i) => (
+                  {visibleMessages.length > displayedMessages.length && !showEarlierConversation && <button type="button" className="text-button" onClick={() => setShowEarlierConversation(true)}>Show earlier messages ({visibleMessages.length - displayedMessages.length})</button>}
+                  {displayedMessages.map((m, i) => (
                     <div className={`message ${m.role}`} key={i}>
                       <span className="message-label">
                         {m.role === "agent" ? "TASTEPASSPORT" : "YOU"}
@@ -1213,7 +1238,7 @@ export default function Home() {
                         busy={busy} savedIds={result.session?.savedCards?.map(card=>card.id) ?? []}
                         onAsk={question=>void refine({message:question})}
                         onSave={id=>recordFeedback(id,"like")}/> : null}
-                      {m.role === "agent" && i === visibleMessages.findLastIndex(message => message.role === "agent") && <>
+                      {m.role === "agent" && i === displayedMessages.findLastIndex(message => message.role === "agent") && <>
                         {result.session?.pending && <ConceptClarification pending={result.session.pending} disabled={busy}
                           onChoose={id=>void refine({tagChoice:id})} onSkip={()=>void refine({message:"Skip this concept"})}/>}
                         {!result.agent?.pending && Boolean(result.session?.recovery?.length) && result.session && <>
@@ -1265,7 +1290,7 @@ export default function Home() {
                   <button type="button" className="quiet-button" onClick={()=>{setError("");setRetryInput(undefined);setAssistantOpen(false);}}>Keep exploring</button>
                 </div>
               </div>}
-              <ChatComposer prompt={composerPrompt} disabled={busy || recoveryStatus === "checking"} onSend={text=>void submitConversation(text)}/>
+              <ChatComposer prompt={composerPrompt} draftRef={composerDraft} disabled={busy || recoveryStatus === "checking"} onSend={sendComposerMessage}/>
             </>
           )}
           {visibleMessages.length > 0 && (

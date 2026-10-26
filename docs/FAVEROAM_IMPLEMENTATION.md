@@ -163,6 +163,27 @@ The user approved loss of existing app data. The updated `setup.sql` is still a
 manual destructive reset; run it in Supabase before deploying to create the new
 table. It must never run in CI or during deployment.
 
+## Interaction latency and alignment pass
+
+- Workspace content is mounted on first visit to each section instead of doing
+  all planner and insights initialization during discovery startup. Visited
+  panels stay mounted so their current form/results state is retained.
+- The chat dialog and rich transcript are not rendered while closed. The draft
+  survives closing/reopening, and the latest 24 messages are shown by default;
+  older turns remain available on request. The composer is memoized with a
+  stable submit callback so unrelated workspace updates do not rerender it.
+- A routine refinement with validated result cards and no newly applied filters
+  skips the optional second Gemini composition call. Explicit explanation and
+  comparison requests, as well as filtered refinements, retain composition.
+  Returned evidence cards and the deterministic completion message remain the
+  source of truth.
+- Discovery card metadata and category headings now share a predictable text
+  edge and heading layout at narrow widths.
+- Regression coverage verifies the composition-call policy. Backend request,
+  provider, Qloo, and session read/write logs include elapsed time, but no live
+  browser/device or production latency benchmark is claimed. Typing itself is
+  local state and does not send Gemini a request until submit.
+
 Changed-file inventory:
 
 ```text

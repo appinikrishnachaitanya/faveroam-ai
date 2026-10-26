@@ -118,5 +118,15 @@ body,.progressive-app,.progressive-app button,.progressive-app input,.progressiv
 .first-week-heading img,.vibe-dial-heading img,.vibe-collection-illustration,.insight-illustration,.day-out-illustration,.together-heading>img { animation:illustration-drift 8s ease-in-out infinite; }
 @keyframes illustration-drift { 0%,100% { transform:translateY(0) } 50% { transform:translateY(-4px) } }
 @media(max-width:640px){.first-week-actions{align-items:stretch}.first-week-actions>*{flex:1 1 100%}.saved-plan{grid-template-columns:1fr}.progressive-app .passport-navigation button[aria-current=page]{color:#17243b}}
-@media(max-width:640px){.insight-illustration{flex-basis:80px;width:80px}.first-week-heading img{flex-basis:78px;width:78px}.vibe-collection-illustration{flex-basis:76px;width:76px}.vibe-dial-heading img{flex-basis:62px;width:62px}.progressive-app .analysis-intro{gap:10px}.vibe-dial-heading{gap:8px}.progressive-app .day-out-illustration{flex-basis:72px;width:72px}}
+
+/* Keep text blocks on one predictable left edge across the customer flows. */
+.progressive-app :is(.discovery-concierge,.passport-workspace-content,.day-out-plan,.first-week-panel,.taste-intelligence,.taste-analysis,.share-taste-card,.concierge-drawer) :is(h1,h2,h3,h4,p,label,legend,summary) { text-align:start; }
+.progressive-app .card-header { justify-content:flex-start; }
+.progressive-app .card-header > .helper { flex:1 1 180px; max-width:none; min-width:0; text-align:start; overflow-wrap:anywhere; }
+.progressive-app .result-heading { display:grid; grid-template-columns:minmax(0,1fr) minmax(14rem,auto); justify-items:start; align-items:start; gap:6px 16px; }
+.progressive-app .result-heading h3 { display:flex; flex-wrap:wrap; align-items:center; gap:8px; min-width:0; margin:0; }
+.progressive-app .result-heading > p { max-width:65ch; margin:0; color:var(--ui-muted); font-size:14px; line-height:1.55; text-align:start; }
+.progressive-app .confirmation-help { max-width:750px; margin:12px auto 0; text-align:start; }
+.progressive-app .concierge-drawer textarea { text-align:start; }
+@media(max-width:640px){.insight-illustration{flex-basis:80px;width:80px}.first-week-heading img{flex-basis:78px;width:78px}.vibe-collection-illustration{flex-basis:76px;width:76px}.vibe-dial-heading img{flex-basis:62px;width:62px}.progressive-app .analysis-intro{gap:10px}.vibe-dial-heading{gap:8px}.progressive-app .day-out-illustration{flex-basis:72px;width:72px}.progressive-app .result-heading{grid-template-columns:minmax(0,1fr)}}
 @media(prefers-reduced-motion:reduce){.first-week-heading img,.vibe-dial-heading img,.vibe-collection-illustration,.insight-illustration,.day-out-illustration,.together-heading>img{animation:none}}
