@@ -1,4 +1,5 @@
 "use client";
+import { memo } from "react";
 import { sectionLabel } from "../../src/passport/labels";
 
 import type { Card } from "../../src/passport/model";
@@ -7,7 +8,7 @@ import { formatReturnedRating } from "../../src/passport/rating-display";
 import { chatReason, chatTasteEvidence } from "../../src/agent/chat-shortlist";
 import { Icon } from "./passport";
 
-export default function ChatRecommendations({cards,city,busy,savedIds,onAsk,onSave}:{
+export default memo(function ChatRecommendations({cards,city,busy,savedIds,onAsk,onSave}:{
   cards:Card[];
   city:string;
   busy:boolean;
@@ -42,4 +43,7 @@ export default function ChatRecommendations({cards,city,busy,savedIds,onAsk,onSa
     })}
     <small className="chat-recommendation-note">From your returned Passport discoveries. Check current prices, hours and availability before going.</small>
   </div>;
-}
+}, (previous,next)=>previous.city===next.city && previous.busy===next.busy &&
+  previous.onAsk===next.onAsk && previous.onSave===next.onSave &&
+  previous.cards.length===next.cards.length && previous.cards.every((card,index)=>card===next.cards[index]) &&
+  previous.savedIds.length===next.savedIds.length && previous.savedIds.every((id,index)=>id===next.savedIds[index]));

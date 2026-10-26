@@ -1,13 +1,13 @@
 "use client";
 import { sectionLabel } from "../../src/passport/labels";
-import { useState } from "react";
+import { memo, useState } from "react";
 import type { Passport } from "../../src/workspace/state";
 import type { Candidate, Card, Section } from "../../src/passport/model";
 import { bridgeRoutes } from "../../src/passport/evidence";
 import { evidenceFacts } from "../../src/qloo/explanation";
 import { DiscoveryCard, Icon } from "./passport";
 import type { Feedback } from "./passport";
-export function PassportCover({
+export const PassportCover = memo(function PassportCover({
   passport,
   origin,
   onConnections,
@@ -56,8 +56,8 @@ export function PassportCover({
       </div>
     </header>
   );
-}
-export function SavedDiscoveries({
+});
+export const SavedDiscoveries = memo(function SavedDiscoveries({
   cards,
   feedback,
   onFeedback,
@@ -104,7 +104,7 @@ export function SavedDiscoveries({
       )}
     </section>
   );
-}
+});
 export function ConnectionExplorer({ passport, onExplore, onAsk }: { passport: Passport; onExplore?: (section: Section) => void; onAsk?: (question: string) => void }) {
   const allRoutes = bridgeRoutes(passport.cards, passport.selected);
   const [interest, setInterest] = useState<string>();

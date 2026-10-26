@@ -234,3 +234,20 @@ tests/progressive.test.ts
 Validation for this pass: 483 tests passed; production build, production smoke,
 documentation links, and diff checks passed. Map retention in this milestone
 supersedes the earlier implementation that released it when leaving Discover.
+
+## Navigation render boundaries and measured local acceptance
+
+Sharing, chat text/recommendation cards, Passport cover, and saved discoveries
+now skip unrelated navigation renders. Theme derivation is memoized against
+Passport cards/interests. Chat callbacks delegate through refs to current handlers;
+card comparison retains updates when card references, saved IDs, busy state, or
+callbacks change.
+
+Local production Chromium acceptance used a synthetic 100-card Passport, three
+cycles through Preferences/Common Ground/Insights/First Week/Discover, and 4x CPU
+throttling. Click-to-two-animation-frame completion ranged from 34–178 ms on
+desktop and 65–205 ms at 375px mobile width (including opening the mobile menu).
+Chat open/close ranged from 24–128 ms; composer DOM identity was preserved.
+These are fixture checks without provider calls or map coordinates, not field
+performance measurements or map-tile/authentication acceptance. Full automated
+suite: 483 passed; production build and TypeScript check passed.

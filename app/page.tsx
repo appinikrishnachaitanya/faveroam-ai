@@ -721,6 +721,8 @@ export default function Home() {
   },[]);
   const panelActions = useRef({refine,selectWorkspaceView});
   useLayoutEffect(()=>{panelActions.current={refine,selectWorkspaceView};});
+  const askFromChat = useCallback((message:string)=>{void panelActions.current.refine({message});},[]);
+  const saveFromChat = useCallback((id:string)=>feedbackHandler.current(id,"like"),[]);
   const stableRefine = useCallback((input:AgentInput)=>{void panelActions.current.refine(input);},[]);
   const refineFromPanel = useCallback((input:AgentInput)=>{setShowSaved(false);panelActions.current.selectWorkspaceView('discover');void panelActions.current.refine(input);},[]);
   const stableSelectWorkspaceView=useCallback((next:typeof workspaceView)=>panelActions.current.selectWorkspaceView(next),[]);
@@ -1046,7 +1048,7 @@ export default function Home() {
                 <SavedDiscoveries
                   cards={result.session?.savedCards ?? []}
                   feedback={feedback}
-                  onFeedback={recordFeedback}
+                  onFeedback={stableFeedback}
                   disabled={busy}
                 />
               ) : (
@@ -1238,8 +1240,8 @@ export default function Home() {
                       {m.role === "agent" && !m.comparisonIds?.length && Array.isArray(m.recommendationIds) && m.recommendationIds.length ? <ChatRecommendations city={result.city}
                         cards={m.recommendationIds.flatMap(id=>result.cards.find(card=>card.id===id && !result.session?.hiddenCategories?.includes(card.section)) ?? [])}
                         busy={busy} savedIds={result.session?.savedCards?.map(card=>card.id) ?? []}
-                        onAsk={question=>void refine({message:question})}
-                        onSave={id=>recordFeedback(id,"like")}/> : null}
+                        onAsk={askFromChat}
+                        onSave={saveFromChat}/> : null}
                       {m.role === "agent" && i === displayedMessages.findLastIndex(message => message.role === "agent") && <>
                         {result.session?.pending && <ConceptClarification pending={result.session.pending} disabled={busy}
                           onChoose={id=>void refine({tagChoice:id})} onSkip={()=>void refine({message:"Skip this concept"})}/>}

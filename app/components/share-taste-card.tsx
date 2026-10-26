@@ -1,15 +1,15 @@
 "use client";
-import {useEffect,useState} from 'react';
+import {memo,useEffect,useMemo,useState} from 'react';
 import type {Passport} from '../../src/workspace/state';
 import {curatedThemes,relevantThemes} from '../../src/passport/taste-themes';
 import {tasteCardPng,tasteCardSvg} from '../../src/share/card-image';
 
 type Link={token:string;revokeToken:string;expiresAt:string};
-export default function ShareTasteCard({passport}:{passport:Passport}){
+export default memo(function ShareTasteCard({passport}:{passport:Passport}){
  const [share,setShare]=useState<Link>();
  const [busy,setBusy]=useState(false),[status,setStatus]=useState('');
  useEffect(()=>{if(!passport.agent)return;try{const saved=JSON.parse(sessionStorage.getItem(`tastepassport:share:${passport.agent.sessionId}`)??'null');if(saved?.token&&saved?.revokeToken&&new Date(saved.expiresAt)>new Date())setShare(saved);}catch{}},[passport.agent?.sessionId]);
- const themes=curatedThemes(relevantThemes(passport.cards.flatMap(card=>card.evidence?.result.tags??[]),passport.selected)).slice(0,5);
+ const themes=useMemo(()=>curatedThemes(relevantThemes(passport.cards.flatMap(card=>card.evidence?.result.tags??[]),passport.selected)).slice(0,5),[passport.cards,passport.selected]);
  const tasteNames=passport.selected.map(taste=>taste.name);
  const image=()=>tasteCardSvg(passport.city,themes.map(theme=>theme.name),tasteNames);
  function downloadBlob(blob:Blob,name:string){const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download=name;link.click();window.setTimeout(()=>URL.revokeObjectURL(url),1000);}
@@ -34,4 +34,4 @@ export default function ShareTasteCard({passport}:{passport:Passport}){
    {share&&<div className="share-link-result"><label>Share link<input readOnly value={`${typeof window==='undefined'?'':window.location.origin}/share/${share.token}`} onFocus={event=>event.target.select()}/></label><button type="button" className="quiet-button" onClick={()=>void copy()}>Copy link</button><button type="button" className="text-button" disabled={busy} onClick={()=>void revoke()}>Revoke link</button><small>Expires {new Date(share.expiresAt).toLocaleDateString()}</small></div>}
    {status&&<p role="status" className="share-status">{status}</p>}
  </section>;
-}
+});
