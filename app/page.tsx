@@ -390,7 +390,7 @@ export default function Home() {
     setPhase("refining");
     setChatProgress('Looking at your request…');
     setUpdating(
-      input.feedback
+      input.feedback && !input.feedback.accepted
         ? [
             [...result.cards, ...(result.session?.savedCards ?? [])].find(
               (c) => c.id === input.feedback!.id,
@@ -658,7 +658,7 @@ export default function Home() {
       feedbackOpener.current = document.activeElement as HTMLElement;
       setRejectionId(id);
     } else
-      void refine({
+      return refine({
         feedback: { id, accepted: true, clear: feedback[id] === "like" },
       });
   }
@@ -969,6 +969,7 @@ export default function Home() {
               ) : (
                 <>
                   <PassportSections
+                    disabled={busy}
                     result={{
                       ...result,
                       cards: result.cards.filter(

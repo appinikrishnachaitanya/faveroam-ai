@@ -347,7 +347,7 @@ export default function AccountControl({
   }
   return (
     <div className="account-control">
-      {passport && (
+      {passport && !savedCurrentPassport && (
         <button
           className="quiet-button save-passport"
           disabled={disabled}
@@ -359,7 +359,7 @@ export default function AccountControl({
             setOpen(true);
           }}
         >
-          {savedCurrentPassport ? "Update Passport" : "Save Passport"}
+          Save Passport
         </button>
       )}
       <button
