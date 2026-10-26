@@ -21,13 +21,13 @@ export default function TasteAnalysis({passport,busy,onRefine}:{passport:Passpor
   const [loading,setLoading]=useState<AnalysisKind>();
   const [error,setError]=useState('');
   const [themeId,setThemeId]=useState('');
-  // Start with one interest. Users explicitly choose any other combination.
-  const [interestIds,setInterestIds]=useState<string[]>(()=>passport.selected[0]?[passport.selected[0].id]:[]);
+  // Start from the full confirmed profile; users can narrow the selection.
+  const [interestIds,setInterestIds]=useState<string[]>(()=>passport.selected.map(interest=>interest.id));
   const categories=activeCategories(passport.session,passport.cards);
   const [themeSections,setThemeSections]=useState<Section[]>(()=>[categories.find(section=>section==='Movies') ?? categories[0] ?? 'Eat']);
   const active=useRef(false);
   useEffect(()=>{
-    setInterestIds(passport.selected[0] ? [passport.selected[0].id] : []);
+    setInterestIds(passport.selected.map(interest=>interest.id));
     setResults({});setResultScope(scope);setThemeId('');setError('');
   },[scope]);
 
@@ -50,6 +50,7 @@ export default function TasteAnalysis({passport,busy,onRefine}:{passport:Passpor
   const taste=visible.taste?.kind==='taste'?visible.taste:undefined;
   const themes=taste ? relevantThemes(taste.tags, passport.selected.filter(interest=>interestIds.includes(interest.id))) : [];
   const selectedTheme=themes.find(theme=>theme.id===themeId);
+  const themeMatches=selectedTheme?passport.cards.filter(card=>card.evidence?.result.tags.some(tag=>tag.id===selectedTheme.id)).slice(0,3):[];
   const themeOptions=themeCategories(selectedTheme,categories);
   const effectiveThemeSections=themeSections.filter(section=>themeOptions.includes(section)).slice(0,3);
   if(!effectiveThemeSections.length && themeOptions[0])effectiveThemeSections.push(themeOptions[0]);
@@ -59,7 +60,7 @@ export default function TasteAnalysis({passport,busy,onRefine}:{passport:Passpor
   const areas=heat ? buildAreaGuide(heat.points,passport.cards) : [];
   function exploreTheme() {
     if (!themeId || busy || !effectiveThemeSections.length) return;
-    onRefine({discovery:{sections:effectiveThemeSections,preferences:{includeTags:[themeId]}}});
+    onRefine({discovery:{sections:effectiveThemeSections,preferences:{inspirationTags:[themeId]}}});
   }
   function nearby(point:{latitude:number;longitude:number}) {
     onRefine({discovery:{sections:['Eat'],preferences:{locationPoint:`POINT(${point.longitude} ${point.latitude})`,radius:1500}}});
@@ -81,7 +82,7 @@ export default function TasteAnalysis({passport,busy,onRefine}:{passport:Passpor
       <div className="analysis-selection-summary"><small>{interestIds.length} of {passport.selected.length} selected</small>{passport.selected.length>1 && interestIds.length<passport.selected.length && <button type="button" onClick={()=>{setInterestIds(passport.selected.map(interest=>interest.id));setResults({});setThemeId('');setError('');}}>Use all my tastes</button>}</div>
     </fieldset>
     <div className="analysis-actions">
-      <button className="analysis-action" aria-pressed={Boolean(taste)} disabled={busy||Boolean(loading)||!interestIds.length} onClick={()=>void load('taste')}><Icon name="star" size={22}/><span><strong>{loading==='taste'?'Finding taste connections…':'Find a new theme from my tastes'}</strong><small>Choose a related theme to search in Discover.</small></span><Icon name="arrow" size={18}/></button>
+      <button className="analysis-action" aria-pressed={Boolean(taste)} disabled={busy||Boolean(loading)||!interestIds.length} onClick={()=>void load('taste')}><Icon name="star" size={22}/><span><strong>{loading==='taste'?'Finding taste connections…':'Explore a new side of my taste'}</strong><small>Find a returned connection, then use it to discover something new.</small></span><Icon name="arrow" size={18}/></button>
       <button className="analysis-action" aria-pressed={Boolean(heat)} disabled={busy||Boolean(loading)||!interestIds.length} onClick={()=>void load('heatmap')}><Icon name="pin" size={22}/><span><strong>{loading==='heatmap'?'Finding a place to start…':`Start from a place in ${passport.city}`}</strong><small>See a named place from your discoveries, then search for food nearby.</small></span><Icon name="arrow" size={18}/></button>
     </div>
     {!interestIds.length&&<p role="status">Choose at least one interest to see relevant insights.</p>}
@@ -96,11 +97,11 @@ export default function TasteAnalysis({passport,busy,onRefine}:{passport:Passpor
           </button>)}
         </div>
         {additionalThemes.length>0 && <details className="additional-themes"><summary>See {additionalThemes.length} more themes</summary><div className="taste-theme-list">{additionalThemes.map(tag=><button key={tag.id} type="button" aria-pressed={themeId===tag.id} disabled={busy} onClick={()=>setThemeId(tag.id)}><small>{themeKind(tag)}</small><strong>{tag.name}</strong></button>)}</div></details>}
-        {selectedTheme&&<p className="selected-theme-summary" role="status"><strong>Explore {selectedTheme.name}</strong><span>A {themeKind(selectedTheme).toLowerCase()} connection returned for your chosen tastes. Choose where to explore it below.</span></p>}
+        {selectedTheme&&<section className="theme-direction" aria-label="Your selected discovery direction"><p className="selected-theme-summary" role="status"><strong>{passport.selected.filter(interest=>interestIds.includes(interest.id)).map(interest=>interest.name).join(' + ')} → {selectedTheme.name}</strong><span>This association was returned for your selected tastes together. It does not establish a separate connection from each interest.</span></p><h4>Where this could take you</h4>{themeMatches.length?<><p>These current discoveries carry this exact theme in their returned tags.</p><ul>{themeMatches.map(card=><li key={card.id}><strong>{card.name}</strong><small>{sectionLabel(card.section)}{card.address?` · ${card.address}`:''}</small></li>)}</ul></>:<p>Your current discoveries don’t carry this exact tag. Explore it below to look for new choices; results aren’t guaranteed.</p>}<p className="helper">This adds inspiration to your taste signals. Your budget, dietary requirements, location and other explicit filters stay in place.</p></section>}
         <div className="theme-next-step">
           <CategoryMultiSelect label="Explore theme in" available={themeOptions} selected={effectiveThemeSections} onChange={setThemeSections} disabled={busy||Boolean(loading)}/>
           <button disabled={busy || !themeId || Boolean(loading) || !effectiveThemeSections.length} onClick={exploreTheme}>
-            Explore selected categories <Icon name="arrow" size={16}/>
+            Find discoveries in this direction <Icon name="arrow" size={16}/>
           </button>
         </div>
         <p className="helper">Choose a returned theme and one or more relevant categories. We’ll search each selected category with that theme and keep the other results. A theme may have no local matches.</p>

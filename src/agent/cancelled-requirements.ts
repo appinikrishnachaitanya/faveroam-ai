@@ -17,10 +17,12 @@ export function removeCancelledRequirements(state:AgentState,intent:Intent,text:
     state.categoryTags ??= {};
     state.categoryTags[section]=(state.categoryTags[section]??[]).filter(id=>!removed.has(id));
     if(state.queryPreferences?.[section]?.includeTags) state.queryPreferences[section]!.includeTags=state.queryPreferences[section]!.includeTags!.filter(id=>!removed.has(id));
+    if(state.queryPreferences?.[section]?.inspirationTags) state.queryPreferences[section]!.inspirationTags=state.queryPreferences[section]!.inspirationTags!.filter(id=>!removed.has(id)&&!cancelled(id));
     state.categoryConcepts ??= {};
     state.categoryConcepts[section]=(state.categoryConcepts[section]??[]).filter(concept=>!cancelled(concept)&&(!(atmosphereOnly||cancelCuisine)||section!=='Eat'||/quiet|peaceful|calm|relax/i.test(concept)));
   }
   intent.concepts=intent.concepts.filter(concept=>!cancelled(concept)&&(!(atmosphereOnly||cancelCuisine)||/quiet|peaceful|calm|relax/i.test(concept)));
   intent.excludeConcepts=intent.excludeConcepts?.filter(concept=>!cancelled(concept));
   if(intent.query?.includeTags)intent.query.includeTags=intent.query.includeTags.filter(id=>!allRemoved.has(id));
+  if(intent.query?.inspirationTags)intent.query.inspirationTags=intent.query.inspirationTags.filter(id=>!allRemoved.has(id)&&!cancelled(id));
 }

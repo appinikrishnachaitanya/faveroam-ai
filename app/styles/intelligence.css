@@ -347,3 +347,10 @@
 .theme-empty-state { padding:16px; border:1px solid var(--ui-border); border-radius:12px; background:var(--ui-tint); }
 .theme-empty-state p { font-size:14px; line-height:1.6; margin-block:8px; }
 .theme-empty-state small { color:var(--ui-muted); }
+
+.theme-direction { margin-top: 20px; padding: var(--space-panel); border: 1px solid var(--ui-border); border-radius: 16px; background: var(--ui-surface); }
+.theme-direction h4 { margin: 20px 0 8px; font-size: 20px; }
+.theme-direction > p { margin-block: 10px; font-size: 14px; line-height: 1.6; }
+.theme-direction ul { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,200px),1fr)); gap: 12px; list-style: none; padding: 0; margin: 16px 0; }
+.theme-direction li { min-width: 0; padding: 16px; border: 1px solid var(--ui-border); border-radius: 12px; overflow-wrap: anywhere; }
+.theme-direction small { display: block; margin-top: 6px; color: var(--ui-muted); font-size: 12px; }

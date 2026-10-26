@@ -313,7 +313,9 @@ export async function discoverSection(
   // Merge the shared planner's applied settings with existing category filters.
   // Omitted settings remain in the server session; unrelated categories are untouched.
   const categoryFilter = params["filter.tags"];
+  const originalTasteSignals=params['signal.interests.tags'];
   Object.assign(params, planned.params);
+  if(planned.params['signal.interests.tags'])params['signal.interests.tags']=[...new Set([...(originalTasteSignals??'').split(',').filter(Boolean),...planned.params['signal.interests.tags'].split(',')])].join(',');
   if (planned.params["filter.location"]) delete params["filter.location.query"];
   if (preferences.includeTags?.length && type === "place") {
     params["filter.tags"] = [

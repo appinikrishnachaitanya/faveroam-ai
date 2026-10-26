@@ -31,6 +31,7 @@ export interface QueryPreferences {
   region?: string;
   metro?: string;
   includeTags?: string[];
+  inspirationTags?: string[];
   excludeTags?: string[];
   excludeEntities?: string[];
   tagOperator?: "union" | "intersection";
@@ -121,6 +122,7 @@ export function validatePreferences(input: unknown): QueryPreferences {
     } else if (
       [
         "includeTags",
+        "inspirationTags",
         "excludeTags",
         "excludeEntities",
         "requiredProperties",
@@ -377,8 +379,9 @@ export function buildQuery(plan: QlooQueryPlan) {
   };
   if (plan.interests.entities.length)
     params["signal.interests.entities"] = plan.interests.entities.join(",");
-  if (plan.interests.tags.length)
-    params["signal.interests.tags"] = plan.interests.tags.join(",");
+  const tasteSignals=[...new Set([...plan.interests.tags,...(plan.preferences?.inspirationTags??[])])];
+  if (tasteSignals.length)
+    params["signal.interests.tags"] = tasteSignals.join(",");
   if (plan.explainability !== false) params["feature.explainability"] = "true";
   Object.assign(params, preferenceParams(plan.preferences ?? {}));
   return validateInsightParams(params);
