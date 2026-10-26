@@ -42,3 +42,14 @@ This is a brand foundation milestone, not completion of the redesign or features
 - Existing CDP browser runner could not connect to localhost:9231 (no browser listening).
 - No live authentication, Qloo, map-tile, or deployed visual acceptance is claimed.
 - No database schema, credentials, or deployment settings changed.
+
+## Stability milestone 2
+
+- Explicit independent/no-chain wording activates the existing mainstream exclusion.
+  Known chains are excluded; remaining ownership is still unverified.
+- Explicit cinema/movie-theater taxonomy outranks a café amenity in both venue classifiers.
+- First Week calendar export validates calendar dates and uses the FaveRoam product label.
+- Automated regression suite: 464 passed, 0 failed; TypeScript check passed.
+- Live venue relevance, map tiles, ordinal reference synchronization and practical
+  shared-venue geography still need acceptance/further work. This does not close
+  the entire stability gate.
