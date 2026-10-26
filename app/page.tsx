@@ -147,6 +147,15 @@ export default function Home() {
   const [chosen, setChosen] = useState<Record<number, string>>({});
   const [removed, setRemoved] = useState<number[]>([]);
   const [result, setResult] = useState<Passport>();
+  useEffect(()=>{
+    if(!result)return;
+    const sessionId=result.agent?.sessionId??result.session?.id;
+    if(!sessionId)return;
+    const key=`tastepassport:assistant-welcomed:${sessionId}`;
+    try{if(window.sessionStorage.getItem(key))return;window.sessionStorage.setItem(key,'1');}catch{}
+    setAssistantTab('ask');
+    setAssistantOpen(true);
+  },[result?.agent?.sessionId,result?.session?.id]);
   useEffect(()=>{if(result&&sharedPartnerTastes.length&&!sharedOfferShown.current){sharedOfferShown.current=true;setShowSaved(false);setWorkspaceView('together');}},[result,sharedPartnerTastes]);
   const [workspaceView, setWorkspaceView] = useState<
     "discover" | "plan" | "preferences" | "together" | "connections"
