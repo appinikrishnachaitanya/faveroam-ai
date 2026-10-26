@@ -1,5 +1,5 @@
 import { browserRequestError, readRequestText } from "../../../../src/http/request.ts";
-import { relevantThemes } from "../../../../src/passport/taste-themes";
+import { themesPerInterest } from "../../../../src/passport/taste-themes";
 import { validSessionId } from "../../../../src/agent/session-lifetime.ts";
 import { trending } from "../../../../src/qloo/trending";
 import { loadSession } from "../../../../src/agent/store";
@@ -9,7 +9,7 @@ import { entityDetails, tagTypes } from "../../../../src/qloo/lookups";
 import { normalizeEntity } from "../../../../src/qloo/normalizer";
 import { queryRecord } from "../../../../src/qloo/diagnostics";
 import { sectionOrder } from "../../../../src/workspace/state";
-import type { Section } from "../../../../src/passport/model";
+import {sectionTypes,type Section} from "../../../../src/passport/model";
 import { configuredProvider } from "../../../../src/agent/provider";
 import { evidenceFacts } from "../../../../src/qloo/explanation";
 import { debugRequest } from "../../../../src/agent/debug";
@@ -75,9 +75,21 @@ async function handlePOST(request: Request) {
       let interests;
       try { interests=selectAnalysisSignals(state.selected,b.interestIds); }
       catch { return json({error:"Choose one to five confirmed interests to explore."},400); }
-      const analysis = await analyze(b.kind as AnalysisKind, interests, state.city, signal);
-      if (analysis.kind === "taste") analysis.tags = relevantThemes(analysis.tags, state.selected.filter(interest => b.interestIds.includes(interest.id)));
-      return json({analysis});
+      let analysis;
+      let themeStatus;
+      if(b.kind==='taste'){
+        const chosen=state.selected.filter(interest=>b.interestIds.includes(interest.id));
+        const grouped=await themesPerInterest(chosen,async interest=>{
+          const single=selectAnalysisSignals(state.selected,[interest.id]);
+          const result=await analyze('taste',single,state.city,signal);
+          if(result.kind!=='taste')throw Error('Unexpected taste analysis result.');
+          return result.tags;
+        });
+        if(!grouped.tags.length)throw Error('No distinct taste connections were returned.');
+        themeStatus={unavailable:grouped.unavailable,noConnections:grouped.noConnections};
+        analysis={kind:'taste' as const,recordedAt:new Date().toISOString(),tags:grouped.tags};
+      }else analysis=await analyze(b.kind as AnalysisKind, interests, state.city, signal);
+      return json({analysis,...(themeStatus?{themeStatus}:{})});
     }
     if (b.action === "trends") {
       if (!selectedCard) return json({error:"Choose a current discovery."},400);
@@ -183,10 +195,29 @@ async function handlePOST(request: Request) {
         const result = await discoverSection(joint, section, state.categoryConstraints[section] ?? [], [...a, ...partner.map(c => c.id), ...rejected], false, signal);
         cards.push(...result.filter(card => card.section === section).slice(0, 3));
       }
+      const placeSection=sections.find(section=>sectionTypes[section]==='place')??'Eat';
+      const exchange=await Promise.all([
+        {person:'you',seeds:state.selected.filter(candidate=>a.includes(candidate.id)),themes:comparison.aOnly},
+        {person:'them',seeds:partner,themes:comparison.bOnly},
+      ].map(async profile=>{
+        if(!profile.themes.length)return {person:profile.person,theme:undefined,card:undefined};
+        const solo=structuredClone(state);
+        const themeCandidates=profile.themes.slice(0,3).map(theme=>({id:theme.id,name:theme.name,types:['urn:tag'],detail:'Returned individual comparison theme'}));
+        solo.selected=profile.seeds;
+        solo.tags=themeCandidates;
+        solo.categoryTags={[placeSection]:themeCandidates.map(theme=>theme.id)};
+        solo.intent={kind:'refine',seeds:[],concepts:[],constraints:state.categoryConstraints[placeSection]??[],sections:[placeSection],strategy:'discover'};
+        try{
+          const personal=await discoverSection(solo,placeSection,state.categoryConstraints[placeSection]??[],rejected,false,signal);
+          const card=personal.find(candidate=>candidate.evidence?.locality==='physical-city');
+          return {person:profile.person,theme:profile.themes[0]?.name,card};
+        }catch{return {person:profile.person,theme:profile.themes[0]?.name,card:undefined};}
+      }));
       return json({
         comparison,
         partner: partner.map((p) => p.name),
         cards,
+        exchange,
         notice: cards.length
           ? "Each category was searched using both confirmed taste profiles and the shared themes returned by the comparison. These are starting ideas, not a compatibility score or a guarantee you will both like every result."
           : "No matches appeared for these shared tastes and current preferences. Your Passport is preserved.",

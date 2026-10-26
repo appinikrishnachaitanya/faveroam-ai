@@ -108,6 +108,7 @@ export default function TasteIntelligence({
     comparison: TasteComparison;
     cards: Card[];
     partner?: string[];
+    exchange?: {person:string;theme?:string;card?:Card}[];
     notice: string;
   }>();
   const [debug, setDebug] = useState<unknown>();
@@ -435,6 +436,7 @@ export default function TasteIntelligence({
                 <h4>One place to start together</h4>{hangout?<><strong>{hangout.card.name}</strong><p>{hangout.card.address??`Returned place in ${passport.city}`}</p><p>{hangout.exactTheme?'An exact returned shared theme appears on this place.':'This place came from the shared-interest search; no individual shared theme was returned on its listing.'}</p></>:<p>No verified place was returned for these interests. Try another category or taste.</p>}
                 <h4>Three ways to start a conversation</h4><ol>{commonGroundStarters(together.comparison,first,second).map(starter=><li key={starter}>{starter}</li>)}</ol>
               </div>;})()}
+              {together.exchange&&<section className="taste-exchange" aria-label="One discovery to show each other"><span className="micro-label">BEYOND THE OVERLAP</span><h4>Show each other something new</h4><p>Each idea starts from one person’s distinct returned theme, so you can introduce each other to something from your own tastes.</p><div className="taste-exchange-grid">{together.exchange.map(item=><article key={item.person}><small>{item.person==='you'?'Your pick to introduce':'Their pick to introduce'}</small>{item.card?<><strong>{item.card.name}</strong><p>{item.card.address??`Returned in ${passport.city}`}</p><span>From the distinct theme: {item.theme}</span></>:<p>{item.theme?`No verified place was returned for “${item.theme}” in this category.`:'No distinct theme was returned for this person.'}</p>}</article>)}</div></section>}
               <p role="status">{together.notice}</p>
               <details className="together-differences"><summary>See each person’s distinct tastes</summary>
                 <p>

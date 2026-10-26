@@ -58,6 +58,34 @@ export function curatedThemes(tags:TasteTag[],limit=6):TasteTag[] {
 /** Stay within the selected interests' returned taxonomy. Audience association
  * alone does not make an unrelated dish or venue a useful film theme. */
 export function relevantThemes(tags:TasteTag[], interests:readonly {id:string;types:string[];name?:string}[]):TasteTag[] {
+  const attributed=tags.some(tag=>Boolean(tag.sourceInterestId));
+  if(attributed)return interests.flatMap(interest=>relevantThemesFor(tags.filter(tag=>!tag.sourceInterestId||tag.sourceInterestId===interest.id),[interest]));
+  return relevantThemesFor(tags,interests);
+}
+
+/** Look up each selected favorite independently so one domain cannot dominate
+ * the combined result. Preserve partial success and identify missing sources. */
+export async function themesPerInterest<T extends {id:string;name:string;types:string[]}>(
+  interests:readonly T[],
+  lookup:(interest:T)=>Promise<TasteTag[]>,
+):Promise<{tags:TasteTag[];unavailable:string[];noConnections:string[]}> {
+  const results=await Promise.allSettled(interests.map(async interest=>({
+    interest,
+    tags:relevantThemes(await lookup(interest),[interest]),
+  })));
+  const tags:TasteTag[]=[];
+  const unavailable:string[]=[];
+  const noConnections:string[]=[];
+  results.forEach((result,index)=>{
+    const interest=interests[index];
+    if(result.status==='rejected') { unavailable.push(interest.name); return; }
+    if(!result.value.tags.length) { noConnections.push(interest.name); return; }
+    tags.push(...result.value.tags.map(tag=>({...tag,sourceInterestId:interest.id,sourceInterestName:interest.name})));
+  });
+  return {tags,unavailable,noConnections};
+}
+
+function relevantThemesFor(tags:TasteTag[],interests:readonly {id:string;types:string[];name?:string}[]):TasteTag[] {
   const domains = new Set(interests.flatMap(interest => interest.id.startsWith('urn:tag:')
     ? [/^urn:tag:(?:cuisine|specialty_dish|dietary_option|dietary_attribute):/.test(interest.id) ? 'place' : interest.id.split(':')[3]] : interest.types.map(type=>type.replace('urn:entity:',''))));
   const allowed = new Set<string>();

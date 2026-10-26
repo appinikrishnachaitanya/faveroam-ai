@@ -13,6 +13,7 @@ export function mappedPlaces(cards:readonly Card[]) {
 export default function PassportMap({cards,onSelect,dayLabels}:{cards:Card[];onSelect?:(card:Card)=>void;dayLabels?:Record<string,string>}) {
   const container=useRef<HTMLDivElement>(null);
   const [failed,setFailed]=useState(false);
+  const [selectedPlace,setSelectedPlace]=useState<Card>();
   const places=mappedPlaces(cards);
   const key=places.map(card=>card.id).join('|');
   useEffect(()=>{
@@ -32,10 +33,7 @@ export default function PassportMap({cards,onSelect,dayLabels}:{cards:Card[];onS
       const bounds=new maplibregl.LngLatBounds();
       for(const card of places){
         const point=card.intelligence!.location;
-        const marker=document.createElement('button');marker.type='button';marker.className='passport-map-marker';marker.textContent=dayLabels?.[card.id]??'●';marker.title=card.name;marker.setAttribute('aria-label',`Open ${card.name}`);marker.onclick=()=>{
-          if(onSelect)onSelect(card);
-          else new maplibregl.Popup({closeButton:true}).setLngLat([point.longitude!,point.latitude!]).setText(`${card.name}${card.address?` · ${card.address}`:''}`).addTo(map!);
-        };
+        const marker=document.createElement('button');marker.type='button';marker.className='passport-map-marker';marker.textContent=dayLabels?.[card.id]??'●';marker.title=card.name;marker.setAttribute('aria-label',`Show details for ${card.name}`);marker.onclick=()=>setSelectedPlace(card);
         markers.push(new maplibregl.Marker({element:marker}).setLngLat([point.longitude!,point.latitude!]).addTo(map));
         bounds.extend([point.longitude!,point.latitude!]);
       }
@@ -57,7 +55,8 @@ export default function PassportMap({cards,onSelect,dayLabels}:{cards:Card[];onS
     <p>Only places with returned coordinates appear here. Circles show the area around named venues, not a verified neighbourhood boundary. Check routes and hours before going.</p>
     {!places.length?<p>No returned places have usable coordinates yet. Your cards remain available.</p>:<>
       <div ref={container} className="passport-map-canvas" hidden={failed} aria-label="Interactive map of returned places"/>
-      {failed&&<div className="passport-map-fallback"><strong>Map tiles are unavailable. Here is a schematic view of the same returned coordinates.</strong><div className="schematic-map" aria-label={`${places.length} returned place coordinates on a schematic plot`}>{schematic?.points.map((point,index)=>{const card=places.find(place=>Math.abs(place.intelligence!.location.latitude!-point.latitude)<0.00001&&Math.abs(place.intelligence!.location.longitude!-point.longitude)<0.00001);return <button key={index} type="button" title={card?.name} aria-label={`Open ${card?.name??'place'}`} style={{left:`${point.x}%`,top:`${point.y}%`}} onClick={()=>card&&onSelect?.(card)}>●</button>;})}</div></div>}
+      {failed&&<div className="passport-map-fallback"><strong>Map tiles are unavailable. Here is a schematic view of the same returned coordinates.</strong><div className="schematic-map" aria-label={`${places.length} returned place coordinates on a schematic plot`}>{schematic?.points.map((point,index)=>{const card=places.find(place=>Math.abs(place.intelligence!.location.latitude!-point.latitude)<0.00001&&Math.abs(place.intelligence!.location.longitude!-point.longitude)<0.00001);return <button key={index} type="button" title={card?.name} aria-label={`Show details for ${card?.name??'place'}`} aria-pressed={selectedPlace?.id===card?.id} style={{left:`${point.x}%`,top:`${point.y}%`}} onClick={()=>card&&setSelectedPlace(card)}>●</button>;})}</div></div>}
+      {selectedPlace&&<div className="map-place-detail" aria-live="polite"><div><span className="micro-label">{selectedPlace.section}</span><strong>{selectedPlace.name}</strong><p>{selectedPlace.address??`Returned in ${selectedPlace.evidence?.destination??'your destination'}`}</p></div><button type="button" className="icon-button" aria-label="Close place details" onClick={()=>setSelectedPlace(undefined)}>×</button>{onSelect&&<button type="button" className="quiet-button" onClick={()=>onSelect(selectedPlace)}>View discovery</button>}</div>}
       <ul className="passport-map-legend">{buildAreaGuide([],places).filter(area=>area.point).map(area=><li key={area.anchor.id}>Area around <strong>{area.anchor.name}</strong></li>)}</ul>
     </>}
   </section>;
