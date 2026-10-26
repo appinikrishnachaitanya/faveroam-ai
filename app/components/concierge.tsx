@@ -26,7 +26,7 @@ export default function ConciergeDrawer({
       if (element.open) element.close();
       root.style.overflow = previousRootOverflow;
       document.body.style.overflow = previousBodyOverflow;
-      opener.current?.focus();
+      opener.current?.focus({ preventScroll: true });
     };
   }, [open]);
   return (

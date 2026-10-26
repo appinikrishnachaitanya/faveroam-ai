@@ -218,3 +218,19 @@ src/share/links.ts
 tests/faveroam-release.test.ts
 tests/progressive.test.ts
 ```
+
+## Repeated opening and closing
+
+- The chat dialog mounts on first opening and retains its transcript on close.
+- Discover retains its map across tab/map toggles, stops camera motion while
+  hidden, and resizes the same instance when shown. Coordinates and day labels
+  participate in map invalidation; changing those inputs refreshes markers.
+- Removed repeated message/card/dialog entrance animations and full-page dialog
+  backdrop blur. Closing chat restores focus without scrolling the workspace.
+- Saved-plan edit navigation now activates the lazy planner before displaying it.
+- These address identifiable render/reinitialization costs. Production interaction
+  latency and provider timings still require measured acceptance.
+
+Validation for this pass: 483 tests passed; production build, production smoke,
+documentation links, and diff checks passed. Map retention in this milestone
+supersedes the earlier implementation that released it when leaving Discover.

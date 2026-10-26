@@ -115,6 +115,8 @@ export default function Home() {
     return ()=>controller.abort();
   },[]);
   const [assistantOpen, setAssistantOpen] = useState(false);
+  const [assistantVisited, setAssistantVisited] = useState(false);
+  useEffect(() => { if (assistantOpen) setAssistantVisited(true); }, [assistantOpen]);
   const [visitedViews, setVisitedViews] = useState<Set<string>>(() => new Set(["discover"]));
   const [showMap,setShowMap]=useState(true);
   const [assistantTab, setAssistantTab] = useState<"ask" | "manual">("ask");
@@ -730,8 +732,8 @@ export default function Home() {
   const stableFresh=useCallback(()=>freshHandler.current(),[]);
   const accountChangedHandler=useCallback((signedIn:boolean,firstName?:string)=>{setAccountSignedIn(signedIn);setAccountFirstName(signedIn?firstName?.trim()??'':'');},[]);
   const passportSavedHandler=useCallback((sessionId?:string)=>{if(sessionId)rememberSavedSession(window.sessionStorage,sessionId);else clearSavedSession(window.sessionStorage);setSavedSessionId(sessionId);},[]);
-  const editPlanHandler=useCallback((plan:SavedPlan)=>{setEditingPlan(current=>({plan,nonce:(current?.nonce??0)+1}));setWorkspaceView('plan');},[]);
-  const editWeekHandler=useCallback((week:SavedFirstWeek)=>{setEditingFirstWeek(current=>({week,nonce:(current?.nonce??0)+1}));setWorkspaceView('plan');},[]);
+  const editPlanHandler=useCallback((plan:SavedPlan)=>{setEditingPlan(current=>({plan,nonce:(current?.nonce??0)+1}));panelActions.current.selectWorkspaceView('plan');},[]);
+  const editWeekHandler=useCallback((week:SavedFirstWeek)=>{setEditingFirstWeek(current=>({week,nonce:(current?.nonce??0)+1}));panelActions.current.selectWorkspaceView('plan');},[]);
   const restoreAccountPassport=useCallback((passport:Passport)=>{
     freshHandler.current();setResult(passport);setCity(passport.city);setDraft(passport.selected.map(seed=>seed.name));
     setRequestedActivities((passport.session?.activeCategories??[]).filter(section=>!passport.session?.hiddenCategories.includes(section)));
@@ -1050,7 +1052,7 @@ export default function Home() {
               ) : (
                 <>
                   {mappedPlaces(result.cards.filter(card=>!result.session?.hiddenCategories.includes(card.section))).length>0&&<button className="quiet-button map-toggle" type="button" aria-expanded={showMap} onClick={()=>setShowMap(value=>!value)}>{showMap?'Hide map':'Show map'}</button>}
-                  {workspaceView==='discover'&&showMap&&visibleResult&&mappedPlaces(visibleResult.cards).length>0&&<PassportMap cards={visibleResult.cards} onSelect={openMappedCard}/>}
+                  {visibleResult&&mappedPlaces(visibleResult.cards).length>0&&<div hidden={!showMap}><PassportMap cards={visibleResult.cards} active={workspaceView==='discover'&&showMap} onSelect={openMappedCard}/></div>}
                   {visibleResult&&<PassportSections disabled={busy} result={visibleResult} feedback={feedback} onFeedback={stableFeedback} updates={updates} updating={updating}/>}
                   <ShareTasteCard key={`share:${result.agent?.sessionId??result.city}`} passport={result}/>
                 </>
@@ -1146,9 +1148,9 @@ export default function Home() {
           <a href="/privacy">Privacy</a>
         </nav>
       </footer>
-      {result && assistantOpen && (
+      {result && (assistantOpen || assistantVisited) && (
         <ConciergeDrawer
-          open
+          open={assistantOpen}
           onClose={() => setAssistantOpen(false)}
         >
           <div

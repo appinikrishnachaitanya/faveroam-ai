@@ -1,5 +1,5 @@
 "use client";
-import {memo,useEffect,useRef,useState} from 'react';
+import {memo,useEffect,useMemo,useRef,useState} from 'react';
 import type {Card} from '../../src/passport/model';
 import {isPlaceSection} from '../../src/passport/model';
 import {buildAreaGuide} from '../../src/passport/area-guide';
@@ -10,12 +10,20 @@ export function mappedPlaces(cards:readonly Card[]) {
     Number.isFinite(card.intelligence?.location?.latitude) && Number.isFinite(card.intelligence?.location?.longitude) &&
     Math.abs(card.intelligence!.location.latitude!)<=90 && Math.abs(card.intelligence!.location.longitude!)<=180);
 }
-export default memo(function PassportMap({cards,onSelect,dayLabels}:{cards:Card[];onSelect?:(card:Card)=>void;dayLabels?:Record<string,string>}) {
+export default memo(function PassportMap({cards,onSelect,dayLabels,active=true}:{cards:Card[];active?:boolean;onSelect?:(card:Card)=>void;dayLabels?:Record<string,string>}) {
   const container=useRef<HTMLDivElement>(null);
+  const mapInstance=useRef<import('maplibre-gl').Map | undefined>(undefined);
+  useEffect(()=>{
+    const map=mapInstance.current;
+    if(!map)return;
+    if(active)map.resize();
+    else map.stop();
+  },[active]);
   const [failed,setFailed]=useState(false);
   const [selectedPlace,setSelectedPlace]=useState<Card>();
-  const places=mappedPlaces(cards);
-  const key=places.map(card=>card.id).join('|');
+  const places=useMemo(()=>mappedPlaces(cards),[cards]);
+  const key=places.map(card=>`${card.id}:${card.intelligence!.location.latitude}:${card.intelligence!.location.longitude}:${dayLabels?.[card.id]??''}`).join('|');
+  const areas=useMemo(()=>buildAreaGuide([],places).filter(area=>area.point),[places]);
   useEffect(()=>{
     if(!container.current||!places.length)return;
     let disposed=false;
@@ -26,6 +34,7 @@ export default memo(function PassportMap({cards,onSelect,dayLabels}:{cards:Card[
       if(disposed||!container.current)return;
       const first=places[0].intelligence!.location;
       map=new maplibregl.Map({container:container.current,style:{version:8,sources:{basemap:{type:'raster',tiles:['https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png','https://b.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png'],tileSize:256,attribution:'© OpenStreetMap contributors © CARTO'}},layers:[{id:'basemap',type:'raster',source:'basemap'}]},center:[first.longitude!,first.latitude!],zoom:11,attributionControl:false});
+      mapInstance.current=map;
       map.addControl(new maplibregl.NavigationControl({showCompass:false}),'top-right');
       map.addControl(new maplibregl.AttributionControl({compact:true,customAttribution:'© OpenStreetMap contributors · © CARTO'}));
       map.on('load',()=>{window.clearTimeout(timer);if(!disposed)setFailed(false);});
@@ -38,7 +47,7 @@ export default memo(function PassportMap({cards,onSelect,dayLabels}:{cards:Card[
         bounds.extend([point.longitude!,point.latitude!]);
       }
       if(places.length>1)map.fitBounds(bounds,{padding:55,maxZoom:13,duration:0});
-      const anchors=buildAreaGuide([],places).filter(area=>area.point);
+      const anchors=areas;
       map.on('load',()=>{if(!map||disposed)return;
         for(const area of anchors){const point=area.point!;const id=`anchor-${anchors.indexOf(area)}`;
           // Approximate display circle around a real venue, never a named neighbourhood.
@@ -48,16 +57,16 @@ export default memo(function PassportMap({cards,onSelect,dayLabels}:{cards:Card[
         }
       });
     }).catch(()=>{if(!disposed)setFailed(true);});
-    return ()=>{disposed=true;window.clearTimeout(timer);markers.forEach(marker=>marker.remove());map?.remove();};
+    return ()=>{disposed=true;window.clearTimeout(timer);markers.forEach(marker=>marker.remove());map?.remove();if(mapInstance.current===map)mapInstance.current=undefined;};
   },[key]);
-  const schematic=plotHeatmap(places.map(card=>({latitude:card.intelligence!.location.latitude!,longitude:card.intelligence!.location.longitude!,affinity:0})));
+  const schematic=useMemo(()=>plotHeatmap(places.map(card=>({latitude:card.intelligence!.location.latitude!,longitude:card.intelligence!.location.longitude!,affinity:0}))),[places]);
   return <section className="passport-map-panel" aria-label="Map of returned places">
     <p>Only places with returned coordinates appear here. Circles show the area around named venues, not a verified neighbourhood boundary. Check routes and hours before going.</p>
     {!places.length?<p>No returned places have usable coordinates yet. Your cards remain available.</p>:<>
       <div ref={container} className="passport-map-canvas" hidden={failed} aria-label="Interactive map of returned places"/>
       {failed&&<div className="passport-map-fallback"><strong>Map tiles are unavailable. Here is a schematic view of the same returned coordinates.</strong><div className="schematic-map" aria-label={`${places.length} returned place coordinates on a schematic plot`}>{schematic?.points.map((point,index)=>{const card=places.find(place=>Math.abs(place.intelligence!.location.latitude!-point.latitude)<0.00001&&Math.abs(place.intelligence!.location.longitude!-point.longitude)<0.00001);return <button key={index} type="button" title={card?.name} aria-label={`Show details for ${card?.name??'place'}`} aria-pressed={selectedPlace?.id===card?.id} style={{left:`${point.x}%`,top:`${point.y}%`}} onClick={()=>card&&setSelectedPlace(card)}>●</button>;})}</div></div>}
       {selectedPlace&&<div className="map-place-detail" aria-live="polite"><div><span className="micro-label">{selectedPlace.section}</span><strong>{selectedPlace.name}</strong><p>{selectedPlace.address??`Returned in ${selectedPlace.evidence?.destination??'your destination'}`}</p></div><button type="button" className="icon-button" aria-label="Close place details" onClick={()=>setSelectedPlace(undefined)}>×</button>{onSelect&&<button type="button" className="quiet-button" onClick={()=>onSelect(selectedPlace)}>View discovery</button>}</div>}
-      <ul className="passport-map-legend">{buildAreaGuide([],places).filter(area=>area.point).map(area=><li key={area.anchor.id}>Area around <strong>{area.anchor.name}</strong></li>)}</ul>
+      <ul className="passport-map-legend">{areas.map(area=><li key={area.anchor.id}>Area around <strong>{area.anchor.name}</strong></li>)}</ul>
     </>}
   </section>;
 });
