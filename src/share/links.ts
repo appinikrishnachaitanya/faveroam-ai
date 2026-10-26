@@ -2,6 +2,7 @@ import 'server-only';
 import {createHash,randomBytes} from 'node:crypto';
 import {storageWriter} from '../account/server';
 import {loadSession} from '../agent/store';
+import {debugEvent} from '../agent/debug';
 import {curatedThemes,relevantThemes} from '../passport/taste-themes';
 import type {AgentState} from '../agent/types';
 import type {Section} from '../passport/model';
@@ -22,12 +23,13 @@ export async function createShare(sessionId:string,revision:number){
  if(state.revision!==revision)throw Error('Your Passport changed. Refresh before sharing.');
  const writer=storageWriter(),owner=hash(sessionId);
  const {count,error:countError}=await writer.from('share_links').select('*',{count:'exact',head:true}).eq('owner_session_hash',owner).gt('expires_at',new Date().toISOString());
- if(countError)throw Error('Share storage is not ready. Apply the share-links database script.');
+ if(countError){debugEvent('share.create_failed',{reason:'storage-read'});throw Error('Share storage is not ready. Apply the share-links database script.');}
  if((count??0)>=5)throw Error('You have five active links. Revoke one before creating another.');
  const publicToken=token(),revokeToken=token(),snapshot=shareSnapshot(state);
  const expiresAt=new Date(Date.now()+14*24*60*60*1000).toISOString();
  const {error}=await writer.from('share_links').insert({token_hash:hash(publicToken),revoke_hash:hash(revokeToken),owner_session_hash:owner,snapshot,expires_at:expiresAt});
- if(error)throw Error('Could not create this share link.');
+ if(error){debugEvent('share.create_failed',{reason:'storage-write'});throw Error('Could not create this share link.');}
+ debugEvent('share.created');
  return {token:publicToken,revokeToken,expiresAt,snapshot};
 }
 export async function readShare(publicToken:string):Promise<SharedSnapshot|undefined>{

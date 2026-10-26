@@ -1,54 +1,29 @@
 "use client";
 
-import { Icon } from "./passport";
+import {Icon} from './passport';
 
-const requests = [
-  "Find cheaper food. Keep my music and movies unchanged.",
-  "Help me plan dinner and a movie.",
-];
-
-export default function DiscoveryConcierge({
-  busy,
-  onAsk,
-  onNavigate,
-}: {
-  busy: boolean;
-  onAsk: (request?: string) => void;
-  onNavigate: (view: "preferences" | "connections" | "together") => void;
+export default function DiscoveryConcierge({city,firstName,busy,onAsk,onNavigate,onShare}:{
+  city:string;
+  firstName?:string;
+  busy:boolean;
+  onAsk:(request?:string)=>void;
+  onNavigate:(view:'plan'|'together')=>void;
+  onShare:()=>void;
 }) {
-  const actions = [
-    { view: "preferences", icon: "sliders", title: "Refine my discoveries", detail: "Budget, rating and the mood for one category." },
-    { view: "connections", icon: "pin", title: "Find my next area", detail: "Explore taste connections and nearby food." },
-    { view: "together", icon: "star", title: "Find something for us both", detail: "A shared choice shaped by two taste profiles." },
-  ] as const;
-
-  return (
-    <section className="discovery-concierge" aria-labelledby="discovery-concierge-title">
-      <div className="discovery-concierge-copy">
-        <span className="micro-label">A LITTLE HELP FINDING YOUR NEXT FAVORITE</span>
-        <h2 id="discovery-concierge-title">What would make today a good day?</h2>
-        <p>Ask for a change, browse your choices, or bring someone along. You stay in control.</p>
-        <button type="button" className="primary-button" onClick={() => onAsk()}>
-          Ask TastePassport <Icon name="arrow" size={16} />
-        </button>
-        <div className="discovery-prompts" aria-label="Start a conversation">
-          {requests.map(request => (
-            <button key={request} type="button" disabled={busy} onClick={() => onAsk(request)}>
-              {request}<Icon name="arrow" size={14} />
-            </button>
-          ))}
-        </div>
+  return <section className="discovery-concierge discovery-welcome" aria-labelledby="discovery-concierge-title">
+    <div className="discovery-concierge-copy">
+      <span className="micro-label">YOUR PASSPORT IS READY</span>
+      <h2 id="discovery-concierge-title">{firstName?`Welcome to ${city}, ${firstName}.`:`Welcome to ${city}.`}</h2>
+      <p>I can help you choose from these discoveries, change what you see, or shape a day out. Tell me what you feel like doing.</p>
+      <div className="discovery-welcome-actions">
+        <button type="button" className="primary-button" disabled={busy} onClick={()=>onAsk()}>Ask TastePassport <Icon name="arrow" size={16}/></button>
+        <button type="button" className="quiet-button" disabled={busy} onClick={()=>onAsk('Pick three places or cultural discoveries that best fit my confirmed tastes, and explain each choice.')}>Pick three for me</button>
       </div>
-      <div className="discovery-next-steps">
-        <span className="micro-label">OR CHOOSE YOUR NEXT STEP</span>
-        {actions.map(action => (
-          <button key={action.view} type="button" onClick={() => onNavigate(action.view)}>
-            <Icon name={action.icon} size={20} />
-            <span><strong>{action.title}</strong><small>{action.detail}</small></span>
-            <Icon name="arrow" size={16} />
-          </button>
-        ))}
-      </div>
-    </section>
-  );
+    </div>
+    <div className="discovery-quick-actions" aria-label="Next things to try">
+      <button type="button" onClick={()=>onNavigate('plan')}><Icon name="pin" size={18}/><span>Plan my first week</span></button>
+      <button type="button" onClick={()=>onNavigate('together')}><Icon name="star" size={18}/><span>Explore together</span></button>
+      <button type="button" onClick={onShare}><Icon name="arrow" size={18}/><span>Share my tastes</span></button>
+    </div>
+  </section>;
 }

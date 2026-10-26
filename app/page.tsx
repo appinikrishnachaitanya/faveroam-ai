@@ -53,7 +53,7 @@ import {
 } from "./components/passport-overview";
 import { sectionOrder } from "../src/workspace/state";
 import TasteAnalysis from "./components/taste-analysis";
-import PassportMap from './components/passport-map';
+import PassportMap, {mappedPlaces} from './components/passport-map';
 import FirstWeek from './components/first-week';
 import ShareTasteCard from './components/share-taste-card';
 import { rememberGuestPassport, restoreGuestPassport, clearGuestPassport } from "../src/workspace/guest-recovery";
@@ -112,7 +112,7 @@ export default function Home() {
     return ()=>controller.abort();
   },[]);
   const [assistantOpen, setAssistantOpen] = useState(false);
-  const [showMap,setShowMap]=useState(false);
+  const [showMap,setShowMap]=useState(true);
   const [assistantTab, setAssistantTab] = useState<"ask" | "manual">("ask");
   const [composer, setComposer] = useState("");
   const [messages, setMessages] = useState<Message[]>([welcome]);
@@ -301,7 +301,7 @@ export default function Home() {
   );
   const committedMessages = result
     ? conversationStart < 0
-      ? []
+      ? [{role:'agent' as const,text:`Welcome to ${result.city}. I can help you choose from your discoveries, change a preference, or plan an outing. What would you like to do first?`}]
       : sessionHistory.slice(conversationStart)
     : messages;
   const missingSections = (result?.session?.activeCategories ?? []).filter(section =>
@@ -708,6 +708,7 @@ export default function Home() {
       });
     setRecoveryStatus(undefined);
     setShowSaved(false);
+    setShowMap(true);
     setWorkspaceView("discover");
     setEditingPlan(undefined);
     setSavePlanRequest(0);
@@ -945,7 +946,7 @@ export default function Home() {
               className="workspace-view-anchor"
               hidden={workspaceView !== "discover"}
             >
-              {!showSaved && <DiscoveryConcierge busy={busy} onAsk={request=>{if(request)setComposer(request);setAssistantTab("ask");setAssistantOpen(true);}} onNavigate={selectWorkspaceView} />}
+              {!showSaved && <DiscoveryConcierge city={result.city} firstName={accountSignedIn?accountFirstName:undefined} busy={busy} onAsk={request=>{if(request)setComposer(request);setAssistantTab("ask");setAssistantOpen(true);}} onNavigate={selectWorkspaceView} onShare={()=>document.getElementById('share-taste-title')?.scrollIntoView({behavior:'smooth',block:'center'})}/>}
               {result.session && !showSaved && (
                 <FamiliarityControl
                   session={result.session}
@@ -992,8 +993,8 @@ export default function Home() {
                 />
               ) : (
                 <>
-                  <button className="quiet-button map-toggle" type="button" aria-expanded={showMap} onClick={()=>setShowMap(value=>!value)}>{showMap?'Hide map':'See places on a map'}</button>
-                  {showMap&&<PassportMap cards={result.cards.filter(card=>!result.session?.hiddenCategories.includes(card.section))} onSelect={card=>{
+                  {mappedPlaces(result.cards.filter(card=>!result.session?.hiddenCategories.includes(card.section))).length>0&&<button className="quiet-button map-toggle" type="button" aria-expanded={showMap} onClick={()=>setShowMap(value=>!value)}>{showMap?'Hide map':'Show map'}</button>}
+                  {showMap&&mappedPlaces(result.cards.filter(card=>!result.session?.hiddenCategories.includes(card.section))).length>0&&<PassportMap cards={result.cards.filter(card=>!result.session?.hiddenCategories.includes(card.section))} onSelect={card=>{
                     setShowMap(false);
                     window.setTimeout(()=>[...document.querySelectorAll<HTMLElement>('[data-entity-id]')].find(element=>element.dataset.entityId===card.id)?.scrollIntoView({behavior:'smooth',block:'center'}),50);
                   }}/>}
