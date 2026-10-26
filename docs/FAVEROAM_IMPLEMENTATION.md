@@ -53,3 +53,14 @@ This is a brand foundation milestone, not completion of the redesign or features
 - Live venue relevance, map tiles, ordinal reference synchronization and practical
   shared-venue geography still need acceptance/further work. This does not close
   the entire stability gate.
+
+## First Week editing milestone
+
+- Existing WeekStop representation now supports optional locks without breaking older plans.
+- One-stop venue/time edits preserve other stops; locked activities reject changes.
+- Removal leaves an explicit open slot; duplicate venues are rejected.
+- One-step undo restores the pre-edit state. Rebuilding/date changes require unlocking.
+- Venue/time fields now have separate accessible labels and responsive action rows.
+- Full suite: 466 passed; TypeScript and production build passed.
+- Weekly editing state is still local to the mounted planner; durable weekly saving,
+  Two Roots assignment, evidence UI and browser acceptance remain unfinished.

@@ -22,3 +22,8 @@ body { background:#f8f6f1; color:#17243b; }
 @media (prefers-reduced-motion:reduce) {
   *,*::before,*::after { animation-duration:.01ms!important; transition-duration:.01ms!important; scroll-behavior:auto!important; }
 }
+.week-stop-editor { min-width:0; display:grid; gap:12px; padding:18px; border:1px solid var(--ui-border); border-radius:14px; background:var(--ui-surface); }
+.week-stop-editor > span { font-weight:700; color:var(--ui-ink); }
+.week-stop-editor label { display:grid; gap:6px; min-width:0; }
+.week-stop-editor input,.week-stop-editor select { width:100%; min-width:0; min-height:44px; }
+.week-stop-actions { display:flex; flex-wrap:wrap; gap:8px; }

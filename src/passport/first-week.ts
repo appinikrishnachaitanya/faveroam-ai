@@ -10,8 +10,21 @@ const days:[string,string[]][]=[
   ['Explore after dark',['Eat','Nightlife']],
   ['Your new favourites',['Coffee','Eat','Culture']],
 ];
-export interface WeekStop {activity:string;card?:Card;time:string}
+export interface WeekStop {activity:string;card?:Card;time:string;locked?:boolean}
 export interface WeekDay {title:string;date:string;stops:WeekStop[]}
+/** One explicit edit, preserving every other stop and all approved locks. */
+export function updateWeekStop(days:WeekDay[],dayIndex:number,stopIndex:number,patch:Partial<Pick<WeekStop,'card'|'time'|'locked'>>):WeekDay[]{
+ const stop=days[dayIndex]?.stops[stopIndex];
+ if(!stop)throw Error('Choose an existing stop.');
+ if(stop.locked && ('card' in patch || 'time' in patch))throw Error('Unlock this stop before changing it.');
+ if(patch.locked && !stop.card)throw Error('Choose a place before locking this stop.');
+ if(patch.time!==undefined&&!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(patch.time))throw Error('Choose a valid time.');
+ if(patch.card){
+   if(!activityMatches(patch.card,stop.activity))throw Error('Choose a place for this activity.');
+   if(days.some((day,i)=>day.stops.some((item,j)=>(i!==dayIndex||j!==stopIndex)&&item.card?.id===patch.card!.id)))throw Error('This place is already in your week.');
+ }
+ return days.map((day,i)=>i===dayIndex?{...day,stops:day.stops.map((item,j)=>j===stopIndex?{...item,...patch}:item)}:day);
+}
 export function addCalendarDays(date:string,offset:number){if(!/^\d{4}-\d{2}-\d{2}$/.test(date))throw Error('Choose a valid date.');const value=new Date(`${date}T12:00:00Z`);if(Number.isNaN(value.getTime())||value.toISOString().slice(0,10)!==date)throw Error('Choose a valid date.');value.setUTCDate(value.getUTCDate()+offset);return value.toISOString().slice(0,10);}
 /** Uses only current validated city places; gaps remain explicit. */
 export function firstWeek(cards:Card[],city:string,startDate:string):WeekDay[]{
