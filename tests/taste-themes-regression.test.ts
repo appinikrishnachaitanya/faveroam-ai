@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { parseAnalysis } from '../src/qloo/analysis.ts';
-import { relevantThemes, themeCategories, themeKind } from '../src/passport/taste-themes.ts';
+import { relevantThemes, themesPerInterest, themeCategories, themeKind } from '../src/passport/taste-themes.ts';
 
 const film={id:'film',types:['urn:entity:movie']};
 const artist={id:'artist',types:['urn:entity:artist']};
@@ -47,4 +47,25 @@ test('theme previews avoid near-identical labels while preserving different retu
  const {curatedThemes}=await import('../src/passport/taste-themes.ts');
  const tags=[['a','Indian Platter'],['b','India Platter'],['c','Indian Curries'],['d','Indian Curries and Accompaniments'],['e','Indian Breakfast']].map(([id,name])=>({id:`urn:tag:specialty_dish:place:${id}`,name}));
  assert.deepEqual(curatedThemes(tags).map(t=>t.name),['Indian Platter','Indian Curries','Indian Breakfast']);
+});
+
+test('multi-interest themes are fetched and attributed independently with honest partial results',async()=>{
+ const interests=[
+   {id:'artist',name:'A.R. Rahman',types:['urn:entity:artist']},
+   {id:'film',name:'Interstellar',types:['urn:entity:movie']},
+   {id:'urn:tag:cuisine:qloo:indian',name:'Indian cuisine',types:['urn:tag']},
+ ];
+ const calls:string[]=[];
+ const result=await themesPerInterest(interests,async interest=>{
+   calls.push(interest.id);
+   if(interest.id==='film')throw Error('synthetic unavailable');
+   return interest.id==='artist'
+     ? [{id:'urn:tag:genre:music:indian_classical',name:'Indian classical'}]
+     : [{id:'urn:tag:cuisine:place:punjabi',name:'Punjabi cuisine'}];
+ });
+ assert.deepEqual(new Set(calls),new Set(['artist','film','urn:tag:cuisine:qloo:indian']));
+ assert.deepEqual(result.tags.map(tag=>tag.sourceInterestId),['artist','urn:tag:cuisine:qloo:indian']);
+ assert.deepEqual(result.tags.map(tag=>tag.sourceInterestName),['A.R. Rahman','Indian cuisine']);
+ assert.deepEqual(result.unavailable,['Interstellar']);
+ assert.deepEqual(result.noConnections,[]);
 });

@@ -9,6 +9,12 @@
 .passport-map-fallback { margin:16px 0; }
 .schematic-map { position:relative; height:300px; margin-top:12px; border-radius:12px; background:linear-gradient(135deg,#e4eee6,#f6e9d0); border:1px solid var(--ui-border); }
 .schematic-map button { position:absolute; transform:translate(-50%,-50%); border:0; background:#234b35; color:#fff; border-radius:50%; width:30px; height:30px; }
+.schematic-map button[aria-pressed="true"] { background:#a25f32; box-shadow:0 0 0 4px #a25f3230; }
+.map-place-detail { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:start; gap:8px 12px; margin:12px 0; padding:14px 16px; border:1px solid #cbd6c1; border-radius:12px; background:#fffef8; }
+.map-place-detail > div { min-width:0; }
+.map-place-detail strong { display:block; margin-top:4px; color:#193e31; font-size:17px; overflow-wrap:anywhere; }
+.map-place-detail p { margin:5px 0 0; color:#526956; line-height:1.5; overflow-wrap:anywhere; }
+.map-place-detail > button:last-child { grid-column:1/-1; justify-self:start; min-height:42px; }
 @media(max-width:640px){.passport-map-canvas{height:350px}.passport-map-panel{padding:16px}}
 .first-week-panel { margin-top:32px; padding:clamp(16px,2.5vw,28px); border:1px solid var(--ui-border); border-radius:18px; background:var(--ui-surface); }
 .first-week-panel h3 { font-size:clamp(22px,3vw,32px); margin:8px 0; }
@@ -30,6 +36,16 @@
 .shared-hangout ol { padding-left:22px; line-height:1.55; }
 .shared-hangout li+li { margin-top:7px; }
 .common-tags small { font-size:11px; opacity:.85; }
+.taste-exchange { margin:18px 0; padding:clamp(16px,2.5vw,24px); border:1px solid #c8d4bc; border-radius:16px; background:linear-gradient(125deg,#f5f1df,#edf3e8); }
+.taste-exchange h4 { margin:6px 0; font-size:clamp(19px,2.2vw,25px); color:#214a35; }
+.taste-exchange > p { max-width:65ch; line-height:1.55; color:#4b604b; }
+.taste-exchange-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin-top:14px; }
+.taste-exchange-grid article { min-width:0; padding:16px; border:1px solid #d2dbc9; border-radius:12px; background:#fffef8; }
+.taste-exchange-grid small,.taste-exchange-grid strong,.taste-exchange-grid span { display:block; }
+.taste-exchange-grid small { color:#697355; font-weight:750; text-transform:uppercase; letter-spacing:.06em; font-size:11px; }
+.taste-exchange-grid strong { margin-top:8px; color:#193e31; font-size:18px; overflow-wrap:anywhere; }
+.taste-exchange-grid p,.taste-exchange-grid span { margin:7px 0 0; color:#526956; line-height:1.5; overflow-wrap:anywhere; font-size:13px; }
+.theme-source-notice { margin:12px 0; padding:12px 14px; border-left:3px solid #b97948; border-radius:8px; background:#f7f1e6; color:#455548; line-height:1.5; }
 .chat-checks { margin-top:12px; padding:10px 12px; border:1px solid var(--ui-border); border-radius:10px; font-size:12px; }
 .chat-checks summary { cursor:pointer; font-weight:650; }
 .chat-checks ul { padding-left:18px; margin:10px 0 0; line-height:1.5; }
@@ -65,6 +81,7 @@
 .share-status { margin:0; padding:10px 13px; border-radius:10px; background:#e7f0e4; color:#1b4733; }
 @media(max-width:850px){.discovery-welcome{flex-direction:column;align-items:stretch}.discovery-quick-actions{flex:auto;grid-template-columns:repeat(3,minmax(0,1fr))}.share-taste-card{grid-template-columns:1fr}}
 @media(max-width:600px){.discovery-quick-actions{grid-template-columns:1fr}.discovery-welcome-actions button{flex:1 1 100%}.passport-map-canvas{height:270px}.share-options .share-actions button{flex:1 1 120px}}
+@media(max-width:600px){.taste-exchange-grid{grid-template-columns:1fr}}
 .shared-passport-page { max-width:1160px; margin:24px auto 48px; padding:clamp(16px,3vw,32px); background:#fbf8ec; border:1px solid #d9decf; border-radius:20px; box-shadow:0 18px 48px #16352514; overflow:hidden; line-height:1.6; }
 .shared-passport-page .primary-button { display:inline-flex; padding:12px 18px; margin-top:18px; border-radius:11px; background:#244b35; color:#fff9e8; font-weight:750; text-decoration:none; transition:transform .18s ease,box-shadow .18s ease; }
 .shared-passport-page .primary-button:hover { transform:translateY(-2px); box-shadow:0 7px 18px #173d2c30; }

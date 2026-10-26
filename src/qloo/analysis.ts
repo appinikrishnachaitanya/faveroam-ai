@@ -1,7 +1,7 @@
 import { request } from './client.ts';
 import { isObject } from './types.ts';
 export type AnalysisKind = 'taste' | 'heatmap' | 'demographics';
-export interface TasteTag { id: string; name: string; affinity?: number }
+export interface TasteTag { id: string; name: string; affinity?: number; sourceInterestId?:string; sourceInterestName?:string }
 export interface HeatPoint { latitude: number; longitude: number; affinity: number; popularity?: number }
 export interface DemographicRecord { id: string; age: Record<string, number>; gender: Record<string, number> }
 export type AnalysisResult =
