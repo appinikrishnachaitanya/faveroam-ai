@@ -27,3 +27,13 @@ body { background:#f8f6f1; color:#17243b; }
 .week-stop-editor label { display:grid; gap:6px; min-width:0; }
 .week-stop-editor input,.week-stop-editor select { width:100%; min-width:0; min-height:44px; }
 .week-stop-actions { display:flex; flex-wrap:wrap; gap:8px; }
+.vibe-dial { padding:clamp(18px,3vw,28px); margin:22px 0; border:1px solid var(--ui-border); border-radius:18px; background:#fffefa; }
+.vibe-dial h3 { margin:8px 0; color:#101c35; font-size:24px; }
+.vibe-dial p { max-width:70ch; line-height:1.6; color:#526078; }
+.vibe-directions { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin:18px 0; }
+.vibe-directions button { min-width:0; min-height:88px; padding:16px; text-align:left; background:#f8f6f1; color:#17243b; border:1px solid #d7dde1; border-radius:12px; }
+.vibe-directions button[aria-pressed=true] { border:2px solid #277c78; background:#eaf4f1; }
+.vibe-directions strong,.vibe-directions small { display:block; overflow-wrap:anywhere; }
+.vibe-directions small { margin-top:8px; }
+.vibe-dial > small { display:block; margin-top:12px; color:#526078; }
+@media(max-width:600px){.vibe-directions{grid-template-columns:1fr}}

@@ -38,6 +38,7 @@ import ConciergeDrawer from "./components/concierge";
 import ChatRecommendations from "./components/chat-recommendations";
 import ChatComparison from "./components/chat-comparison";
 import ChatReply from "./components/chat-reply";
+import VibeDial from './components/vibe-dial';
 import ChatComposer from "./components/chat-composer";
 import ConceptClarification from "./components/concept-clarification";
 import DiscoveryConcierge from "./components/discovery-concierge";
@@ -1013,6 +1014,7 @@ export default function Home() {
                   {mappedPlaces(result.cards.filter(card=>!result.session?.hiddenCategories.includes(card.section))).length>0&&<button className="quiet-button map-toggle" type="button" aria-expanded={showMap} onClick={()=>setShowMap(value=>!value)}>{showMap?'Hide map':'Show map'}</button>}
                   {showMap&&visibleResult&&mappedPlaces(visibleResult.cards).length>0&&<PassportMap cards={visibleResult.cards} onSelect={openMappedCard}/>}
                   {visibleResult&&<PassportSections disabled={busy} result={visibleResult} feedback={feedback} onFeedback={stableFeedback} updates={updates} updating={updating}/>}
+                  <VibeDial key={`vibe:${result.agent?.sessionId??result.city}`} passport={result} busy={busy} onApply={input=>void refine(input)}/>
                   <ShareTasteCard key={`share:${result.agent?.sessionId??result.city}`} passport={result}/>
                 </>
               )}

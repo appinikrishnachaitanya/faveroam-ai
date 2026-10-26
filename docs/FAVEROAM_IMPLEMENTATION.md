@@ -91,3 +91,17 @@ to avoid compositing the map and large card grids behind overlays.
 468 tests passed and production build/type checking passed. These changes address
 observed code paths that do unnecessary work; no browser latency measurement or
 universal device-performance claim is made. Live interaction profiling is pending.
+
+## Vibe Dial milestone
+
+Discover now offers up to three existing returned themes, scoped to active relevant
+categories. It sends the selected exact tag through the established inspiration
+preference path, keeping original interests and explicit requirements. The receipt
+counts new and retained entity IDs; unsuccessful changes are not called successful.
+No usable returned themes means the quiz is omitted. Choices are memoized and do
+not add provider calls until the user explicitly applies a direction.
+
+470 tests and the production build/type check passed. Live provider acceptance is
+still pending. Landing/workspace redesign requires the requested design preview
+before application. Map tiles, visible-card references, shared-place geography,
+sharing acceptance, rituals and durable weekly persistence remain open.
