@@ -153,6 +153,7 @@ export default function Home() {
     if(!sessionId)return;
     const key=`tastepassport:assistant-welcomed:${sessionId}`;
     try{if(window.sessionStorage.getItem(key))return;window.sessionStorage.setItem(key,'1');}catch{}
+    document.querySelector<HTMLButtonElement>('.assistant-launch')?.focus();
     setAssistantTab('ask');
     setAssistantOpen(true);
   },[result?.agent?.sessionId,result?.session?.id]);
