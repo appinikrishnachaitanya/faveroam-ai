@@ -105,3 +105,67 @@ not add provider calls until the user explicitly applies a direction.
 still pending. Landing/workspace redesign requires the requested design preview
 before application. Map tiles, visible-card references, shared-place geography,
 sharing acceptance, rituals and durable weekly persistence remain open.
+
+## Combined design, interaction and sharing milestone
+
+- Landing now uses the approved editorial layout direction, an original city SVG,
+  functional sample/city CTAs, and locally hosted Inter/Fraunces WOFF2 fonts with OFL licenses.
+- Navigation labels use My places, First Week and Common Ground. Desktop sidebar
+  and mobile menu reuse the existing navigation component.
+- Hidden Intelligence, Insights, Vibe Dial and day-planning panels have memoized
+  render boundaries and stable handlers. Tab changes no longer animate a page scroll.
+- Visible-card comparisons send bounded entity IDs and validate them against the
+  current session before comparing. Explicit second/third and named pairs are covered.
+- Map tiles use direct attributed CARTO raster sources, avoiding the style/glyph
+  dependency chain; schematic fallback remains. Live external tile loading is unverified.
+- Common Ground offers an explicit real-place anchor and radius, omitting unknown
+  coordinates while active. It never silently expands the radius. Shared-week locks
+  block area changes. Median-cluster ranking is deliberately deferred.
+- Shared snapshots reject malformed records; account/storage fetches bypass caches.
+  Synthetic protocol tests cover expiry queries, wrong revoke credentials, successful
+  revocation and a fresh read after deletion without external records.
+- Production smoke now expects the actual FaveRoam brand. GitHub API log access
+  returned Forbidden, so remote CI status has not been independently inspected.
+- Chromium landing checks passed at 375, 768 and 1440 pixels: no horizontal overflow,
+  local fonts, branding and the city CTA. These are not full authenticated/live discovery tests.
+
+Deferred/unfinished: real-provider map/category acceptance, signed-in save/reload,
+rituals, durable weekly persistence, full Two Roots live journey and deployment.
+
+Final local gates for this combined milestone: 473 tests passed, documentation
+links passed, production build passed, typecheck passed, production smoke passed.
+
+Changed-file inventory:
+
+```text
+README.md
+app/components/day-out.tsx
+app/components/first-week.tsx
+app/components/intelligence.tsx
+app/components/onboarding.tsx
+app/components/passport-map.tsx
+app/components/passport-navigation.tsx
+app/components/taste-analysis.tsx
+app/components/vibe-dial.tsx
+app/page.tsx
+app/share/[token]/page.tsx
+app/styles/faveroam.css
+docs/FAVEROAM_IMPLEMENTATION.md
+docs/PROJECT_GUIDE.md
+package.json
+public/fonts/OFL-Fraunces.txt
+public/fonts/OFL-Inter.txt
+public/fonts/fraunces-variable.woff2
+public/fonts/inter-variable.woff2
+public/illustrations/faveroam-journey.svg
+scripts/smoke-production.mjs
+scripts/verify-faveroam-layout.mjs
+src/account/server.ts
+src/agent/existing-choice.ts
+src/agent/orchestrator.ts
+src/agent/types.ts
+src/passport/common-ground.ts
+src/share/links.ts
+tests/faveroam-release.test.ts
+tests/progressive.test.ts
+```

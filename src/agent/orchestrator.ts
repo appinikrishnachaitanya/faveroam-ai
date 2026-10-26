@@ -339,7 +339,9 @@ async function executeTurn(
     }
     if (route === "current-results" && isExistingChoiceRequest(input.message)) {
       delete state.pending;
-      const choice = chooseExisting(state, input.message);
+      const visibleIds=input.visibleIds;
+      if(visibleIds && (!Array.isArray(visibleIds)||visibleIds.length>40||new Set(visibleIds).size!==visibleIds.length||visibleIds.some(id=>typeof id!=='string'||!state.cards.some(card=>card.id===id&&!state.hiddenCategories?.includes(card.section)))))return reply('Those visible choices have changed. Open Discover and select the choices again. Your Passport is unchanged.');
+      const choice = chooseExisting(state, input.message,visibleIds);
       if (!choice.cards.length) markNeedsInput();
       return reply(choice.message, choice.cards, undefined, choice.comparison ? choice.cards.map(card=>card.id) : undefined);
     }

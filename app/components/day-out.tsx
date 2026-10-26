@@ -1,6 +1,6 @@
 "use client";
 import { Icon } from "./passport";
-import { useState, useEffect } from "react";
+import { memo, useState, useEffect } from "react";
 import type { Card } from "../../src/passport/model";
 import type { Passport } from "../../src/workspace/state";
 import {
@@ -15,7 +15,7 @@ import { evidenceFacts } from "../../src/qloo/explanation";
 import { cityDate, cityTimeZone, nextWeekend, planDateError, savedStopActivity, type SavedPlan } from "../../src/account/plans";
 import { accountRequest, showNotice } from "../../src/account/browser";
 
-export default function DayOutPlan({
+export default memo(function DayOutPlan({
   passport,
   disabled,
   signedIn = false,
@@ -344,4 +344,4 @@ export default function DayOutPlan({
       </div>
     </details>
   );
-}
+});

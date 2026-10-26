@@ -1,11 +1,11 @@
 "use client";
-import {useEffect,useMemo,useRef,useState} from 'react';
+import {memo,useEffect,useMemo,useRef,useState} from 'react';
 import type {Passport} from '../../src/workspace/state';
 import type {AgentInput} from '../../src/agent/types';
 import {vibeDirections} from '../../src/passport/vibe-dial';
 import {activeCategories} from '../../src/passport/active-categories';
 import {sectionLabel} from '../../src/passport/labels';
-export default function VibeDial({passport,busy,onApply}:{passport:Passport;busy:boolean;onApply:(input:AgentInput)=>void}){
+export default memo(function VibeDial({passport,busy,onApply}:{passport:Passport;busy:boolean;onApply:(input:AgentInput)=>void}){
  const directions=useMemo(()=>vibeDirections(passport.cards,passport.selected,activeCategories(passport.session,passport.cards)),[passport.cards,passport.selected,passport.session]);
  const [choice,setChoice]=useState('');
  const [pending,setPending]=useState<{ids:string[];sections:string[]}>();
@@ -31,4 +31,4 @@ export default function VibeDial({passport,busy,onApply}:{passport:Passport;busy
    setReceipt('');started.current=false;setPending({ids:passport.cards.filter(card=>selected.sections.includes(card.section)).map(card=>card.id),sections:selected.sections});
    onApply({discovery:{sections:selected.sections,preferences:{inspirationTags:[selected.theme.id],inspirationName:selected.theme.name}}});
  }}>{pending?'Finding this direction…':'Explore this direction'}</button>{receipt&&<p role="status">{receipt}</p>}<small>These are returned cultural themes, not personality types or guarantees.</small></section>;
-}
+});

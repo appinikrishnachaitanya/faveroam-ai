@@ -22,7 +22,7 @@ export function isExistingChoiceRequest(text: string): boolean {
   if (/\b(?:pick|choose|select|recommend)\b[\s\S]*\b(?:one|1|single)\b/.test(q)) return true;
   if (ratingQuestion(q)) return true;
   if (/^(?:and )?which(?: one)?(?: is)? (?:the )?(?:best|better|top one)(?: choice)?[?!.,\s]*$/.test(q.trim()) || /^(?:what(?:'s| is) )?(?:your )?(?:best )?pick[?!.,\s]*$/.test(q.trim())) return true;
-  if (/\bcompare\b/.test(q) && /\b(?:two|both|first and second|these|those)\b/.test(q)) return true;
+  if (/\bcompare\b/.test(q)) return true;
   if (/\bwhich\b[\s\S]*\b(?:should|would)\b[\s\S]*\b(?:pick|choose|recommend|try|visit|go)\b/.test(q)) return true;
   return reference.test(q) && /\b(?:pick|choose|select|recommend|best|top|highest[ -]rated|best[ -]rated|cheapest|most affordable|lowest price)\b/.test(q);
 }
@@ -41,17 +41,18 @@ export interface ExistingChoice {
   message: string;
   comparison?: boolean;
 }
-export function chooseExisting(state: AgentState, text: string): ExistingChoice {
+export function chooseExisting(state: AgentState, text: string, visibleIds?:string[]): ExistingChoice {
   const q = selectionLanguage(refinementScope(text).positive);
   const sections = requestedShortlistSections(q);
   const genre = requestedGenre(q);
-  const ids = lastReferencedIds(state);
+  const ids = visibleIds ?? lastReferencedIds(state);
   const above = reference.test(q);
   const implicitShown = ratingQuestion(q);
   const available = state.cards.filter(card => !state.hiddenCategories?.includes(card.section) &&
     !state.feedback.some(feedback => feedback.id === card.id && !feedback.accepted));
   const contextualBest = /^(?:and )?which(?: one)?(?: is)? (?:the )?(?:best|better|top one)(?: choice)?[?!.,\s]*$/.test(q.trim()) || /^(?:what(?:'s| is) )?(?:your )?(?:best )?pick[?!.,\s]*$/.test(q.trim());
-  const source = (above || implicitShown || contextualBest || /\bcompare\b/.test(q)) && ids !== undefined
+  const namedCards=available.filter(card=>q.includes(card.name.toLowerCase()));
+  const source = /\bcompare\b/.test(q)&&namedCards.length===2?namedCards:(above || implicitShown || contextualBest || /\bcompare\b/.test(q)) && ids !== undefined
     ? ids.flatMap(id => available.find(card => card.id === id) ?? [])
     : available;
   const contextualSections = state.intent?.sections?.filter(section => available.some(card => card.section === section)) ?? [];
@@ -85,7 +86,9 @@ export function chooseExisting(state: AgentState, text: string): ExistingChoice 
   if (comparison) {
     if (ids !== undefined && ids.slice(0, 2).some(id => !available.some(card => card.id === id)))
       return {cards: [], message: "One of those choices is no longer in your current discoveries. Ask for a new shortlist before comparing. Your Passport is unchanged."};
-    const cards = eligible.slice(0, 2);
+    const ordinals=[...q.matchAll(/\b(first|second|third|1st|2nd|3rd)\b/g)].map(match=>({first:0,second:1,third:2,'1st':0,'2nd':1,'3rd':2}[match[1]]!));
+    const named=eligible.filter(card=>q.includes(card.name.toLowerCase()));
+    const cards = named.length===2?named:ordinals.length===2?ordinals.flatMap(index=>eligible[index]?[eligible[index]]:[]):eligible.slice(0, 2);
     return cards.length < 2
       ? {cards: [], message: source.length < 2 && ids !== undefined ? "One of those choices is no longer in your current discoveries. Ask for a new shortlist before comparing. Your Passport is unchanged." : "I need two current choices to compare. Ask me to show a few options first; your Passport is unchanged."}
       : {cards, comparison: true, message: `Comparing ${cards[0].name} and ${cards[1].name}. I’ll use only details returned for these listings; where a detail is missing, I’ll leave it open rather than guess.`};

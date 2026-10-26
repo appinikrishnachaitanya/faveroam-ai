@@ -369,7 +369,8 @@ export default function Home() {
       )
     ) {
       setMessages((m) => [...m, { role: "user", text }]);
-      await refine({ message: text });
+      const visibleIds=/\bcompare\b/i.test(text)&&/\bvisible\b/i.test(text)?[...document.querySelectorAll<HTMLElement>('.passport-sections [data-entity-id]')].filter(element=>element.getClientRects().length>0).map(element=>element.dataset.entityId!).filter(Boolean).slice(0,40):undefined;
+      await refine({ message: text,...(visibleIds?{visibleIds}:{}) });
       return;
     }
     setPhase("interpreting");
@@ -545,9 +546,7 @@ export default function Home() {
     setWorkspaceView(next);
     requestAnimationFrame(() =>
       document.getElementById(`view-${next === "together" ? "preferences" : next}`)?.scrollIntoView({
-        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
-          ? "instant"
-          : "smooth",
+        behavior: "instant",
         block: "start",
       }),
     );
@@ -697,6 +696,17 @@ export default function Home() {
   const visibleResult = useMemo(()=>result?{...result,cards:result.cards.filter(card=>!result.session?.hiddenCategories.includes(card.section))}:undefined,[result]);
   const openMappedCard = useCallback((card:import('../src/passport/model').Card)=>{
     window.setTimeout(()=>[...document.querySelectorAll<HTMLElement>('[data-entity-id]')].find(element=>element.dataset.entityId===card.id)?.scrollIntoView({behavior:'smooth',block:'center'}),50);
+  },[]);
+  const panelActions = useRef({refine,selectWorkspaceView});
+  useLayoutEffect(()=>{panelActions.current={refine,selectWorkspaceView};});
+  const stableRefine = useCallback((input:AgentInput)=>{void panelActions.current.refine(input);},[]);
+  const refineFromPanel = useCallback((input:AgentInput)=>{setShowSaved(false);panelActions.current.selectWorkspaceView('discover');void panelActions.current.refine(input);},[]);
+  const openPreferences = useCallback(()=>panelActions.current.selectWorkspaceView('preferences'),[]);
+  const planSaveHandled = useCallback(()=>setSavePlanRequest(0),[]);
+  const findPlanActivity = useCallback((id:string)=>{
+    const target=id==='Cinema'?'cinemas':id==='Nightlife'?'nightclubs':id==='Coffee'?'coffee shops':id==='Eat'?'restaurants':'museums';
+    const kept=id==='Coffee'?'dining, music and movies':id==='Eat'?'coffee, music and movies':'dining, coffee, music and movies';
+    void panelActions.current.refine({message:`Find local ${target} for this outing. Keep my ${kept} unchanged.`});
   },[]);
   function closeFeedback() {
     setRejectionId(undefined);
@@ -992,7 +1002,7 @@ export default function Home() {
               <RefinementRecovery
                 session={result.session}
                 disabled={busy}
-                onApply={(input) => void refine(input)}
+                onApply={stableRefine}
               />
             )}
             {result.session?.hiddenCategories.length ? (
@@ -1014,7 +1024,7 @@ export default function Home() {
                   {mappedPlaces(result.cards.filter(card=>!result.session?.hiddenCategories.includes(card.section))).length>0&&<button className="quiet-button map-toggle" type="button" aria-expanded={showMap} onClick={()=>setShowMap(value=>!value)}>{showMap?'Hide map':'Show map'}</button>}
                   {showMap&&visibleResult&&mappedPlaces(visibleResult.cards).length>0&&<PassportMap cards={visibleResult.cards} onSelect={openMappedCard}/>}
                   {visibleResult&&<PassportSections disabled={busy} result={visibleResult} feedback={feedback} onFeedback={stableFeedback} updates={updates} updating={updating}/>}
-                  <VibeDial key={`vibe:${result.agent?.sessionId??result.city}`} passport={result} busy={busy} onApply={input=>void refine(input)}/>
+                  <VibeDial key={`vibe:${result.agent?.sessionId??result.city}`} passport={result} busy={busy} onApply={stableRefine}/>
                   <ShareTasteCard key={`share:${result.agent?.sessionId??result.city}`} passport={result}/>
                 </>
               )}
@@ -1028,12 +1038,12 @@ export default function Home() {
                 key={`day-out:${result.session?.id ?? result.city}`}
                 editPlan={editingPlan}
                 expanded={workspaceView === "plan"}
-                onFindActivity={id=>{const target=id==="Cinema"?"cinemas":id==="Nightlife"?"nightclubs":id==="Coffee"?"coffee shops":id==="Eat"?"restaurants":"museums";const kept=id==="Coffee"?"dining, music and movies":id==="Eat"?"coffee, music and movies":"dining, coffee, music and movies";void refine({message:`Find local ${target} for this outing. Keep my ${kept} unchanged.`});}}
+                onFindActivity={findPlanActivity}
                 passport={result}
                 disabled={busy}
                 signedIn={accountSignedIn}
                 saveRequest={savePlanRequest}
-                onSaveRequestHandled={()=>setSavePlanRequest(0)}
+                onSaveRequestHandled={planSaveHandled}
               />
               <FirstWeek key={`first-week:${result.session?.id??result.city}`} passport={result}/>
             </div>
@@ -1045,11 +1055,11 @@ export default function Home() {
               <TasteIntelligence
                 key={`intelligence:${result.session?.id ?? result.city}`}
                 view={workspaceView === "together" ? "together" : "preferences"}
-                onPreferences={()=>selectWorkspaceView("preferences")}
+                onPreferences={openPreferences}
                 partnerSample={sharedPartnerTastes}
                 passport={result}
                 busy={busy}
-                onRefine={(input) => {setWorkspaceView("discover");setShowSaved(false);void refine(input);}}
+                onRefine={refineFromPanel}
               />
 
             </div>
@@ -1065,7 +1075,7 @@ export default function Home() {
                 <summary>
                   Explore your taste patterns <Icon name="arrow" size={16} />
                 </summary>
-                <TasteAnalysis key={`analysis:${result.session?.id ?? result.city}`} passport={result} busy={busy} onRefine={input=>{setWorkspaceView("discover");void refine(input);}}/>
+                <TasteAnalysis key={`analysis:${result.session?.id ?? result.city}`} passport={result} busy={busy} onRefine={refineFromPanel}/>
                 {process.env.NODE_ENV === "development" && (
                   <details className="all-query-routes">
                     <summary>Technical recommendation details</summary>
@@ -1202,7 +1212,7 @@ export default function Home() {
                         {result.session?.pending && <ConceptClarification pending={result.session.pending} disabled={busy}
                           onChoose={id=>void refine({tagChoice:id})} onSkip={()=>void refine({message:"Skip this concept"})}/>}
                         {!result.agent?.pending && Boolean(result.session?.recovery?.length) && result.session && <>
-                          <RefinementRecovery session={result.session} disabled={busy} onApply={input=>void refine(input)}/>
+                          <RefinementRecovery session={result.session} disabled={busy} onApply={stableRefine}/>
                           <button className="quiet-button" disabled={busy} onClick={()=>{setAssistantOpen(false);selectWorkspaceView("preferences");}}>Adjust preferences</button>
                         </>}
                       </>}
@@ -1210,7 +1220,7 @@ export default function Home() {
                   ))}
                 </div>
                 {visibleMessages.length>0 && !busy && !result.agent?.pending && <div className="chat-next-actions" aria-label="Continue your conversation">
-                  {["Pick three things across my interests","Compare the first and second choices","What filters are saved?"].map(question=><button type="button" key={question} onClick={()=>{setComposer(question);document.querySelector<HTMLTextAreaElement>("#conversation-input")?.focus();}}>{question}</button>)}
+                  {["Pick three things across my interests","Compare the first and second visible discoveries","What filters are saved?"].map(question=><button type="button" key={question} onClick={()=>{setComposer(question);document.querySelector<HTMLTextAreaElement>("#conversation-input")?.focus();}}>{question}</button>)}
                 </div>}
               </div>
             ) : (
@@ -1225,7 +1235,7 @@ export default function Home() {
                   <GuidedRefinement
                     session={result.session}
                     disabled={busy}
-                    onApply={(input) => void refine(input)}
+                    onApply={stableRefine}
                   />
                 )}
               </div>

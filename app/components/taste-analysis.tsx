@@ -3,7 +3,7 @@ import { sectionLabel } from "../../src/passport/labels";
 import AudienceContext from './audience-context';
 import { Icon } from "./passport";
 import { CategoryMultiSelect } from "./category-multi-select";
-import { useEffect, useRef, useState } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import type { Passport } from '../../src/workspace/state';
 import { activeCategories } from "../../src/passport/active-categories";
 import { curatedThemes, themeCategories, relevantThemes, themeKind } from "../../src/passport/taste-themes";
@@ -13,7 +13,7 @@ import { buildAreaGuide } from '../../src/passport/area-guide';
 import { formatReturnedRating } from '../../src/passport/rating-display';
 import type { AnalysisKind, AnalysisResult } from '../../src/qloo/analysis';
 
-export default function TasteAnalysis({passport,busy,onRefine}:{passport:Passport;busy:boolean;onRefine:(input:AgentInput)=>void}) {
+export default memo(function TasteAnalysis({passport,busy,onRefine}:{passport:Passport;busy:boolean;onRefine:(input:AgentInput)=>void}) {
   const [results,setResults]=useState<Partial<Record<AnalysisKind,AnalysisResult>>>({});
   const scope=[passport.agent?.sessionId ?? '',passport.city,...passport.selected.map(i=>i.id)].join('|');
   const latestScope=useRef(scope);
@@ -136,4 +136,4 @@ export default function TasteAnalysis({passport,busy,onRefine}:{passport:Passpor
     </div>}
     <AudienceContext interests={passport.selected.filter(interest=>interestIds.includes(interest.id))} records={visible.demographics?.kind==='demographics'?visible.demographics.records:undefined} loading={loading==='demographics'} disabled={busy||Boolean(loading)} onLoad={()=>void load('demographics')}/>
   </section>;
-}
+});

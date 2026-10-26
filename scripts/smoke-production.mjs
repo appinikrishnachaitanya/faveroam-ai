@@ -41,7 +41,7 @@ try {
   assert.equal(root.headers.get("x-frame-options"), "DENY");
   assert.equal(root.headers.get("referrer-policy"), "no-referrer");
   assert.match(root.headers.get("content-security-policy") || "", /frame-ancestors 'none'/);
-  assert.match(await root.text(), /TastePassport/);
+  assert.match(await root.text(), /FaveRoam/);
   const blocked = await fetch(new URL("/api/agent/interpret", base), {
     method: "POST", headers: { Origin: "https://other.example", "Content-Type": "application/json" },
     body: "{}", signal: AbortSignal.timeout(10000), redirect: "error",

@@ -1,8 +1,8 @@
 # FaveRoam
 
-**Move anywhere. Keep your vibe.**
+**From what you love to where you belong.**
 
-TastePassport is an agent-powered cultural discovery app for people making a new city feel like home. Tell it what you already love—a film, an artist, a cuisine, a book—and it helps you find places and culture in your destination, refine those choices through conversation, find common ground with someone else, and shape a day out. You can explore without creating an account.
+FaveRoam is an agent-powered cultural discovery app for people making a new city feel like home. Tell it what you already love—a film, an artist, a cuisine, a book—and it helps you find places and culture in your destination, refine those choices through conversation, find common ground with someone else, and shape a day out. You can explore without creating an account.
 
 **[Try the Cloud Run demo](https://taste-passport-ai.cloud.run/)** · [Project guide](docs/PROJECT_GUIDE.md) · [MIT license](LICENSE)
 
@@ -10,14 +10,14 @@ TastePassport is an agent-powered cultural discovery app for people making a new
 
 Moving changes more than an address. A newcomer often knows what they love but not where those tastes might lead in a new city. A generic city guide starts with popularity. A general-purpose chatbot can offer plausible ideas, but its answer alone does not confirm which *Interstellar* or *A.R. Rahman* the person meant, retrieve Qloo's cultural associations, or carry verified preferences through later decisions.
 
-TastePassport starts with **confirmed cultural interests** and makes a useful next step from them. The user stays in control: they can correct a match, set a budget or other supported requirements, reject a suggestion, ask a follow-up, or choose the stops in an outing.
+FaveRoam starts with **confirmed cultural interests** and makes a useful next step from them. The user stays in control: they can correct a match, set a budget or other supported requirements, reject a suggestion, ask a follow-up, or choose the stops in an outing.
 
 ## Explore the app
 
 1. Pick a destination and add **one to five interests**. For example, try *A.R. Rahman*, *Interstellar*, and *Indian cuisine*. The home city is optional and labels your journey; it does not silently infer your tastes.
 2. Review the suggested identity for each interest. The dropdown contains other returned matches so you can correct a title or name before discovery.
 3. Choose the activities you want to explore. Open a recommendation to see what evidence is available: its type, place details where returned, and an explanation that distinguishes an audience-taste association from a proven personal preference.
-4. Ask TastePassport something specific, such as **“Find quieter Indian food within a moderate budget. Keep my movies unchanged.”** Check which section changed and whether the choices meet the request. Follow with **“Make those cheaper.”**
+4. Ask FaveRoam something specific, such as **“Find quieter Indian food within a moderate budget. Keep my movies unchanged.”** Check which section changed and whether the choices meet the request. Follow with **“Make those cheaper.”**
 5. Save a promising choice to **My Vibe**. Ask **“Save my Passport”** to save it to your signed-in account, or **“Plan a day out”** to open the editable planner. Try **Together** with another confirmed interest to look for shared cultural ground. Choose stops and times; reorder stops without silently replacing their venues.
 6. Optionally create an account to save a Passport, a dated plan, or a named taste profile for another destination.
 
@@ -29,7 +29,7 @@ Live coverage varies by city and interest. The app should show a gap when Qloo d
 
 ## Why Qloo changes the answer
 
-| A standalone LLM answer | TastePassport's Qloo-grounded workflow |
+| A standalone LLM answer | FaveRoam's Qloo-grounded workflow |
 |---|---|
 | Suggests plausible places from general knowledge, which may be stale or hard to verify. | Retrieves named entities and supported metadata from Qloo, then checks output type, locality, exclusions and observable constraints. |
 | May guess which artist, film or food concept the user meant. | Presents returned candidates for explicit confirmation before using them as taste signals. |
@@ -37,7 +37,7 @@ Live coverage varies by city and interest. The app should show a gap when Qloo d
 | Treats a follow-up as a new prompt unless an application carries state. | Keeps a revision-checked Passport with confirmed interests, category preferences, feedback and conversation context. |
 | Can propose a group outing in prose. | Uses Qloo Compare for shared cultural associations and lets people assemble an outing from returned place choices. |
 
-This describes the **difference in workflow and evidence**, not a measured claim that every TastePassport result beats every LLM answer. Gemini is valuable for understanding language and selecting tools; Qloo supplies the cultural entities and discovery candidates that the app can inspect and preserve.
+This describes the **difference in workflow and evidence**, not a measured claim that every FaveRoam result beats every LLM answer. Gemini is valuable for understanding language and selecting tools; Qloo supplies the cultural entities and discovery candidates that the app can inspect and preserve.
 
 The integration uses Qloo [entity search, tags, Insights and Compare](https://docs.qloo.com/reference/qloo-llm-hackathon-developer-guide), plus validated official harness/MCP functions where appropriate. In an Insights request, `filter.type` is the **requested output type**. An artist and a film can be input signals while `urn:entity:place` requests places. Food, coffee and cinema are place activities selected with supported taxonomy, not made-up entity types. Music results are artist discoveries, not verified local concerts.
 
@@ -82,7 +82,7 @@ Discovery first checks identity and hard requirements, then ranks and diversifie
 
 | Part | Responsibility |
 |---|---|
-| Next.js 16, React, TypeScript, MapLibre GL | Onboarding, Discover, interactive place map, Ask TastePassport, My Vibe, Together, insights and the outing planners |
+| Next.js 16, React, TypeScript, MapLibre GL | Onboarding, Discover, interactive place map, Ask FaveRoam, My Vibe, Together, insights and the outing planners |
 | Qloo API and official harness/MCP | Resolve interests and concepts; retrieve cultural entities, places and shared associations |
 | Gemini via `@google/genai` | Interpret conversational requests and select permitted functions; compose responses from checked facts |
 | Server-side policy and session state | Validate requests, preserve unaffected preferences, reject unsupported results and coordinate revisions |
@@ -135,6 +135,6 @@ For a warmer hackathon demo, set one minimum Cloud Run instance after considerin
 
 ## Boundaries
 
-TastePassport does not book venues, verify current opening hours or showtimes, guarantee travel times, or certify dietary or medical safety. Some Qloo entities have no image, rating or usable venue details; the UI must not infer missing facts. Geographic affinity and aggregate audience patterns do not describe an individual.
+FaveRoam does not book venues, verify current opening hours or showtimes, guarantee travel times, or certify dietary or medical safety. Some Qloo entities have no image, rating or usable venue details; the UI must not infer missing facts. Geographic affinity and aggregate audience patterns do not describe an individual.
 
-We built TastePassport for the [Qloo Agentic Hackathon](https://qloo.devpost.com/) around a specific use case: carrying familiar cultural interests into a new city. The public code is available under the [MIT license](LICENSE). Developers can start with this README, inspect the [project guide](docs/PROJECT_GUIDE.md) for implementation details, and run the app with their own credentials.
+We built FaveRoam for the [Qloo Agentic Hackathon](https://qloo.devpost.com/) around a specific use case: carrying familiar cultural interests into a new city. The public code is available under the [MIT license](LICENSE). Developers can start with this README, inspect the [project guide](docs/PROJECT_GUIDE.md) for implementation details, and run the app with their own credentials.

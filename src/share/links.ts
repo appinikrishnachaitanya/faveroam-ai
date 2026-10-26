@@ -5,7 +5,7 @@ import {loadSession} from '../agent/store';
 import {debugEvent} from '../agent/debug';
 import {curatedThemes,relevantThemes} from '../passport/taste-themes';
 import type {AgentState} from '../agent/types';
-import type {Section} from '../passport/model';
+import {sectionTypes,type Section} from '../passport/model';
 
 const hash=(value:string)=>createHash('sha256').update(value).digest('hex');
 const token=()=>randomBytes(24).toString('base64url');
@@ -37,7 +37,11 @@ export async function readShare(publicToken:string):Promise<SharedSnapshot|undef
  const {data,error}=await storageWriter().from('share_links').select('snapshot').eq('token_hash',hash(publicToken)).gt('expires_at',new Date().toISOString()).maybeSingle();
  if(error||!data)return;
  const snapshot=data.snapshot as SharedSnapshot;
- return snapshot?.version===1&&Array.isArray(snapshot.interests)?snapshot:undefined;
+ if(snapshot?.version!==1||typeof snapshot.city!=='string'||!Array.isArray(snapshot.interests)||!Array.isArray(snapshot.themes)||!Array.isArray(snapshot.cards))return;
+ if(snapshot.interests.some(value=>!value||typeof value.name!=='string'||!Array.isArray(value.types)||value.types.some(type=>typeof type!=='string')))return;
+ if(snapshot.themes.some(value=>!value||typeof value.id!=='string'||typeof value.name!=='string'))return;
+ if(snapshot.cards.some(value=>!value||typeof value.id!=='string'||typeof value.name!=='string'||!Object.hasOwn(sectionTypes,value.section)||(value.address!==undefined&&typeof value.address!=='string')))return;
+ return snapshot;
 }
 export async function revokeShare(publicToken:string,revokeToken:string){
  if(!valid(publicToken)||!valid(revokeToken))return false;

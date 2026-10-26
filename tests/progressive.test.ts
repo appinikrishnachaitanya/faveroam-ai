@@ -15,7 +15,7 @@ const signal: Candidate = {
   detail: "Protocol metadata",
 };
 
-test("first load has one clear onboarding action without agent panels or advanced disclosures", () => {
+test("first load offers sample and personalized onboarding without agent panels", () => {
   const html = renderToStaticMarkup(createElement(Home));
   assert.match(html, /Build your/);
   assert.match(html, /Moving to/);
@@ -25,7 +25,8 @@ test("first load has one clear onboarding action without agent panels or advance
     html,
     /Taste Concierge|Agent execution activity|THE DEMO JOURNEY|View Qloo evidence|cultural-reveal|guided-panel|split-workspace/,
   );
-  assert.equal((html.match(/class="primary-button/g) ?? []).length, 1);
+  assert.equal((html.match(/class="primary-button/g) ?? []).length, 2);
+  assert.match(html,/Try a sample/);
   assert.doesNotMatch(html, /Reset conversation|New Passport/);
 });
 test("onboarding requires city and one taste, uses a single taste input and accessible removable chips", () => {

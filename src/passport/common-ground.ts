@@ -17,3 +17,19 @@ export function commonGroundStarters(comparison:TasteComparison,first:string,sec
    'Which returned place would you both want to check out first?',
  ];
 }
+
+/** Explicit proximity to a returned venue, never an invented city centre. */
+export function nearbySharedPlaces(cards:Card[],anchor:Card|undefined,radiusMetres:number):Card[]{
+ if(!anchor)return cards;
+ const point=anchor.intelligence?.location;
+ if(!Number.isFinite(point?.latitude)||!Number.isFinite(point?.longitude)||!Number.isFinite(radiusMetres)||radiusMetres<=0)return [];
+ const r=Math.PI/180;
+ return cards.filter(card=>{
+  const other=card.intelligence?.location;
+  if(!Number.isFinite(other?.latitude)||!Number.isFinite(other?.longitude))return false;
+  const a=point!.latitude!*r,b=other!.latitude!*r;
+  const h=Math.sin((b-a)/2)**2+Math.cos(a)*Math.cos(b)*Math.sin((other!.longitude!-point!.longitude!)*r/2)**2;
+  const metres=6371000*2*Math.atan2(Math.sqrt(h),Math.sqrt(Math.max(0,1-h)));
+  return metres<=radiusMetres;
+ });
+}

@@ -1,12 +1,12 @@
 "use client";
-import {memo,useState} from 'react';
+import {memo,useEffect,useState} from 'react';
 import type {Passport} from '../../src/workspace/state';
 import {activityMatches,dayOutOptions,outingActivities} from '../../src/passport/day-out';
 import {cityDate,cityTimeZone} from '../../src/account/plans';
 import {firstWeek,firstWeekIcs,updateWeekStop,type WeekDay,type WeekRoots} from '../../src/passport/first-week';
 import PassportMap from './passport-map';
 
-export default memo(function FirstWeek({passport,roots}:{passport:Passport;roots?:WeekRoots}){
+export default memo(function FirstWeek({passport,roots,onLocksChange}:{passport:Passport;roots?:WeekRoots;onLocksChange?:(locked:boolean)=>void}){
  const [date,setDate]=useState(()=>cityDate(passport.city));
  const [days,setDays]=useState<WeekDay[]>();
  const [active,setActive]=useState(0);
@@ -20,6 +20,7 @@ export default memo(function FirstWeek({passport,roots}:{passport:Passport;roots
    catch(error){setStatus(error instanceof Error?error.message:'This stop could not be changed.');}
  }
  const hasLocks=days?.some(day=>day.stops.some(stop=>stop.locked))??false;
+ useEffect(()=>{onLocksChange?.(hasLocks);return()=>onLocksChange?.(false);},[hasLocks,onLocksChange]);
  function download(){
    if(!days||days[0]?.date<cityDate(passport.city)){setStatus('Choose today or a future date before downloading.');return;}
    if(!chosen.size){setStatus('Find a place for at least one stop before downloading.');return;}

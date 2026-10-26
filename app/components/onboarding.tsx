@@ -119,13 +119,13 @@ export function MoveForm({
           MAKE YOUR NEXT CHAPTER FEEL LIKE YOU
         </span>
         <h1 id="move-title">
-          Your taste.
-          <br />
-          <em>A new city.</em>
+          From what you love<br />
+          <em>to where you belong.</em>
         </h1>
-        <p>Tell us where you’re moving and a few things you already love.</p>
+        <p>Discover places that feel like you, build your first week, and find Common Ground in a new city.</p>
+        <div className="landing-actions">{onSample&&<button type="button" className="primary-button" disabled={disabled||loadingCities||!destinations.length} onClick={()=>onSample(destinations.includes('London')?'London':destinations[0])}>Try a sample <Icon name="arrow" size={16}/></button>}<button type="button" className="quiet-button" onClick={()=>{const form=document.getElementById('city-onboarding-form');form?.scrollIntoView({behavior:'smooth',block:'start'});const destination=document.querySelector<HTMLSelectElement>('#destination');if(destination&&!destination.disabled)destination.focus({preventScroll:true});else form?.focus({preventScroll:true});}}>Explore my city</button></div>
         <div className="onboarding-story">
-          <img className="journey-illustration" src="/illustrations/passport-journey.svg" width="520" height="350" alt="" aria-hidden="true" />
+          <img className="journey-illustration" src="/illustrations/faveroam-journey.svg" width="520" height="350" alt="" aria-hidden="true" />
           <ul>
             <li><Icon name="check" size={16} /> Your tastes, explicitly confirmed</li>
             <li><Icon name="check" size={16} /> Real discoveries. Visible connections.</li>
@@ -134,6 +134,8 @@ export function MoveForm({
         </div>
       </div>
       <form
+        id="city-onboarding-form"
+        tabIndex={-1}
         className="move-form"
         onSubmit={(event) => {
           event.preventDefault();
@@ -263,7 +265,6 @@ export function MoveForm({
               ? " · Add one taste to start"
               : " · Ready to discover"}
           </p>
-          {onSample && <button type="button" className="quiet-button sample-passport" disabled={disabled||loadingCities||!destinations.length} onClick={()=>onSample(destinations.includes('London')?'London':destinations[0])}>Try a sample <Icon name="arrow" size={16}/></button>}
         </div>
         {onActivities && <fieldset className="activity-picker">
           <legend>What would you like to discover?</legend>

@@ -203,6 +203,7 @@ export interface ToolResult {
   execution?: { transport?: string };
 }
 export interface AgentInput {
+  visibleIds?:string[];
   discovery?: {
     sections: Section[];
     preferences: import("../qloo/query-plan.ts").QueryPreferences;

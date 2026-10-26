@@ -25,7 +25,7 @@ export default memo(function PassportMap({cards,onSelect,dayLabels}:{cards:Card[
     void import('maplibre-gl').then(({default:maplibregl})=>{
       if(disposed||!container.current)return;
       const first=places[0].intelligence!.location;
-      map=new maplibregl.Map({container:container.current,style:'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json',center:[first.longitude!,first.latitude!],zoom:11,attributionControl:false});
+      map=new maplibregl.Map({container:container.current,style:{version:8,sources:{basemap:{type:'raster',tiles:['https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png','https://b.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png'],tileSize:256,attribution:'© OpenStreetMap contributors © CARTO'}},layers:[{id:'basemap',type:'raster',source:'basemap'}]},center:[first.longitude!,first.latitude!],zoom:11,attributionControl:false});
       map.addControl(new maplibregl.NavigationControl({showCompass:false}),'top-right');
       map.addControl(new maplibregl.AttributionControl({compact:true,customAttribution:'© OpenStreetMap contributors · © CARTO'}));
       map.on('load',()=>{window.clearTimeout(timer);if(!disposed)setFailed(false);});
