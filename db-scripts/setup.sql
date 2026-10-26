@@ -5,6 +5,7 @@
 begin;
 
 drop table if exists public.active_passport_sessions;
+drop table if exists public.share_links;
 drop table if exists public.saved_plans;
 drop table if exists public.taste_profiles;
 drop table if exists public.saved_passports;
@@ -102,10 +103,25 @@ alter table public.active_passport_sessions enable row level security;
 revoke all on public.active_passport_sessions from anon, authenticated;
 grant select, insert, update, delete on public.active_passport_sessions to service_role;
 
+-- Public links contain a deliberately limited snapshot, never editable sessions.
+create table public.share_links (
+  token_hash text primary key,
+  revoke_hash text not null,
+  owner_session_hash text not null,
+  snapshot jsonb not null,
+  created_at timestamptz not null default now(),
+  expires_at timestamptz not null
+);
+create index share_links_owner_expiry_idx on public.share_links(owner_session_hash,expires_at);
+create index share_links_expiry_idx on public.share_links(expires_at);
+alter table public.share_links enable row level security;
+revoke all on public.share_links from anon, authenticated;
+grant select, insert, delete on public.share_links to service_role;
+
 commit;
 
--- Expected: five public app tables. Destination rows survive the reset.
+-- Expected: six public app tables. Destination rows survive the reset.
 select table_name from information_schema.tables
 where table_schema = 'public' and table_name in
-  ('destinations', 'saved_passports', 'saved_plans', 'taste_profiles', 'active_passport_sessions')
+  ('destinations', 'saved_passports', 'saved_plans', 'taste_profiles', 'active_passport_sessions', 'share_links')
 order by table_name;

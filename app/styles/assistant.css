@@ -177,3 +177,7 @@ html { scrollbar-gutter: stable; }
 .chat-taste-path strong { font-size:13px; line-height:1.5; color:var(--ui-ink); }
 .chat-taste-path .chat-taste-link { display:flex; align-items:center; gap:6px; font-size:11px; font-weight:650; color:var(--ui-action); }
 .theme-empty-state > small { display:block; margin-top:12px; }
+
+.chat-progress { display: flex; align-items: center; gap: 12px; padding: 12px 16px; margin-bottom: 16px; border-radius: 12px; background: var(--ui-tint); color: var(--ui-ink); }
+.chat-progress > span { letter-spacing: 3px; font-size: 20px; }
+.chat-progress > p { font-size: 13px; line-height: 1.5; }

@@ -449,7 +449,7 @@ body { background: #f6f2e8; }
   border-color: #dcd7c5;
   box-shadow: 0 8px 28px #21382912;
 }
-.header-greeting { white-space: nowrap; color: #244736; font: 600 13px/1.3 Manrope, system-ui, sans-serif; padding: 0 8px; }
+.header-greeting { white-space: nowrap; color: #244736; font: 600 14px/1.4 Manrope, system-ui, sans-serif; padding: 0 8px; }
 .progressive-app .topbar-caption { font-family: Georgia, 'Times New Roman', serif; font-style: italic; }
 .progressive-app h1,.progressive-app h2,.progressive-app h3,.progressive-app h4 { font-family: Georgia, 'Times New Roman', serif; letter-spacing: -.035em; }
 .progressive-app .living-passport,.progressive-app .discovery-card { box-shadow: var(--ui-shadow); }
@@ -558,7 +558,7 @@ body { background: #f6f2e8; }
 @media (max-width: 640px) {
   .progressive-app { overflow-x: clip; }
   .progressive-app .workspace-topbar { gap: 8px; padding-inline: 12px; }
-  .header-greeting { font-size: 12px; max-width: 76px; padding-inline: 2px; }
+  .header-greeting { font-size: 14px; max-width: 76px; padding-inline: 2px; }
   .concierge-drawer { height: 100dvh; border-radius: 0; }
   .concierge-body { overflow-x: hidden; }
   .progressive-app .passport-cover { padding: 22px 18px; }

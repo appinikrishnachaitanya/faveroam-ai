@@ -74,7 +74,7 @@ export function SavedDiscoveries({
         <span className="vibe-emblem" aria-hidden="true"><Icon name="heart" size={28}/></span>
         <div><span className="micro-label">A COLLECTION THAT FEELS LIKE YOU</span>
           <h2 id="saved-title">Your favorites, all in one place.</h2>
-          <p>The discoveries you love stay here as you explore. Save your Passport to keep them for your next visit.</p>
+          <p>Your saved discoveries also help shape future refinements in this Passport. Save your Passport to keep this collection for your next visit.</p>
           <div className="vibe-summary"><span>{cards.length} saved {cards.length === 1 ? "discovery" : "discoveries"}</span><span>{new Set(cards.map(card=>card.section)).size} categories</span></div>
         </div>
       </header>

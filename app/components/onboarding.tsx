@@ -55,6 +55,7 @@ export function MoveForm({
   onOrigin,
   onDraft,
   onSubmit,
+  onSample,
   activities = [],
   onActivities,
 }: {
@@ -66,6 +67,7 @@ export function MoveForm({
   onOrigin: (value: string) => void;
   onDraft: (values: string[]) => void;
   onSubmit: () => void;
+  onSample?: (city:string) => void;
   activities?: Section[];
   onActivities?: (values: Section[]) => void;
 }) {
@@ -261,6 +263,7 @@ export function MoveForm({
               ? " · Add one taste to start"
               : " · Ready to discover"}
           </p>
+          {onSample && <button type="button" className="quiet-button sample-passport" disabled={disabled||loadingCities||!destinations.length} onClick={()=>onSample(destinations.includes('London')?'London':destinations[0])}>Try a sample <Icon name="arrow" size={16}/></button>}
         </div>
         {onActivities && <fieldset className="activity-picker">
           <legend>What would you like to discover?</legend>

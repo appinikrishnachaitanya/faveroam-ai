@@ -295,6 +295,7 @@ function EntityPhoto({url,name,section}:{url?:string;name:string;section:Section
 export function DiscoveryCard({
   session,
   card,
+  selected = [],
   feedback,
   onFeedback,
   live = false,
@@ -304,9 +305,11 @@ export function DiscoveryCard({
   live?: boolean;
   disabled?: boolean;
   card: Card;
+  selected?: {id:string}[];
   feedback?: Feedback;
-  onFeedback: (id: string, value: Feedback) => void;
+  onFeedback: (id: string, value: Feedback) => void | Promise<void>;
 }) {
+  const [saving,setSaving]=useState(false);
   return (
     <article
       data-entity-id={card.id}
@@ -342,12 +345,13 @@ export function DiscoveryCard({
       {card.evidence?.strategyNote?.startsWith("Dish match not verified:") && (
         <p className="helper">Dish not verified · check the menu</p>
       )}
-      <ResultMetrics card={card} />
+      <ResultMetrics card={card} selected={selected} />
       <details className="why-section">
         <summary>
           Why this suggestion? <Icon name="plus" size={12} />
         </summary>
         {evidenceFacts(card).slice(0, 4).map((fact) => <p key={fact}>{fact}</p>)}
+        <p className="helper">Taste evidence % counts confirmed tastes with an individual returned contribution or matching returned tag on this card. It is not a prediction of enjoyment.</p>
         <div className="why-signals">
           {(
             card.evidence?.inputs
@@ -364,13 +368,14 @@ export function DiscoveryCard({
       <div className="feedback-actions">
         <button
           type="button"
-          disabled={disabled}
+          disabled={disabled || saving}
+          aria-busy={saving}
           aria-pressed={feedback === "like"}
           className={feedback === "like" ? "liked" : ""}
-          onClick={() => onFeedback(card.id, "like")}
+          onClick={async () => {if(saving)return;setSaving(true);try{await onFeedback(card.id,'like');}finally{setSaving(false);}}}
         >
           <Icon name="heart" size={14} />
-          My vibe
+          {saving ? (feedback==='like'?'Removing…':'Saving…') : feedback==='like'?'Saved to My Vibe':'Save to My Vibe'}
         </button>
         <button
           type="button"
@@ -400,7 +405,9 @@ export function PassportSections({
   updates = {},
   updating = [],
   previewLimit = 3,
+  disabled = false,
 }: {
+  disabled?: boolean;
   previewLimit?: number;
   updates?: Partial<Record<Section, number>>;
   updating?: Section[];
@@ -511,10 +518,11 @@ export function PassportSections({
                   session={result.agent}
                   key={c.id}
                   card={c}
+                  selected={result.selected}
                   feedback={feedback[c.id]}
                   onFeedback={onFeedback}
                   live={Boolean(result.agent)}
-                  disabled={updating.length > 0}
+                  disabled={disabled || updating.length > 0}
                 />
                 </div>
               ))}

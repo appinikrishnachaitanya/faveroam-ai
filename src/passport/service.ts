@@ -67,6 +67,8 @@ export async function passport(
   constraints: Constraint[] = [],
   activities: import("./model.ts").Section[] = [],
   mode: import("./evidence.ts").Familiarity = "familiar",
+  onCategory?: (section: import('./model.ts').Section, cards: Card[]) => void,
+  externalSignal?: AbortSignal,
 ) {
   if (!["familiar", "balanced", "explore"].includes(mode))
     throw new QlooError("Choose a supported discovery style.", 400);
@@ -89,12 +91,14 @@ export async function passport(
     categoryConstraints:{},cards:[],previous:[],feedback:[],notices:[],
     activeCategories:sections, discoveryMode:mode,
   });
-  const deadline=AbortSignal.timeout(65_000);
+  const deadline=externalSignal ? AbortSignal.any([externalSignal,AbortSignal.timeout(65_000)]) : AbortSignal.timeout(65_000);
+  deadline.throwIfAborted();
   const pools=await Promise.all(sections.map(async section=>{
     const local=normalizeSession(structuredClone(bootstrap));
     local.intent={kind:"refine",seeds:[],concepts:[],constraints,sections:[section],strategy:"discover"};
     try {
       const cards=await discoverSection(local,section,constraints,ids.filter(id=>!id.startsWith("urn:tag:")),false,deadline);
+      onCategory?.(section,cards);
       if (cards.length > 0 && cards.length < 3) local.notices.push(`Only ${cards.length} eligible ${section} ${cards.length === 1 ? "match was" : "matches were"} returned for these tastes and requirements. Try Balanced or Explore to broaden taste similarity; explicit filters stay in place.`);
       if (!cards.length) local.notices.push(`No eligible ${section} matches were returned. Try a different activity or refinement.`);
       return {cards,notices:local.notices};
@@ -103,7 +107,8 @@ export async function passport(
       return {cards:[] as Card[],notices:[`${section} is temporarily unavailable. Retry that activity; your confirmed tastes are preserved.`]};
     }
   }));
-  const cards=[...new Map(pools.flatMap(pool=>pool.cards).map(card=>[card.id,card])).values()];
+  externalSignal?.throwIfAborted();
+  const cards=[...new Map(pools.flatMap(pool=>pool.cards).map(card=>[`${card.section}:${card.id}`,card])).values()];
   debugEvent("passport.completed",{city,count:cards.length});
   return {city,selected,cards,requestedActivities:sections,
     notices:[...new Set(pools.flatMap(pool=>pool.notices))],

@@ -1,5 +1,7 @@
 "use client";
 import { refinementErrorMessage } from "../src/agent/customer-error";
+import {generatePassport} from '../src/workspace/generation-browser';
+import GenerationPreview from './components/generation-preview';
 import { sectionLabel } from "../src/passport/labels";
 import { useEffect, useRef, useState } from "react";
 import { validDestination } from "../src/workspace/location";
@@ -51,6 +53,9 @@ import {
 } from "./components/passport-overview";
 import { sectionOrder } from "../src/workspace/state";
 import TasteAnalysis from "./components/taste-analysis";
+import PassportMap, {mappedPlaces} from './components/passport-map';
+import FirstWeek from './components/first-week';
+import ShareTasteCard from './components/share-taste-card';
 import { rememberGuestPassport, restoreGuestPassport, clearGuestPassport } from "../src/workspace/guest-recovery";
 import { rememberActiveSession, restoreActiveSession, clearActiveSession, rememberSavedSession, restoreSavedSession, clearSavedSession } from "../src/workspace/active-session";
 import { accountRequest, showNotice } from "../src/account/browser";
@@ -62,11 +67,13 @@ interface Message {
   text: string;
   recommendationIds?: string[];
   comparisonIds?: string[];
+  checks?: {route:string;model:string;qlooOperations:number;validation:string;kept:Section[]};
 }
 const welcome: Message = {
   role: "agent",
   text: "Move anywhere. Keep your vibe. Tell me your new city and one to five cultural tastes you love. We’ll build a bridge between your world and your next chapter.",
 };
+const verifyShareToken=(value:string)=>/^[a-zA-Z0-9_-]{32}$/.test(value);
 async function post<T>(path: string, body: unknown): Promise<T> {
   const response = await fetch(path, {
     method: "POST",
@@ -80,6 +87,10 @@ async function post<T>(path: string, body: unknown): Promise<T> {
   return data;
 }
 export default function Home() {
+  const [chatProgress,setChatProgress]=useState('');
+  const [generationPreviews,setGenerationPreviews]=useState<Partial<Record<Section,import('../src/passport/model').Card[]>>>({});
+  const generationRequest=useRef<AbortController|null>(null);
+  useEffect(()=>()=>generationRequest.current?.abort(),[]);
   const [tasteDraftVersion,setTasteDraftVersion]=useState(0);
   const [saveTastePrompt,setSaveTastePrompt]=useState(false);
   const [showSaved, setShowSaved] = useState(false);
@@ -89,7 +100,19 @@ export default function Home() {
   const [origin, setOrigin] = useState("");
   const [initialMode, setInitialMode] = useState<Familiarity>("familiar");
   const [requestedActivities, setRequestedActivities] = useState<Section[]>([]);
+  const [sharedPartnerTastes,setSharedPartnerTastes]=useState<string[]>([]);
+  const sharedOfferShown=useRef(false);
+  useEffect(()=>{
+    const token=new URLSearchParams(window.location.search).get('together');
+    if(!token||!verifyShareToken(token))return;
+    const controller=new AbortController();
+    void fetch(`/api/share?token=${encodeURIComponent(token)}`,{signal:controller.signal,cache:'no-store'}).then(response=>response.ok?response.json():undefined).then(data=>{
+      if(!controller.signal.aborted&&Array.isArray(data?.snapshot?.interests))setSharedPartnerTastes(data.snapshot.interests.slice(0,3).map((interest:{name:string})=>interest.name));
+    }).catch(()=>{});
+    return ()=>controller.abort();
+  },[]);
   const [assistantOpen, setAssistantOpen] = useState(false);
+  const [showMap,setShowMap]=useState(true);
   const [assistantTab, setAssistantTab] = useState<"ask" | "manual">("ask");
   const [composer, setComposer] = useState("");
   const [messages, setMessages] = useState<Message[]>([welcome]);
@@ -117,10 +140,23 @@ export default function Home() {
     return () => window.removeEventListener("tastepassport:plans-updated", onPlansUpdated);
   }, []);
   const [phase, setPhase] = useState<Phase>("idle");
+  useEffect(()=>{
+    if(phase==='exploring')document.getElementById('generation-heading')?.focus();
+  },[phase]);
   const [resolution, setResolution] = useState<Resolution>();
   const [chosen, setChosen] = useState<Record<number, string>>({});
   const [removed, setRemoved] = useState<number[]>([]);
   const [result, setResult] = useState<Passport>();
+  useEffect(()=>{
+    if(!result)return;
+    const sessionId=result.agent?.sessionId??result.session?.id;
+    if(!sessionId)return;
+    const key=`tastepassport:assistant-welcomed:${sessionId}`;
+    try{if(window.sessionStorage.getItem(key))return;window.sessionStorage.setItem(key,'1');}catch{}
+    setAssistantTab('ask');
+    setAssistantOpen(true);
+  },[result?.agent?.sessionId,result?.session?.id]);
+  useEffect(()=>{if(result&&sharedPartnerTastes.length&&!sharedOfferShown.current){sharedOfferShown.current=true;setShowSaved(false);setWorkspaceView('together');}},[result,sharedPartnerTastes]);
   const [workspaceView, setWorkspaceView] = useState<
     "discover" | "plan" | "preferences" | "together" | "connections"
   >("discover");
@@ -274,7 +310,7 @@ export default function Home() {
   );
   const committedMessages = result
     ? conversationStart < 0
-      ? []
+      ? [{role:'agent' as const,text:`Welcome to ${result.city}. I can help you choose from your discoveries, change a preference, or plan an outing. What would you like to do first?`}]
       : sessionHistory.slice(conversationStart)
     : messages;
   const missingSections = (result?.session?.activeCategories ?? []).filter(section =>
@@ -379,8 +415,9 @@ export default function Home() {
     setRetryInput(input);
     setError("");
     setPhase("refining");
+    setChatProgress('Looking at your request…');
     setUpdating(
-      input.feedback
+      input.feedback && !input.feedback.accepted
         ? [
             [...result.cards, ...(result.session?.savedCards ?? [])].find(
               (c) => c.id === input.feedback!.id,
@@ -393,6 +430,7 @@ export default function Home() {
         result.agent,
         input,
         (event) => {
+          setChatProgress(event.label);
           const match = event.label.match(
             /(?:Updating|Ranking) your (Eat|Coffee|Music|Culture|Lifestyle) passport/,
           );
@@ -512,8 +550,8 @@ export default function Home() {
       }),
     );
   }
-  async function resolve() {
-    const queries = draft.map((s) => s.trim()).filter(Boolean);
+  async function resolve(sample?:string[]) {
+    const queries = (sample??draft).map((s) => s.trim()).filter(Boolean);
     if (
       queries.length < 1 ||
       queries.length > 5 ||
@@ -530,7 +568,7 @@ export default function Home() {
     try {
       const r = await post<Resolution>("/api/agent/resolve", {
         seeds: queries,
-        concepts: conceptSeeds,
+        concepts: sample ? ["Indian cuisine"] : conceptSeeds,
       });
       setResolution(r);
       setChosen(reviewMatches(r.items));
@@ -598,16 +636,18 @@ export default function Home() {
     );
   }
   async function generate() {
-    if (!resolution || !complete || busy || !city) return;
+    if (!resolution || !complete || busy || !city || generationRequest.current) return;
+    const controller=new AbortController();generationRequest.current=controller;
     setError("");
     setResult(undefined);
+    setGenerationPreviews({});
     setUpdating([]);
     setPhase("exploring");
     say(
       `I’m exploring ${city} using your confirmed tastes and chosen activities.`,
     );
     try {
-      const r = await post<Passport>("/api/passport", {
+      const r = await generatePassport({
         city,
         token: resolution.token,
         ids: signals.map((s) => s.id),
@@ -616,7 +656,8 @@ export default function Home() {
         mode: initialMode,
         // Onboarding progress is not assistant chat history.
         history: [],
-      });
+      },(section,cards)=>{if(generationRequest.current===controller&&!controller.signal.aborted)setGenerationPreviews(current=>({...current,[section]:cards}));},controller.signal);
+      if(generationRequest.current!==controller||controller.signal.aborted)return;
       const passport = r;
       setResult(passport);
       setPhase("ready");
@@ -626,6 +667,7 @@ export default function Home() {
           : "No suitable discoveries were returned this time. Try editing your tastes or try again.",
       );
     } catch (e) {
+      if(generationRequest.current!==controller||controller.signal.aborted)return;
       setError(
         e instanceof Error ? e.message : "Could not build your passport.",
       );
@@ -633,6 +675,8 @@ export default function Home() {
       say(
         "Exploration couldn’t complete. Your confirmed tastes are preserved for a retry.",
       );
+    } finally {
+      if(generationRequest.current===controller)generationRequest.current=null;
     }
   }
   function recordFeedback(id: string, value: Feedback) {
@@ -641,7 +685,7 @@ export default function Home() {
       feedbackOpener.current = document.activeElement as HTMLElement;
       setRejectionId(id);
     } else
-      void refine({
+      return refine({
         feedback: { id, accepted: true, clear: feedback[id] === "like" },
       });
   }
@@ -654,6 +698,7 @@ export default function Home() {
     else fresh();
   }
   function fresh() {
+    generationRequest.current?.abort();generationRequest.current=null;setGenerationPreviews({});
     recoveryRequest.current?.abort();
     clearGuestPassport(window.sessionStorage);
     clearActiveSession(window.sessionStorage);
@@ -672,6 +717,7 @@ export default function Home() {
       });
     setRecoveryStatus(undefined);
     setShowSaved(false);
+    setShowMap(true);
     setWorkspaceView("discover");
     setEditingPlan(undefined);
     setSavePlanRequest(0);
@@ -694,7 +740,7 @@ export default function Home() {
     setConceptDialog(false);
     resetMatches("idle");
   }
-  const step = result ? 3 : resolution && !editing ? 2 : 1;
+  const step = result || phase==='exploring' ? 3 : resolution && !editing ? 2 : 1;
   const progress =
     phase === "refining"
       ? updating.length
@@ -799,7 +845,13 @@ export default function Home() {
               );
               resetMatches();
             }}
-            onSubmit={resolve}
+            onSubmit={()=>void resolve()}
+            onSample={sampleCity=>{
+              const tastes=['A.R. Rahman','Interstellar','Indian cuisine'];
+              setCity(sampleCity);setOrigin('');setDraft(tastes);
+              setConceptSeeds(['Indian cuisine']);setRequestedActivities(['Eat','Music','Movies']);
+              void resolve(tastes);
+            }}
             activities={requestedActivities}
             onActivities={setRequestedActivities}
           />
@@ -843,7 +895,8 @@ export default function Home() {
             )}
           </div>
         )}
-        {busy && <JourneyLoading phase={phase} detail={progress} />}
+        {busy && phase!=='exploring' && <JourneyLoading phase={phase} detail={progress} />}
+        {phase==='exploring'&&<GenerationPreview city={city} previews={generationPreviews} onCancel={()=>{generationRequest.current?.abort();generationRequest.current=null;setGenerationPreviews({});setPhase('confirming');}}/>}
         {result && (
           <section
             className="living-passport"
@@ -902,7 +955,7 @@ export default function Home() {
               className="workspace-view-anchor"
               hidden={workspaceView !== "discover"}
             >
-              {!showSaved && <DiscoveryConcierge busy={busy} onAsk={request=>{if(request)setComposer(request);setAssistantTab("ask");setAssistantOpen(true);}} onNavigate={selectWorkspaceView} />}
+              {!showSaved && <DiscoveryConcierge city={result.city} firstName={accountSignedIn?accountFirstName:undefined} busy={busy} onAsk={request=>{if(request)setComposer(request);setAssistantTab("ask");setAssistantOpen(true);}} onNavigate={selectWorkspaceView} onShare={()=>document.getElementById('share-taste-title')?.scrollIntoView({behavior:'smooth',block:'center'})}/>}
               {result.session && !showSaved && (
                 <FamiliarityControl
                   session={result.session}
@@ -949,7 +1002,13 @@ export default function Home() {
                 />
               ) : (
                 <>
+                  {mappedPlaces(result.cards.filter(card=>!result.session?.hiddenCategories.includes(card.section))).length>0&&<button className="quiet-button map-toggle" type="button" aria-expanded={showMap} onClick={()=>setShowMap(value=>!value)}>{showMap?'Hide map':'Show map'}</button>}
+                  {showMap&&mappedPlaces(result.cards.filter(card=>!result.session?.hiddenCategories.includes(card.section))).length>0&&<PassportMap cards={result.cards.filter(card=>!result.session?.hiddenCategories.includes(card.section))} onSelect={card=>{
+                    setShowMap(false);
+                    window.setTimeout(()=>[...document.querySelectorAll<HTMLElement>('[data-entity-id]')].find(element=>element.dataset.entityId===card.id)?.scrollIntoView({behavior:'smooth',block:'center'}),50);
+                  }}/>}
                   <PassportSections
+                    disabled={busy}
                     result={{
                       ...result,
                       cards: result.cards.filter(
@@ -962,6 +1021,7 @@ export default function Home() {
                     updates={updates}
                     updating={updating}
                   />
+                  <ShareTasteCard key={`share:${result.agent?.sessionId??result.city}`} passport={result}/>
                 </>
               )}
             </div>
@@ -981,6 +1041,7 @@ export default function Home() {
                 saveRequest={savePlanRequest}
                 onSaveRequestHandled={()=>setSavePlanRequest(0)}
               />
+              <FirstWeek key={`first-week:${result.session?.id??result.city}`} passport={result}/>
             </div>
             <div
               className="workspace-panel"
@@ -991,6 +1052,7 @@ export default function Home() {
                 key={`intelligence:${result.session?.id ?? result.city}`}
                 view={workspaceView === "together" ? "together" : "preferences"}
                 onPreferences={()=>selectWorkspaceView("preferences")}
+                partnerSample={sharedPartnerTastes}
                 passport={result}
                 busy={busy}
                 onRefine={(input) => {setWorkspaceView("discover");setShowSaved(false);void refine(input);}}
@@ -1084,6 +1146,7 @@ export default function Home() {
 
             {assistantTab === "ask" ? (
               <div id="ask-panel" role="tabpanel" aria-labelledby="ask-tab">
+                {phase==='refining'&&<div className="chat-progress" role="status" aria-live="polite"><span aria-hidden="true">•••</span><p>{chatProgress}</p></div>}
                 <p className="concierge-intro">
                   Ask a follow-up, refine one category, or get help choosing your next stop.
                 </p>
@@ -1134,6 +1197,7 @@ export default function Home() {
                         {m.role === "agent" ? "TASTEPASSPORT" : "YOU"}
                       </span>
                       {m.role === "agent" ? <ChatReply text={m.text} hasCards={Boolean(m.recommendationIds?.some(id=>result.cards.some(card=>card.id===id && !result.session?.hiddenCategories?.includes(card.section))))}/> : <p>{m.text}</p>}
+                      {m.role==='agent'&&m.checks&&<details className="chat-checks"><summary>What I checked</summary><ul><li>Request route: {m.checks.route}</li><li>{m.checks.model}</li><li>{m.checks.qlooOperations} Qloo retrieval or tool operation{m.checks.qlooOperations===1?'':'s'} in this turn; each may use more than one network request.</li><li>{m.checks.validation}</li><li>{m.checks.kept.length?`Kept unchanged: ${m.checks.kept.map(sectionLabel).join(', ')}.`:'No sections were explicitly protected in this request.'}</li></ul></details>}
                       {m.role === "agent" && m.comparisonIds?.length ? <ChatComparison cards={m.comparisonIds.flatMap(id=>result.cards.find(card=>card.id===id && !result.session?.hiddenCategories?.includes(card.section)) ?? [])} /> : null}
                       {m.role === "agent" && !m.comparisonIds?.length && Array.isArray(m.recommendationIds) && m.recommendationIds.length ? <ChatRecommendations city={result.city}
                         cards={m.recommendationIds.flatMap(id=>result.cards.find(card=>card.id===id && !result.session?.hiddenCategories?.includes(card.section)) ?? [])}

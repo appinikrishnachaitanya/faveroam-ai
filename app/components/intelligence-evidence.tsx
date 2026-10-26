@@ -6,8 +6,10 @@ import { screenTasteConnection } from "../../src/qloo/explanation";
 import { isPlaceSection } from "../../src/passport/model";
 import { formatReturnedRating } from "../../src/passport/rating-display";
 import { priceLabel } from "../../src/passport/pricing";
-export function ResultMetrics({ card }: { card: Card }) {
+import {tasteEvidenceCoverage} from '../../src/passport/taste-evidence-coverage';
+export function ResultMetrics({ card, selected = [] }: { card: Card; selected?: {id:string}[] }) {
   const m = card.intelligence;
+  const coverage=tasteEvidenceCoverage(card,selected);
   return (
     <div
       className="result-metrics"
@@ -23,6 +25,9 @@ export function ResultMetrics({ card }: { card: Card }) {
         <span aria-label={`Tripadvisor rating ${formatReturnedRating(m.externalProof?.tripadvisorRating)} out of 5`}>★ {formatReturnedRating(m.externalProof?.tripadvisorRating)} / 5 <small>Tripadvisor</small></span>
       ) : isPlaceSection(card.section) ? <span className="metric-unavailable">Rating unavailable</span> : null}
       {isPlaceSection(card.section) && priceLabel(m?.commercial?.priceLevel) && <span aria-label={`Listed price category: ${priceLabel(m?.commercial?.priceLevel)}`}>{priceLabel(m?.commercial?.priceLevel)}</span>}
+      {coverage && <span className="evidence-coverage" title={`${coverage.count} of ${coverage.total} confirmed tastes have individual returned evidence on this result. This is not the chance you will like it.`} aria-label={`Taste evidence: ${coverage.percentage} percent, ${coverage.count} of ${coverage.total} confirmed tastes with individual returned evidence`}>
+        {coverage.percentage}% taste evidence
+      </span>}
 
     </div>
   );

@@ -67,7 +67,9 @@ type DebugEvent =
   | "session.expired"
   | "service.invoked"
   | "service.response"
-  | "service.failed";
+  | "service.failed"
+  | "share.create_failed"
+  | "share.created";
 interface DebugMeta {
   reason?: string;
   service?: "supabase-auth" | "supabase-storage";
@@ -142,7 +144,7 @@ export function debugEvent(event: DebugEvent, meta: DebugMeta = {}) {
         "explain",
       ]),
       reason: allowed(meta.reason, [
-        "transport", "timeout", "cancelled", "provider", "rate-limit", "empty-response", "max-tokens", "safety", "invalid-json", "invalid-protocol", "unsafe-payload", "validation",
+        "transport", "timeout", "cancelled", "provider", "rate-limit", "empty-response", "max-tokens", "safety", "invalid-json", "invalid-protocol", "unsafe-payload", "validation", "storage-read", "storage-write",
       ]),
       tool: allowed(meta.tool, [
         "interpret_cultural_intent",

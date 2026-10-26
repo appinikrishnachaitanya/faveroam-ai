@@ -62,7 +62,7 @@ export function conversationContext(state: AgentState): ConversationContext {
         const value = query[key];
         if (typeof value === "number" && Number.isFinite(value)) preferences[key] = value;
       }
-      for (const key of ["goal", "qualityBias", "trendBias", "tagOperator", "locationQuery"] as const) {
+      for (const key of ["goal", "qualityBias", "trendBias", "tagOperator", "locationQuery", "audienceAge", "inspirationName"] as const) {
         const value = query[key];
         const checked = value && safe(value, 100);
         if (checked) preferences[key] = checked;

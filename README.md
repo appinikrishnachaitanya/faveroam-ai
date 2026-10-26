@@ -21,6 +21,10 @@ TastePassport starts with **confirmed cultural interests** and makes a useful ne
 5. Save a promising choice to **My Vibe**. Ask **“Save my Passport”** to save it to your signed-in account, or **“Plan a day out”** to open the editable planner. Try **Together** with another confirmed interest to look for shared cultural ground. Choose stops and times; reorder stops without silently replacing their venues.
 6. Optionally create an account to save a Passport, a dated plan, or a named taste profile for another destination.
 
+For a quick start, **Try a sample** fills a destination and three interests, then opens the normal identity-confirmation step. Discover opens a map automatically when returned places have real coordinates; its circles mark the vicinity of named venues, not verified neighbourhood borders. The assistant welcomes the user on Discover and offers concrete next actions. **Plan my first week** builds seven editable days from validated local cards, leaves unsupported stops open, and exports selected stops as a local-time `.ics` calendar. It does not claim opening hours or route feasibility.
+
+**Together** compares your confirmed interests with a second person's confirmed interests, shows returned shared and distinct themes, and suggests one first hangout from a returned local place. The conversation starters describe the overlap without claiming personal compatibility. Chat replies can expand **What I checked** for the route, protected sections, and retrieval/validation steps. A taste card can be downloaded or shared as a PNG (with SVG as an optional format). An expiring, revocable read-only link is available when share storage is configured; the recipient can use that link to prefill the second side of Together after making their own Passport. Image sharing remains available if link storage is down.
+
 Live coverage varies by city and interest. The app should show a gap when Qloo does not return a suitable choice rather than manufacture a venue. For a recorded demo, use the results the app actually returns.
 
 ## Why Qloo changes the answer
@@ -78,11 +82,11 @@ Discovery first checks identity and hard requirements, then ranks and diversifie
 
 | Part | Responsibility |
 |---|---|
-| Next.js 16, React, TypeScript | Onboarding, Discover, Ask TastePassport, My Vibe, Together, insights and the outing planner |
+| Next.js 16, React, TypeScript, MapLibre GL | Onboarding, Discover, interactive place map, Ask TastePassport, My Vibe, Together, insights and the outing planners |
 | Qloo API and official harness/MCP | Resolve interests and concepts; retrieve cultural entities, places and shared associations |
 | Gemini via `@google/genai` | Interpret conversational requests and select permitted functions; compose responses from checked facts |
 | Server-side policy and session state | Validate requests, preserve unaffected preferences, reject unsupported results and coordinate revisions |
-| Supabase (optional) | Email/password accounts, saved Passports, plans, taste profiles, destinations and persisted editing sessions |
+| Supabase (optional for guests) | Email/password accounts, saved Passports, plans, taste profiles, destinations, persisted editing sessions and expiring share links |
 | Google Cloud Run | Host the public Next.js application |
 
 Guest discovery needs Qloo but no account. If account storage is configured, the browser receives only an active-session pointer; canonical editing state stays on the server. Saved Passports hold bounded Qloo-backed discoveries and preferences, not chat history or provider credentials.
@@ -111,7 +115,7 @@ Open `http://localhost:3000`. Set these **server-side** values in `.env.local` o
 
 The `AGENT_MODEL_*` compatibility adapter is optional for other providers; native Gemini does not need it. Do not put any provider or service-role secret in a `NEXT_PUBLIC_` variable, a commit, logs or screenshots.
 
-For account features, create a Supabase project, enable email/password authentication and the desired email-confirmation setting, configure the local and deployed `/auth/callback` redirect URLs, then run [db-scripts/setup.sql](db-scripts/setup.sql) **manually once** in its SQL Editor. **That script deletes existing app-owned Passports, plans, profiles and active sessions.** It preserves Auth users and existing destination rows. Do not run it in CI or on every deployment. Without Supabase configuration, use the guest discovery flow.
+For account features, create a Supabase project, enable email/password authentication and the desired email-confirmation setting, configure the local and deployed `/auth/callback` redirect URLs, then run [db-scripts/setup.sql](db-scripts/setup.sql) **manually once on a fresh project** in its SQL Editor. **That script deletes existing app-owned Passports, plans, profiles, active sessions and share links.** It preserves Auth users and existing destination rows. Do not run it in CI or on every deployment. For an existing installation, apply only the **non-destructive** [share-links.sql](db-scripts/share-links.sql) once to enable public taste links. Share links require configured Supabase storage; PNG/SVG image export does not. Without Supabase configuration, use the guest discovery flow.
 
 ## Verify and deploy
 
@@ -126,6 +130,8 @@ npm run smoke:production
 Those checks use local fixtures and a production smoke test; they do not certify live Qloo, Gemini or email delivery. Opt-in live checks are `npm run verify:qloo`, `npm run verify:gemini`, `npm run verify:accuracy` and `npm run verify:relevance`; they consume provider quota. For the hosted demo, also test a complete guest journey and the account flow if you intend to show it.
 
 The app can be deployed to Cloud Run from GitHub. It listens on the host-provided `PORT` and exposes `/api/health` for process readiness. Configure secrets in the host, set `APP_ORIGIN` to the public HTTPS origin, and verify a real discovery and refinement in addition to the health response. GitHub Actions validates pushed `feat/**` branches. **[Open the live demo](https://taste-passport-ai.cloud.run/).**
+
+For a warmer hackathon demo, set one minimum Cloud Run instance after considering its idle cost: `gcloud run services update tastepassport-ai --project=hackathon-tastepassport-ai --region=us-central1 --min-instances=1`. Repeated identical Qloo lookups, including the sample's tastes, use the existing short-lived per-instance transport cache; it is not a shared distributed cache and a newly started instance can still be cold. Map tiles use CARTO Voyager and attribute CARTO and OpenStreetMap contributors. If tiles fail, the UI falls back to a schematic plot of returned coordinates.
 
 ## Boundaries
 
