@@ -1,12 +1,12 @@
 "use client";
-import {useState} from 'react';
+import {memo,useState} from 'react';
 import type {Passport} from '../../src/workspace/state';
 import {activityMatches,dayOutOptions,outingActivities} from '../../src/passport/day-out';
 import {cityDate,cityTimeZone} from '../../src/account/plans';
 import {firstWeek,firstWeekIcs,updateWeekStop,type WeekDay,type WeekRoots} from '../../src/passport/first-week';
 import PassportMap from './passport-map';
 
-export default function FirstWeek({passport,roots}:{passport:Passport;roots?:WeekRoots}){
+export default memo(function FirstWeek({passport,roots}:{passport:Passport;roots?:WeekRoots}){
  const [date,setDate]=useState(()=>cityDate(passport.city));
  const [days,setDays]=useState<WeekDay[]>();
  const [active,setActive]=useState(0);
@@ -52,4 +52,4 @@ export default function FirstWeek({passport,roots}:{passport:Passport;roots?:Wee
      <button type="button" className="quiet-button" onClick={download}>Download calendar (.ics)</button>{status&&<p role="status">{status}</p>}
    </>}
  </section>;
-}
+});

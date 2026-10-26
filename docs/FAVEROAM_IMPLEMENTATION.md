@@ -78,3 +78,16 @@ Verification: 468 automated tests passed; TypeScript and optimized build passed.
 Live two-profile Qloo acceptance, durable weekly saving, approved-sharing granularity,
 and practical geographic ranking remain open. Candidate coverage can be sparse,
 because the existing exchange supplies only one individual place per profile.
+
+## Overlay responsiveness milestone
+
+Discovery sections and MapLibre now have memoized render boundaries. Filtered
+Passport data and feedback dictionaries retain identity until their source state
+changes. A stable feedback bridge delegates to the latest committed handler, so
+memoization does not retain stale session or preference callbacks. FirstWeek also
+skips unrelated parent renders. Drawer and navigation backdrop blur were removed
+to avoid compositing the map and large card grids behind overlays.
+
+468 tests passed and production build/type checking passed. These changes address
+observed code paths that do unnecessary work; no browser latency measurement or
+universal device-performance claim is made. Live interaction profiling is pending.

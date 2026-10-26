@@ -19,7 +19,7 @@ html { scrollbar-gutter: stable; }
 }
 .concierge-drawer[open] { display: flex; flex-direction: column; }
 .concierge-drawer:not([open]) { display: none; }
-.concierge-drawer::backdrop { background: #19382f66; backdrop-filter: blur(3px); }
+.concierge-drawer::backdrop { background: #19382f66;  }
 
 .concierge-heading {
   display: flex;

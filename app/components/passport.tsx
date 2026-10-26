@@ -1,6 +1,6 @@
 "use client";
 import { sectionLabel } from "../../src/passport/labels";
-import { useState } from "react";
+import { memo, useState } from "react";
 import { ResultMetrics, WhyEvidence } from "./intelligence-evidence";
 import { evidenceFacts, recommendationSummary } from "../../src/qloo/explanation";
 import { threeChoices } from "../../src/passport/shortlist";
@@ -398,7 +398,7 @@ export function DiscoveryCard({
     </article>
   );
 }
-export function PassportSections({
+export const PassportSections = memo(function PassportSections({
   result,
   feedback,
   onFeedback,
@@ -544,4 +544,4 @@ export function PassportSections({
       ))}
     </div>
   );
-}
+});

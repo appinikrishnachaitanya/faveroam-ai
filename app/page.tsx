@@ -3,7 +3,7 @@ import { refinementErrorMessage } from "../src/agent/customer-error";
 import {generatePassport} from '../src/workspace/generation-browser';
 import GenerationPreview from './components/generation-preview';
 import { sectionLabel } from "../src/passport/labels";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { validDestination } from "../src/workspace/location";
 import { AgentTurnError, sendAgentTurn } from "../src/agent/browser";
 import type { Intent } from "../src/agent/types";
@@ -301,12 +301,12 @@ export default function Home() {
     phase === "refining" ||
     phase === "interpreting";
   const signals = result?.session?.selected ?? confirmed(resolution, chosen);
-  const feedback: Record<string, Feedback> = Object.fromEntries(
+  const feedback: Record<string, Feedback> = useMemo(()=>Object.fromEntries(
     (result?.session?.feedback ?? []).map((f) => [
       f.id,
       f.accepted ? "like" : "dislike",
     ]),
-  );
+  ),[result?.session?.feedback]);
   const sessionHistory = result?.session?.history ?? [];
   const conversationStart = sessionHistory.findIndex(
     (message) => message.role === "user",
@@ -690,6 +690,13 @@ export default function Home() {
         feedback: { id, accepted: true, clear: feedback[id] === "like" },
       });
   }
+  const feedbackHandler = useRef(recordFeedback);
+  useLayoutEffect(()=>{feedbackHandler.current=recordFeedback;});
+  const stableFeedback = useCallback((id:string,value:Feedback)=>feedbackHandler.current(id,value),[]);
+  const visibleResult = useMemo(()=>result?{...result,cards:result.cards.filter(card=>!result.session?.hiddenCategories.includes(card.section))}:undefined,[result]);
+  const openMappedCard = useCallback((card:import('../src/passport/model').Card)=>{
+    window.setTimeout(()=>[...document.querySelectorAll<HTMLElement>('[data-entity-id]')].find(element=>element.dataset.entityId===card.id)?.scrollIntoView({behavior:'smooth',block:'center'}),50);
+  },[]);
   function closeFeedback() {
     setRejectionId(undefined);
     requestAnimationFrame(() => feedbackOpener.current?.focus());
@@ -1004,23 +1011,8 @@ export default function Home() {
               ) : (
                 <>
                   {mappedPlaces(result.cards.filter(card=>!result.session?.hiddenCategories.includes(card.section))).length>0&&<button className="quiet-button map-toggle" type="button" aria-expanded={showMap} onClick={()=>setShowMap(value=>!value)}>{showMap?'Hide map':'Show map'}</button>}
-                  {showMap&&mappedPlaces(result.cards.filter(card=>!result.session?.hiddenCategories.includes(card.section))).length>0&&<PassportMap cards={result.cards.filter(card=>!result.session?.hiddenCategories.includes(card.section))} onSelect={card=>{
-                    window.setTimeout(()=>[...document.querySelectorAll<HTMLElement>('[data-entity-id]')].find(element=>element.dataset.entityId===card.id)?.scrollIntoView({behavior:'smooth',block:'center'}),50);
-                  }}/>}
-                  <PassportSections
-                    disabled={busy}
-                    result={{
-                      ...result,
-                      cards: result.cards.filter(
-                        (c) =>
-                          !result.session?.hiddenCategories.includes(c.section),
-                      ),
-                    }}
-                    feedback={feedback}
-                    onFeedback={recordFeedback}
-                    updates={updates}
-                    updating={updating}
-                  />
+                  {showMap&&visibleResult&&mappedPlaces(visibleResult.cards).length>0&&<PassportMap cards={visibleResult.cards} onSelect={openMappedCard}/>}
+                  {visibleResult&&<PassportSections disabled={busy} result={visibleResult} feedback={feedback} onFeedback={stableFeedback} updates={updates} updating={updating}/>}
                   <ShareTasteCard key={`share:${result.agent?.sessionId??result.city}`} passport={result}/>
                 </>
               )}

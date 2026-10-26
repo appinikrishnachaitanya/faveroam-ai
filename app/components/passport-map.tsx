@@ -1,5 +1,5 @@
 "use client";
-import {useEffect,useRef,useState} from 'react';
+import {memo,useEffect,useRef,useState} from 'react';
 import type {Card} from '../../src/passport/model';
 import {isPlaceSection} from '../../src/passport/model';
 import {buildAreaGuide} from '../../src/passport/area-guide';
@@ -10,7 +10,7 @@ export function mappedPlaces(cards:readonly Card[]) {
     Number.isFinite(card.intelligence?.location?.latitude) && Number.isFinite(card.intelligence?.location?.longitude) &&
     Math.abs(card.intelligence!.location.latitude!)<=90 && Math.abs(card.intelligence!.location.longitude!)<=180);
 }
-export default function PassportMap({cards,onSelect,dayLabels}:{cards:Card[];onSelect?:(card:Card)=>void;dayLabels?:Record<string,string>}) {
+export default memo(function PassportMap({cards,onSelect,dayLabels}:{cards:Card[];onSelect?:(card:Card)=>void;dayLabels?:Record<string,string>}) {
   const container=useRef<HTMLDivElement>(null);
   const [failed,setFailed]=useState(false);
   const [selectedPlace,setSelectedPlace]=useState<Card>();
@@ -60,4 +60,4 @@ export default function PassportMap({cards,onSelect,dayLabels}:{cards:Card[];onS
       <ul className="passport-map-legend">{buildAreaGuide([],places).filter(area=>area.point).map(area=><li key={area.anchor.id}>Area around <strong>{area.anchor.name}</strong></li>)}</ul>
     </>}
   </section>;
-}
+});
