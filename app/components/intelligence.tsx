@@ -14,6 +14,7 @@ import { priceLabel } from "../../src/passport/pricing";
 import { suggestedMatches } from "../../src/passport/matching";
 import { isPlaceSection } from "../../src/passport/model";
 import { Icon } from "./passport";
+import FirstWeek from './first-week';
 import {commonGroundStarters,sharedHangout} from '../../src/passport/common-ground';
 const modes: { id: DiscoveryGoal; name: string; detail: string; icon: string }[] = [
   {
@@ -437,6 +438,11 @@ export default function TasteIntelligence({
                 <h4>Three ways to start a conversation</h4><ol>{commonGroundStarters(together.comparison,first,second).map(starter=><li key={starter}>{starter}</li>)}</ol>
               </div>;})()}
               {together.exchange&&<section className="taste-exchange" aria-label="One discovery to show each other"><span className="micro-label">BEYOND THE OVERLAP</span><h4>Show each other something new</h4><p>Each idea starts from one person’s distinct returned theme, so you can introduce each other to something from your own tastes.</p><div className="taste-exchange-grid">{together.exchange.map(item=><article key={item.person}><small>{item.person==='you'?'Your pick to introduce':'Their pick to introduce'}</small>{item.card?<><strong>{item.card.name}</strong><p>{item.card.address??`Returned in ${passport.city}`}</p><span>From the distinct theme: {item.theme}</span></>:<p>{item.theme?`No verified place was returned for “${item.theme}” in this category.`:'No distinct theme was returned for this person.'}</p>}</article>)}</div></section>}
+              <FirstWeek key={together.comparison.recordedAt} passport={passport} roots={{
+                you:together.exchange?.filter(item=>item.person==='you').flatMap(item=>item.card?[item.card]:[])??[],
+                partner:together.exchange?.filter(item=>item.person==='them').flatMap(item=>item.card?[item.card]:[])??[],
+                both:together.cards,
+              }}/>
               <p role="status">{together.notice}</p>
               <details className="together-differences"><summary>See each person’s distinct tastes</summary>
                 <p>

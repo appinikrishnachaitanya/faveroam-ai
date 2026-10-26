@@ -41,3 +41,18 @@ test('public share snapshot contains tastes and returned evidence but no account
  assert.doesNotMatch(json,/private message|private@example.com/);
  assert.equal(snapshot.cards[0].name,'Dinner');
 });
+
+test('two roots shares the planner while keeping individual and joint search pools distinct',()=>{
+ const a=venue('A anchor','Eat'),b=venue('B anchor','Eat'),joint=venue('Shared place','Eat');
+ const days=firstWeek([], 'London','2026-10-27',{you:[a],partner:[b],both:[joint]});
+ const chosen=days.flatMap(day=>day.stops).filter(stop=>stop.card);
+ assert.deepEqual(new Set(chosen.map(stop=>stop.card!.id)),new Set(['A anchor','B anchor','Shared place']));
+ assert.equal(chosen.find(stop=>stop.card!.id===a.id)?.audience,'you');
+ assert.equal(chosen.find(stop=>stop.card!.id===b.id)?.audience,'partner');
+ assert.equal(chosen.find(stop=>stop.card!.id===joint.id)?.audience,'both');
+ assert.ok(days.flatMap(day=>day.stops).some(stop=>!stop.card));
+});
+test('a missing individual profile never borrows a joint venue and calls it personal',()=>{
+ const days=firstWeek([], 'London','2026-10-27',{you:[],partner:[],both:[venue('Joint only','Eat')]});
+ assert.ok(days.flatMap(day=>day.stops).filter(stop=>stop.audience!=='both').every(stop=>!stop.card));
+});

@@ -64,3 +64,17 @@ This is a brand foundation milestone, not completion of the redesign or features
 - Full suite: 466 passed; TypeScript and production build passed.
 - Weekly editing state is still local to the mounted planner; durable weekly saving,
   Two Roots assignment, evidence UI and browser acceptance remain unfinished.
+
+## Two Roots planner integration milestone
+
+Common Ground now exposes a joint week through the existing FirstWeek component
+and WeekDay/WeekStop model. Stops retain optional `you`, `partner`, or `both`
+attribution. Each pool uses only its own returned profile/joint-search candidates;
+missing individual results cannot be filled with a shared venue under a false label.
+Replacement lists stay within the stop's attributed pool. Locks/removal/undo use
+existing controls. No extra API calls or database schema changes are introduced.
+
+Verification: 468 automated tests passed; TypeScript and optimized build passed.
+Live two-profile Qloo acceptance, durable weekly saving, approved-sharing granularity,
+and practical geographic ranking remain open. Candidate coverage can be sparse,
+because the existing exchange supplies only one individual place per profile.

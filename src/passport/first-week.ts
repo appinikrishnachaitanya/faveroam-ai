@@ -10,7 +10,9 @@ const days:[string,string[]][]=[
   ['Explore after dark',['Eat','Nightlife']],
   ['Your new favourites',['Coffee','Eat','Culture']],
 ];
-export interface WeekStop {activity:string;card?:Card;time:string;locked?:boolean}
+export type WeekAudience='you'|'partner'|'both';
+export type WeekRoots=Record<WeekAudience,Card[]>;
+export interface WeekStop {activity:string;card?:Card;time:string;locked?:boolean;audience?:WeekAudience}
 export interface WeekDay {title:string;date:string;stops:WeekStop[]}
 /** One explicit edit, preserving every other stop and all approved locks. */
 export function updateWeekStop(days:WeekDay[],dayIndex:number,stopIndex:number,patch:Partial<Pick<WeekStop,'card'|'time'|'locked'>>):WeekDay[]{
@@ -27,12 +29,15 @@ export function updateWeekStop(days:WeekDay[],dayIndex:number,stopIndex:number,p
 }
 export function addCalendarDays(date:string,offset:number){if(!/^\d{4}-\d{2}-\d{2}$/.test(date))throw Error('Choose a valid date.');const value=new Date(`${date}T12:00:00Z`);if(Number.isNaN(value.getTime())||value.toISOString().slice(0,10)!==date)throw Error('Choose a valid date.');value.setUTCDate(value.getUTCDate()+offset);return value.toISOString().slice(0,10);}
 /** Uses only current validated city places; gaps remain explicit. */
-export function firstWeek(cards:Card[],city:string,startDate:string):WeekDay[]{
+export function firstWeek(cards:Card[],city:string,startDate:string,roots?:WeekRoots):WeekDay[]{
  const available=dayOutOptions(cards,city),used=new Set<string>();
+ const audiences:WeekAudience[]=['you','both','partner','both','you','partner','both'];
  return days.map(([title,activities],dayIndex)=>({title,date:addCalendarDays(startDate,dayIndex),stops:activities.map((activity,stopIndex)=>{
-   const card=available.find(option=>!used.has(option.id)&&activityMatches(option,activity));
+   const audience=roots?audiences[dayIndex]:undefined;
+   const pool=audience&&roots?dayOutOptions(roots[audience],city):available;
+   const card=pool.find(option=>!used.has(option.id)&&activityMatches(option,activity));
    if(card)used.add(card.id);
-   return {activity,card,time:['10:00','14:00','18:00'][stopIndex]};
+   return {activity,card,time:['10:00','14:00','18:00'][stopIndex],...(audience?{audience}:{})};
  })}));
 }
 function escapeIcs(value:string){return value.replace(/\\/g,'\\\\').replace(/\r?\n/g,'\\n').replace(/[,;]/g,char=>`\\${char}`);}
