@@ -2,7 +2,7 @@ import Link from "next/link";
 export default function Privacy() {
   return (
     <main className="privacy-page">
-      <Link href="/">← TastePassport</Link>
+      <Link href="/">← FaveRoam</Link>
       <h1>Your tastes belong to you.</h1>
       <p>
         You can explore without creating an account. Guest Passports live

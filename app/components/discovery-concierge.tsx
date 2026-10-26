@@ -16,7 +16,7 @@ export default function DiscoveryConcierge({city,firstName,busy,onAsk,onNavigate
       <h2 id="discovery-concierge-title">{firstName?`Welcome to ${city}, ${firstName}.`:`Welcome to ${city}.`}</h2>
       <p>I can help you choose from these discoveries, change what you see, or shape a day out. Tell me what you feel like doing.</p>
       <div className="discovery-welcome-actions">
-        <button type="button" className="primary-button" disabled={busy} onClick={()=>onAsk()}>Ask TastePassport <Icon name="arrow" size={16}/></button>
+        <button type="button" className="primary-button" disabled={busy} onClick={()=>onAsk()}>Ask FaveRoam <Icon name="arrow" size={16}/></button>
         <button type="button" className="quiet-button" disabled={busy} onClick={()=>onAsk('Pick three places or cultural discoveries that best fit my confirmed tastes, and explain each choice.')}>Pick three for me</button>
       </div>
     </div>

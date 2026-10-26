@@ -18,5 +18,12 @@ import './styles/motion.css';
 import './styles/workspace.css';
 import './styles/new-features.css';
 import 'maplibre-gl/dist/maplibre-gl.css';
-export const metadata:Metadata={title:'TastePassport — Move anywhere. Keep your vibe.',description:'Turn your tastes into discoveries in a new city.'};
+import './styles/faveroam.css';
+export const metadata:Metadata={
+  metadataBase:new URL('https://taste-passport-ai.cloud.run/'),
+  title:'FaveRoam — From what you love to where you belong.',
+  description:'Turn what you love into places, experiences, and shared discoveries in a new city.',
+  icons:{icon:'/brand/faveroam-mark.svg'},
+  openGraph:{title:'FaveRoam',description:'From what you love to where you belong.',images:[{url:'/brand/faveroam-cover.png',width:1200,height:800}]},
+};
 export default function Layout({children}:{children:React.ReactNode}){return <html lang="en"><body>{children}</body></html>}

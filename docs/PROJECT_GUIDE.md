@@ -1,4 +1,4 @@
-# TastePassport AI — project guide
+# FaveRoam — project guide
 
 This is the single reference for the product, Qloo integration, agent design, development, deployment, demo, and submission. The [root README](../README.md) is the short entry point for judges.
 

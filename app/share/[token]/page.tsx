@@ -8,7 +8,7 @@ export default async function SharedPassport({params}:{params:Promise<{token:str
  const snapshot=await readShare(token).catch(()=>undefined);
  if(!snapshot)notFound();
  return <main className="shared-passport-page">
-   <header className="shared-page-header"><a href="/" className="shared-brand"><span className="shared-brand-mark" aria-hidden="true">✦</span><span>TastePassport AI</span></a><span className="shared-read-only">Shared taste card · read-only</span></header>
+   <header className="shared-page-header"><a href="/" className="shared-brand"><span className="shared-brand-mark" aria-hidden="true">✦</span><span>FaveRoam</span></a><span className="shared-read-only">Shared taste card · read-only</span></header>
    <section className="shared-page-hero" aria-labelledby="shared-page-title">
      <div className="shared-hero-copy"><span className="micro-label">THE THREADS BETWEEN FAVORITES</span><h1 id="shared-page-title">A little of what they love.<br/><em>A city to explore.</em></h1><p>These interests are their starting point for discovering {snapshot.city}. The places and themes below come from their returned Passport, ready to explore together.</p>
        <a className="primary-button" href={`/?together=${encodeURIComponent(token)}`}>Find our common ground <span aria-hidden="true">↗</span></a>
@@ -21,6 +21,6 @@ export default async function SharedPassport({params}:{params:Promise<{token:str
    </div>
    <section className="shared-page-section shared-discoveries" aria-labelledby="shared-discoveries"><div><span className="micro-label">03 · WHERE IT COULD LEAD</span><h2 id="shared-discoveries">A few discoveries</h2><p>Ideas from their returned Passport. Check current details before making plans.</p></div>{snapshot.cards.length?<ul className="shared-discovery-list">{snapshot.cards.map((card,index)=><li key={card.id}><span className="shared-discovery-number">0{index+1}</span><div><small>{sectionLabel(card.section)}</small><strong>{card.name}</strong>{card.address&&<p>{card.address}</p>}</div></li>)}</ul>:<p className="shared-empty">No validated discoveries were available to share yet.</p>}</section>
    <section className="shared-page-invitation"><div><span className="micro-label">A SHARED NEXT STEP</span><h2>What might you both enjoy?</h2><p>Build your own Passport, then compare your confirmed tastes with theirs. We’ll show returned common ground without claiming a compatibility percentage.</p></div><a className="primary-button" href={`/?together=${encodeURIComponent(token)}`}>Explore together <span aria-hidden="true">↗</span></a></section>
-   <footer className="shared-page-footer"><span>Move anywhere. Keep your vibe.</span><span>This link expires automatically. No account or chat was shared.</span></footer>
+   <footer className="shared-page-footer"><span>From what you love to where you belong.</span><span>This link expires automatically. No account or chat was shared.</span></footer>
  </main>;
 }

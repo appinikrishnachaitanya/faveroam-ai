@@ -12,7 +12,7 @@ export default function ChatComposer({prompt,disabled,onSend}:{prompt:{text:stri
     setDraft('');
     onSend(text);
   }}>
-    <label htmlFor="conversation-input" className="sr-only">Ask TastePassport</label>
+    <label htmlFor="conversation-input" className="sr-only">Ask FaveRoam</label>
     <textarea id="conversation-input" placeholder="Show me something quieter…" value={draft}
       onChange={event=>setDraft(event.target.value)} disabled={disabled} maxLength={1000} rows={2}/>
     <div className="composer-footer"><span>Updates your current suggestions</span>

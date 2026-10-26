@@ -57,7 +57,7 @@ export default function ConciergeDrawer({
           <Icon name="star" />
         </span>
         <div>
-          <h2 id="concierge-title">Ask TastePassport</h2>
+          <h2 id="concierge-title">Ask FaveRoam</h2>
           <p>Make these suggestions feel more like you.</p>
         </div>
         <div className="concierge-heading-actions">

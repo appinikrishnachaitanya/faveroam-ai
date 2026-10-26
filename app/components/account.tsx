@@ -433,7 +433,7 @@ export default function AccountControl({
                     : "Your saved Passports"
                   : pendingSave
                     ? "Keep your next chapter"
-                    : "Welcome to TastePassport"}
+                    : "Welcome to FaveRoam"}
             </h2>
             {!account?.user && !verificationPending && (
               <p className="account-intro">

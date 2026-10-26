@@ -1,4 +1,4 @@
-# TastePassport AI
+# FaveRoam
 
 **Move anywhere. Keep your vibe.**
 

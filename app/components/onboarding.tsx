@@ -449,7 +449,7 @@ export function TasteConfirmation({
           onClick={onSubmit}
           disabled={disabled || !complete}
         >
-          Create my TastePassport <Icon name="arrow" />
+          Create my FaveRoam <Icon name="arrow" />
         </button>
       </div>
       {!complete && (

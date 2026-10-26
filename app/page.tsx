@@ -72,7 +72,7 @@ interface Message {
 }
 const welcome: Message = {
   role: "agent",
-  text: "Move anywhere. Keep your vibe. Tell me your new city and one to five cultural tastes you love. We’ll build a bridge between your world and your next chapter.",
+  text: "From what you love to where you belong. Tell me your new city and one to five cultural tastes you love. We’ll build a bridge between your world and your next chapter.",
 };
 const verifyShareToken=(value:string)=>/^[a-zA-Z0-9_-]{32}$/.test(value);
 async function post<T>(path: string, body: unknown): Promise<T> {
@@ -759,15 +759,15 @@ export default function Home() {
         Skip to main content
       </a>
       <header className="workspace-topbar">
-        <a className="brand" href="/" aria-label="TastePassport home" onClick={event=>{if(result){event.preventDefault();requestNewPassport();}}}>
+        <a className="brand" href="/" aria-label="FaveRoam home" onClick={event=>{if(result){event.preventDefault();requestNewPassport();}}}>
           <span className="brand-symbol">
-            <Icon name="star" size={22} />
+            <img src="/brand/faveroam-mark.svg" width="28" height="28" alt="" />
           </span>
           <span>
-            TastePassport <small>AI</small>
+            FaveRoam
           </span>
         </a>
-        <span className="topbar-caption">Move anywhere. Keep your vibe.</span>
+        <span className="topbar-caption">From what you love to where you belong.</span>
         <nav className="header-controls" aria-label="Passport actions">
           {accountSignedIn && <span className="header-greeting" aria-label={accountFirstName ? `Signed in as ${accountFirstName}` : "Signed in"}>{accountFirstName ? `Hi, ${accountFirstName}` : "Welcome back"}</span>}
           <AccountControl
@@ -927,7 +927,7 @@ export default function Home() {
                 aria-controls="taste-concierge"
               >
                 <Icon name="star" size={18} />
-                Ask TastePassport
+                Ask FaveRoam
               </button>
             {recoveryStatus && (
               <section className="passport-recovery" aria-label="Continue your Passport" role="status">
@@ -1005,7 +1005,6 @@ export default function Home() {
                 <>
                   {mappedPlaces(result.cards.filter(card=>!result.session?.hiddenCategories.includes(card.section))).length>0&&<button className="quiet-button map-toggle" type="button" aria-expanded={showMap} onClick={()=>setShowMap(value=>!value)}>{showMap?'Hide map':'Show map'}</button>}
                   {showMap&&mappedPlaces(result.cards.filter(card=>!result.session?.hiddenCategories.includes(card.section))).length>0&&<PassportMap cards={result.cards.filter(card=>!result.session?.hiddenCategories.includes(card.section))} onSelect={card=>{
-                    setShowMap(false);
                     window.setTimeout(()=>[...document.querySelectorAll<HTMLElement>('[data-entity-id]')].find(element=>element.dataset.entityId===card.id)?.scrollIntoView({behavior:'smooth',block:'center'}),50);
                   }}/>}
                   <PassportSections
@@ -1108,8 +1107,8 @@ export default function Home() {
         )}
       </div>
       <footer className="workspace-footer">
-        <span>Move anywhere. Keep your vibe.</span>
-        <nav aria-label="About TastePassport">
+        <span>From what you love to where you belong.</span>
+        <nav aria-label="About FaveRoam">
           <a href="/about">About us</a>
           <a href="/privacy">Privacy</a>
         </nav>

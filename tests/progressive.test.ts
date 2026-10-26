@@ -80,7 +80,7 @@ test("confirmation offers actual candidates inline, explicit selection, replacem
   assert.match(html, /Feels like home/);
   assert.match(html, /Balanced/);
   assert.match(html, /Help me explore/);
-  assert.match(html, /Create my TastePassport/);
+  assert.match(html, /Create my FaveRoam/);
   assert.doesNotMatch(html, /class="confirmation-card confirmed"/);
   const confirmed = renderToStaticMarkup(
     createElement(TasteConfirmation, {

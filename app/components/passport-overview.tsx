@@ -31,7 +31,7 @@ export function PassportCover({
         <h1 id="passport-title">
           Your {passport.city}
           <br />
-          <em>TastePassport</em>
+          <em>FaveRoam</em>
         </h1>
         <p>A new chapter, connected to the things you already love.</p>
         <div className="passport-taste-preview">
