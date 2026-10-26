@@ -38,6 +38,7 @@ import ConciergeDrawer from "./components/concierge";
 import ChatRecommendations from "./components/chat-recommendations";
 import ChatComparison from "./components/chat-comparison";
 import ChatReply from "./components/chat-reply";
+import ChatComposer from "./components/chat-composer";
 import ConceptClarification from "./components/concept-clarification";
 import DiscoveryConcierge from "./components/discovery-concierge";
 import PassportNavigation from "./components/passport-navigation";
@@ -114,7 +115,8 @@ export default function Home() {
   const [assistantOpen, setAssistantOpen] = useState(false);
   const [showMap,setShowMap]=useState(true);
   const [assistantTab, setAssistantTab] = useState<"ask" | "manual">("ask");
-  const [composer, setComposer] = useState("");
+  const [composerPrompt, setComposerPrompt] = useState({text:"",version:0});
+  const setComposer = (text:string) => setComposerPrompt(previous=>({text,version:previous.version+1}));
   const [messages, setMessages] = useState<Message[]>([welcome]);
   const [draft, setDraft] = useState<string[]>([]);
   const [draftHydrated, setDraftHydrated] = useState(false);
@@ -356,11 +358,9 @@ export default function Home() {
     setError("");
     setUpdating([]);
   }
-  async function submitConversation(event: React.FormEvent) {
-    event.preventDefault();
-    if (!composer.trim() || busy || recoveryStatus === "checking") return;
-    const text = composer.trim();
-    setComposer("");
+  async function submitConversation(text: string) {
+    if (!text.trim() || busy || recoveryStatus === "checking") return;
+    text = text.trim();
     if (
       result?.agent &&
       !/\b(?:i love|my tastes (?:are|include)|i'm moving|i’m moving)\b/i.test(
@@ -1257,31 +1257,7 @@ export default function Home() {
                   <button type="button" className="quiet-button" onClick={()=>{setError("");setRetryInput(undefined);setAssistantOpen(false);}}>Keep exploring</button>
                 </div>
               </div>}
-              <form className="composer" onSubmit={submitConversation}>
-                <label htmlFor="conversation-input" className="sr-only">
-                  Ask TastePassport
-                </label>
-                <textarea
-                  id="conversation-input"
-                  placeholder="Show me something quieter…"
-                  value={composer}
-                  onChange={(e) => setComposer(e.target.value)}
-                  disabled={busy}
-                  maxLength={1000}
-                  rows={2}
-                />
-                <div className="composer-footer">
-                  <span>Updates your current suggestions</span>
-                  <button
-                    type="submit"
-                    aria-label="Send message"
-                    disabled={busy || recoveryStatus === "checking" || !composer.trim()}
-                  >
-                    <Icon name="send" size={17} />
-                    Send
-                  </button>
-                </div>
-              </form>
+              <ChatComposer prompt={composerPrompt} disabled={busy || recoveryStatus === "checking"} onSend={text=>void submitConversation(text)}/>
             </>
           )}
           {visibleMessages.length > 0 && (
