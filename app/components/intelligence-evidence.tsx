@@ -35,9 +35,12 @@ export function ResultMetrics({ card, selected = [] }: { card: Card; selected?: 
 export function WhyEvidence({
   card,
   session,
+  confirmedIds,
 }: {
   card: Card;
   session?: { sessionId: string; revision: number };
+  /** When supplied, only these tastes are described as the person's own. */
+  confirmedIds?: readonly string[];
 }) {
   const [details, setDetails] = useState<TasteResult>();
   const [loading, setLoading] = useState(false);
@@ -45,6 +48,7 @@ export function WhyEvidence({
   const [explanation, setExplanation] = useState<string[]>([]);
   const m = card.intelligence,
     inputs = card.evidence?.inputs ?? [];
+  const screenConnection=screenTasteConnection(card,confirmedIds);
   async function more() {
     if (!session) return;
     setLoading(true);
@@ -93,6 +97,9 @@ export function WhyEvidence({
       setLoading(false);
     }
   }
+  const own = new Set((confirmedIds ?? []).map((id) => id.toLowerCase()));
+  const isOwn = (id: string) => !confirmedIds || own.has(id.toLowerCase());
+  const requestInputs = inputs.filter((i) => i.role !== "tag-filter" && !isOwn(i.id));
   const connected =
     m?.taste?.contributingSignals
       .filter(signal => signal.contribution > 0)
@@ -100,7 +107,7 @@ export function WhyEvidence({
         const input = inputs.find(
           (i) => i.id.toLowerCase() === signal.id.toLowerCase(),
         );
-        return input ? [input.name] : [];
+        return input && isOwn(input.id) ? [input.name] : [];
       })
       .slice(0, 3) ?? [];
   return (
@@ -112,14 +119,15 @@ export function WhyEvidence({
         <summary>Interests considered</summary>
         <p>
           {inputs
-            .filter((i) => i.role !== "tag-filter")
+            .filter((i) => i.role !== "tag-filter" && isOwn(i.id))
             .map((i) => i.name)
             .join(", ") || "Category and location requirements"}
         </p>
-        {!screenTasteConnection(card) && <p>Search inputs are shown here; they do not by themselves establish an individual relationship.</p>}
+        {requestInputs.length > 0 && <p>Additional search signals, not confirmed tastes: {requestInputs.map((i) => i.name).join(", ")}.</p>}
+        {!screenConnection && <p>Search inputs are shown here; they do not by themselves establish an individual relationship.</p>}
       </details>
-      {screenTasteConnection(card) ? <p className="why-summary"><strong>Why it may fit</strong>{screenTasteConnection(card)}</p> : !!connected.length && (
-        <p className="why-summary"><strong>Why it may fit</strong>Connected to {connected.join(", ")} in your interests.</p>
+      {screenConnection ? <p className="why-summary"><strong>Why it may fit</strong>{screenConnection}</p> : !!connected.length && (
+        <p className="why-summary"><strong>Why it may fit</strong>Returned audience signals connect this listing to {connected.join(", ")}.</p>
       )}
       {card.evidence && <details><summary>Returned evidence and its limits</summary>
         <p>Source: {card.evidence.source} · {card.evidence.operation}. Result: {card.name}.</p>

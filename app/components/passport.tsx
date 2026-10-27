@@ -310,6 +310,7 @@ export function DiscoveryCard({
   onFeedback: (id: string, value: Feedback) => void | Promise<void>;
 }) {
   const [saving,setSaving]=useState(false);
+  const summary=recommendationSummary(card,selected?.map(taste=>taste.id));
   return (
     <article
       data-entity-id={card.id}
@@ -329,7 +330,7 @@ export function DiscoveryCard({
         </span>
         <h4>{card.name}</h4>
       </div>
-      {recommendationSummary(card) && <p className="card-query-inputs">{recommendationSummary(card)}</p>}
+      {summary && <p className="card-query-inputs">{summary}</p>}
       {card.address && (
         <p className="card-address">
           <Icon name="pin" size={13} />
@@ -350,7 +351,7 @@ export function DiscoveryCard({
         <summary>
           Why this suggestion? <Icon name="plus" size={12} />
         </summary>
-        {evidenceFacts(card).slice(0, 4).map((fact) => <p key={fact}>{fact}</p>)}
+        {evidenceFacts(card,selected?.map(taste=>taste.id)).slice(0, 4).map((fact) => <p key={fact}>{fact}</p>)}
         <p className="helper">Taste evidence % counts confirmed tastes with an individual returned contribution or matching returned tag on this card. It is not a prediction of enjoyment.</p>
         <div className="why-signals">
           {(
@@ -363,7 +364,7 @@ export function DiscoveryCard({
               <span key={name}>{name}</span>
             ))}
         </div>
-        <WhyEvidence card={card} session={session} />
+        <WhyEvidence card={card} session={session} confirmedIds={selected.map(taste=>taste.id)} />
       </details>
       <div className="feedback-actions">
         <button

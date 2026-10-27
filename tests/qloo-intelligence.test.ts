@@ -364,7 +364,7 @@ test("explanation facts only use returned evidence and never convert affinity in
     }),
   });
   assert.ok(!facts.join(" ").includes("96%"));
-  assert.ok(facts.join(" ").includes("confirmed interests"));
+  assert.ok(facts.join(" ").includes("No individual taste explanation"));
 });
 test("HTTP integration maps lookup, insights, compare and trend endpoints; unsupported fields never reach fetch", async () => {
   const original = globalThis.fetch,

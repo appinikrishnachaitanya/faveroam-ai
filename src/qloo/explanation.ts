@@ -17,31 +17,33 @@ export function displayTags<T extends {id:string;name:string}>(tags: readonly T[
   });
 }
 /** Contributions are audience associations, not inferred plot/genre similarity. */
-export function screenTasteConnection(card: Card): string | undefined {
+export function screenTasteConnection(card: Card,confirmedIds?:readonly string[]): string | undefined {
   if (!["Movies","Shows","Music"].includes(card.section)) return;
+  const own=confirmedIds&&new Set(confirmedIds.map(id=>id.toLowerCase()));
   const names = (card.intelligence?.taste?.contributingSignals ?? [])
     .filter(signal => signal.contribution > 0)
     .sort((a,b) => b.contribution - a.contribution)
     .flatMap(signal => {
       const input = card.evidence?.inputs?.find(input => input.id.toLowerCase() === signal.id.toLowerCase() && input.role === "entity-signal");
-      if (!input || input.name === input.id) return [];
+      if (!input || input.name === input.id || (own&&!own.has(input.id.toLowerCase()))) return [];
       const domain = input.types?.includes("urn:entity:artist") ? "music" : input.types?.includes("urn:entity:movie") ? "film" : undefined;
       return [`${input.name}${domain ? ` (${domain})` : ""}`];
     });
   if (card.section === "Music") {
     const genres = displayTags(card.evidence?.result?.tags ?? []).filter(tag=>/genre|style/.test(tag.id)).slice(0,3).map(tag=>tag.name);
     if (names.length) return `Listeners associated with ${[...new Set(names)].slice(0,2).join(" and ")} also connect to this artist${genres.length ? `; returned styles: ${genres.join(", ")}` : ""}. This is audience discovery, not a claim of the same sound.`;
-    return "This artist was found using your tastes; no individual audience connection was returned. Preview their music to judge the fit.";
+    return own ? "This artist appeared in the search; no individual audience connection to a confirmed taste was returned. Preview their music to judge the fit." : "This artist was found using your tastes; no individual audience connection was returned. Preview their music to judge the fit.";
   }
   if (names.length) return `Audience-taste association with ${[...new Set(names)].slice(0,2).join(" and ")}; this does not establish a shared story or genre.`;
   if (card.evidence?.inputs?.some(input => input.role === "entity-signal"))
     return "No individual supporting interest was identified in the response; this search association does not establish a shared story or genre.";
 }
 /** These are the only sentences the model may select. It never authors recommendation facts. */
-export function evidenceFacts(card: Card): string[] {
+export function evidenceFacts(card: Card,confirmedIds?:readonly string[]): string[] {
   const m = card.intelligence,
     params = card.evidence?.params ?? {},
     facts: string[] = [];
+  const own=confirmedIds&&new Set(confirmedIds.map(id=>id.toLowerCase()));
   const signals = card.evidence?.inputs?.filter(input => input.role === "entity-signal") ?? [];
   if (card.evidence?.strategyNote?.startsWith("Dish match not verified:"))
     facts.push(card.evidence.strategyNote);
@@ -68,7 +70,7 @@ export function evidenceFacts(card: Card): string[] {
     facts.push(
       "Your interests were considered together; this does not establish an individual taste relationship.",
     );
-  const screenConnection = screenTasteConnection(card);
+  const screenConnection = screenTasteConnection(card,confirmedIds);
   if (screenConnection) facts.push(screenConnection);
   for (const signal of screenConnection ? [] : m?.taste?.contributingSignals ?? []) {
     if (signal.contribution <= 0) continue;
@@ -76,6 +78,10 @@ export function evidenceFacts(card: Card): string[] {
       (i) => i.id.toLowerCase() === signal.id.toLowerCase(),
     )?.name;
     if (name) {
+      if(own&&!own.has(signal.id.toLowerCase())) {
+        facts.push(`A returned audience signal involved the additional search input ${name}; this is not one of your confirmed tastes.`);
+        continue;
+      }
       if (card.section === "Eat" || card.section === "Coffee") {
         facts.push(`Associated via cross-domain audience affinity with ${name}; reflects cultural overlap rather than a direct culinary link.`);
       } else {
@@ -92,15 +98,16 @@ export function evidenceFacts(card: Card): string[] {
   if (card.address) facts.push(`Located at ${card.address}. Check opening hours before going.`);
   else if (params["filter.location.query"])
     facts.push(`We searched in ${params["filter.location.query"]}.`);
-  if (!facts.length)
-    facts.push(
-      "Your confirmed interests were considered together to find this suggestion.",
-    );
+  if (!facts.length) {
+    if (!card.evidence?.inputs?.length) facts.push("No individual taste explanation was returned for this suggestion.");
+    else if (confirmedIds?.length) facts.push("Your confirmed interests were considered together to find this suggestion.");
+    else facts.push("Search inputs were considered together to find this suggestion.");
+  }
   return facts.slice(0, 12);
 }
 
 /** Short customer-facing copy uses specific returned evidence, never generic search membership. */
-export function recommendationSummary(card: Card): string | undefined {
+export function recommendationSummary(card: Card,confirmedIds?:readonly string[]): string | undefined {
   const inputs=card.evidence?.inputs ?? [];
   const contributors=card.intelligence?.taste?.contributingSignals ?? [];
   const connected=contributors.filter(signal=>signal.contribution>0).flatMap(signal=>{
@@ -110,9 +117,13 @@ export function recommendationSummary(card: Card): string | undefined {
 
   const tags=displayTags(card.evidence?.result?.tags ?? []).filter(tag=>!/urn:tag:(?:genre|category):place/.test(tag.type ?? tag.id));
   const matches=tags.filter(tag=>inputs.some(input=>input.id===tag.id));
-  const screenConnection = screenTasteConnection(card);
+  const screenConnection = screenTasteConnection(card,confirmedIds);
   if (screenConnection) return `${tags.slice(0,2).map(tag=>tag.name).join(" · ")}${tags.length ? ". " : ""}${screenConnection}`;
-  if(matches.length) return `Matches ${matches.some(tag=>tag.id.includes(":dietary_option:")) ? "" : "your interest in "}${[...new Set(matches.map(tag=>tag.name))].slice(0,3).join(" · ")}${matches.some(tag=>tag.id.includes(":dietary_option:")) ? " options; confirm the menu with the venue" : ""}.`;
+  if(matches.length) {
+    const dietary=matches.some(tag=>tag.id.includes(":dietary_option:"));
+    const personal=!confirmedIds||matches.some(tag=>confirmedIds.some(id=>id.toLowerCase()===tag.id.toLowerCase()));
+    return `Matches ${dietary ? "" : personal ? "your interest in " : "a search for "}${[...new Set(matches.map(tag=>tag.name))].slice(0,3).join(" · ")}${dietary ? " options; confirm the menu with the venue" : ""}.`;
+  }
   if(connected.length && card.section !== "Eat" && card.section !== "Coffee") {
     const details=tags.slice(0,2).map(tag=>tag.name).join(" · ");
     return `${details ? details+". " : ""}Returned taste signals include ${[...new Set(connected)].slice(0,2).join(" and ")}.`;

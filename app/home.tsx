@@ -1098,6 +1098,7 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
             <div hidden={workspaceView !== "discover"}>
               <div hidden={!showSaved}>{visitedViews.has('saved') && <><Rituals passport={result} signedIn={accountSignedIn} initialCardId={ritualCardId} onInitialHandled={ritualInitialHandled}/><SavedDiscoveries
                   cards={result.session?.savedCards ?? []}
+                  selected={result.selected}
                   feedback={feedback}
                   onFeedback={stableFeedback}
                   disabled={busy}
@@ -1289,7 +1290,7 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
                       {m.role === "agent" ? <ChatReply text={m.text} hasCards={Boolean(m.recommendationIds?.some(id=>result.cards.some(card=>card.id===id && !result.session?.hiddenCategories?.includes(card.section))))}/> : <p>{m.text}</p>}
                       {m.role==='agent'&&m.checks&&<details className="chat-checks"><summary>What I checked</summary><ul><li>Request route: {m.checks.route}</li><li>{m.checks.model}</li><li>{m.checks.qlooOperations} Qloo retrieval or tool operation{m.checks.qlooOperations===1?'':'s'} in this turn; each may use more than one network request.</li><li>{m.checks.validation}</li><li>{m.checks.kept.length?`Kept unchanged: ${m.checks.kept.map(sectionLabel).join(', ')}.`:'No sections were explicitly protected in this request.'}</li></ul></details>}
                       {m.role === "agent" && m.comparisonIds?.length ? <ChatComparison cards={m.comparisonIds.flatMap(id=>result.cards.find(card=>card.id===id && !result.session?.hiddenCategories?.includes(card.section)) ?? [])} /> : null}
-                      {m.role === "agent" && !m.comparisonIds?.length && Array.isArray(m.recommendationIds) && m.recommendationIds.length ? <ChatRecommendations city={result.city}
+                      {m.role === "agent" && !m.comparisonIds?.length && Array.isArray(m.recommendationIds) && m.recommendationIds.length ? <ChatRecommendations city={result.city} confirmedIds={result.selected.map(taste=>taste.id)}
                         cards={m.recommendationIds.flatMap(id=>result.cards.find(card=>card.id===id && !result.session?.hiddenCategories?.includes(card.section)) ?? [])}
                         busy={busy} savedIds={result.session?.savedCards?.map(card=>card.id) ?? []}
                         onAsk={askFromChat}

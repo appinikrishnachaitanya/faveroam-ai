@@ -102,7 +102,7 @@ async function handlePOST(request: Request) {
     if (b.action === "explain") {
       if (!selectedCard)
         return json({ error: "Choose a current discovery." }, 400);
-      const facts = evidenceFacts(selectedCard);
+      const facts = evidenceFacts(selectedCard,state.selected.map(taste=>taste.id));
       try {
         const provider = configuredProvider();
         if (!provider?.explain) throw Error();

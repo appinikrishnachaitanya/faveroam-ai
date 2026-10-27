@@ -16,7 +16,7 @@ import { isPlaceSection } from "../../src/passport/model";
 import { Icon } from "./passport";
 import FirstWeek from './first-week';
 import CommonGroundThemes from './common-ground-themes';
-import {commonGroundStarters,sharedHangout,nearbySharedPlaces} from '../../src/passport/common-ground';
+import {commonGroundStarters,sharedHangout,hangoutExplanation,meaningfulSharedThemes,nearbySharedPlaces} from '../../src/passport/common-ground';
 const modes: { id: DiscoveryGoal; name: string; detail: string; icon: string }[] = [
   {
     id: "discover",
@@ -450,14 +450,14 @@ export default memo(function TasteIntelligence({
                   return <section className="together-category" key={category}><h4>{sectionLabel(category)} you could enjoy together</h4><div className="together-cards">
                 {cards.map((card) => (
                   <article key={card.id}>
-                    <span className="shared-result-status">{card.evidence?.strategyNote?.startsWith("Broader local") ? "Broader local option" : card.evidence?.result.tags.some(tag=>together.comparison.shared.some(shared=>shared.id===tag.id)) ? "Shared theme on this result" : "From your shared-interest search"}</span>
+                    <span className="shared-result-status">{card.evidence?.strategyNote?.startsWith("Broader local") ? "Broader local option" : card.evidence?.result.tags.some(tag=>meaningfulSharedThemes(together.comparison).some(shared=>!shared.broad&&shared.id===tag.id)) ? "Shared theme on this result" : "From your shared-interest search"}</span>
                     <h4>{card.name}</h4>
                     <p>{card.address ?? card.section}</p>
                     <ResultMetrics card={card} />
                     <a href={isPlaceSection(card.section) ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([card.name,card.address,passport.city].filter(Boolean).join(", "))}` : `https://www.google.com/search?q=${encodeURIComponent(card.name + " " + card.section)}`} target="_blank" rel="noopener noreferrer">{isPlaceSection(card.section) ? "Check location and availability ↗" : "Learn about this discovery ↗"}</a>
                     <details>
                       <summary>Returned taste evidence</summary>
-                      <WhyEvidence card={card} />
+                      <WhyEvidence card={card} confirmedIds={[...passport.selected,...(together.partnerSignals??[])].map(taste=>taste.id)} />
                     </details>
                   </article>
                 ))}
@@ -465,8 +465,8 @@ export default memo(function TasteIntelligence({
                 })}
               </div>
               <details className="common-ground-more"><summary>Why these choices connect your tastes</summary><CommonGroundThemes comparison={together.comparison} cards={sharedCards} you={passport.selected} partner={together.partnerSignals??[]}/></details>
-              {(()=>{const first=passport.selected[0]?.name??'your taste',second=together.partner?.[0]??'their taste';const hangout=sharedHangout(sharedCards,together.comparison);return <div className="shared-hangout">
-                <h4>One place to start together</h4>{hangout?<><strong>{hangout.card.name}</strong><p>{hangout.card.address??`Returned place in ${passport.city}`}</p><p>{hangout.exactTheme?'An exact returned shared theme appears on this place.':'This place came from the shared-interest search; no individual shared theme was returned on its listing.'}</p></>:<p>No verified place was returned for these interests. Try another category or taste.</p>}
+              {(()=>{const first=passport.selected[0]?.name??'your taste',second=together.partner?.[0]??'their taste';const hangout=sharedHangout(sharedCards,together.comparison,passport.selected,together.partnerSignals??[]);return <div className="shared-hangout">
+                <h4>One place to start together</h4>{hangout?<><strong>{hangout.card.name}</strong><p>{hangout.card.address??`Returned place in ${passport.city}`}</p><p>{hangoutExplanation(hangout)}</p></>:<p>No verified place was returned for these interests. Try another category or taste.</p>}
                 <details className="common-ground-more"><summary>Three conversation starters</summary><ol>{commonGroundStarters(together.comparison,first,second).map(starter=><li key={starter}>{starter}</li>)}</ol></details>
               </div>;})()}
               {together.exchange&&<section className="taste-exchange" aria-label="One discovery to show each other"><span className="micro-label">BEYOND THE OVERLAP</span><h4>Show each other something new</h4><p>Each idea comes from a separate confirmed-interest search. These are introductions to try, not exclusive preferences; both searches may overlap. A personal theme is shown only when it also appears on the returned listing.</p><div className="taste-exchange-grid">{together.exchange.map(item=><article key={item.person}><small>{item.person==='you'?'Your pick to introduce':'Their pick to introduce'}</small>{item.card?<><strong>{item.card.name}</strong><p>{item.card.address??`Returned in ${passport.city}`}</p><span>{item.theme?`A returned personal-profile theme: ${item.theme}`:'From this person’s confirmed cultural interests.'}</span></>:<p>{item.theme?`No verified place was returned for “${item.theme}” in this category.`:'No distinct personal introduction was available in the returned places.'}</p>}</article>)}</div></section>}
