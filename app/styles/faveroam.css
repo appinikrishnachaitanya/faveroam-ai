@@ -45,6 +45,9 @@ body { background:#f8f6f1; color:#17243b; }
 .progressive-app .passport-sidebar { background:#fffefa; border-color:#e1e5e8; }
 .progressive-app .passport-navigation button { color:#17243b; border-radius:10px; }
 .progressive-app .passport-navigation button[aria-current=page] { background:#fce5bd; color:#101c35; }
+.progressive-app .passport-navigation button > .flow-nav-icon { display:grid; flex:0 0 28px; place-items:center; width:28px; height:28px; border-radius:9px; background:#fff4e3; }
+.progressive-app .passport-navigation button > .passport-navigation-label { flex:1 1 auto; min-width:0; }
+.progressive-app .passport-navigation button[aria-current=page] > .flow-nav-icon { background:#fff8e9; }
 .progressive-app .discovery-card { border-color:#e1e5e8; background:#fffefa; box-shadow:0 5px 18px #101c3509; }
 .progressive-app .discovery-card .feedback-actions { gap:12px; }
 .progressive-app .discovery-card .feedback-actions button { min-width:0; padding:10px 12px; line-height:1.35; }
@@ -145,3 +148,38 @@ body,.progressive-app,.progressive-app button,.progressive-app input,.progressiv
 .progressive-app .passport-cover .cover-connection:hover { color:#17243b; background:#f3cc8b; border-color:#b9853d; }
 .progressive-app .passport-cover .cover-stamp { background:#fffefa; color:#17243b; border-color:#bdc6cb; }
 .progressive-app .passport-cover .cover-stamp :is(strong,span) { color:#17243b; }
+
+/* Keep the city story next to the first decision on desktop. */
+.progressive-app .move-onboarding { grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr); gap:clamp(20px,3vw,36px); align-items:start; }
+.progressive-app .move-onboarding .landing-city-hero { position:relative; isolation:isolate; min-height:660px; margin:0; padding:clamp(24px,3vw,38px); overflow:hidden; border:1px solid #e8dfce; border-radius:24px; background:#faf7f0; }
+.progressive-app .landing-city-hero::before { content:""; position:absolute; inset:0; z-index:-1; background:linear-gradient(180deg,#faf7f0 0%,#faf7f0 32%,#faf7f0dc 46%,transparent 68%); pointer-events:none; }
+.progressive-app .landing-city-hero > :not(.onboarding-story) { position:relative; z-index:1; max-width:none; }
+.progressive-app .landing-city-hero > p { line-height:1.6; }
+.progressive-app .landing-city-hero .micro-label { color:#405b57; }
+.progressive-app .landing-city-hero > p { color:#35445b; }
+.progressive-app .landing-city-hero .landing-actions .primary-button { background:#f3b65c; border-color:#c78a32; color:#101c35; font-weight:700; }
+.progressive-app .landing-city-hero .landing-actions .quiet-button { background:#fffefa; border:1px solid #768597; color:#17243b; font-weight:650; }
+.progressive-app .landing-city-hero .landing-actions .quiet-button:hover { background:#eef4f1; border-color:#277c78; }
+.progressive-app .landing-city-hero .landing-actions button { min-height:48px; }
+.progressive-app .landing-city-hero .onboarding-story { position:absolute; inset:0; z-index:-2; margin:0; padding:0; border:0; border-radius:0; background:none; }
+.progressive-app .landing-city-hero .journey-illustration { display:block; width:100%; max-width:none; height:100%; max-height:none; margin:0; object-fit:cover; object-position:74% center; }
+.progressive-app .landing-city-hero .onboarding-story ul { display:none; }
+.progressive-app .move-onboarding .move-form { width:100%; max-width:none; margin-inline:0; }
+.progressive-app .passport-cover .cover-art { transform:none; overflow:hidden; border-radius:18px; }
+.progressive-app .passport-cover .cover-illustration { display:block; width:100%; height:100%; min-height:240px; max-height:320px; object-fit:cover; object-position:78% center; }
+@media(max-width:800px) {
+  .progressive-app .move-onboarding { grid-template-columns:minmax(0,1fr); }
+  .progressive-app .move-onboarding .landing-city-hero { min-height:0; padding:225px 20px 24px; }
+  .progressive-app .landing-city-hero::before { background:linear-gradient(180deg,transparent 0 165px,#faf7f0 215px); }
+  .progressive-app .landing-city-hero .onboarding-story { bottom:auto; height:230px; }
+  .progressive-app .landing-city-hero .journey-illustration { object-position:right center; }
+  .progressive-app .landing-city-hero > :not(.onboarding-story) { max-width:none; }
+  .progressive-app .landing-city-hero .landing-actions { margin-bottom:0; }
+}
+@media(min-width:801px) {
+  .progressive-app .move-onboarding .landing-city-hero { min-height:0; }
+  .progressive-app .move-onboarding .landing-city-hero h1 { font-size:clamp(38px,3.2vw,48px); line-height:1.1; }
+  .progressive-app .landing-city-hero::before { display:none; }
+  .progressive-app .landing-city-hero .onboarding-story { position:relative; inset:auto; z-index:0; height:310px; margin-top:22px; overflow:hidden; border-radius:15px; }
+  .progressive-app .landing-city-hero .journey-illustration { object-position:75% 57%; }
+}

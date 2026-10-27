@@ -55,9 +55,21 @@ try{
     await ev("document.querySelector('#view-preferences .category-multi-select').open=false");
    }
 
-   if(label==='First Week'){await ev(`document.querySelector('#view-plan .first-week-controls .primary-button').click()`);await frame();assert.ok(await ev('Boolean(document.querySelector(".week-save-summary"))'));}
+   if(label==='First Week'){
+    if(width===375)assert.equal(await ev('Boolean(document.querySelector("#view-plan .day-out-plan"))'),false,'Opening First Week must not mount the day planner');
+    await ev(`document.querySelector('#view-plan .first-week-controls .primary-button').click()`);await frame();
+    assert.ok(await ev('Boolean(document.querySelector("#view-plan .week-save-summary"))'));
+    if(width===375){
+     await ev(`document.querySelectorAll('#view-plan .planner-mode-switch button')[1].click()`);await frame();
+     assert.ok(await ev('Boolean(document.querySelector("#view-plan .day-out-plan"))'));
+     await ev(`document.querySelectorAll('#view-plan .planner-mode-switch button')[0].click()`);await frame();
+     assert.ok(await ev('Boolean(document.querySelector("#view-plan .week-save-summary"))'),'Switching planners must preserve the built week');
+    }
+   }
    if(label==='Common Ground'){
     if(!await ev('Boolean(document.querySelector(".together-results"))')){
+     await ev(`[...document.querySelectorAll('.common-ground-setup button')].find(button=>button.textContent.includes('Add another interest')).click()`);await frame();
+     assert.ok(await ev(`(()=>{const labels=[...document.querySelectorAll('.partner-interests label')];const inputs=labels.map(label=>label.querySelector('input').getBoundingClientRect());const boxes=labels.map(label=>label.getBoundingClientRect());return labels.length===2&&Math.abs(boxes[0].width-boxes[1].width)<2&&Math.abs(inputs[0].width-inputs[1].width)<2&&getComputedStyle(labels[0]).borderRadius===getComputedStyle(labels[1]).borderRadius;})()`),'Additional Common Ground interest must match the first field');
      await ev(`(()=>{const input=document.querySelector('.partner-interests input');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,'Fixture artist');input.dispatchEvent(new Event('input',{bubbles:true}));})()`);await frame();
      await ev("document.querySelector('.together-reveal form button[type=submit]').click()");await wait('Boolean(document.querySelector(".partner-matches"))');
      await ev("document.querySelector('.partner-matches>.primary-button').click()");await wait('Boolean(document.querySelector(".common-ground-evidence"))');
@@ -103,6 +115,18 @@ try{
  await wait('Boolean(document.querySelector(".schematic-map button"))');
  await ev('document.querySelector(".schematic-map button").click()');await frame();
  assert.ok(await ev('Boolean(document.querySelector(".map-place-detail"))'));assert.equal(await ev('document.querySelector(".map-toggle").getAttribute("aria-expanded")'),'true');
+ assert.ok(await ev('document.querySelector(".place-clusters").textContent.includes("Compare areas")'));
+ assert.ok(await ev('document.querySelector(".cluster-highlights").textContent.includes("Food")'));
+ await call('Browser.grantPermissions',{permissions:['geolocation'],origin:base});
+ await call('Emulation.setGeolocationOverride',{latitude:12.9716,longitude:77.5946,accuracy:100});
+ await ev('[...document.querySelectorAll(".near-me-panel button")].find(button=>button.textContent==="Use my location").click()');
+ await wait('document.querySelector(".near-me-panel").textContent.includes("far from these London discoveries")');
+ assert.ok(await ev('document.querySelectorAll(".near-me-choice").length===3'));
+ await call('Emulation.setGeolocationOverride',{latitude:51.5072,longitude:-.1276,accuracy:100});
+ await ev('[...document.querySelectorAll(".near-me-panel button")].find(button=>button.textContent==="Update my location").click()');
+ await wait('!document.querySelector(".near-me-panel").textContent.includes("far from these London discoveries")');
+ await ev('[...document.querySelectorAll(".near-me-panel button")].find(button=>button.textContent==="Clear location").click()');
+ assert.equal(await ev('document.querySelectorAll(".near-me-choice").length'),0);
  const mappedCardId=await ev('document.querySelector(".schematic-map button[aria-pressed=true]").title');
  await ev('[...document.querySelectorAll(".map-place-detail button")].find(button=>button.textContent==="Plan from here").click()');
  await wait('Boolean(document.querySelector("#view-plan:not([hidden]) #day-out-Eat"))');

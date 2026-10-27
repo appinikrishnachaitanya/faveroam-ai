@@ -123,6 +123,11 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
   useEffect(() => { if (assistantOpen) setAssistantVisited(true); }, [assistantOpen]);
   const [visitedViews, setVisitedViews] = useState<Set<string>>(() => new Set(["discover"]));
   const [planMode,setPlanMode]=useState<"week"|"day">("week");
+  const [visitedPlanModes,setVisitedPlanModes]=useState<Set<"week"|"day">>(()=>new Set(["week"]));
+  const choosePlanMode=(mode:"week"|"day")=>{
+    setVisitedPlanModes(current=>current.has(mode)?current:new Set([...current,mode]));
+    setPlanMode(mode);
+  };
   const [planFrom,setPlanFrom]=useState<{cardId:string;sessionId?:string;nonce:number}>();
   const [ritualCardId,setRitualCardId]=useState<string>();
   const ritualInitialHandled=useCallback(()=>setRitualCardId(undefined),[]);
@@ -397,6 +402,7 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
   ]);
   useEffect(() => {
     setVisitedViews(new Set(["discover"]));
+    setVisitedPlanModes(new Set(["week"]));
     setShowEarlierConversation(false);
   }, [result?.session?.id]);
   function say(text: string) {
@@ -541,7 +547,7 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
       });
       setProviderHealth(reply.state.providerHealth ?? "unconfigured");
       if (reply.action === "plan-day" || reply.action === "save-plan") {
-        setPlanMode("day");
+        choosePlanMode("day");
         setAssistantOpen(false);
         selectWorkspaceView("plan");
         if(reply.action === "save-plan")setSavePlanRequest(current=>current+1);
@@ -773,7 +779,7 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
   },[]);
   const panelActions = useRef({refine,selectWorkspaceView});
   useLayoutEffect(()=>{panelActions.current={refine,selectWorkspaceView};});
-  const planFromMap=useCallback((card:import('../src/passport/model').Card)=>{setEditingPlan(undefined);setPlanFrom(current=>({cardId:card.id,sessionId:result?.session?.id,nonce:(current?.nonce??0)+1}));setPlanMode('day');panelActions.current.selectWorkspaceView('plan');},[result?.session?.id]);
+  const planFromMap=useCallback((card:import('../src/passport/model').Card)=>{setEditingPlan(undefined);setPlanFrom(current=>({cardId:card.id,sessionId:result?.session?.id,nonce:(current?.nonce??0)+1}));choosePlanMode('day');panelActions.current.selectWorkspaceView('plan');},[result?.session?.id]);
   const askFromChat = useCallback((message:string)=>{void panelActions.current.refine({message});},[]);
   const saveFromChat = useCallback((id:string)=>feedbackHandler.current(id,"like"),[]);
   const stableRefine = useCallback((input:AgentInput)=>{void panelActions.current.refine(input);},[]);
@@ -788,8 +794,8 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
   const stableFresh=useCallback(()=>freshHandler.current(),[]);
   const accountChangedHandler=useCallback((signedIn:boolean,firstName?:string)=>{setAccountSignedIn(signedIn);setAccountFirstName(signedIn?firstName?.trim().replace(/^\p{L}/u,letter=>letter.toLocaleUpperCase())??'':'');},[]);
   const passportSavedHandler=useCallback((sessionId?:string)=>{if(sessionId)rememberSavedSession(window.sessionStorage,sessionId);else clearSavedSession(window.sessionStorage);setSavedSessionId(sessionId);},[]);
-  const editPlanHandler=useCallback((plan:SavedPlan)=>{setPlanMode("day");setEditingPlan(current=>({plan,nonce:(current?.nonce??0)+1}));panelActions.current.selectWorkspaceView('plan');},[]);
-  const editWeekHandler=useCallback((week:SavedFirstWeek)=>{setPlanMode("week");setEditingFirstWeek(current=>({week,nonce:(current?.nonce??0)+1}));panelActions.current.selectWorkspaceView('plan');},[]);
+  const editPlanHandler=useCallback((plan:SavedPlan)=>{choosePlanMode("day");setEditingPlan(current=>({plan,nonce:(current?.nonce??0)+1}));panelActions.current.selectWorkspaceView('plan');},[]);
+  const editWeekHandler=useCallback((week:SavedFirstWeek)=>{choosePlanMode("week");setEditingFirstWeek(current=>({week,nonce:(current?.nonce??0)+1}));panelActions.current.selectWorkspaceView('plan');},[]);
   const restoreAccountPassport=useCallback((passport:Passport)=>{
     freshHandler.current();setResult(passport);setCity(passport.city);setDraft(passport.selected.map(seed=>seed.name));
     setRequestedActivities((passport.session?.activeCategories??[]).filter(section=>!passport.session?.hiddenCategories.includes(section)));
@@ -844,6 +850,7 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
     setShowMap(true);
     setWorkspaceView("discover");
     setVisitedViews(new Set(["discover"]));
+    setVisitedPlanModes(new Set(["week"]));
     setShowEarlierConversation(false);
     setEditingPlan(undefined);
     setSavePlanRequest(0);
@@ -1121,8 +1128,8 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
               hidden={workspaceView !== "plan"}
             >
               {visitedViews.has("plan") && <>
-              <div className="planner-mode-switch" role="group" aria-label="Choose your plan"><button type="button" aria-pressed={planMode==='week'} onClick={()=>setPlanMode('week')}>First Week</button><button type="button" aria-pressed={planMode==='day'} onClick={()=>setPlanMode('day')}>A day out</button></div>
-              <div hidden={planMode!=='day'}><DayOutPlan
+              <div className="planner-mode-switch" role="group" aria-label="Choose your plan"><button type="button" aria-pressed={planMode==='week'} onClick={()=>choosePlanMode('week')}>First Week</button><button type="button" aria-pressed={planMode==='day'} onClick={()=>choosePlanMode('day')}>A day out</button></div>
+              <div hidden={planMode!=='day'}>{visitedPlanModes.has('day')&&<DayOutPlan
                 key={`day-out:${result.session?.id ?? result.city}`}
                 editPlan={editingPlan}
                 startFrom={planFrom}
@@ -1133,8 +1140,8 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
                 signedIn={accountSignedIn}
                 saveRequest={savePlanRequest}
                 onSaveRequestHandled={planSaveHandled}
-              /></div>
-              <div hidden={planMode!=='week'}><FirstWeek key={`first-week:${result.session?.id??result.city}`} passport={result} cartoKey={cartoKey} signedIn={accountSignedIn} editWeek={editingFirstWeek} onEditWeekHandled={editWeekHandled}/></div>
+              />}</div>
+              <div hidden={planMode!=='week'}>{visitedPlanModes.has('week')&&<FirstWeek key={`first-week:${result.session?.id??result.city}`} passport={result} cartoKey={cartoKey} signedIn={accountSignedIn} editWeek={editingFirstWeek} onEditWeekHandled={editWeekHandled}/>}</div>
               </>}
             </div>
             <div

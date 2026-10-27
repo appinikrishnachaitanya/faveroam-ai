@@ -8,12 +8,18 @@
 .together-reveal .together-heading > div { min-width: 0; }
 .progressive-app .together-reveal .together-heading h3 { font-size: clamp(21px, 2.5vw, 27px); line-height: 1.25; margin: 6px 0 10px; }
 .together-reveal .together-heading > img { width: 110px; height: auto; flex: 0 0 110px; animation: none; }
+.progressive-app .together-reveal .together-heading { overflow:hidden; border:1px solid #e8dfce; border-radius:16px; background:#faf7f0; }
+.progressive-app .together-reveal .together-heading > img { display:block; width:min(38%,320px); height:190px; flex:0 0 min(38%,320px); object-fit:cover; object-position:center; border-radius:12px; }
 .together-reveal .together-preference-summary { padding: 12px 0; background: transparent; border: 0; border-bottom: 1px solid var(--ui-border); border-radius: 0; margin: 0; gap: 12px; }
 .together-reveal .together-preference-summary .helper { font-size: 13px; }
 .together-reveal .together-two-profiles { display: block; margin: 12px 0; }
 .together-reveal .together-two-profiles > div { padding: 10px 12px; background: var(--ui-tint); border: 0; border-radius: 10px; }
 .together-reveal .together-two-profiles p { margin: 4px 0 0; font-size: 14px; }
 .together-reveal .partner-interests { padding: 0; border: 0; background: transparent; gap: 12px; margin: 12px 0; }
+.together-reveal .partner-interests { grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),360px)); align-items:stretch; }
+.progressive-app .together-reveal .partner-interests label { display:grid; align-content:start; gap:8px; width:100%; max-width:none; min-width:0; min-height:140px; padding:14px; border:1px solid #d8dee4; border-radius:14px; background:#fffefa; box-shadow:none; }
+.progressive-app .together-reveal .partner-interests input { display:block; width:100%; min-width:0; min-height:48px; margin:0; border-radius:10px; }
+.progressive-app .together-reveal .partner-interests label .text-button { justify-self:start; min-height:32px; padding:0 4px; }
 .together-reveal .common-ground-setup form > button { margin: 0 8px 8px 0; min-height: 44px; }
 .together-reveal .shared-story { padding: 16px 0 8px; background: transparent; border: 0; }
 .together-reveal .shared-story h3 { margin: 6px 0; font-size: 24px; }
@@ -32,7 +38,8 @@
 .together-reveal .taste-exchange-grid :is(strong, small, p, span) { color: var(--ui-ink); }
 .together-reveal .shared-hangout { border: 0; border-left: 3px solid #277c78; border-radius: 0; padding: 0 0 0 16px; }
 @media (max-width: 600px) {
-  .together-reveal .together-heading > img { width: 68px; flex-basis: 68px; }
+  .progressive-app .together-reveal .together-heading { flex-direction:column-reverse; align-items:stretch; }
+  .progressive-app .together-reveal .together-heading > img { width:100%; height:170px; flex:none; }
   .together-reveal .common-ground-setup form > button { width: 100%; margin-right: 0; }
   .together-reveal .together-preference-summary { align-items: flex-start; }
   .together-reveal .together-cards { grid-template-columns: minmax(0, 1fr); }

@@ -22,6 +22,12 @@ export default function Privacy() {
       </p>
       <h2>External services</h2>
       <p>
+        Explore near me requests browser location only after you tap Use my location.
+        FaveRoam uses it in this page to order already returned places by distance;
+        it is not sent to our server, included in provider requests, or saved in
+        your Passport. Clear location removes it from the current page.
+      </p>
+      <p>
         Qloo receives cultural IDs, concepts, bounded preferences and the
         selected destination—not your account email or password. Gemini may
         receive cultural messages, taste context and discovery metadata to

@@ -1,16 +1,16 @@
 "use client";
 
 import { memo, useEffect, useId, useRef, useState } from "react";
-import { Icon } from "./passport";
+import { FlowNavIcon } from "./flow-nav-icon";
 
 export type PassportDestination = "discover" | "saved" | "plan" | "preferences" | "together" | "connections";
-const destinations: {id: PassportDestination; label: string; icon: string}[] = [
-  {id:"discover",label:"Discover",icon:"globe"},
-  {id:"saved",label:"My places",icon:"heart"},
-  {id:"plan",label:"First Week",icon:"pin"},
-  {id:"preferences",label:"Preferences",icon:"sliders"},
-  {id:"together",label:"Common Ground",icon:"People"},
-  {id:"connections",label:"Taste insights",icon:"star"},
+const destinations: {id: PassportDestination; label: string}[] = [
+  {id:"discover",label:"Discover"},
+  {id:"saved",label:"My places"},
+  {id:"plan",label:"First Week"},
+  {id:"preferences",label:"Preferences"},
+  {id:"together",label:"Common Ground"},
+  {id:"connections",label:"Taste insights"},
 ];
 
 function PassportNavigation({active,savedCount,onNavigate}:{
@@ -45,8 +45,8 @@ function PassportNavigation({active,savedCount,onNavigate}:{
         {destinations.map(item=>(
           <button key={item.id} type="button" aria-current={active===item.id ? "page" : undefined}
             onClick={()=>{setOpen(false);onNavigate(item.id);}}>
-            <Icon name={item.icon} size={19}/>
-            <span>{item.label}</span>
+            <FlowNavIcon flow={item.id}/>
+            <span className="passport-navigation-label">{item.label}</span>
             {item.id === "saved" && <span className="passport-saved-count" aria-label={`${savedCount} saved discoveries`}>{savedCount}</span>}
           </button>
         ))}
