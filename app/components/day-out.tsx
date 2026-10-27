@@ -292,7 +292,7 @@ export default memo(function DayOutPlan({
                   </a>
                   <details>
                     <summary>Why this stop?</summary>
-                    {evidenceFacts(stop.selected).slice(0,4).map(fact => <p key={fact}>{fact}</p>)}
+                    {evidenceFacts(stop.selected,passport.selected.map(taste=>taste.id)).slice(0,4).map(fact => <p key={fact}>{fact}</p>)}
                     <small>Suggested for your confirmed interests.</small>
                   </details>
                 </>

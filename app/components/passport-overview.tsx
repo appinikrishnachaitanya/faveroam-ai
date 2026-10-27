@@ -59,11 +59,13 @@ export const PassportCover = memo(function PassportCover({
 });
 export const SavedDiscoveries = memo(function SavedDiscoveries({
   cards,
+  selected,
   feedback,
   onFeedback,
   disabled,
 }: {
   cards: Card[];
+  selected: Candidate[];
   feedback: Record<string, Feedback>;
   onFeedback: (id: string, value: Feedback) => void;
   disabled: boolean;
@@ -85,6 +87,7 @@ export const SavedDiscoveries = memo(function SavedDiscoveries({
             <DiscoveryCard
               key={card.id}
               card={card}
+              selected={selected}
               feedback={feedback[card.id]}
               onFeedback={onFeedback}
               live
@@ -173,7 +176,7 @@ export function ConnectionExplorer({ passport, onExplore, onAsk }: { passport: P
             <details>
               <summary>Why did this appear?</summary>
               {(() => {
-                const facts=evidenceFacts(card).filter(f=>/helped shape|returned tags include|Associated via cross-domain audience affinity with/.test(f)).slice(0,2);
+                const facts=evidenceFacts(card,passport.selected.map(taste=>taste.id)).filter(f=>/helped shape|returned tags include|Associated via cross-domain audience affinity with/.test(f)).slice(0,2);
                 return facts.length ? facts.map(f=><p key={f}>{f}</p>) : <p>These interests were considered together. Individual contribution evidence was not returned for this suggestion.</p>;
               })()}
               <small>This search considered the interests above, but may not identify which one influenced the result.</small>

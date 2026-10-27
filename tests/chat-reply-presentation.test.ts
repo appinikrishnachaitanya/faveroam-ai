@@ -12,9 +12,9 @@ test('assistant detail lines render as readable lists and HTML is escaped',()=>{
 });
 test('individual audience path requires a real positive contribution, not merely a search input',()=>{
  const card={evidence:{inputs:[{id:'film',name:'Fixture film',role:'entity-signal'}]}} as Card;
- assert.deepEqual(chatTasteEvidence(card),{names:['Fixture film'],associated:false});
+ assert.deepEqual(chatTasteEvidence(card,['film']),{names:['Fixture film'],associated:false,requestNames:[]});
  card.intelligence={taste:{contributingSignals:[{id:'film',contribution:.6},{id:'unknown',contribution:1}]}} as Card['intelligence'];
- assert.deepEqual(chatTasteEvidence(card),{names:['Fixture film'],associated:true});
+ assert.deepEqual(chatTasteEvidence(card,['film']),{names:['Fixture film'],associated:true,requestNames:[]});
  card.intelligence={taste:{contributingSignals:[{id:'film',contribution:-.5}]}} as Card['intelligence'];
- assert.equal(chatTasteEvidence(card).associated,false);
+ assert.equal(chatTasteEvidence(card,['film']).associated,false);
 });
