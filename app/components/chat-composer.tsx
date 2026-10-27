@@ -8,11 +8,15 @@ export default memo(function ChatComposer({
   draftRef,
   disabled,
   onSend,
+  processing,
+  onStop,
 }: {
   prompt: { text: string; version: number };
   draftRef?: MutableRefObject<string>;
   disabled: boolean;
   onSend: (text: string) => void;
+  processing: boolean;
+  onStop: () => void;
 }) {
   const [draft, setDraft] = useState(() => draftRef?.current || prompt.text);
   const promptVersion = useRef(prompt.version);
@@ -27,10 +31,11 @@ export default memo(function ChatComposer({
   return (
     <form
       className="composer"
+      aria-busy={processing}
       onSubmit={(event) => {
         event.preventDefault();
         const text = draft.trim();
-        if (!text || disabled) return;
+        if (!text || disabled || processing) return;
         setDraft("");
         if (draftRef) draftRef.current = "";
         onSend(text);
@@ -54,9 +59,10 @@ export default memo(function ChatComposer({
         rows={2}
       />
       <div className="composer-footer">
-        <span>Updates your current suggestions</span>
-        <button type="submit" aria-label="Send message" disabled={disabled || !draft.trim()}>
-          <Icon name="send" size={17} /> Send
+        <span>Ask a question or change your suggestions</span>
+        <button type={processing ? "button" : "submit"} aria-label={processing ? "Stop response" : "Send message"}
+          disabled={!processing && (disabled || !draft.trim())} onClick={processing ? onStop : undefined}>
+          {processing ? <><svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="2"/></svg> Stop</> : <><Icon name="send" size={17} /> Send</>}
         </button>
       </div>
     </form>

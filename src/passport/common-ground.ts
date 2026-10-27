@@ -36,7 +36,7 @@ export function nearbySharedPlaces(cards:Card[],anchor:Card|undefined,radiusMetr
 
 /** Presentation specificity only: broad adjectives are not personal explanations. */
 export function meaningfulSharedThemes(comparison:TasteComparison){
- const broad=(name:string)=>/^(dynamic|passionate|innovative|ambitious|creative|entertainment|popular)$/i.test(name.trim());
+ const broad=(name:string)=>/^(dynamic|passionate|innovative|ambitious|creative|entertainment|popular|versatile|expressive)$/i.test(name.trim());
  const specific=comparison.shared.filter(theme=>!broad(theme.name));
  return (specific.length?specific:comparison.shared.slice(0,2)).slice(0,6).map(theme=>({...theme,broad:broad(theme.name)}));
 }
@@ -62,4 +62,14 @@ export function jointProfileState(state:import('../agent/types').AgentState,part
  joint.intent={kind:'refine',seeds:[],concepts:[],constraints:state.categoryConstraints[section]??[],sections:[section],strategy:'discover'};
  if(joint.activityGenres)delete joint.activityGenres.Culture;
  return joint;
+}
+
+/** Personal retrieval can overlap; never label the same venue as two introductions. */
+export function distinctIntroductions<T extends {card?:Card;cards:Card[];theme?:string}>(profiles:T[]):(T & {card:Card|undefined;theme:string|undefined})[] {
+ const used=new Set<string>();
+ return profiles.map(profile=>{
+  const card=profile.cards.find(candidate=>!used.has(candidate.id));
+  if(card)used.add(card.id);
+  return {...profile,card,theme:card?.evidence?.result.tags.some(tag=>tag.name===profile.theme)?profile.theme:undefined};
+ });
 }

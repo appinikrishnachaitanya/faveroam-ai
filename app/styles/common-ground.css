@@ -1,0 +1,45 @@
+/* Common Ground: a short setup, returned places first, detail on demand. */
+.progressive-app .together-reveal { padding: clamp(16px, 2vw, 24px); background: var(--ui-surface); border: 1px solid var(--ui-border); }
+.together-reveal .common-ground-setup > summary,
+.together-reveal .common-ground-more > summary,
+.together-reveal .common-ground-week > summary { cursor: pointer; min-height: 44px; align-content: center; font-size: 14px; font-weight: 650; color: var(--ui-ink); padding: 10px 0; overflow-wrap: anywhere; }
+.together-reveal .common-ground-setup > summary { font-size: 16px; }
+.together-reveal .together-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 16px 0; }
+.together-reveal .together-heading > div { min-width: 0; }
+.progressive-app .together-reveal .together-heading h3 { font-size: clamp(21px, 2.5vw, 27px); line-height: 1.25; margin: 6px 0 10px; }
+.together-reveal .together-heading > img { width: 110px; height: auto; flex: 0 0 110px; animation: none; }
+.together-reveal .together-preference-summary { padding: 12px 0; background: transparent; border: 0; border-bottom: 1px solid var(--ui-border); border-radius: 0; margin: 0; gap: 12px; }
+.together-reveal .together-preference-summary .helper { font-size: 13px; }
+.together-reveal .together-two-profiles { display: block; margin: 12px 0; }
+.together-reveal .together-two-profiles > div { padding: 10px 12px; background: var(--ui-tint); border: 0; border-radius: 10px; }
+.together-reveal .together-two-profiles p { margin: 4px 0 0; font-size: 14px; }
+.together-reveal .partner-interests { padding: 0; border: 0; background: transparent; gap: 12px; margin: 12px 0; }
+.together-reveal .common-ground-setup form > button { margin: 0 8px 8px 0; min-height: 44px; }
+.together-reveal .shared-story { padding: 16px 0 8px; background: transparent; border: 0; }
+.together-reveal .shared-story h3 { margin: 6px 0; font-size: 24px; }
+.together-reveal .shared-story p { margin: 6px 0; font-size: 14px; }
+.together-reveal .common-ground-more,
+.together-reveal .common-ground-week { border-top: 1px solid var(--ui-border); margin-top: 16px; padding: 0; background: transparent; }
+.together-reveal .common-ground-more[open] > summary,
+.together-reveal .common-ground-week[open] > summary { margin-bottom: 10px; }
+.together-reveal .together-cards { gap: 12px; }
+.together-reveal .together-cards article { padding: 16px; border-radius: 12px; box-shadow: none; }
+.together-reveal .together-cards h4 { font-size: 18px; margin: 8px 0; }
+.together-reveal .together-cards p { margin: 8px 0; }
+.together-reveal .taste-exchange { background: var(--ui-tint); border-color: var(--ui-border); padding: 16px; border-radius: 12px; }
+.together-reveal .taste-exchange h4 { color: var(--ui-ink); font-size: 20px; }
+.together-reveal .taste-exchange-grid article { border-color: var(--ui-border); background: var(--ui-surface); }
+.together-reveal .taste-exchange-grid :is(strong, small, p, span) { color: var(--ui-ink); }
+.together-reveal .shared-hangout { border: 0; border-left: 3px solid #277c78; border-radius: 0; padding: 0 0 0 16px; }
+@media (max-width: 600px) {
+  .together-reveal .together-heading > img { width: 68px; flex-basis: 68px; }
+  .together-reveal .common-ground-setup form > button { width: 100%; margin-right: 0; }
+  .together-reveal .together-preference-summary { align-items: flex-start; }
+  .together-reveal .together-cards { grid-template-columns: minmax(0, 1fr); }
+}
+.together-reveal .together-results { margin-top: 12px; }
+.together-reveal .shared-story { margin: 12px 0; }
+.together-reveal .together-cards article { gap: 6px; }
+.together-reveal .together-cards article > :is(h4, p) { margin: 4px 0; }
+.together-reveal .together-cards article .result-metrics { margin: 8px 0; }
+.together-reveal .together-cards article > a { margin-top: 8px; }

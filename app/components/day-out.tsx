@@ -1,6 +1,6 @@
 "use client";
 import { Icon } from "./passport";
-import { memo, useState, useEffect } from "react";
+import { memo, useState, useEffect, useMemo } from "react";
 import type { Card } from "../../src/passport/model";
 import type { Passport } from "../../src/workspace/state";
 import {
@@ -44,7 +44,7 @@ export default memo(function DayOutPlan({
   const [activities, setActivities] = useState<string[]>(()=>requestOrder?.length ? requestOrder : ["Coffee","Culture","Eat"].filter(id=>dayOutOptions(passport.cards,passport.city).some(c=>activityMatches(c,id))));
   const orderKey=requestOrder?.join(',') ?? '';
   useEffect(()=>{if(orderKey)setActivities(orderKey.split(','));},[orderKey]);
-  const options = dayOutOptions(passport.cards, passport.city);
+  const options = useMemo(()=>dayOutOptions(passport.cards, passport.city),[passport.cards,passport.city]);
   useEffect(()=>{
     if(!editPlan || editPlan.plan.city!==passport.city)return;
     const plan=editPlan.plan;

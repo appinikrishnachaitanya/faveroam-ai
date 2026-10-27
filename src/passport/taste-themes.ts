@@ -28,6 +28,7 @@ export function curatedThemes(tags:TasteTag[],limit=6):TasteTag[] {
   const perSource=new Map<string,number>();
   const perSourceFamily=new Map<string,number>();
   for(const tag of displayTags(tags)){
+    if(/^(versatile|expressive|dynamic|passionate|innovative|ambitious|creative|popular|entertainment)$/i.test(tag.name.trim()))continue;
     const source=tag.sourceInterestId;
     const family=tag.id.split(':').slice(2,4).join(':');
     if(source&&((perSource.get(source)??0)>=3 || (perSourceFamily.get(`${source}:${family}`)??0)>=2))continue;

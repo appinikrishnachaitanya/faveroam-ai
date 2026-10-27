@@ -103,3 +103,10 @@
 
 /* Avoid full-page backdrop blur over the retained map and card inventory. */
 .progressive-app dialog::backdrop { backdrop-filter: none; }
+
+/* Workspace switches are navigation, not a new landing-page reveal. Avoid
+   opacity/translate entrance waits on first mount and when hidden panels reopen. */
+.progressive-app :is(.workspace-panel, .workspace-view-anchor) :is(
+  .intelligence-intro, .analysis-intro, .outing-intro, .vibe-intro,
+  .together-heading img, .journey-illustration, .cover-illustration
+) { animation: none; }

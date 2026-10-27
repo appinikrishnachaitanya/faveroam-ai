@@ -87,11 +87,11 @@ test("an explicit budget overrides the legacy cheap flag, including clearing to 
  const entities=[3,undefined,1].map((price,index)=>({entity_id:'00000000-0000-4000-8000-00000000000'+index,name:'Venue '+index,type:'urn:entity:place',tags:[{id:'urn:tag:genre:place:restaurant',name:'Restaurant',type:'urn:tag:genre:place'}],properties:{geocode:{city:'Toronto'},...(price===undefined?{}:{price_level:price})}}));
  let sent;
  globalThis.fetch=async(url)=>{sent=new URL(url).searchParams;return Response.json({results:{entities}})};
- for(const cap of [undefined,3,4,"minimum"]) {
+ for(const cap of [undefined,1,3,4,"minimum"]) {
   const state=normalizeSession({id:'budget',revision:0,expires:Date.now()+60000,city:'Toronto',selected:[seed],tags:[],constraints:[],categoryConstraints:{},queryPreferences:{Eat:cap==="minimum"?{priceMin:3}:cap===undefined?{}:{priceMax:cap}},cards:[],previous:[],feedback:[],notices:[]});
   const cards=await discoverSection(state,'Eat',['expensive'],[],false);
   assert.equal(sent.get('filter.price_level.max'),cap===4||cap==='minimum'?null:String(cap ?? 2));
-  assert.equal(cards.some(card=>card.id===entities[0].entity_id),cap!==undefined,'Price 3 should be allowed only after the explicit override');
+  assert.equal(cards.some(card=>card.id===entities[0].entity_id),cap!==undefined&&cap!==1,'Price 3 should be allowed only after the explicit override');
   assert.equal(cards.some(card=>card.id===entities[1].entity_id),cap===4,'Unknown prices are allowed only without a numeric requirement');
   assert.equal(cards.some(card=>card.id===entities[2].entity_id),cap!=='minimum','A premium minimum must exclude lower-price listings');
  }

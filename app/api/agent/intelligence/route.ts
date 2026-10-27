@@ -1,5 +1,5 @@
 import { browserRequestError, readRequestText } from "../../../../src/http/request.ts";
-import {jointProfileState,togetherPlanningCards} from "../../../../src/passport/common-ground";
+import {jointProfileState,togetherPlanningCards,distinctIntroductions} from "../../../../src/passport/common-ground";
 import { themesPerInterest } from "../../../../src/passport/taste-themes";
 import { validSessionId } from "../../../../src/agent/session-lifetime.ts";
 import { trending } from "../../../../src/qloo/trending";
@@ -189,7 +189,7 @@ async function handlePOST(request: Request) {
         for(const section of placeSections){
           const solo=structuredClone(state);
           solo.selected=profile.seeds;
-          solo.tags=[...new Map([...state.tags,...themeCandidates].map(tag=>[tag.id,tag])).values()];
+          solo.tags=themeCandidates;
           solo.queryPreferences??={};solo.queryPreferences[section]={...solo.queryPreferences[section],inspirationTags:themeCandidates.map(theme=>theme.id)};
           solo.intent={kind:'refine',seeds:[],concepts:[],constraints:state.categoryConstraints[section]??[],sections:[section],strategy:'discover'};
           if(solo.activityGenres)delete solo.activityGenres.Culture;
@@ -203,7 +203,7 @@ async function handlePOST(request: Request) {
         partnerSignals:partner.map(({id,name})=>({id,name})),
         failedSections:[...new Set(failedSections)],
         cards,
-        exchange,
+        exchange:distinctIntroductions(exchange),
         notice: cards.length
           ? "Each category was searched using both confirmed taste profiles with shared themes used as soft taste signals. Explicit category and geographic requirements stayed in place. These are starting ideas, not a compatibility score or a guarantee you will both like every result."
           : "No matches appeared for these shared tastes and current preferences. Your Passport is preserved.",

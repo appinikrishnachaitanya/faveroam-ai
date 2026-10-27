@@ -216,3 +216,12 @@
   }
   .header-controls:has(.header-greeting) .save-passport { background: var(--ui-action); color: #fffdf7; border-color: var(--ui-action); }
 }
+
+/* One text style for the greeting and adjacent navbar actions at every width. */
+.progressive-app .header-controls :is(.header-greeting, .account-control > button, .topbar-actions > button) {
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: normal;
+}

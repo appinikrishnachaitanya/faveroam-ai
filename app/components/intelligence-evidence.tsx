@@ -25,8 +25,8 @@ export function ResultMetrics({ card, selected = [] }: { card: Card; selected?: 
         <span aria-label={`Tripadvisor rating ${formatReturnedRating(m.externalProof?.tripadvisorRating)} out of 5`}>★ {formatReturnedRating(m.externalProof?.tripadvisorRating)} / 5 <small>Tripadvisor</small></span>
       ) : isPlaceSection(card.section) ? <span className="metric-unavailable">Rating unavailable</span> : null}
       {isPlaceSection(card.section) && priceLabel(m?.commercial?.priceLevel) && <span aria-label={`Listed price category: ${priceLabel(m?.commercial?.priceLevel)}`}>{priceLabel(m?.commercial?.priceLevel)}</span>}
-      {coverage && <span className="evidence-coverage" title={`${coverage.count} of ${coverage.total} confirmed tastes have individual returned evidence on this result. This is not the chance you will like it.`} aria-label={`Taste evidence: ${coverage.percentage} percent, ${coverage.count} of ${coverage.total} confirmed tastes with individual returned evidence`}>
-        {coverage.percentage}% taste evidence
+      {coverage && <span className="evidence-coverage" title={`${coverage.count} of ${coverage.total} confirmed tastes have individual returned evidence on this result. This is not the chance you will like it.`} aria-label={`${coverage.count} of ${coverage.total} confirmed tastes with individual returned evidence; not a predicted match`}>
+        {coverage.count}/{coverage.total} tastes evidenced
       </span>}
 
     </div>
@@ -121,6 +121,11 @@ export function WhyEvidence({
       {screenTasteConnection(card) ? <p className="why-summary"><strong>Why it may fit</strong>{screenTasteConnection(card)}</p> : !!connected.length && (
         <p className="why-summary"><strong>Why it may fit</strong>Connected to {connected.join(", ")} in your interests.</p>
       )}
+      {card.evidence && <details><summary>Returned evidence and its limits</summary>
+        <p>Source: {card.evidence.source} · {card.evidence.operation}. Result: {card.name}.</p>
+        <p>Listed tags: {card.evidence.result.tags.map(tag=>tag.name).join(', ') || 'No listing tags returned.'}</p>
+        <p>{connected.length ? `Positive individual audience contributions returned for: ${connected.join(', ')}.` : 'No positive individual contribution to a named interest is available here.'} Audience associations do not prove why you personally will enjoy this choice.</p>
+      </details>}
       <dl className="evidence-metrics">
         {m?.quality?.businessRating !== undefined && (
           <>
