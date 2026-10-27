@@ -103,6 +103,18 @@ try{
  await wait('Boolean(document.querySelector(".schematic-map button"))');
  await ev('document.querySelector(".schematic-map button").click()');await frame();
  assert.ok(await ev('Boolean(document.querySelector(".map-place-detail"))'));assert.equal(await ev('document.querySelector(".map-toggle").getAttribute("aria-expanded")'),'true');
+ assert.ok(await ev('document.querySelector(".place-clusters").textContent.includes("Compare areas")'));
+ assert.ok(await ev('document.querySelector(".cluster-highlights").textContent.includes("Food")'));
+ await call('Browser.grantPermissions',{permissions:['geolocation'],origin:base});
+ await call('Emulation.setGeolocationOverride',{latitude:12.9716,longitude:77.5946,accuracy:100});
+ await ev('[...document.querySelectorAll(".near-me-panel button")].find(button=>button.textContent==="Use my location").click()');
+ await wait('document.querySelector(".near-me-panel").textContent.includes("far from these London discoveries")');
+ assert.ok(await ev('document.querySelectorAll(".near-me-choice").length===3'));
+ await call('Emulation.setGeolocationOverride',{latitude:51.5072,longitude:-.1276,accuracy:100});
+ await ev('[...document.querySelectorAll(".near-me-panel button")].find(button=>button.textContent==="Update my location").click()');
+ await wait('!document.querySelector(".near-me-panel").textContent.includes("far from these London discoveries")');
+ await ev('[...document.querySelectorAll(".near-me-panel button")].find(button=>button.textContent==="Clear location").click()');
+ assert.equal(await ev('document.querySelectorAll(".near-me-choice").length'),0);
  const mappedCardId=await ev('document.querySelector(".schematic-map button[aria-pressed=true]").title');
  await ev('[...document.querySelectorAll(".map-place-detail button")].find(button=>button.textContent==="Plan from here").click()');
  await wait('Boolean(document.querySelector("#view-plan:not([hidden]) #day-out-Eat"))');
