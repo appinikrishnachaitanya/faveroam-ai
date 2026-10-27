@@ -3,6 +3,7 @@ import {readRequestText} from '../http/request';
 import {loadSession} from '../agent/store';
 import {discoverSection} from '../agent/runtime';
 import {ritualFields,ritualFromSession,ritualReplacementState,ritualContext,verifiedRitualCard,type Ritual,type RitualContext} from './rituals';
+import {validDestination} from '../workspace/location';
 const fields='id,name,city,weekday,recurrence,status,card,created_at,updated_at';
 const uuid=(v:unknown):v is string=>typeof v==='string'&&/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(v);
 const defaultDependencies={
@@ -10,12 +11,17 @@ const defaultDependencies={
  writer:storageWriter,loadSession,discoverSection,
 };
 export async function ritualHandler(request?:Request,deps=defaultDependencies){
- if(request&&!sameOrigin(request))return privateJson({error:'Please use this app.'},403);
+ if(request&&request.method!=='GET'&&!sameOrigin(request))return privateJson({error:'Please use this app.'},403);
  try{
   const user=await deps.identity();
   if(!user)return privateJson({error:'Sign in to keep your rituals.',signInRequired:true},401);
   const writer=deps.writer();
-  if(!request){const {data,error}=await writer.from('saved_rituals').select(fields).eq('user_id',user.id).order('created_at',{ascending:false}).limit(50);if(error)throw error;return privateJson({rituals:data??[]});}
+  if(!request||request.method==='GET'){
+   const city=request&&new URL(request.url).searchParams.get('city');
+   if(!validDestination(city))return privateJson({error:'Choose a city to view its rituals.'},400);
+   const {data,error}=await writer.from('saved_rituals').select(fields).eq('user_id',user.id).eq('city',city).order('created_at',{ascending:false}).limit(50);
+   if(error)throw error;return privateJson({rituals:data??[]});
+  }
   let body:Record<string,unknown>;
   try{body=JSON.parse(await readRequestText(request,6000));if(!body||typeof body!=='object'||Array.isArray(body))throw Error();}catch{return privateJson({error:'Choose a valid ritual action.'},400);}
   if(body.action==='create'){

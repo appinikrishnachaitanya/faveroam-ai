@@ -1204,7 +1204,7 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
               </details>}
             </div>
             <div className="workspace-panel" id="view-shares" hidden={workspaceView!=="shares"}>
-              {visitedViews.has("shares")&&<><ShareTasteCard key={`share:${result.agent?.sessionId??result.city}`} passport={result} ownerName={accountSignedIn?accountFirstName:undefined}/><ShareManagement signedIn={accountSignedIn}/></>}
+              {visitedViews.has("shares")&&<><ShareTasteCard key={`share:${result.agent?.sessionId??result.city}`} passport={result} ownerName={accountSignedIn?accountFirstName:undefined}/><ShareManagement key={`share-management:${result.city}`} signedIn={accountSignedIn} city={result.city}/></>}
             </div>
             {result.session &&
               process.env.NODE_ENV === "development" &&

@@ -18,6 +18,7 @@ function wheelSegment(index:number,total:number){
 export default memo(function VibeDial({passport,busy,open,onClose,onApply}:{passport:Passport;busy:boolean;open:boolean;onClose:()=>void;onApply:(input:AgentInput)=>void}){
  const directions=useMemo(()=>vibeDirections(passport.cards,passport.selected,activeCategories(passport.session,passport.cards)),[passport.cards,passport.selected,passport.session]);
  const [choice,setChoice]=useState('');
+ const [choiceSource,setChoiceSource]=useState<'spin'|'manual'>();
  const [pending,setPending]=useState<{ids:string[];sections:string[]}>();
  const [receipt,setReceipt]=useState('');
  const [rotation,setRotation]=useState(0);
@@ -59,9 +60,9 @@ export default memo(function VibeDial({passport,busy,open,onClose,onApply}:{pass
    const index=Math.floor(Math.random()*directions.length);
    const direction=directions[index];
    if(!direction)return;
-   setChoice('');setReceipt('');
+   setChoice('');setChoiceSource(undefined);setReceipt('');
    const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-   if(reduced){setChoice(direction.theme.id);setSpinning(false);return;}
+   if(reduced){setChoice(direction.theme.id);setChoiceSource('spin');setSpinning(false);return;}
    const step=360/directions.length;
    const center=wheelAngle(index,directions.length)+step/2;
    const current=((rotation%360)+360)%360;
@@ -69,7 +70,7 @@ export default memo(function VibeDial({passport,busy,open,onClose,onApply}:{pass
    setSpinning(true);
    setRotation(rotation+360*5+offset);
    if(spinTimer.current)window.clearTimeout(spinTimer.current);
-   spinTimer.current=window.setTimeout(()=>{setChoice(direction.theme.id);setSpinning(false);spinTimer.current=undefined;},3700);
+   spinTimer.current=window.setTimeout(()=>{setChoice(direction.theme.id);setChoiceSource('spin');setSpinning(false);spinTimer.current=undefined;},3700);
  }
 
  function apply(){
@@ -101,13 +102,13 @@ export default memo(function VibeDial({passport,busy,open,onClose,onApply}:{pass
          <div className="vibe-wheel-controls">
            <span className="micro-label">YOUR RETURNED THEMES</span>
            <div className={`vibe-wheel-selection${selected?' has-selection':''}`} aria-live="polite" aria-atomic="true">
-             {spinning?<><strong>Finding a direction…</strong><span>The wheel is choosing from {directions.length} returned themes.</span></>:selected?<><strong>{selected.theme.name}</strong><span>{selected.sections.map(sectionLabel).join(' · ')}</span></>:<><strong>Ready when you are</strong><span>{directions.length} themes came back in your discoveries. Spin, or pick one yourself.</span></>}
+             {spinning?<><strong>Finding a direction…</strong><span>The wheel is choosing from {directions.length} returned themes.</span></>:selected?<><strong>{choiceSource==='spin'?'The wheel landed on':'You chose'} {selected.theme.name}</strong><span>{selected.sections.map(sectionLabel).join(' · ')} · Explore this direction when you’re ready.</span></>:<><strong>Ready when you are</strong><span>{directions.length} themes came back in your discoveries. Spin, or pick one yourself.</span></>}
            </div>
-           <button type="button" className="quiet-button vibe-wheel-spin" disabled={spinning||busy||Boolean(pending)} onClick={spin}>{spinning?'Spinning…':directions.length===1?'Choose this theme':'Spin the wheel'}</button>
-           <button type="button" className="primary-button vibe-wheel-apply" disabled={!selected||spinning||busy||Boolean(pending)} onClick={apply}>{pending?'Finding places…':'Explore this direction'}</button>
+           <button type="button" className="primary-button vibe-wheel-spin" disabled={spinning||busy||Boolean(pending)} onClick={spin}>{spinning?'Spinning…':directions.length===1?'Choose this theme':'Spin the wheel'}</button>
+           <button type="button" className={`${selected&&!spinning?'primary-button':'quiet-button'} vibe-wheel-apply`} disabled={!selected||spinning||busy||Boolean(pending)} onClick={apply}>{pending?'Finding places…':'Explore this direction'}</button>
          </div>
        </div>
-       <details className="vibe-wheel-manual"><summary>Choose a theme yourself</summary><div className="vibe-directions" role="group" aria-label="Returned taste themes">{directions.map(direction=><button key={direction.theme.id} type="button" disabled={busy||Boolean(pending)||spinning} aria-pressed={choice===direction.theme.id} onClick={()=>{setChoice(direction.theme.id);setReceipt('');}}><strong>{direction.theme.name}</strong><small>{direction.sections.map(sectionLabel).join(' · ')}</small></button>)}</div></details>
+       <details className="vibe-wheel-manual"><summary>Choose a theme yourself</summary><div className="vibe-directions" role="group" aria-label="Returned taste themes">{directions.map(direction=><button key={direction.theme.id} type="button" disabled={busy||Boolean(pending)||spinning} aria-pressed={choice===direction.theme.id} onClick={()=>{setChoice(direction.theme.id);setChoiceSource('manual');setReceipt('');}}><strong>{direction.theme.name}</strong><small>{direction.sections.map(sectionLabel).join(' · ')}</small></button>)}</div></details>
        <div className="vibe-dial-feedback">{receipt&&<p role="status">{receipt}</p>}<small>Every option comes from your returned discoveries. The wheel is a playful picker, not a match score or guarantee.</small></div>
      </>}
    </section>

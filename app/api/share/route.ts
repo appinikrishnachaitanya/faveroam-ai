@@ -3,13 +3,16 @@ import {validSessionId} from '../../../src/agent/session-lifetime';
 import {createShare,readShare,revokeShare,listAccountShares,revokeAccountShare} from '../../../src/share/links';
 import {accountClient} from '../../../src/account/server';
 import {accountName} from '../../../src/account/identity';
+import {validDestination} from '../../../src/workspace/location';
 export const runtime='nodejs';
 const respond=(data:unknown,status=200)=>Response.json(data,{status,headers:{'Cache-Control':'no-store','Referrer-Policy':'no-referrer'}});
 export async function GET(request:Request){
  const url=new URL(request.url), value=url.searchParams.get('token')??'';
  if(url.searchParams.get('manage')==='true') {
+   const city=url.searchParams.get('city');
+   if(!validDestination(city))return respond({error:'Choose a city to view its shared links.'},400);
    try {const {data:{user},error}=await (await accountClient()).auth.getUser();if(error||!user)return respond({error:'Sign in to manage your share links.'},401);
-     const page=Math.max(1,Math.min(1000,Number(url.searchParams.get('page'))||1));return respond(await listAccountShares(user.id,page));}
+     const page=Math.max(1,Math.min(1000,Number(url.searchParams.get('page'))||1));return respond(await listAccountShares(user.id,city,page));}
    catch{return respond({error:'Share links could not be loaded.'},503);}
  }
  try {const snapshot=await readShare(value);return snapshot?respond({snapshot}):respond({error:'This link is unavailable or expired.'},404);}

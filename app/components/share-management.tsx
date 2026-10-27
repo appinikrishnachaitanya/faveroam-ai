@@ -1,16 +1,16 @@
 "use client";
 import {memo,useCallback,useEffect,useRef,useState} from "react";
 type ShareItem={urlToken:string;createdAt:string;expiresAt:string;status:"active"|"revoked"|"expired";city:string};
-export default memo(function ShareManagement({signedIn}:{signedIn:boolean}){
+export default memo(function ShareManagement({signedIn,city}:{signedIn:boolean;city:string}){
  const [items,setItems]=useState<ShareItem[]>([]),[page,setPage]=useState(1),[total,setTotal]=useState(0),[counts,setCounts]=useState({active:0,revoked:0}),[busy,setBusy]=useState(false),[message,setMessage]=useState("");
  const requestGeneration=useRef(0);
- const load=useCallback(async(next=page)=>{if(!signedIn){setItems([]);return;}const generation=++requestGeneration.current;setBusy(true);setMessage("");try{const response=await fetch(`/api/share?manage=true&page=${next}`,{cache:"no-store"});const data=await response.json();if(!response.ok)throw Error(data.error);if(generation!==requestGeneration.current)return;setItems(data.items);setTotal(data.total);setCounts(data.counts);setPage(next);}catch(e){if(generation===requestGeneration.current)setMessage(e instanceof Error?e.message:"Share links could not be loaded.");}finally{if(generation===requestGeneration.current)setBusy(false);}},[page,signedIn]);
- useEffect(()=>{void load(1);},[signedIn]);
+ const load=useCallback(async(next=page)=>{if(!signedIn){setItems([]);return;}const generation=++requestGeneration.current;setBusy(true);setMessage("");try{const response=await fetch(`/api/share?manage=true&city=${encodeURIComponent(city)}&page=${next}`,{cache:"no-store"});const data=await response.json();if(!response.ok)throw Error(data.error);if(generation!==requestGeneration.current)return;setItems(data.items);setTotal(data.total);setCounts(data.counts);setPage(next);}catch(e){if(generation===requestGeneration.current)setMessage(e instanceof Error?e.message:"Share links could not be loaded.");}finally{if(generation===requestGeneration.current)setBusy(false);}},[page,signedIn,city]);
+ useEffect(()=>{requestGeneration.current++;setItems([]);setTotal(0);setCounts({active:0,revoked:0});setPage(1);void load(1);},[signedIn,city]);
  useEffect(()=>{
    if(!signedIn)return;
    const created=(event:Event)=>{
      const item=(event as CustomEvent<ShareItem>).detail;
-     if(!item?.urlToken)return;
+     if(!item?.urlToken||item.city!==city)return;
      requestGeneration.current++;
      setItems(current=>[item,...current.filter(existing=>existing.urlToken!==item.urlToken)].slice(0,8));
      setPage(1);setTotal(current=>current+1);setCounts(current=>({...current,active:current.active+1}));setBusy(false);setMessage("New share link added.");
@@ -25,9 +25,9 @@ export default memo(function ShareManagement({signedIn}:{signedIn:boolean}){
    window.addEventListener("faveroam:share-created",created);
    window.addEventListener("faveroam:share-revoked",revoked);
    return()=>{window.removeEventListener("faveroam:share-created",created);window.removeEventListener("faveroam:share-revoked",revoked);};
- },[signedIn]);
+ },[signedIn,city]);
  async function revoke(token:string){setBusy(true);setMessage("");try{const response=await fetch("/api/share",{method:"DELETE",headers:{"Content-Type":"application/json"},body:JSON.stringify({token})});const data=await response.json();if(!response.ok)throw Error(data.error);await load(page);setMessage("Share link revoked.");}catch(e){setMessage(e instanceof Error?e.message:"Could not revoke this link.");}finally{setBusy(false);}}
- return <section className="share-management" aria-labelledby="share-management-title"><header><span className="micro-label">YOUR SHARED LINKS</span><h2 id="share-management-title">Share my tastes</h2><p>Review links you’ve created, copy an active link, or revoke access. Links expire after 14 days.</p></header>
+ return <section className="share-management" aria-labelledby="share-management-title"><header><span className="micro-label">YOUR SHARED LINKS</span><h2 id="share-management-title">Share my tastes in {city}</h2><p>Review your {city} links, copy an active link, or revoke access. Links expire after 14 days.</p></header>
  {!signedIn?<div className="share-management-empty"><p>Sign in to manage your shared links.</p><button type="button" className="primary-button" onClick={()=>window.dispatchEvent(new Event("tastepassport:open-account"))}>Sign in</button></div>:<>
  <div className="share-link-counts"><article><strong>{counts.active}</strong><span>Active links</span></article><article><strong>{counts.revoked}</strong><span>Revoked links</span></article><article><strong>{total}</strong><span>Total links</span></article></div>
  {busy&&!items.length?<p role="status">Loading your links…</p>:!items.length?<p className="share-management-empty">No share links yet. Create one from Discover after signing in.</p>:<>

@@ -5,6 +5,7 @@ import {loadSession} from '../agent/store';
 import {debugEvent} from '../agent/debug';
 import {curatedThemes,relevantThemes} from '../passport/taste-themes';
 import type {AgentState} from '../agent/types';
+import {validDestination} from '../workspace/location';
 import {sectionTypes,type Section} from '../passport/model';
 
 const hash=(value:string)=>createHash('sha256').update(value).digest('hex');
@@ -22,9 +23,9 @@ export async function createShare(sessionId:string,revision:number,ownerName:str
  const state=await loadSession(sessionId);
  if(state.revision!==revision)throw Error('Your Passport changed. Refresh before sharing.');
  const writer=storageWriter(),owner=hash(sessionId);
- const {count,error:countError}=await writer.from('share_links').select('*',{count:'exact',head:true}).eq('owner_user_id',ownerUserId).is('revoked_at',null).gt('expires_at',new Date().toISOString());
+ const {count,error:countError}=await writer.from('share_links').select('*',{count:'exact',head:true}).eq('owner_user_id',ownerUserId).eq('snapshot->>city',state.city).is('revoked_at',null).gt('expires_at',new Date().toISOString());
  if(countError){debugEvent('share.create_failed',{reason:'storage-read'});throw Error('Share storage is not ready. Apply the share-links database script.');}
- if((count??0)>=5)throw Error('You have five active links. Revoke one before creating another.');
+ if((count??0)>=5)throw Error(`You have five active links for ${state.city}. Revoke one before creating another.`);
  const publicToken=token(),revokeToken=token(),snapshot=shareSnapshot(state,ownerName);
  const expiresAt=new Date(Date.now()+14*24*60*60*1000).toISOString();
  const {error}=await writer.from('share_links').insert({token_hash:hash(publicToken),public_token:publicToken,revoke_hash:hash(revokeToken),owner_session_hash:owner,owner_user_id:ownerUserId,snapshot,expires_at:expiresAt});
@@ -49,14 +50,16 @@ export async function revokeShare(publicToken:string,revokeToken:string){
  const {data,error}=await storageWriter().from('share_links').delete().eq('token_hash',hash(publicToken)).eq('revoke_hash',hash(revokeToken)).select('token_hash').maybeSingle();
  return !error&&Boolean(data);
 }
-export async function listAccountShares(userId:string,page:number,pageSize=8){
+export async function listAccountShares(userId:string,city:string,page:number,pageSize=8){
+ if(!validDestination(city))throw Error('Choose a city to view its shared links.');
  const start=(page-1)*pageSize;
  const writer=storageWriter();
+ const cityColumn='snapshot->>city';
  const [listed,activeCount,revokedCount,totalCount]=await Promise.all([
-   writer.from('share_links').select('public_token,created_at,expires_at,revoked_at,snapshot',{count:'exact'}).eq('owner_user_id',userId).order('created_at',{ascending:false}).range(start,start+pageSize-1),
-   writer.from('share_links').select('*',{count:'exact',head:true}).eq('owner_user_id',userId).is('revoked_at',null).gt('expires_at',new Date().toISOString()),
-   writer.from('share_links').select('*',{count:'exact',head:true}).eq('owner_user_id',userId).not('revoked_at','is',null),
-   writer.from('share_links').select('*',{count:'exact',head:true}).eq('owner_user_id',userId),
+   writer.from('share_links').select('public_token,created_at,expires_at,revoked_at,snapshot',{count:'exact'}).eq('owner_user_id',userId).eq(cityColumn,city).order('created_at',{ascending:false}).range(start,start+pageSize-1),
+   writer.from('share_links').select('*',{count:'exact',head:true}).eq('owner_user_id',userId).eq(cityColumn,city).is('revoked_at',null).gt('expires_at',new Date().toISOString()),
+   writer.from('share_links').select('*',{count:'exact',head:true}).eq('owner_user_id',userId).eq(cityColumn,city).not('revoked_at','is',null),
+   writer.from('share_links').select('*',{count:'exact',head:true}).eq('owner_user_id',userId).eq(cityColumn,city),
  ]);
  const {data,error}=listed;
  if(error)throw Error('Share links could not be loaded.');

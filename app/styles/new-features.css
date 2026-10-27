@@ -185,10 +185,26 @@
 .ritual-actions .primary-button { width:auto; margin:0; }
 .ritual-list { display:grid; gap:16px; }
 .ritual-list article,.ritual-proposal { padding:20px; border:1px solid var(--ui-border); border-radius:16px; min-width:0; }
+.ritual-list { grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr)); align-items:start; }
+.ritual-list .ritual-card { display:grid; gap:12px; padding:20px; background:#fffdf8; box-shadow:0 8px 24px #183e330a; }
+.ritual-card-heading { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; }
+.ritual-card-category { color:var(--ui-muted); font-size:12px; font-weight:700; }
+.ritual-status { display:inline-flex; align-items:center; min-height:28px; padding:4px 10px; border-radius:999px; background:var(--ui-tint); color:var(--ui-ink); font-size:12px; font-weight:700; }
+.ritual-status-kept { background:#e2f1df; color:#285537; }
+.ritual-status-tried { background:#e8edfa; color:#344d80; }
+.ritual-list .ritual-card h3 { margin:0; font-size:clamp(20px,2vw,25px); }
+.ritual-card-place { display:grid; gap:3px; min-width:0; }
+.ritual-card-place strong { font-size:16px; overflow-wrap:anywhere; }
+.ritual-card-place p,.ritual-list .ritual-card .ritual-card-schedule { margin:0; color:var(--ui-muted); font-size:13px; }
+.ritual-list .ritual-card .ritual-card-schedule { padding:9px 12px; border-radius:10px; background:var(--ui-tint); color:var(--ui-ink); font-weight:650; }
+.ritual-card-actions { display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding-top:12px; border-top:1px solid var(--ui-border); }
+.ritual-card-actions button { min-height:44px; padding-inline:12px; font-size:13px; }
+.ritual-card-actions .text-button { margin-left:auto; }
+.ritual-card-hint { color:var(--ui-muted); }
 .ritual-note { padding:14px; border-radius:10px; background:var(--ui-tint); color:var(--ui-ink); margin:14px 0; }
 @media(max-width:600px){.ritual-guest-note{grid-template-columns:1fr;gap:4px}.ritual-guest-note p{font-size:13px}}
 @media(max-width:600px){.ritual-form{grid-template-columns:minmax(0,1fr);gap:14px}.ritual-form h3,.ritual-form .ritual-actions,.ritual-form .ritual-no-favorites{grid-column:1}}
-@media(max-width:480px){.ritual-actions>*{flex:1 1 100%;justify-content:center}.ritual-form{padding:14px}.ritual-list article{padding:16px}}
+@media(max-width:480px){.ritual-actions>*{flex:1 1 100%;justify-content:center}.ritual-form{padding:14px}.ritual-list article{padding:16px}.ritual-card-actions button{flex:1 1 calc(50% - 8px)}.ritual-card-actions .text-button{margin-left:0}}
 
 .chat-broader-badge{display:inline-block;margin:0 0 .35rem;padding:.15rem .5rem;border-radius:999px;border:1px solid currentColor;font-size:.72rem;font-weight:600;opacity:.85}
 .chat-request-inputs{display:block;margin-top:.35rem;opacity:.85}

@@ -73,6 +73,9 @@
   font-size: 14px;
 }
 .account-dialog .account-register-form { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px 16px; }
+.account-dialog:has(.account-register-form) { padding:24px; }
+.account-dialog:has(.account-register-form) .account-intro { margin:8px 0 16px; line-height:1.5; }
+.account-dialog .account-register-form > .account-tabs { margin:0; }
 .account-dialog .account-register-form > .account-tabs,
 .account-dialog .account-register-form > label:nth-of-type(n+3),
 .account-dialog .account-register-form > .account-password-guidance,
@@ -80,6 +83,11 @@
 .account-dialog .account-register-form > .text-button { grid-column:1/-1; }
 .account-dialog .account-register-form > label { min-width:0; }
 .account-dialog .account-register-form input { width:100%; box-sizing:border-box; }
+.account-dialog .account-register-form > label { display:grid; gap:5px; }
+.account-dialog .account-register-form .account-password-guidance { padding:9px 12px; }
+.account-dialog .account-register-form .account-password-guidance .helper { margin:0; line-height:1.45; }
+.account-dialog .account-register-form .account-password-checklist { grid-template-columns:repeat(2,minmax(0,1fr)); gap:3px 12px; margin:6px 0; }
+.account-dialog:has(.account-register-form) .account-privacy { margin:12px 0 0; line-height:1.5; }
 
 .account-privacy {
   font-size: 13px;
@@ -132,4 +140,6 @@
   }
   .account-dialog .account-register-form { grid-template-columns:1fr; gap:12px; }
   .account-dialog .account-register-form > * { grid-column:1; }
+  .account-dialog:has(.account-register-form) { padding:18px; }
+  .account-dialog .account-register-form .account-password-checklist { grid-template-columns:1fr; }
 }
