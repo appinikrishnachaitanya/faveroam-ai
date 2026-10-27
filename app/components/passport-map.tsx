@@ -12,7 +12,7 @@ export function mappedPlaces(cards:readonly Card[]) {
     Number.isFinite(card.intelligence?.location?.latitude) && Number.isFinite(card.intelligence?.location?.longitude) &&
     Math.abs(card.intelligence!.location.latitude!)<=90 && Math.abs(card.intelligence!.location.longitude!)<=180);
 }
-export default memo(function PassportMap({cards,onSelect,dayLabels,active=true,selectedCluster,onClusterSelect}:{cards:Card[];active?:boolean;selectedCluster?:string;onClusterSelect?:(id?:string)=>void;onSelect?:(card:Card)=>void;dayLabels?:Record<string,string>}) {
+export default memo(function PassportMap({cards,cartoKey='',onSelect,dayLabels,active=true,selectedCluster,onClusterSelect}:{cards:Card[];cartoKey?:string;active?:boolean;selectedCluster?:string;onClusterSelect?:(id?:string)=>void;onSelect?:(card:Card)=>void;dayLabels?:Record<string,string>}) {
   const container=useRef<HTMLDivElement>(null);
   const mapInstance=useRef<import('maplibre-gl').Map | undefined>(undefined);
   useEffect(()=>{
@@ -23,6 +23,7 @@ export default memo(function PassportMap({cards,onSelect,dayLabels,active=true,s
   },[active]);
   const [retryKey,setRetryKey]=useState(0);
   const [failed,setFailed]=useState(false);
+  const [failureKind,setFailureKind]=useState<'key'|'tiles'|'initialize'>('tiles');
   const [selectedId,setSelectedId]=useState<string>();
   const places=useMemo(()=>mappedPlaces(cards),[cards]);
   const selectedPlace=places.find(card=>card.id===selectedId);
@@ -40,16 +41,20 @@ export default memo(function PassportMap({cards,onSelect,dayLabels,active=true,s
     let map:import('maplibre-gl').Map|undefined;
     const markers:import('maplibre-gl').Marker[]=[];
     let tileFailure=false;
-    const timer=window.setTimeout(()=>{if(!disposed)setFailed(true);},12000);
-    void import('maplibre-gl').then(({default:maplibregl})=>{
+    const timer=window.setTimeout(()=>{if(!disposed){map?.stop();setFailureKind('tiles');setFailed(true);}},12000);
+    void Promise.resolve().then(async()=>{
+      if(!cartoKey)throw Error('map-key-unavailable');
+      return (await import('maplibre-gl')).default;
+    }).then(maplibregl=>{
       if(disposed||!container.current)return;
       const first=places[0].intelligence!.location;
-      map=new maplibregl.Map({container:container.current,style:{version:8,sources:{basemap:{type:'raster',tiles:['https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png','https://b.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png'],tileSize:256,attribution:'© OpenStreetMap contributors © CARTO'}},layers:[{id:'basemap',type:'raster',source:'basemap'}]},center:[first.longitude!,first.latitude!],zoom:11,attributionControl:false});
+      const tileUrl=`https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png?key=${encodeURIComponent(cartoKey)}`;
+      map=new maplibregl.Map({container:container.current,style:{version:8,sources:{basemap:{type:'raster',tiles:[tileUrl],tileSize:256,attribution:'© OpenStreetMap contributors · © CARTO'}},layers:[{id:'basemap',type:'raster',source:'basemap'}]},center:[first.longitude!,first.latitude!],zoom:11,attributionControl:false});
       mapInstance.current=map;
       map.addControl(new maplibregl.NavigationControl({showCompass:false}),'top-right');
-      map.addControl(new maplibregl.AttributionControl({compact:true,customAttribution:'© OpenStreetMap contributors · © CARTO'}));
-      map.on('load',()=>{if(!disposed&&!tileFailure){window.clearTimeout(timer);setFailed(false);}});
-      map.on('error',event=>{if(!disposed&&!tileFailure){tileFailure=true;const status=Number((event.error as Error&{status?:number})?.status);console.warn('FaveRoam map load failed',{provider:'CARTO',status:Number.isInteger(status)&&status>=400&&status<600?status:undefined});window.clearTimeout(timer);setFailed(true);}});
+      map.addControl(new maplibregl.AttributionControl({compact:false}),'bottom-right');
+      map.on('idle',()=>{if(!disposed&&!tileFailure&&map?.areTilesLoaded()){window.clearTimeout(timer);setFailed(false);}});
+      map.on('error',event=>{if(!disposed&&!tileFailure){tileFailure=true;const status=Number((event.error as Error&{status?:number})?.status);console.warn('FaveRoam map load failed',{provider:'CARTO',status:Number.isInteger(status)&&status>=400&&status<600?status:undefined});window.clearTimeout(timer);map?.stop();setFailureKind('tiles');setFailed(true);}});
       const bounds=new maplibregl.LngLatBounds();
       for(const card of places){
         const point=card.intelligence!.location;
@@ -68,16 +73,16 @@ export default memo(function PassportMap({cards,onSelect,dayLabels,active=true,s
           map.addLayer({id,type:'fill',source:id,paint:{'fill-color':'#b97948','fill-opacity':0.12}});
         }
       });
-    }).catch(()=>{if(!disposed){console.warn('FaveRoam map initialization failed',{provider:'CARTO'});setFailed(true);}});
+    }).catch(error=>{if(!disposed){window.clearTimeout(timer);const missing=error instanceof Error&&error.message==='map-key-unavailable';console.warn('FaveRoam map initialization failed',{provider:'CARTO',reason:missing?'key-unavailable':'initialization'});setFailureKind(missing?'key':'initialize');setFailed(true);}});
     return ()=>{disposed=true;window.clearTimeout(timer);markers.forEach(marker=>marker.remove());map?.remove();if(mapInstance.current===map)mapInstance.current=undefined;};
-  },[key]);
+  },[key,cartoKey]);
   const schematic=useMemo(()=>plotHeatmap(places.map(card=>({latitude:card.intelligence!.location.latitude!,longitude:card.intelligence!.location.longitude!,affinity:0}))),[places]);
   return <section className="passport-map-panel" aria-label="Map of returned places">
     {onClusterSelect&&clusters.length>0&&<div className="place-clusters" aria-label="Explore nearby groups"><div><h3>Explore one area at a time</h3><p>Nearby returned places, grouped by distance. Area names use a real venue—not an assumed neighbourhood.</p></div><div className="cluster-options"><button type="button" className="quiet-button" aria-pressed={!selectedCluster} onClick={()=>onClusterSelect(undefined)}>All discoveries</button>{clusters.map(cluster=><button type="button" key={cluster.id} className="cluster-option" aria-pressed={selectedCluster===cluster.id} onClick={()=>onClusterSelect(cluster.id)}><strong>Around {cluster.anchor.name}</strong><span>{cluster.cards.length} places · {cluster.categories.map(sectionLabel).join(', ')}</span><small>Within {(cluster.radiusMeters/1000).toFixed(1)} km of this anchor, straight-line.{cluster.evidenceCount?' Uses your returned taste-grounded discoveries.':''}</small></button>)}</div></div>}
     <p>Only places with returned coordinates appear here. Circles show the area around named venues, not a verified neighbourhood boundary. Check routes and hours before going.</p>
     {!places.length?<p>No returned places have usable coordinates yet. Your cards remain available.</p>:<>
       <div ref={container} className="passport-map-canvas" hidden={failed} aria-label="Interactive map of returned places"/>
-      {failed&&<div className="passport-map-fallback"><strong>Map tiles are unavailable. Here is a schematic view of the same returned coordinates.</strong><button type="button" className="quiet-button" onClick={()=>{setFailed(false);setRetryKey(value=>value+1);}}>Try map again</button><div className="schematic-map" aria-label={`${places.length} returned place coordinates on a schematic plot`}>{places.map(card=>{const point=schematic?.points.find(point=>Math.abs(card.intelligence!.location.latitude!-point.latitude)<0.00001&&Math.abs(card.intelligence!.location.longitude!-point.longitude)<0.00001);if(!point)return null;return <button key={card.id} type="button" title={card?.name} aria-label={`Show details for ${card?.name??'place'}`} aria-pressed={selectedPlace?.id===card?.id} style={{left:`${point.x}%`,top:`${point.y}%`}} onClick={event=>{event.stopPropagation();if(card)setSelectedId(card.id);}}>{dayLabels?.[card.id]??'●'}</button>;})}</div></div>}
+      {failed&&<div className="passport-map-fallback"><strong>{failureKind==='key'?'The map needs setup. Your returned places are shown below.':failureKind==='initialize'?'The interactive map could not open. Your returned places are shown below.':'Map tiles are unavailable. Here is a schematic view of the same returned coordinates.'}</strong><button type="button" className="quiet-button" onClick={()=>{setFailed(false);setRetryKey(value=>value+1);}}>Try map again</button><div className="schematic-map" aria-label={`${places.length} returned place coordinates on a schematic plot`}>{places.map(card=>{const point=schematic?.points.find(point=>Math.abs(card.intelligence!.location.latitude!-point.latitude)<0.00001&&Math.abs(card.intelligence!.location.longitude!-point.longitude)<0.00001);if(!point)return null;return <button key={card.id} type="button" title={card?.name} aria-label={`Show details for ${card?.name??'place'}`} aria-pressed={selectedPlace?.id===card?.id} style={{left:`${point.x}%`,top:`${point.y}%`}} onClick={event=>{event.stopPropagation();if(card)setSelectedId(card.id);}}>{dayLabels?.[card.id]??'●'}</button>;})}</div></div>}
       {selectedPlace&&<div className="map-place-detail" aria-live="polite"><div><span className="micro-label">{selectedPlace.section}</span><strong>{selectedPlace.name}</strong><p>{selectedPlace.address??`Returned in ${selectedPlace.evidence?.destination??'your destination'}`}</p></div><button type="button" className="icon-button" aria-label="Close place details" onClick={()=>setSelectedId(undefined)}>×</button>{onSelect&&<button type="button" className="quiet-button" onClick={()=>onSelect(selectedPlace)}>View discovery</button>}</div>}
       <ul className="passport-map-legend">{areas.map(area=><li key={area.anchor.id}>Area around <strong>{area.anchor.name}</strong></li>)}</ul>
     </>}

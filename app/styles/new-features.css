@@ -3,6 +3,8 @@
 .passport-map-panel { margin:16px 0 26px; padding:clamp(16px,2vw,24px); border:1px solid var(--ui-border); border-radius:18px; background:var(--ui-surface); }
 .passport-map-panel > p { max-width:75ch; line-height:1.6; color:var(--ui-muted); }
 .passport-map-canvas { width:100%; height:clamp(300px,48vw,520px); border-radius:12px; margin:16px 0; overflow:hidden; }
+.passport-map-canvas .maplibregl-ctrl-attrib { display:block; max-width:calc(100% - 12px); padding:4px 8px; background:#fffef8; color:#193e31; font-size:11px; line-height:1.35; }
+.passport-map-canvas .maplibregl-ctrl-attrib a { color:#193e31; text-decoration:underline; }
 .passport-map-marker { width:34px; height:34px; border-radius:50%; border:2px solid #fff; background:#234b35; color:#fff; box-shadow:0 3px 8px #10261e55; font-size:15px; font-weight:700; }
 .passport-map-marker:hover { background:#8d592c; transform:scale(1.08); }
 .passport-map-legend { display:flex; flex-wrap:wrap; gap:8px 20px; padding-left:20px; font-size:13px; }

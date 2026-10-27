@@ -46,6 +46,11 @@ body { background:#f8f6f1; color:#17243b; }
 .progressive-app .passport-navigation button { color:#17243b; border-radius:10px; }
 .progressive-app .passport-navigation button[aria-current=page] { background:#fce5bd; color:#101c35; }
 .progressive-app .discovery-card { border-color:#e1e5e8; background:#fffefa; box-shadow:0 5px 18px #101c3509; }
+.progressive-app .discovery-card .feedback-actions { gap:12px; }
+.progressive-app .discovery-card .feedback-actions button { min-width:0; padding:10px 12px; line-height:1.35; }
+.progressive-app .discovery-card .ritual-card-action { align-self:stretch; margin:12px 0 4px; min-height:44px; padding:10px 14px; border:1px solid #c8d1d4; background:#f7f8f5; color:#17243b; border-radius:10px; font-size:13px; font-weight:650; }
+.progressive-app .discovery-card .ritual-card-action:hover:not(:disabled) { border-color:#9bafb1; background:#edf2ef; }
+.progressive-app .discovery-card .feedback-note { display:block; margin-top:10px; line-height:1.5; }
 .progressive-app .move-onboarding { max-width:1180px; display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); align-items:start; gap:clamp(24px,4vw,60px); margin:32px auto; }
 .progressive-app .move-onboarding .onboarding-heading { margin:16px 0; }
 .progressive-app .move-onboarding .onboarding-heading h1 { font-size:clamp(38px,4.2vw,62px); }

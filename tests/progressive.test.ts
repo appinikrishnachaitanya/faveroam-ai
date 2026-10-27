@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import Home from "../app/page.tsx";
+import Home from "../app/home.tsx";
 import { MoveForm, TasteConfirmation } from "../app/components/onboarding.tsx";
 import ConciergeDrawer from "../app/components/concierge.tsx";
 import FeedbackDialog from "../app/components/feedback.tsx";

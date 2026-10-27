@@ -52,6 +52,7 @@ const modes: { id: DiscoveryGoal; name: string; detail: string; icon: string }[]
 ];
 export default memo(function TasteIntelligence({
   passport,
+  cartoKey='',
   busy,
   onRefine,
   view = "preferences",
@@ -59,6 +60,7 @@ export default memo(function TasteIntelligence({
   partnerSample = [],
 }: {
   passport: Passport;
+  cartoKey?: string;
   busy: boolean;
   onRefine: (input: AgentInput) => void;
   view?: "preferences" | "together";
@@ -470,7 +472,7 @@ export default memo(function TasteIntelligence({
               {together.exchange&&<section className="taste-exchange" aria-label="One discovery to show each other"><span className="micro-label">BEYOND THE OVERLAP</span><h4>Show each other something new</h4><p>Each idea comes from a separate confirmed-interest search. These are introductions to try, not exclusive preferences; both searches may overlap. A personal theme is shown only when it also appears on the returned listing.</p><div className="taste-exchange-grid">{together.exchange.map(item=><article key={item.person}><small>{item.person==='you'?'Your pick to introduce':'Their pick to introduce'}</small>{item.card?<><strong>{item.card.name}</strong><p>{item.card.address??`Returned in ${passport.city}`}</p><span>{item.theme?`A returned personal-profile theme: ${item.theme}`:'From this person’s confirmed cultural interests.'}</span></>:<p>{item.theme?`No verified place was returned for “${item.theme}” in this category.`:'No distinct personal introduction was available in the returned places.'}</p>}</article>)}</div></section>}
               <details className="common-ground-week"><summary>Plan a first week together</summary>
               <p className="helper">Week coverage uses all validated places returned by each person’s searches and the joint searches—not just the preview cards. Missing categories remain open; select Food, Coffee & cafés and Places & culture before comparing for a fuller local week.</p>
-              <FirstWeek key={`${together.comparison.recordedAt}:${sharedAnchor?.id??'all'}:${sharedRadius}`} passport={passport} onLocksChange={setJointLocked} roots={{
+              <FirstWeek key={`${together.comparison.recordedAt}:${sharedAnchor?.id??'all'}:${sharedRadius}`} passport={passport} cartoKey={cartoKey} onLocksChange={setJointLocked} roots={{
                 you:nearbySharedPlaces(together.exchange?.filter(item=>item.person==='you').flatMap(item=>item.cards??(item.card?[item.card]:[]))??[],sharedAnchor,sharedRadius),
                 partner:nearbySharedPlaces(together.exchange?.filter(item=>item.person==='them').flatMap(item=>item.cards??(item.card?[item.card]:[]))??[],sharedAnchor,sharedRadius),
                 both:sharedCards,

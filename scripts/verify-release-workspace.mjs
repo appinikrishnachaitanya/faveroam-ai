@@ -11,6 +11,8 @@ const base=process.env.PASSPORT_TEST_URL??'http://127.0.0.1:3001';
 const tabs=await(await fetch((process.env.PASSPORT_CDP_URL??'http://127.0.0.1:9231')+'/json')).json();
 const ws=new WebSocket(tabs.find(t=>t.type==='page').webSocketDebuggerUrl);
 await new Promise(r=>ws.addEventListener('open',r,{once:true}));
+let directCartoRequests=0,directWithOriginReferrer=0,appTileRelayRequests=0;
+ws.addEventListener('message',event=>{const value=JSON.parse(event.data);if(value.method!=='Network.requestWillBeSent')return;const request=new URL(value.params.request.url);if(request.hostname==='basemaps.cartocdn.com'&&request.pathname.startsWith('/rastertiles/voyager/')){directCartoRequests++;const referrer=value.params.request.headers?.Referer??value.params.request.headers?.referer;if(referrer&&new URL(referrer).origin===new URL(base).origin)directWithOriginReferrer++;}if(request.pathname.startsWith('/api/map/tiles/'))appTileRelayRequests++;});
 let id=0;const pending=new Map();
 ws.addEventListener('message',event=>{const value=JSON.parse(event.data);if(value.id){const job=pending.get(value.id);if(job){clearTimeout(job.timer);pending.delete(value.id);value.error?job.reject(Error(value.error.message)):job.resolve(value);}}});
 const call=(method,params={})=>new Promise((resolve,reject)=>{const n=++id;pending.set(n,{resolve,reject,timer:setTimeout(()=>{pending.delete(n);reject(Error(`CDP timeout: ${method}`));},20000)});ws.send(JSON.stringify({id:n,method,params}));});
@@ -80,9 +82,18 @@ try{
     await ev("document.querySelector('.together-results').scrollIntoView({block:'start',behavior:'instant'})");await frame();
    }
    if(label==='Discover')assert.ok(await ev('document.querySelector(".discovery-welcome").getBoundingClientRect().height<500'),'Welcome layout must not retain a 430px flex column basis');
+   if(label==='Discover'){
+    const spacing=await ev(`(()=>{const card=document.querySelector('.passport-sections .discovery-card');const buttons=[...card.querySelectorAll('.feedback-actions button')];const ritual=card.querySelector('.ritual-card-action');const [save,reject]=buttons.map(button=>button.getBoundingClientRect());const third=ritual.getBoundingClientRect();const outer=card.getBoundingClientRect();return {count:buttons.length,sideGap:reject.left-save.right,verticalGap:third.top-Math.max(save.bottom,reject.bottom),inside:save.left>=outer.left+8&&third.right<=outer.right-8};})()`);
+    assert.equal(spacing.count,2);assert.ok(spacing.sideGap>=8&&spacing.verticalGap>=8&&spacing.inside,`Discovery card actions overlap or touch at ${width}px: ${JSON.stringify(spacing)}`);
+   }
    if(label==='Discover'){assert.equal(await ev('document.querySelector(".vibe-tuning-disclosure")?.open??false'),false);assert.equal(await ev('document.querySelector(".familiarity-disclosure")?.open??false'),false);assert.ok(await ev('window.fixtureMapCanvas===document.querySelector(".passport-map-canvas")'),'Discover map must survive My places toggles');}
    if(label==='Discover')assert.equal(await ev('document.querySelectorAll(".share-options>div:first-child .share-actions button").length'),2);
    const screenshot=await call('Page.captureScreenshot',{format:'png'});await fs.writeFile(`/tmp/faveroam-release-${width}-${label.replaceAll(' ','-')}.png`,Buffer.from(screenshot.result.data,'base64'));
+   if(label==='Discover'&&(width===375||width===1440)){
+    await ev(`document.querySelector('.passport-sections .discovery-card').scrollIntoView({block:'center',behavior:'instant'})`);await frame();
+    const cardShot=await call('Page.captureScreenshot',{format:'png'});
+    await fs.writeFile(`/tmp/faveroam-card-actions-${width}.png`,Buffer.from(cardShot.result.data,'base64'));
+   }
    assert.ok(await ev('document.documentElement.scrollWidth<=innerWidth+1'),`Overflow: ${label} ${width}`);
   }
  }
@@ -125,5 +136,7 @@ try{
   const shot=await call('Page.captureScreenshot',{format:'png'});await fs.writeFile(`/tmp/faveroam-library-${width}.png`,Buffer.from(shot.result.data,'base64'));
  }
  await ev('document.querySelector("#fixture-library").close();document.querySelector("#fixture-library").remove()');
- console.log(JSON.stringify({result:'PASS',scope:'synthetic browser fixtures only; external tiles intentionally blocked; no authenticated/live acceptance',timings,map:'schematic pin preserves map; cluster filters list',ritual:'discovery action prepares guest draft',chat:'retained composer survives three toggles'}));
+ assert.equal(appTileRelayRequests,0,'CARTO tiles must never use the application as a relay');
+ if(directCartoRequests)assert.equal(directWithOriginReferrer,directCartoRequests,'Direct CARTO requests must carry the requesting website origin');
+ console.log(JSON.stringify({result:'PASS',scope:'synthetic browser fixtures only; external tiles intentionally blocked; no authenticated/live acceptance',timings,map:'schematic pin preserves map; cluster filters list',directCartoRequests,directWithOriginReferrer,appTileRelayRequests,ritual:'discovery action prepares guest draft',chat:'retained composer survives three toggles'}));
 }finally{ws.close();}
