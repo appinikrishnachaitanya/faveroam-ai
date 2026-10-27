@@ -66,10 +66,11 @@ export function jointProfileState(state:import('../agent/types').AgentState,part
 
 /** Personal retrieval can overlap; never label the same venue as two introductions. */
 export function distinctIntroductions<T extends {card?:Card;cards:Card[];theme?:string}>(profiles:T[]):(T & {card:Card|undefined;theme:string|undefined})[] {
- const used=new Set<string>();
+ const used=new Set<string>(),names=new Set<string>();
+ const venueName=(card:Card)=>card.name.normalize('NFKD').replace(/\p{M}/gu,'').toLowerCase().replace(/[^\p{L}\p{N}]+/gu,' ').trim();
  return profiles.map(profile=>{
-  const card=profile.cards.find(candidate=>!used.has(candidate.id));
-  if(card)used.add(card.id);
+  const card=profile.cards.find(candidate=>!used.has(candidate.id)&&!names.has(venueName(candidate)));
+  if(card){used.add(card.id);names.add(venueName(card));}
   return {...profile,card,theme:card?.evidence?.result.tags.some(tag=>tag.name===profile.theme)?profile.theme:undefined};
  });
 }

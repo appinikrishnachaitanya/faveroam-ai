@@ -67,6 +67,14 @@ try{
     const simpleShot=await call('Page.captureScreenshot',{format:'png'});await fs.writeFile(`/tmp/faveroam-common-ground-simple-${width}.png`,Buffer.from(simpleShot.result.data,'base64'));
     await ev("document.querySelector('.common-ground-week').open=true;document.querySelector('.together-results .first-week-controls .primary-button').click()");await frame();
     assert.ok(await ev('Number(document.querySelector(".together-results .week-save-summary p").textContent.match(/\\d+/)[0])>=10'),'Shared week must use retained fixture pools');
+    // Exercise the browser's native time control and retain it across day changes.
+    await ev(`(()=>{const input=document.querySelector('.together-results .week-stops input[type=time]');input.focus();Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,'13:15');input.dispatchEvent(new Event('input',{bubbles:true}));input.dispatchEvent(new Event('change',{bubbles:true}));input.blur();})()`);await frame();
+    assert.equal(await ev(`document.querySelector('.together-results .week-stops input[type=time]').value`),'13:15');
+    await ev(`document.querySelectorAll('.together-results .week-days button')[6].click()`);await frame();
+    await wait(`Boolean(document.querySelector('.together-results .schematic-map button'))`);
+    assert.ok(await ev(`(()=>{const names=[...document.querySelectorAll('.together-results .week-stops select')].map(select=>select.selectedOptions[0]?.textContent.split(' · ')[0]);return [...document.querySelectorAll('.together-results .schematic-map button')].every(pin=>names.includes(pin.title));})()`),'Day 7 schematic pins must describe Day 7 choices');
+    await ev(`document.querySelectorAll('.together-results .week-days button')[0].click()`);await frame();
+    assert.equal(await ev(`document.querySelector('.together-results .week-stops input[type=time]').value`),'13:15','Time edit must survive a day switch');
     assert.ok(await ev('document.querySelector(".common-ground-evidence").textContent.includes("Fixture artist")'));
     assert.ok(await ev('!document.querySelector(".common-ground-evidence").textContent.includes("relative score")'));
     await ev("document.querySelector('.together-results').scrollIntoView({block:'start',behavior:'instant'})");await frame();

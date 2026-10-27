@@ -23,9 +23,10 @@ export default memo(function PassportMap({cards,onSelect,dayLabels,active=true,s
   },[active]);
   const [retryKey,setRetryKey]=useState(0);
   const [failed,setFailed]=useState(false);
-  const [selectedPlace,setSelectedPlace]=useState<Card>();
+  const [selectedId,setSelectedId]=useState<string>();
   const places=useMemo(()=>mappedPlaces(cards),[cards]);
-  const key=retryKey+':'+places.map(card=>`${card.id}:${card.intelligence!.location.latitude}:${card.intelligence!.location.longitude}:${dayLabels?.[card.id]??''}`).join('|');
+  const selectedPlace=places.find(card=>card.id===selectedId);
+  const key=retryKey+':'+places.map(card=>`${card.id}:${card.name}:${card.intelligence!.location.latitude}:${card.intelligence!.location.longitude}:${dayLabels?.[card.id]??''}`).join('|');
   const clusters=useMemo(()=>clusterPlaces(places),[places]);
   useEffect(()=>{
     const map=mapInstance.current;if(!map)return;
@@ -52,7 +53,7 @@ export default memo(function PassportMap({cards,onSelect,dayLabels,active=true,s
       const bounds=new maplibregl.LngLatBounds();
       for(const card of places){
         const point=card.intelligence!.location;
-        const marker=document.createElement('button');marker.type='button';marker.className='passport-map-marker';marker.textContent=dayLabels?.[card.id]??'●';marker.title=card.name;marker.setAttribute('aria-label',`Show details for ${card.name}`);marker.onclick=event=>{event.stopPropagation();setSelectedPlace(card);};
+        const marker=document.createElement('button');marker.type='button';marker.className='passport-map-marker';marker.textContent=dayLabels?.[card.id]??'●';marker.title=card.name;marker.setAttribute('aria-label',`Show details for ${card.name}`);marker.onclick=event=>{event.stopPropagation();setSelectedId(card.id);};
         markers.push(new maplibregl.Marker({element:marker}).setLngLat([point.longitude!,point.latitude!]).addTo(map));
         bounds.extend([point.longitude!,point.latitude!]);
       }
@@ -76,8 +77,8 @@ export default memo(function PassportMap({cards,onSelect,dayLabels,active=true,s
     <p>Only places with returned coordinates appear here. Circles show the area around named venues, not a verified neighbourhood boundary. Check routes and hours before going.</p>
     {!places.length?<p>No returned places have usable coordinates yet. Your cards remain available.</p>:<>
       <div ref={container} className="passport-map-canvas" hidden={failed} aria-label="Interactive map of returned places"/>
-      {failed&&<div className="passport-map-fallback"><strong>Map tiles are unavailable. Here is a schematic view of the same returned coordinates.</strong><button type="button" className="quiet-button" onClick={()=>{setFailed(false);setRetryKey(value=>value+1);}}>Try map again</button><div className="schematic-map" aria-label={`${places.length} returned place coordinates on a schematic plot`}>{schematic?.points.map((point,index)=>{const card=places.find(place=>Math.abs(place.intelligence!.location.latitude!-point.latitude)<0.00001&&Math.abs(place.intelligence!.location.longitude!-point.longitude)<0.00001);return <button key={index} type="button" title={card?.name} aria-label={`Show details for ${card?.name??'place'}`} aria-pressed={selectedPlace?.id===card?.id} style={{left:`${point.x}%`,top:`${point.y}%`}} onClick={event=>{event.stopPropagation();if(card)setSelectedPlace(card);}}>●</button>;})}</div></div>}
-      {selectedPlace&&<div className="map-place-detail" aria-live="polite"><div><span className="micro-label">{selectedPlace.section}</span><strong>{selectedPlace.name}</strong><p>{selectedPlace.address??`Returned in ${selectedPlace.evidence?.destination??'your destination'}`}</p></div><button type="button" className="icon-button" aria-label="Close place details" onClick={()=>setSelectedPlace(undefined)}>×</button>{onSelect&&<button type="button" className="quiet-button" onClick={()=>onSelect(selectedPlace)}>View discovery</button>}</div>}
+      {failed&&<div className="passport-map-fallback"><strong>Map tiles are unavailable. Here is a schematic view of the same returned coordinates.</strong><button type="button" className="quiet-button" onClick={()=>{setFailed(false);setRetryKey(value=>value+1);}}>Try map again</button><div className="schematic-map" aria-label={`${places.length} returned place coordinates on a schematic plot`}>{places.map(card=>{const point=schematic?.points.find(point=>Math.abs(card.intelligence!.location.latitude!-point.latitude)<0.00001&&Math.abs(card.intelligence!.location.longitude!-point.longitude)<0.00001);if(!point)return null;return <button key={card.id} type="button" title={card?.name} aria-label={`Show details for ${card?.name??'place'}`} aria-pressed={selectedPlace?.id===card?.id} style={{left:`${point.x}%`,top:`${point.y}%`}} onClick={event=>{event.stopPropagation();if(card)setSelectedId(card.id);}}>{dayLabels?.[card.id]??'●'}</button>;})}</div></div>}
+      {selectedPlace&&<div className="map-place-detail" aria-live="polite"><div><span className="micro-label">{selectedPlace.section}</span><strong>{selectedPlace.name}</strong><p>{selectedPlace.address??`Returned in ${selectedPlace.evidence?.destination??'your destination'}`}</p></div><button type="button" className="icon-button" aria-label="Close place details" onClick={()=>setSelectedId(undefined)}>×</button>{onSelect&&<button type="button" className="quiet-button" onClick={()=>onSelect(selectedPlace)}>View discovery</button>}</div>}
       <ul className="passport-map-legend">{areas.map(area=><li key={area.anchor.id}>Area around <strong>{area.anchor.name}</strong></li>)}</ul>
     </>}
   </section>;

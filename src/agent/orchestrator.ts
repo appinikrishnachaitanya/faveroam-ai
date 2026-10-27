@@ -69,6 +69,7 @@ function conceptAlreadyApplied(
   state: AgentState,
   section: Section,
   concept: string,
+  tagIds?: string[],
 ) {
   const wanted = conceptKey(concept);
   if (!wanted) return true;
@@ -88,7 +89,7 @@ function conceptAlreadyApplied(
           "somewhere",
         ].includes(word),
     );
-  return (state.categoryTags?.[section] ?? []).some((id) => {
+  return (tagIds ?? state.categoryTags?.[section] ?? []).some((id) => {
     const tag = state.tags.find((candidate) => candidate.id === id);
     if (!tag) return false;
     const current = conceptKey(`${tag.name} ${tag.detail}`);
@@ -770,7 +771,10 @@ async function executeTurn(
           if (section === "Eat") {
             state.categoryTags[section] = (state.categoryTags[section] ?? []).filter(id => {
               const tag = state.tags.find(t => t.id === id);
-              return !tag || !/cuisine|restaurant/i.test(`${tag.id} ${tag.name} ${tag.detail}`);
+              // "Refresh only affordable Indian Food" repeats a confirmed
+              // cuisine; do not discard its ID and ask to resolve it again.
+              return incomingForSection.some(concept=>conceptAlreadyApplied(state,section,concept,[id])) ||
+                !tag || !/cuisine|restaurant/i.test(`${tag.id} ${tag.name} ${tag.detail}`);
             });
           }
         } else {
