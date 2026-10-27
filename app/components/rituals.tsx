@@ -40,8 +40,8 @@ export default memo(function Rituals({passport,signedIn,initialCardId,onInitialH
   {!signedIn&&<aside className="ritual-guest-note"><strong>Guest mode</strong><p>You can set up a ritual now. Sign in to keep it across visits. Rituals don’t send reminders or make bookings.</p></aside>}
   <form className="ritual-form" onSubmit={e=>{e.preventDefault();void mutate({action:editing?'update':'create',...(editing?{id:editing.id,updatedAt:editing.updated_at,status:editing.status}:{sessionId:passport.agent?.sessionId,revision:passport.agent?.revision,cardId,status:'planned'}),name,weekday,recurrence});}}>
    <h3>{editing?'Edit your ritual':'Create a ritual'}</h3>
+   {!editing&&!choices.length&&<p className="ritual-no-favorites">Save a place to My Vibe from Discover to make it a ritual.</p>}
    {!editing&&<label>From My Vibe<select required value={cardId} disabled={busy||!choices.length} onChange={e=>setCardId(e.target.value)}><option value="">Choose a saved favorite</option>{[...new Set(choices.map(c=>c.section))].map(section=><optgroup key={section} label={sectionLabel(section)}>{choices.filter(c=>c.section===section).map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</optgroup>)}</select></label>}
-   {!editing&&!choices.length&&<p>Save a place to My Vibe from Discover to make it a ritual.</p>}
    <label>Name<input required maxLength={80} value={name} disabled={busy} placeholder="Saturday coffee" onChange={e=>setName(e.target.value)}/></label>
    <label>Day<select value={weekday} disabled={busy} onChange={e=>setWeekday(Number(e.target.value))}>{weekdays.map((day,i)=><option key={day} value={i}>{day}</option>)}</select></label>
    <label>Repeat<select value={recurrence} disabled={busy} onChange={e=>setRecurrence(e.target.value as Ritual['recurrence'])}><option value="weekly">Every week</option><option value="fortnightly">Every two weeks</option></select></label>

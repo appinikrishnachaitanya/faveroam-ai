@@ -15,18 +15,15 @@ const signal: Candidate = {
   detail: "Protocol metadata",
 };
 
-test("first load offers sample and personalized onboarding without agent panels", () => {
+test("first load waits for Passport restoration before showing onboarding or saved profiles", () => {
   const html = renderToStaticMarkup(createElement(Home));
-  assert.match(html, /Build your/);
-  assert.match(html, /Moving to/);
-  assert.match(html, /What already feels like you/);
-  assert.match(html, /Find my taste matches/);
+  assert.match(html, /Restoring your Passport/);
+  assert.doesNotMatch(html, /Build your|Moving to|What already feels like you|Find my taste matches|Try a sample/);
   assert.doesNotMatch(
     html,
     /Taste Concierge|Agent execution activity|THE DEMO JOURNEY|View Qloo evidence|cultural-reveal|guided-panel|split-workspace/,
   );
-  assert.equal((html.match(/class="primary-button/g) ?? []).length, 2);
-  assert.match(html,/Try a sample/);
+  assert.equal((html.match(/class="primary-button/g) ?? []).length, 0);
   assert.doesNotMatch(html, /Reset conversation|New Passport/);
 });
 test("onboarding requires city and one taste, uses a single taste input and accessible removable chips", () => {

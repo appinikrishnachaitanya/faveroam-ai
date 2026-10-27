@@ -65,9 +65,11 @@
 .share-taste-card p { line-height:1.6; max-width:70ch; }
 .share-theme-preview,.share-actions { display:flex; flex-wrap:wrap; gap:8px; margin:16px 0; }
 .share-theme-preview span { padding:7px 12px; border-radius:99px; border:1px solid var(--ui-border); background:#fff; }
-.share-link-result { display:flex; flex-wrap:wrap; gap:10px; align-items:end; padding:16px; border:1px solid var(--ui-border); border-radius:12px; }
-.share-link-result label { display:grid; gap:5px; flex:1 1 280px; min-width:0; }
+.share-link-result { display:grid; grid-template-columns:minmax(0,1fr) auto auto; align-items:center; gap:12px; width:100%; min-width:0; margin-top:16px; padding:16px; border:1px solid var(--ui-border); border-radius:12px; background:var(--ui-surface); }
+.share-link-result label { display:grid; grid-column:1/-1; gap:7px; min-width:0; color:var(--ui-ink); font-size:14px; font-weight:650; }
 .share-link-result input { min-height:44px; width:100%; min-width:0; padding:8px; border:1px solid var(--ui-border); border-radius:8px; }
+.share-link-result > button { min-height:44px; margin:0; white-space:nowrap; }
+.share-link-result > small { justify-self:end; color:var(--ui-muted); font-size:12px; line-height:1.45; text-align:right; overflow-wrap:anywhere; }
 .discovery-welcome { display:flex; align-items:center; justify-content:space-between; gap:clamp(18px,3vw,36px); margin:18px 0; padding:clamp(20px,2.5vw,30px); }
 .discovery-welcome .discovery-concierge-copy { flex:1 1 430px; }
 .discovery-welcome h2 { margin:6px 0; font-size:clamp(23px,2.5vw,32px); }
@@ -171,8 +173,9 @@
 .ritual-guest-note p { margin:0; max-width:70ch; color:#4e5d50; line-height:1.55; text-align:left; }
 .rituals-panel h2,.rituals-panel h3 { margin:10px 0; line-height:1.25; overflow-wrap:anywhere; }
 .rituals-panel p,.rituals-panel small { line-height:1.6; overflow-wrap:anywhere; }
-.ritual-form { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr)); gap:16px; margin:24px 0; padding:20px; border:1px solid var(--ui-border); border-radius:16px; }
+.ritual-form { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px 20px; margin:24px 0; padding:20px; border:1px solid var(--ui-border); border-radius:16px; }
 .ritual-form h3,.ritual-form .ritual-actions { grid-column:1/-1; }
+.ritual-form .ritual-no-favorites { grid-column:1/-1; margin:0; padding:12px 14px; border:1px solid #d7dfcf; border-radius:11px; background:#f3f5ec; color:#405848; font-size:14px; line-height:1.55; text-align:left; }
 .ritual-form label { display:flex; flex-direction:column; gap:8px; min-width:0; font-size:14px; }
 .ritual-form :is(input,select) { width:100%; max-width:100%; min-width:0; min-height:46px; padding:10px; border:1px solid var(--ui-border); border-radius:10px; background:var(--ui-surface); color:var(--ui-ink); }
 .ritual-actions { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:14px; }
@@ -181,6 +184,7 @@
 .ritual-list article,.ritual-proposal { padding:20px; border:1px solid var(--ui-border); border-radius:16px; min-width:0; }
 .ritual-note { padding:14px; border-radius:10px; background:var(--ui-tint); color:var(--ui-ink); margin:14px 0; }
 @media(max-width:600px){.ritual-guest-note{grid-template-columns:1fr;gap:4px}.ritual-guest-note p{font-size:13px}}
+@media(max-width:600px){.ritual-form{grid-template-columns:minmax(0,1fr);gap:14px}.ritual-form h3,.ritual-form .ritual-actions,.ritual-form .ritual-no-favorites{grid-column:1}}
 @media(max-width:480px){.ritual-actions>*{flex:1 1 100%;justify-content:center}.ritual-form{padding:14px}.ritual-list article{padding:16px}}
 
 .chat-broader-badge{display:inline-block;margin:0 0 .35rem;padding:.15rem .5rem;border-radius:999px;border:1px solid currentColor;font-size:.72rem;font-weight:600;opacity:.85}
@@ -212,11 +216,16 @@
 .share-management-table { width:100%; border-collapse:collapse; text-align:left; }
 .share-management-table th,.share-management-table td { padding:13px 15px; border-bottom:1px solid #e5e6dc; }
 .share-management-table th { background:#f5f3e8; color:#425643; font-size:12px; letter-spacing:.06em; text-transform:uppercase; }
+@media(min-width:601px){.share-management-table th:last-child,.share-management-table td:last-child { width:190px; }}
 .share-management-table tr:last-child td { border-bottom:0; }
 .share-link-status { display:inline-flex; padding:4px 9px; border-radius:99px; background:#e5f1e4; color:#285738; font-size:12px; font-weight:700; text-transform:capitalize; }
 .share-link-status.revoked,.share-link-status.expired { background:#f3e9de; color:#79563c; }
 .share-management-actions,.share-management-pagination>div { display:flex; align-items:center; flex-wrap:wrap; gap:8px; }
+.share-management-actions { flex-wrap:nowrap; }
+.share-management-actions button { min-width:72px; min-height:40px; margin:0; justify-content:center; white-space:nowrap; }
 .share-management-pagination { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-top:14px; color:var(--ui-muted); }
 .share-management-empty { padding:20px; border:1px dashed var(--ui-border); border-radius:14px; background:#fbfaf4; color:var(--ui-muted); }
 .share-management-message { padding:12px; border-radius:10px; background:#e8f1e6; color:#285738; }
 @media(max-width:600px){.app-shell{padding-inline:12px}.share-link-counts{grid-template-columns:1fr}.share-link-counts article{grid-template-columns:auto 1fr;align-items:center}.share-link-counts strong{font-size:24px}.share-management-table thead{display:none}.share-management-table,.share-management-table tbody,.share-management-table tr,.share-management-table td{display:block;width:100%;box-sizing:border-box}.share-management-table tr{padding:10px 12px;border-bottom:1px solid var(--ui-border)}.share-management-table td{display:grid;grid-template-columns:90px minmax(0,1fr);gap:8px;padding:7px 0;border:0}.share-management-table td::before{content:attr(data-label);color:var(--ui-muted);font-size:12px;font-weight:700}.share-management-pagination{align-items:stretch;flex-direction:column}.share-management-pagination>div button{flex:1}}
+.passport-resume-loading { display:grid; place-items:center; min-height:34vh; padding:24px; color:var(--ui-muted); font-size:15px; line-height:1.6; text-align:center; }
+@media(max-width:600px){.share-link-result{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;padding:14px}.share-link-result>button{width:100%;justify-content:center;white-space:normal}.share-link-result>small{grid-column:1/-1;justify-self:start;text-align:left}}

@@ -142,6 +142,7 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
   const [messages, setMessages] = useState<Message[]>([welcome]);
   const [draft, setDraft] = useState<string[]>([]);
   const [draftHydrated, setDraftHydrated] = useState(false);
+  const [passportRestoreComplete,setPassportRestoreComplete]=useState(false);
   const [editingPlan, setEditingPlan] = useState<{plan:SavedPlan;nonce:number}>();
   const [editingFirstWeek,setEditingFirstWeek]=useState<{week:SavedFirstWeek;nonce:number}>();
   // Keep editingPlan in sync after a save so the DayOut component never
@@ -221,7 +222,7 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
     const recovered=restoreGuestPassport(window.sessionStorage);
     if (!recovered) {
       const sessionId=restoreActiveSession(window.sessionStorage);
-      if (!sessionId) return;
+      if (!sessionId) {setPassportRestoreComplete(true);return;}
       const controller=new AbortController();
       void fetch("/api/agent/session", {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sessionId}),signal:controller.signal})
         .then(async response=>{
@@ -234,7 +235,7 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
             setConstraints(data.passport.session?.constraints ?? []);
             setPhase("ready");setRecoveryStatus(undefined);
           }
-        }).catch(()=>{});
+        }).catch(()=>{}).finally(()=>{if(!controller.signal.aborted)setPassportRestoreComplete(true);});
       return ()=>controller.abort();
     }
     setResult(current => current ?? recovered);
@@ -245,6 +246,7 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
     setInitialMode(recovered.session?.discoveryMode ?? "familiar");
     setConstraints(recovered.session?.constraints ?? []);
     setPhase("ready");
+    setPassportRestoreComplete(true);
     const controller = new AbortController();
     void reconnectPassport(recovered, controller.signal);
     return () => controller.abort();
@@ -949,14 +951,15 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
         </nav>
       </header>
       <div className="progressive-content" id="passport-content" tabIndex={-1}>
-        {<ReusableTastes signedIn={accountSignedIn} passport={result} city={city} draft={draft} disabled={busy} draftVersion={tasteDraftVersion} showLibrary={!result && step === 1}
+        {!passportRestoreComplete&&!result&&<div className="passport-resume-loading" role="status">Restoring your Passport…</div>}
+        {passportRestoreComplete&&<ReusableTastes signedIn={accountSignedIn} passport={result} city={city} draft={draft} disabled={busy} draftVersion={tasteDraftVersion} showLibrary={!result && step === 1}
           saveRequested={saveTastePrompt} onContinue={fresh} onCancel={()=>setSaveTastePrompt(false)}
           onSelect={profile=>{resetMatches("idle");setDraft(profile.selected.map(s=>s.name));setConceptSeeds(profile.selected.filter(s=>s.id.startsWith("urn:tag:")).map(s=>s.name));setInitialMode(profile.discoveryMode);setConstraints(profile.constraints);setRequestedActivities(profile.activeCategories.filter(s=>!profile.hiddenCategories.includes(s)).slice(0,5));setEditing(true);}}
           onBusy={value=>{if(value)setPhase("exploring");else setPhase(current=>current==="exploring"?"idle":current);}}
           onApply={passport=>{setResult(passport);setCity(passport.city);setDraft(passport.selected.map(s=>s.name));setPhase("ready");setAdaptation("Fresh discoveries using your saved tastes.");}}
         />}
-        {!result && <StepIndicator step={step} />}
-        {step === 1 && (
+        {passportRestoreComplete&&!result && <StepIndicator step={step} />}
+        {passportRestoreComplete&&step === 1 && (
           <MoveForm
             city={city}
             origin={origin}
@@ -987,7 +990,7 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
             onActivities={setRequestedActivities}
           />
         )}
-        {step === 2 && resolution && (
+        {passportRestoreComplete&&step === 2 && resolution && (
           <TasteConfirmation
             items={activeItems}
             chosen={chosen}
@@ -1147,7 +1150,6 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
                 key={`day-out:${result.session?.id ?? result.city}`}
                 editPlan={editingPlan}
                 startFrom={planFrom}
-                expanded={workspaceView === "plan"}
                 onFindActivity={findPlanActivity}
                 passport={result}
                 disabled={busy}
