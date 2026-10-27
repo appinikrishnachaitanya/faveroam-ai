@@ -9,17 +9,45 @@ No deployment is implied by a successful push.
 | Milestone | Status | Acceptance still needed |
 | --- | --- | --- |
 | Existing feature audit and original brand assets | Completed | Public submission media review is separate |
-| Responsive landing and workspace palette | Implemented | Landing checked at 375/768/1440; full workspace needs real-device review |
+| Responsive landing and workspace palette | Local browser checks passed | Workspace/library checked at 375/390/768/1440 with explicit fixtures; deployed real-device acceptance remains |
 | Taste Insights theme quality | Implemented in code | Per-interest attribution/caps and honest partial-result wording; live Qloo diversity remains |
 | First Week account persistence | Implemented in code | Save/reopen/update/delete; run updated `setup.sql` and verify with a signed-in account |
-| Navigation render cost | Improved in code | Stable callbacks, memoized account/navigation, map released off Discover; loaded-browser profiling remains |
+| Navigation render cost | Implemented and locally measured | Map/chat retained; memoized sharing/cards; final synthetic 4x-CPU navigation 51–240 ms; production profiling remains |
 | New local illustrations | Implemented | Insights, My Vibe, Vibe Dial and First Week; review responsive balance |
 | Map and shared geography | Implemented in code | Attributed tiles and explicit place anchor/radius; DBSCAN/medoid clusters implemented; live tiles remain unverified |
-| Two Roots, One City | Implemented in code | Live-provider journey remains; candidate pools can be sparse |
+| Two Roots, One City | Implemented and fixture-tested | Larger separate pools and soft shared themes; live relevance/coverage remains unverified; shared weeks export only |
 | My Rituals | Implemented in code | Run the complete setup.sql reset; real authenticated acceptance remains |
 | Stop repair, undo, and comparison UI | Implemented in code | Full browser acceptance remains |
 | Sharing, account, and calendar acceptance | Partial | Validate live link lifecycle, real account ownership, and ICS import |
-| Final release gates | Pending | Full tests/build/smoke/browser checks, remote CI, and deployed revision verification |
+| Final release gates | Local gates passed; live release pending | 497 tests, build, typecheck, smoke and fixture browser checks passed; remote CI/deployed SHA and live integrations remain |
+
+## Current outstanding release checks
+
+The release implementation is committed as `e8074c2`. A subsequent local build
+recheck passed. The latest deployment log supplied by the user failed while
+Railpack downloaded `mise` from GitHub (504), before the application build ran.
+That log does not demonstrate an application compilation failure or identify a
+successful deployed revision.
+
+- Run the complete `db-scripts/setup.sql` manually, then start a New Passport.
+  No database execution was performed by the agent.
+- Confirm GitHub/hosting use the intended release SHA and obtain a successful
+  deployment. Workspace pushes/remote reads were blocked by the proxy; externally
+  initiated pushes are unverified here.
+- Verify actual CARTO tile requests in an ordinary browser. Fixture coverage tests
+  the schematic fallback; no new map API key is required.
+- Use isolated real accounts to verify First Week and ritual CRUD/replacement,
+  ownership, sign-out/sign-in and restored saved data.
+- Verify real share expiry/revocation and ICS import into a calendar application.
+- Test current Qloo Taste Insights/Common Ground quality and two-person week
+  coverage. Fixture results do not prove current provider relevance.
+- Measure deployed navigation/chat on a real mobile device. Local synthetic
+  timings are not a production latency guarantee.
+
+No additional feature is planned by this tracker. Shared two-person weeks remain
+calendar-export only; account save/reopen applies to personal First Weeks.
+Historical milestones below are retained as development history and are superseded
+by this summary and the release completion section.
 
 ## Existing capabilities to extend
 

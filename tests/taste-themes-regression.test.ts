@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { parseAnalysis } from '../src/qloo/analysis.ts';
-import { relevantThemes, themesPerInterest, themeCategories, themeKind } from '../src/passport/taste-themes.ts';
+import { relevantThemes, themesPerInterest, themeCategories, themeKind, curatedThemes } from '../src/passport/taste-themes.ts';
 
 const film={id:'film',types:['urn:entity:movie']};
 const artist={id:'artist',types:['urn:entity:artist']};
@@ -74,4 +74,8 @@ test('multi-interest themes are fetched and attributed independently with honest
  assert.deepEqual(result.tags.map(tag=>tag.sourceInterestName),['A.R. Rahman','Indian cuisine']);
  assert.deepEqual(result.unavailable,['Interstellar']);
  assert.deepEqual(result.noConnections,[]);
+});
+
+test('generic adjectives do not masquerade as useful new taste directions',()=>{
+ assert.deepEqual(curatedThemes([{id:'urn:tag:style:qloo:versatile',name:'Versatile'},{id:'urn:tag:style:qloo:expressive',name:'Expressive'},{id:'urn:tag:genre:music:jazz',name:'Jazz'}]).map(tag=>tag.name),['Jazz']);
 });

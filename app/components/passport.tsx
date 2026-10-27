@@ -392,7 +392,7 @@ export function DiscoveryCard({
       {feedback && (
         <small className="feedback-note">
           {live
-            ? "Your preference is saved for this visit. We’ll look for a replacement when one is available."
+            ? feedback === "like" ? "Saved to My Vibe for this visit." : "Your preference is saved for this visit. We’ll look for a replacement when one is available."
             : "Preference saved for this session. Recommendations haven’t been replanned."}
         </small>
       )}

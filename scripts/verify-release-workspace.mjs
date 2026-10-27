@@ -46,6 +46,7 @@ try{
   for(const label of ['Preferences','Common Ground','Taste insights','First Week','Discover','My places','Discover']){
    const ms=await ev(`(async()=>{const menu=document.querySelector('.passport-menu-toggle');if(getComputedStyle(menu).display!=='none'&&menu.getAttribute('aria-expanded')==='false'){menu.click();await new Promise(r=>requestAnimationFrame(r));}const button=[...document.querySelectorAll('.passport-navigation button')].find(b=>b.textContent.includes(${JSON.stringify(label)}));const start=performance.now();button.click();await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));return Math.round(performance.now()-start);})()`);
    timings.push({width,label,ms});
+   assert.ok(await ev(`![...document.querySelectorAll('.workspace-panel:not([hidden]) .intelligence-intro, .workspace-panel:not([hidden]) .analysis-intro, .workspace-panel:not([hidden]) .outing-intro')].some(node=>node.getAnimations().some(animation=>animation.playState==='running'))`),`Workspace introduction must not delay navigation: ${label}`);
    if(label==='Preferences'||label==='Common Ground'){
     await ev(`(()=>{const picker=document.querySelector('#view-preferences .category-multi-select');picker.querySelector('summary').scrollIntoView({block:'center',behavior:'instant'});picker.open=true;})()`);await frame();
     assert.ok(await ev(`(()=>{const r=document.querySelector('#view-preferences .category-multi-select fieldset').getBoundingClientRect();return r.left>=0&&r.right<=innerWidth+1&&r.width>0;})()`),`Category menu overflow: ${width}`);
@@ -59,8 +60,21 @@ try{
      await ev("document.querySelector('.together-reveal form button[type=submit]').click()");await wait('Boolean(document.querySelector(".partner-matches"))');
      await ev("document.querySelector('.partner-matches>.primary-button').click()");await wait('Boolean(document.querySelector(".common-ground-evidence"))');
     }
-    await ev("document.querySelector('.together-results .first-week-controls .primary-button').click()");await frame();
+    assert.equal(await ev('document.querySelector(".common-ground-setup").open'),false,'Completed setup should collapse without removing its inputs');
+    assert.ok(await ev('document.querySelectorAll(".partner-interests input").length>0'));
+    assert.ok(await ev('document.querySelectorAll(".together-category article").length>0'));
+    await ev("document.querySelector('.common-ground-week').open=false;document.querySelector('.together-results').scrollIntoView({block:'start',behavior:'instant'})");await frame();
+    const simpleShot=await call('Page.captureScreenshot',{format:'png'});await fs.writeFile(`/tmp/faveroam-common-ground-simple-${width}.png`,Buffer.from(simpleShot.result.data,'base64'));
+    await ev("document.querySelector('.common-ground-week').open=true;document.querySelector('.together-results .first-week-controls .primary-button').click()");await frame();
     assert.ok(await ev('Number(document.querySelector(".together-results .week-save-summary p").textContent.match(/\\d+/)[0])>=10'),'Shared week must use retained fixture pools');
+    // Exercise the browser's native time control and retain it across day changes.
+    await ev(`(()=>{const input=document.querySelector('.together-results .week-stops input[type=time]');input.focus();Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,'13:15');input.dispatchEvent(new Event('input',{bubbles:true}));input.dispatchEvent(new Event('change',{bubbles:true}));input.blur();})()`);await frame();
+    assert.equal(await ev(`document.querySelector('.together-results .week-stops input[type=time]').value`),'13:15');
+    await ev(`document.querySelectorAll('.together-results .week-days button')[6].click()`);await frame();
+    await wait(`Boolean(document.querySelector('.together-results .schematic-map button'))`);
+    assert.ok(await ev(`(()=>{const names=[...document.querySelectorAll('.together-results .week-stops select')].map(select=>select.selectedOptions[0]?.textContent.split(' · ')[0]);return [...document.querySelectorAll('.together-results .schematic-map button')].every(pin=>names.includes(pin.title));})()`),'Day 7 schematic pins must describe Day 7 choices');
+    await ev(`document.querySelectorAll('.together-results .week-days button')[0].click()`);await frame();
+    assert.equal(await ev(`document.querySelector('.together-results .week-stops input[type=time]').value`),'13:15','Time edit must survive a day switch');
     assert.ok(await ev('document.querySelector(".common-ground-evidence").textContent.includes("Fixture artist")'));
     assert.ok(await ev('!document.querySelector(".common-ground-evidence").textContent.includes("relative score")'));
     await ev("document.querySelector('.together-results').scrollIntoView({block:'start',behavior:'instant'})");await frame();
@@ -87,6 +101,17 @@ try{
   assert.ok(await ev('(window.fixtureComposer??=document.querySelector("#conversation-input"))===document.querySelector("#conversation-input")'));
   await ev('document.querySelector(".assistant-close").click()');await frame();assert.equal(await ev('document.querySelector("#taste-concierge").open'),false);
  }
+ // A controlled pending request proves Send becomes an enabled Stop action.
+ await ev(`window.preStopCards=[...document.querySelectorAll('.passport-sections [data-entity-id]')].map(node=>node.dataset.entityId).join('|');window.preStopFetch=window.fetch;window.fetch=(url,options)=>String(url)==='/api/agent/turn'?new Promise((resolve,reject)=>options.signal.addEventListener('abort',()=>reject(new DOMException('Stopped','AbortError')),{once:true})):window.preStopFetch(url,options);document.querySelector('.assistant-launch').click()`);await frame();
+ await ev(`(()=>{const input=document.querySelector('#conversation-input');Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set.call(input,'Find quieter places');input.dispatchEvent(new Event('input',{bubbles:true}));})()`);await frame();
+ await ev(`document.querySelector('.composer button[aria-label="Send message"]').click()`);
+ await wait(`Boolean(document.querySelector('.composer button[aria-label="Stop response"]:not(:disabled)'))`);
+ assert.ok(await ev(`![...document.querySelectorAll('#taste-concierge button')].some(button=>button.textContent.includes('Cancel refinement'))`));
+ await ev(`document.querySelector('.composer button[aria-label="Stop response"]').click()`);
+ await wait(`Boolean(document.querySelector('.composer button[aria-label="Send message"]'))`);
+ assert.ok(await ev(`document.querySelector('.chat-stop-notice')?.textContent.includes('Stopped waiting for this request')`));
+ assert.equal(await ev(`window.preStopCards===[...document.querySelectorAll('.passport-sections [data-entity-id]')].map(node=>node.dataset.entityId).join('|')`),true);
+ await ev(`window.fetch=window.preStopFetch;document.querySelector('.assistant-close').click()`);await frame();
  await ev('[...document.querySelectorAll(".passport-sections button")].find(b=>b.textContent==="Make a ritual").click()');await frame();
  assert.ok(await ev('Boolean(document.querySelector(".ritual-form"))'));assert.ok(await ev('Boolean(document.querySelector(".ritual-form select").value)'));
  const today=new Date().toISOString().slice(0,10);

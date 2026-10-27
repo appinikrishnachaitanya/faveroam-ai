@@ -27,6 +27,12 @@ export function activityMatches(card: Card, activity: string) {
     return Boolean(card.address?.trim() && (namedCinema || (!areaName && venueDescription)));
   }
   if (activity === "Nightlife") return /nightclub|night club/i.test(tags);
+  if (activity === "Coffee") {
+    if (!/coffee|caf[eé]|tea house/i.test(tags)) return false;
+    // Mixed restaurant/café metadata is insufficient to default a restaurant
+    // into a coffee outing when its venue identity says otherwise.
+    return !/\b(?:restaurant|bar|grill|bistro)\b/i.test(card.name) || /coffee|caf[eé]|tea house/i.test(card.name);
+  }
   return true;
 }
 
@@ -105,4 +111,13 @@ export function nearbyOutingOptions(cards:Card[],anchor?:Card) {
   return cards.map((card,index)=>({card,index,distance:stopDistance(anchor,card)}))
     .sort((a,b)=>(a.distance ?? Infinity)-(b.distance ?? Infinity) || a.index-b.index)
     .map(row=>row.card);
+}
+
+/** Conservative automatic choice; all returned venues remain manually selectable. */
+export function suggestedOutingChoice(cards:Card[],anchor?:Card,maxKm=3):Card|undefined {
+ if(!anchor || stopDistance(anchor,anchor)===undefined)return cards[0];
+ return nearbyOutingOptions(cards,anchor).find(card=>{
+  const distance=stopDistance(anchor,card);
+  return distance!==undefined && distance<=maxKm;
+ });
 }

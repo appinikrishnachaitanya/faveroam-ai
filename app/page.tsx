@@ -3,7 +3,7 @@ import { refinementErrorMessage } from "../src/agent/customer-error";
 import {generatePassport} from '../src/workspace/generation-browser';
 import GenerationPreview from './components/generation-preview';
 import { sectionLabel } from "../src/passport/labels";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { startTransition, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { validDestination } from "../src/workspace/location";
 import { AgentTurnError, sendAgentTurn } from "../src/agent/browser";
 import type { Intent } from "../src/agent/types";
@@ -93,6 +93,7 @@ async function post<T>(path: string, body: unknown): Promise<T> {
 }
 export default function Home() {
   const [chatProgress,setChatProgress]=useState('');
+  const [chatNotice,setChatNotice]=useState('');
   const [generationPreviews,setGenerationPreviews]=useState<Partial<Record<Section,import('../src/passport/model').Card[]>>>({});
   const generationRequest=useRef<AbortController|null>(null);
   useEffect(()=>()=>generationRequest.current?.abort(),[]);
@@ -302,6 +303,7 @@ export default function Home() {
       .catch(() => {});
   }, []);
   const activeTurn = useRef<AbortController | null>(null);
+  const stopAgentRequest = useCallback(()=>activeTurn.current?.abort(),[]);
   const [retryInput, setRetryInput] = useState<AgentInput>();
   const agentScroll = useRef<HTMLDivElement>(null);
   const matchOpener = useRef<HTMLButtonElement>(null);
@@ -314,6 +316,34 @@ export default function Home() {
     phase === "exploring" ||
     phase === "refining" ||
     phase === "interpreting";
+  // Prepare local-only panels between interactions, never on the first click.
+  // Account data and provider searches remain user-triggered. Transition priority
+  // lets typing/navigation interrupt this work, unlike eager mounting everything.
+  useEffect(() => {
+    if (!result || busy) return;
+    let cancelled = false;
+    let idle: number | undefined;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const queue = ["preferences", "connections", "plan"];
+    const prepare = () => {
+      if (cancelled) return;
+      const next = queue.shift();
+      if (!next) return;
+      startTransition(() => setVisitedViews(current => current.has(next) ? current : new Set([...current, next])));
+      schedule();
+    };
+    const schedule = () => {
+      if (!queue.length || cancelled) return;
+      if (typeof window.requestIdleCallback === "function") idle = window.requestIdleCallback(prepare);
+      else timer = setTimeout(prepare, 250);
+    };
+    schedule();
+    return () => {
+      cancelled = true;
+      if (idle !== undefined) window.cancelIdleCallback(idle);
+      if (timer !== undefined) clearTimeout(timer);
+    };
+  }, [result?.agent?.sessionId, result?.city, busy]);
   const signals = result?.session?.selected ?? confirmed(resolution, chosen);
   const feedback: Record<string, Feedback> = useMemo(()=>Object.fromEntries(
     (result?.session?.feedback ?? []).map((f) => [
@@ -442,6 +472,7 @@ export default function Home() {
     if (!result?.agent || busy || activeTurn.current || recoveryStatus === "checking") return;
     const controller = new AbortController();
     activeTurn.current = controller;
+    setChatNotice("");
     setRetryInput(input);
     setError("");
     setPhase("refining");
@@ -551,7 +582,13 @@ export default function Home() {
         );
     } catch (e) {
       if (activeTurn.current !== controller) return;
-      setError(refinementErrorMessage(e, controller.signal.aborted));
+      if (controller.signal.aborted) {
+        setError("");
+        setRetryInput(undefined);
+        setChatNotice("Stopped waiting for this request. You can keep exploring or ask something else.");
+        return;
+      }
+      setError(refinementErrorMessage(e));
       if ((e instanceof AgentTurnError && ["SESSION_EXPIRED", "SESSION_MISSING"].includes(e.code)) || (e instanceof Error && /session.*expired/i.test(e.message))) {
         setRecoveryStatus("expired");
         setRetryInput(undefined);
@@ -745,7 +782,7 @@ export default function Home() {
   const freshHandler=useRef(fresh);
   useLayoutEffect(()=>{freshHandler.current=fresh;});
   const stableFresh=useCallback(()=>freshHandler.current(),[]);
-  const accountChangedHandler=useCallback((signedIn:boolean,firstName?:string)=>{setAccountSignedIn(signedIn);setAccountFirstName(signedIn?firstName?.trim()??'':'');},[]);
+  const accountChangedHandler=useCallback((signedIn:boolean,firstName?:string)=>{setAccountSignedIn(signedIn);setAccountFirstName(signedIn?firstName?.trim().replace(/^\p{L}/u,letter=>letter.toLocaleUpperCase())??'':'');},[]);
   const passportSavedHandler=useCallback((sessionId?:string)=>{if(sessionId)rememberSavedSession(window.sessionStorage,sessionId);else clearSavedSession(window.sessionStorage);setSavedSessionId(sessionId);},[]);
   const editPlanHandler=useCallback((plan:SavedPlan)=>{setPlanMode("day");setEditingPlan(current=>({plan,nonce:(current?.nonce??0)+1}));panelActions.current.selectWorkspaceView('plan');},[]);
   const editWeekHandler=useCallback((week:SavedFirstWeek)=>{setPlanMode("week");setEditingFirstWeek(current=>({week,nonce:(current?.nonce??0)+1}));panelActions.current.selectWorkspaceView('plan');},[]);
@@ -790,6 +827,7 @@ export default function Home() {
     setTasteDraftVersion(value=>value+1);
     activeTurn.current?.abort();
     activeTurn.current = null;
+    setChatNotice("");
     setRetryInput(undefined);
     if (result?.agent)
       void fetch("/api/agent/session", {
@@ -1245,7 +1283,7 @@ export default function Home() {
                   {displayedMessages.map((m, i) => (
                     <div className={`message ${m.role}`} key={i}>
                       <span className="message-label">
-                        {m.role === "agent" ? "TASTEPASSPORT" : "YOU"}
+                        {m.role === "agent" ? "FAVEROAM" : "YOU"}
                       </span>
                       {m.role === "agent" ? <ChatReply text={m.text} hasCards={Boolean(m.recommendationIds?.some(id=>result.cards.some(card=>card.id===id && !result.session?.hiddenCategories?.includes(card.section))))}/> : <p>{m.text}</p>}
                       {m.role==='agent'&&m.checks&&<details className="chat-checks"><summary>What I checked</summary><ul><li>Request route: {m.checks.route}</li><li>{m.checks.model}</li><li>{m.checks.qlooOperations} Qloo retrieval or tool operation{m.checks.qlooOperations===1?'':'s'} in this turn; each may use more than one network request.</li><li>{m.checks.validation}</li><li>{m.checks.kept.length?`Kept unchanged: ${m.checks.kept.map(sectionLabel).join(', ')}.`:'No sections were explicitly protected in this request.'}</li></ul></details>}
@@ -1290,15 +1328,6 @@ export default function Home() {
           </div>
           {assistantTab === "ask" && (
             <>
-              {phase === "refining" && (
-                <button
-                  type="button"
-                  className="quiet-button"
-                  onClick={() => activeTurn.current?.abort()}
-                >
-                  Cancel refinement
-                </button>
-              )}
               {error && !busy && <div className="conversation-recovery" role="alert">
                 <p>{error}</p>
                 <div>
@@ -1307,7 +1336,8 @@ export default function Home() {
                   <button type="button" className="quiet-button" onClick={()=>{setError("");setRetryInput(undefined);setAssistantOpen(false);}}>Keep exploring</button>
                 </div>
               </div>}
-              <ChatComposer prompt={composerPrompt} draftRef={composerDraft} disabled={busy || recoveryStatus === "checking"} onSend={sendComposerMessage}/>
+              {chatNotice && <p className="chat-stop-notice" role="status">{chatNotice}</p>}
+              <ChatComposer processing={phase === "refining"} onStop={stopAgentRequest} prompt={composerPrompt} draftRef={composerDraft} disabled={busy || recoveryStatus === "checking"} onSend={sendComposerMessage}/>
             </>
           )}
           {visibleMessages.length > 0 && (

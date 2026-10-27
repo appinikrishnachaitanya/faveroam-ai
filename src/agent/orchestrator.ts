@@ -69,6 +69,7 @@ function conceptAlreadyApplied(
   state: AgentState,
   section: Section,
   concept: string,
+  tagIds?: string[],
 ) {
   const wanted = conceptKey(concept);
   if (!wanted) return true;
@@ -88,7 +89,7 @@ function conceptAlreadyApplied(
           "somewhere",
         ].includes(word),
     );
-  return (state.categoryTags?.[section] ?? []).some((id) => {
+  return (tagIds ?? state.categoryTags?.[section] ?? []).some((id) => {
     const tag = state.tags.find((candidate) => candidate.id === id);
     if (!tag) return false;
     const current = conceptKey(`${tag.name} ${tag.detail}`);
@@ -487,6 +488,14 @@ async function executeTurn(
         "Saved as your vibe. Future refinements can use this cultural signal.",
       );
     }
+    if (input.feedback.reason === "Too expensive") {
+      state.queryPreferences ??= {};
+      const previous = state.queryPreferences[current.section] ?? {};
+      const returnedPrice = current.intelligence?.commercial?.priceLevel;
+      const ceiling = Math.max(1, Math.min(previous.priceMax ?? 4,
+        typeof returnedPrice === "number" ? returnedPrice - 1 : 2));
+      state.queryPreferences[current.section] = { ...previous, priceMax: ceiling, priceMin: undefined };
+    }
     state.cards = state.cards.filter((card) => card.id !== current.id);
     intent = {
       kind: "refine",
@@ -762,7 +771,10 @@ async function executeTurn(
           if (section === "Eat") {
             state.categoryTags[section] = (state.categoryTags[section] ?? []).filter(id => {
               const tag = state.tags.find(t => t.id === id);
-              return !tag || !/cuisine|restaurant/i.test(`${tag.id} ${tag.name} ${tag.detail}`);
+              // "Refresh only affordable Indian Food" repeats a confirmed
+              // cuisine; do not discard its ID and ask to resolve it again.
+              return incomingForSection.some(concept=>conceptAlreadyApplied(state,section,concept,[id])) ||
+                !tag || !/cuisine|restaurant/i.test(`${tag.id} ${tag.name} ${tag.detail}`);
             });
           }
         } else {
@@ -1475,7 +1487,9 @@ async function executeTurn(
   const finalReply = reply(
     changed.length
       ? `Updated ${changed.map(section => sectionLabel(section)).join(", ")} suggestions. ${decisionSummary(original, state, changed)} ${state.relaxed!.length ? "I couldn't find a strong match satisfying every preference, so these results prioritize your confirmed cultural tastes. Optional preferences relaxed: " + [...new Set(state.relaxed!.flatMap((r) => r.constraints))].map((c) => (c === "crowded" ? "quiet atmosphere" : c)).join(", ") + ". " : ""}${state.pending ? "You can also confirm the atmosphere concept to refine further. " : ""}Your other categories and confirmed interests are unchanged.${previewRefinedResults(state, changed)}`
-      : "I couldn’t apply that search because no verified match was returned. Your previous discoveries and their active preferences are unchanged. The attempted search is kept separately so you can adjust it or retry.",
+      : input.feedback?.reason === "Too expensive"
+        ? "I couldn’t verify a cheaper alternative within the lower price ceiling. I haven’t substituted premium places. Your earlier discoveries are not new affordable matches; the lower-budget search is kept separately so you can adjust it or retry."
+        : "I couldn’t apply that search because no verified match was returned. Your previous discoveries and their active preferences are unchanged. The attempted search is kept separately so you can adjust it or retry.",
     changed.length ? chatShortlist(state,changed) : undefined,
   );
   return input.message && intent.action === "plan-day" &&

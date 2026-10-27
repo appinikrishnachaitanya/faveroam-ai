@@ -364,9 +364,10 @@ export default memo(function TasteIntelligence({
           </button>
         </form>
         <section className="together-reveal" hidden={view !== "together"} aria-label="Find common ground">
+          <details className="common-ground-setup" open={!together}><summary>{together ? "Change interests or preferences" : "Choose who you’re exploring with"}</summary>
           <div className="together-preference-summary"><div><strong>{selectedSections.map(sectionLabel).join(", ")} in {passport.city}</strong><p className="helper">The matching categories’ existing filters carry into the shared search. No single score is used to claim compatibility.</p></div><button type="button" className="quiet-button" onClick={onPreferences}>Review preferences</button></div>
-          <div className="together-heading"><div><span className="micro-label">A LITTLE OF YOU. A LITTLE OF THEM.</span><h3>What are they into?</h3><p>Add an artist, film, book or brand they love. We’ll find cultural common ground and look for ideas in the categories you selected.</p></div><img src="/illustrations/together-passports.svg" width="440" height="260" alt="" aria-hidden="true" loading="lazy" /></div>
-          <div className="together-two-profiles"><div><strong>Person 1 · your confirmed tastes</strong><p>{passport.selected.map(taste=>taste.name).join(' · ')}</p></div><div><strong>Person 2 · choose their tastes below</strong><p>Confirm at least one returned match before comparing.</p></div></div>
+          <div className="together-heading"><div><span className="micro-label">A LITTLE OF YOU. A LITTLE OF THEM.</span><h3>Find something you’ll both want to try</h3><p>Add one thing they love. Confirm the match, then explore places together.</p></div><img src="/illustrations/together-passports.svg" width="440" height="260" alt="" aria-hidden="true" loading="lazy" /></div>
+          <div className="together-two-profiles"><div><strong>Person 1 · your confirmed tastes</strong><p>{passport.selected.map(taste=>taste.name).join(' · ')}</p></div></div>
           <p className="helper">Start with one. Add more if you like. Your Passport and preferences stay yours.</p>
           {!hasEntityProfile && <p role="status">Add a named artist, film, book or brand to your Passport to use Together.</p>}
           <form
@@ -434,36 +435,12 @@ export default memo(function TasteIntelligence({
               <p className="helper">Uses {new Set(Object.values(ids)).size} selected interest{new Set(Object.values(ids)).size===1?'':'s'}. Interests without a selected match are not included. Choose a match above to include them.</p>
             </div>
           )}
+          </details>
           {together && (
             <section className="together-results" aria-label="Your common ground">
-              <button type="button" className="text-button" onClick={()=>setTogether(undefined)}>Edit confirmed interests</button>
-              <div className="shared-story"><span className="micro-label">A SHARED STARTING POINT</span><h3>{together.comparison.shared.length?'Here’s what connects you.':'No shared theme was returned yet.'}</h3><p>These themes appeared in the comparison. Use the places below as ideas to explore together.</p></div>
-              <div className="shared-area-controls"><label>Start near<select disabled={jointLocked} value={sharedAnchorId==='all'?'all':sharedAnchor?.id??'all'} onChange={event=>setSharedAnchorId(event.target.value)}><option value="all">Anywhere in this city</option>{anchors.map(card=><option key={card.id} value={card.id}>{card.name}</option>)}</select></label>{sharedAnchor&&<label>Distance from this place<select disabled={jointLocked||!sharedAnchor} value={sharedRadius} onChange={event=>setSharedRadius(Number(event.target.value))}><option value={1500}>1.5 km</option><option value={3000}>3 km</option><option value={5000}>5 km</option></select></label>}<p>{jointLocked?'Unlock your shared-week stops before changing the search area. ':''}{sharedAnchor?'Distance is straight-line from this returned place. Places without coordinates are omitted. Check travel time and venue availability.':'Choose a returned place to narrow the list by distance. City and category requirements still apply.'}</p>{!sharedCards.length&&<p role="status">{sharedAnchor?'No returned shared place fits this area. Choose a wider distance or another starting place.':'No verified shared place was returned for these categories and requirements. Try another category or change a requirement.'}</p>}</div>
-              <CommonGroundThemes comparison={together.comparison} cards={sharedCards} you={passport.selected} partner={together.partnerSignals??[]}/>
-              {(()=>{const first=passport.selected[0]?.name??'your taste',second=together.partner?.[0]??'their taste';const hangout=sharedHangout(sharedCards,together.comparison);return <div className="shared-hangout">
-                <h4>One place to start together</h4>{hangout?<><strong>{hangout.card.name}</strong><p>{hangout.card.address??`Returned place in ${passport.city}`}</p><p>{hangout.exactTheme?'An exact returned shared theme appears on this place.':'This place came from the shared-interest search; no individual shared theme was returned on its listing.'}</p></>:<p>No verified place was returned for these interests. Try another category or taste.</p>}
-                <h4>Three ways to start a conversation</h4><ol>{commonGroundStarters(together.comparison,first,second).map(starter=><li key={starter}>{starter}</li>)}</ol>
-              </div>;})()}
-              {together.exchange&&<section className="taste-exchange" aria-label="One discovery to show each other"><span className="micro-label">BEYOND THE OVERLAP</span><h4>Show each other something new</h4><p>Each idea comes from that person’s confirmed-interest search. Distinct themes are included when the comparison returns them.</p><div className="taste-exchange-grid">{together.exchange.map(item=><article key={item.person}><small>{item.person==='you'?'Your pick to introduce':'Their pick to introduce'}</small>{item.card?<><strong>{item.card.name}</strong><p>{item.card.address??`Returned in ${passport.city}`}</p><span>{item.theme?`A returned personal-profile theme: ${item.theme}`:'From this person’s confirmed cultural interests.'}</span></>:<p>{item.theme?`No verified place was returned for “${item.theme}” in this category.`:'No verified personal place was returned in the selected categories.'}</p>}</article>)}</div></section>}
-              <p className="helper">Week coverage uses all validated places returned by each person’s searches and the joint searches—not just the preview cards. Missing categories remain open; select Food, Coffee & cafés and Places & culture before comparing for a fuller local week.</p>
-              <FirstWeek key={`${together.comparison.recordedAt}:${sharedAnchor?.id??'all'}:${sharedRadius}`} passport={passport} onLocksChange={setJointLocked} roots={{
-                you:nearbySharedPlaces(together.exchange?.filter(item=>item.person==='you').flatMap(item=>item.cards??(item.card?[item.card]:[]))??[],sharedAnchor,sharedRadius),
-                partner:nearbySharedPlaces(together.exchange?.filter(item=>item.person==='them').flatMap(item=>item.cards??(item.card?[item.card]:[]))??[],sharedAnchor,sharedRadius),
-                both:sharedCards,
-              }}/>
-              <p role="status">{together.notice}</p>{Boolean(together.failedSections?.length)&&<p role="status">Some searches could not finish: {together.failedSections!.map(sectionLabel).join(", ")}. Other returned choices are preserved; compare again to retry.</p>}
-              <details className="together-differences"><summary>See each person’s distinct tastes</summary>
-                <p>
-                  More your taste:{" "}
-                  {together.comparison.aOnly.map((t) => t.name).join(", ") ||
-                    "No separate themes available"}
-                </p>
-                <p>
-                  More their taste:{" "}
-                  {together.comparison.bOnly.map((t) => t.name).join(", ") ||
-                    "No separate themes available"}
-                </p>
-              </details>
+              <div className="shared-story"><span className="micro-label">A SHARED STARTING POINT</span><h3>Places to try together</h3><p>Start with a place, then open the taste connections if you’re curious.</p></div>
+              {!sharedCards.length && <p role="status">No verified shared places fit the selected categories and area. Change a category, starting place or distance to try again.</p>}
+              <details className="common-ground-more"><summary>Narrow choices by distance</summary><div className="shared-area-controls"><label>Start near<select disabled={jointLocked} value={sharedAnchorId==='all'?'all':sharedAnchor?.id??'all'} onChange={event=>setSharedAnchorId(event.target.value)}><option value="all">Anywhere in this city</option>{anchors.map(card=><option key={card.id} value={card.id}>{card.name}</option>)}</select></label>{sharedAnchor&&<label>Distance from this place<select disabled={jointLocked||!sharedAnchor} value={sharedRadius} onChange={event=>setSharedRadius(Number(event.target.value))}><option value={1500}>1.5 km</option><option value={3000}>3 km</option><option value={5000}>5 km</option></select></label>}<p>{jointLocked?'Unlock your shared-week stops before changing the search area. ':''}{sharedAnchor?'Distance is straight-line from this returned place. Places without coordinates are omitted. Check travel time and venue availability.':'Choose a returned place to narrow the list by distance. City and category requirements still apply.'}</p>{!sharedCards.length&&<p role="status">{sharedAnchor?'No returned shared place fits this area. Choose a wider distance or another starting place.':'No verified shared place was returned for these categories and requirements. Try another category or change a requirement.'}</p>}</div></details>
               <div className="together-categories">
                 {selectedSections.map(category=>{
                   const cards=sharedCards.filter(card=>card.section===category).slice(0,3);
@@ -477,7 +454,7 @@ export default memo(function TasteIntelligence({
                     <ResultMetrics card={card} />
                     <a href={isPlaceSection(card.section) ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([card.name,card.address,passport.city].filter(Boolean).join(", "))}` : `https://www.google.com/search?q=${encodeURIComponent(card.name + " " + card.section)}`} target="_blank" rel="noopener noreferrer">{isPlaceSection(card.section) ? "Check location and availability ↗" : "Learn about this discovery ↗"}</a>
                     <details>
-                      <summary>Why this works together</summary>
+                      <summary>Returned taste evidence</summary>
                       <WhyEvidence card={card} />
                     </details>
                   </article>
@@ -485,6 +462,33 @@ export default memo(function TasteIntelligence({
                   </div></section>;
                 })}
               </div>
+              <details className="common-ground-more"><summary>Why these choices connect your tastes</summary><CommonGroundThemes comparison={together.comparison} cards={sharedCards} you={passport.selected} partner={together.partnerSignals??[]}/></details>
+              {(()=>{const first=passport.selected[0]?.name??'your taste',second=together.partner?.[0]??'their taste';const hangout=sharedHangout(sharedCards,together.comparison);return <div className="shared-hangout">
+                <h4>One place to start together</h4>{hangout?<><strong>{hangout.card.name}</strong><p>{hangout.card.address??`Returned place in ${passport.city}`}</p><p>{hangout.exactTheme?'An exact returned shared theme appears on this place.':'This place came from the shared-interest search; no individual shared theme was returned on its listing.'}</p></>:<p>No verified place was returned for these interests. Try another category or taste.</p>}
+                <details className="common-ground-more"><summary>Three conversation starters</summary><ol>{commonGroundStarters(together.comparison,first,second).map(starter=><li key={starter}>{starter}</li>)}</ol></details>
+              </div>;})()}
+              {together.exchange&&<section className="taste-exchange" aria-label="One discovery to show each other"><span className="micro-label">BEYOND THE OVERLAP</span><h4>Show each other something new</h4><p>Each idea comes from a separate confirmed-interest search. These are introductions to try, not exclusive preferences; both searches may overlap. A personal theme is shown only when it also appears on the returned listing.</p><div className="taste-exchange-grid">{together.exchange.map(item=><article key={item.person}><small>{item.person==='you'?'Your pick to introduce':'Their pick to introduce'}</small>{item.card?<><strong>{item.card.name}</strong><p>{item.card.address??`Returned in ${passport.city}`}</p><span>{item.theme?`A returned personal-profile theme: ${item.theme}`:'From this person’s confirmed cultural interests.'}</span></>:<p>{item.theme?`No verified place was returned for “${item.theme}” in this category.`:'No distinct personal introduction was available in the returned places.'}</p>}</article>)}</div></section>}
+              <details className="common-ground-week"><summary>Plan a first week together</summary>
+              <p className="helper">Week coverage uses all validated places returned by each person’s searches and the joint searches—not just the preview cards. Missing categories remain open; select Food, Coffee & cafés and Places & culture before comparing for a fuller local week.</p>
+              <FirstWeek key={`${together.comparison.recordedAt}:${sharedAnchor?.id??'all'}:${sharedRadius}`} passport={passport} onLocksChange={setJointLocked} roots={{
+                you:nearbySharedPlaces(together.exchange?.filter(item=>item.person==='you').flatMap(item=>item.cards??(item.card?[item.card]:[]))??[],sharedAnchor,sharedRadius),
+                partner:nearbySharedPlaces(together.exchange?.filter(item=>item.person==='them').flatMap(item=>item.cards??(item.card?[item.card]:[]))??[],sharedAnchor,sharedRadius),
+                both:sharedCards,
+              }}/></details>
+              <p role="status">{together.notice}</p>{Boolean(together.failedSections?.length)&&<p role="status">Some searches could not finish: {together.failedSections!.map(sectionLabel).join(", ")}. Other returned choices are preserved; compare again to retry.</p>}
+              <details className="together-differences"><summary>See each person’s distinct tastes</summary>
+                <p>
+                  More your taste:{" "}
+                  {together.comparison.aOnly.map((t) => t.name).join(", ") ||
+                    "No separate themes available"}
+                </p>
+                <p>
+                  More their taste:{" "}
+                  {together.comparison.bOnly.map((t) => t.name).join(", ") ||
+                    "No separate themes available"}
+                </p>
+              </details>
+
             </section>
           )}
           {loading && <p className="together-loading" role="status">Finding connections between both sets of interests…</p>}

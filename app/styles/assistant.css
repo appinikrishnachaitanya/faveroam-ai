@@ -181,3 +181,5 @@ html { scrollbar-gutter: stable; }
 .chat-progress { display: flex; align-items: center; gap: 12px; padding: 12px 16px; margin-bottom: 16px; border-radius: 12px; background: var(--ui-tint); color: var(--ui-ink); }
 .chat-progress > span { letter-spacing: 3px; font-size: 20px; }
 .chat-progress > p { font-size: 13px; line-height: 1.5; }
+
+.concierge-drawer .chat-stop-notice { margin: 0; padding: 10px 16px; font-size: 13px; line-height: 1.5; color: var(--ui-ink); background: var(--ui-tint); }

@@ -1,6 +1,6 @@
 "use client";
 import { Icon } from "./passport";
-import { memo, useState, useEffect } from "react";
+import { memo, useState, useEffect, useMemo } from "react";
 import type { Card } from "../../src/passport/model";
 import type { Passport } from "../../src/workspace/state";
 import {
@@ -8,6 +8,7 @@ import {
   dayOutText,
   stopDistance,
   nearbyOutingOptions,
+  suggestedOutingChoice,
   outingActivities,
   activityMatches,
 } from "../../src/passport/day-out";
@@ -44,7 +45,7 @@ export default memo(function DayOutPlan({
   const [activities, setActivities] = useState<string[]>(()=>requestOrder?.length ? requestOrder : ["Coffee","Culture","Eat"].filter(id=>dayOutOptions(passport.cards,passport.city).some(c=>activityMatches(c,id))));
   const orderKey=requestOrder?.join(',') ?? '';
   useEffect(()=>{if(orderKey)setActivities(orderKey.split(','));},[orderKey]);
-  const options = dayOutOptions(passport.cards, passport.city);
+  const options = useMemo(()=>dayOutOptions(passport.cards, passport.city),[passport.cards,passport.city]);
   useEffect(()=>{
     if(!editPlan || editPlan.plan.city!==passport.city)return;
     const plan=editPlan.plan;
@@ -64,13 +65,14 @@ export default memo(function DayOutPlan({
       : "Your saved plan is open. Change its stops or times, then update it for this date.");
   },[editPlan?.nonce]);
   const editingSameDate=editPlan?.plan.city===passport.city && editPlan.plan.scheduled_date===date;
+  const foodAnchor=activities.includes("Eat") ? options.find(card=>card.id===choices.Eat) ?? options.find(card=>activityMatches(card,"Eat")) : undefined;
   let previousStop:Card | undefined;
   const stops = activities.map(id => ({ ...outingActivities.find(a => a.id === id)!, id })).map((stop) => {
-    const pool = nearbyOutingOptions(options.filter((card) => activityMatches(card, stop.id)),previousStop);
+    const pool = nearbyOutingOptions(options.filter((card) => activityMatches(card, stop.id)),previousStop??foodAnchor);
     // A choice removed by refinement requires explicit reselection.
     const selected = choices[stop.id]
       ? pool.find((card) => card.id === choices[stop.id])
-      : pool[0];
+      : suggestedOutingChoice(pool,previousStop??foodAnchor);
     const chosen=omitted[stop.id] ? undefined : selected;
     const distance=previousStop && chosen ? stopDistance(previousStop,chosen) : undefined;
     if(chosen)previousStop=chosen;
@@ -113,11 +115,11 @@ export default memo(function DayOutPlan({
     let previous: Card | undefined;
     for (const id of activities) {
       if (omitted[id]) continue;
-      const chosen = nearbyOutingOptions(options.filter(card=>activityMatches(card,id)),previous)[0];
+      const chosen = suggestedOutingChoice(options.filter(card=>activityMatches(card,id)),previous??foodAnchor);
       if (chosen) { next[id]=chosen.id; previous=chosen; }
     }
     setChoices(next);
-    setStatus("Venues reselected for this order from your current discoveries. Check travel times and availability.");
+    setStatus("Nearby venues reselected for this order. Stops without a verified option within 3 km remain open. Check travel times and availability.");
   }
 
   const dateError=planDateError(passport.city,date);
@@ -190,7 +192,7 @@ export default memo(function DayOutPlan({
         <h2>Make a day of it.</h2><p>Your places, your pace. Bring a few favorites together into a plan.</p></div><img className="day-out-illustration" src="/illustrations/day-out-route.svg" width="154" height="112" alt="" aria-hidden="true" loading="lazy"/></header>
         <div className="outing-progress" aria-label="Your plan at a glance"><span><Icon name="pin" size={16}/>{passport.city}</span><span>{selected.length}/{activities.length} stops chosen</span><span>{date ? new Date(`${date}T12:00:00Z`).toLocaleDateString(undefined,{month:"short",day:"numeric",timeZone:"UTC"}) : "Choose a date"}</span></div>
         {selected.length < activities.length && <p role="status">{activities.length-selected.length} stops still need a place. Choose an option below, or leave them open.</p>}
-        <p>Swap a stop or change the order. Your selected venues stay put.</p>
+        <p>Swap a stop or change the order. Your selected venues stay put. Automatic choices prefer places within 3 km straight-line of the food stop or previous stop; you can choose farther places yourself.</p>
         <div className="plan-schedule">
           <label htmlFor="plan-date">
             When are you going?

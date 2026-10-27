@@ -1,5 +1,5 @@
 "use client";
-import {memo,useEffect,useState} from 'react';
+import {memo,useEffect,useMemo,useState} from 'react';
 import type {Passport} from '../../src/workspace/state';
 import {activityMatches,dayOutOptions,outingActivities} from '../../src/passport/day-out';
 import {cityDate,cityTimeZone} from '../../src/account/plans';
@@ -17,7 +17,7 @@ export default memo(function FirstWeek({passport,roots,onLocksChange,signedIn=fa
  const [saving,setSaving]=useState(false);
  const [weekId,setWeekId]=useState<string>();
  const [editingSavedWeek,setEditingSavedWeek]=useState(false);
- const options=dayOutOptions(roots?Object.values(roots).flat():passport.cards,passport.city);
+ const options=useMemo(()=>dayOutOptions(roots?Object.values(roots).flat():passport.cards,passport.city),[roots,passport.cards,passport.city]);
  const chosen=new Set(days?.flatMap(day=>day.stops.flatMap(stop=>stop.card?.id??[]))??[]);
  function editStop(dayIndex:number,stopIndex:number,patch:Parameters<typeof updateWeekStop>[3]){
    if(!days)return;

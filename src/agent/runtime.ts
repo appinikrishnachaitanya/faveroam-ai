@@ -495,7 +495,12 @@ export async function discoverSection(
   const eligible = avoidMainstream ? mixed.filter(card=>!knownChain(card)) : mixed;
   if (avoidMainstream && eligible.length < mixed.length)
     state.notices.push(`Excluded ${mixed.length-eligible.length} known chain listings from ${section}. Independent ownership of remaining venues is not verified.`);
-  const cards = rankDiverseChoices(diversifyCards(eligible, section), section);
+  // Enforce a price ceiling locally even if the provider ignores a filter.
+  // Unknown prices cannot establish affordability.
+  const affordable = type === "place" && preferences.priceMax !== undefined && preferences.priceMax < 4
+    ? eligible.filter(card => typeof card.intelligence?.commercial?.priceLevel === "number" && card.intelligence.commercial.priceLevel <= preferences.priceMax!)
+    : eligible;
+  const cards = rankDiverseChoices(diversifyCards(affordable, section), section);
   debugEvent("discovery.completed", { section, mode, count: cards.length });
   return cards;
 }

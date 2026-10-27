@@ -36,3 +36,11 @@ test('shared comparison themes are soft signals and never replace explicit cuisi
  const next=jointProfileState(state,[{id:'b',name:'B',types:['urn:entity:artist'],detail:''}],comparison,'Eat');
  assert.deepEqual(next.categoryTags!.Eat,state.categoryTags!.Eat);assert.deepEqual(next.queryPreferences!.Eat!.inspirationTags,['urn:tag:genre:music:jazz']);assert.equal(next.queryPreferences!.Eat!.locationPoint,'-0.1,51.5');assert.equal(next.selected.length,2);assert.equal(state.selected.length,1);
 });
+
+test('introductions choose different returned venues and disclose an exhausted pool',async()=>{
+ const {distinctIntroductions}=await import('../src/passport/common-ground.ts');
+ const a=place('same'),b=place('different');
+ const profiles=distinctIntroductions([{cards:[a,b]},{cards:[a,b]}]);
+ assert.equal(profiles[0].card?.id,'same');assert.equal(profiles[1].card?.id,'different');
+ assert.equal(distinctIntroductions([{cards:[a]},{cards:[a]}])[1].card,undefined);
+});
