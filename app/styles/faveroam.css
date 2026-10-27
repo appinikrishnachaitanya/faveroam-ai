@@ -145,3 +145,24 @@ body,.progressive-app,.progressive-app button,.progressive-app input,.progressiv
 .progressive-app .passport-cover .cover-connection:hover { color:#17243b; background:#f3cc8b; border-color:#b9853d; }
 .progressive-app .passport-cover .cover-stamp { background:#fffefa; color:#17243b; border-color:#bdc6cb; }
 .progressive-app .passport-cover .cover-stamp :is(strong,span) { color:#17243b; }
+
+/* Original city artwork frames the journey while all copy remains selectable HTML. */
+.progressive-app .move-onboarding { grid-template-columns:minmax(0,1fr); gap:24px; }
+.progressive-app .move-onboarding .landing-city-hero { position:relative; isolation:isolate; min-height:455px; margin:0; padding:clamp(28px,4vw,54px); overflow:hidden; border:1px solid #e8dfce; border-radius:24px; background:#faf7f0; }
+.progressive-app .landing-city-hero::before { content:""; position:absolute; inset:0; z-index:-1; background:linear-gradient(90deg,#faf7f0 0%,#faf7f0 31%,#faf7f0e8 43%,transparent 68%); pointer-events:none; }
+.progressive-app .landing-city-hero > :not(.onboarding-story) { position:relative; z-index:1; max-width:48%; }
+.progressive-app .landing-city-hero > p { line-height:1.6; }
+.progressive-app .landing-city-hero .onboarding-story { position:absolute; inset:0; z-index:-2; margin:0; padding:0; border:0; border-radius:0; background:none; }
+.progressive-app .landing-city-hero .journey-illustration { display:block; width:100%; max-width:none; height:100%; max-height:none; margin:0; object-fit:cover; object-position:center; }
+.progressive-app .landing-city-hero .onboarding-story ul { display:none; }
+.progressive-app .move-onboarding .move-form { width:100%; max-width:960px; margin-inline:auto; }
+.progressive-app .passport-cover .cover-art { transform:none; overflow:hidden; border-radius:18px; }
+.progressive-app .passport-cover .cover-illustration { display:block; width:100%; height:100%; min-height:240px; max-height:320px; object-fit:cover; object-position:78% center; }
+@media(max-width:800px) {
+  .progressive-app .move-onboarding .landing-city-hero { min-height:0; padding:225px 20px 24px; }
+  .progressive-app .landing-city-hero::before { background:linear-gradient(180deg,transparent 0 165px,#faf7f0 215px); }
+  .progressive-app .landing-city-hero .onboarding-story { bottom:auto; height:230px; }
+  .progressive-app .landing-city-hero .journey-illustration { object-position:right center; }
+  .progressive-app .landing-city-hero > :not(.onboarding-story) { max-width:none; }
+  .progressive-app .landing-city-hero .landing-actions { margin-bottom:0; }
+}
