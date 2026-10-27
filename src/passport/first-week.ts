@@ -29,12 +29,19 @@ export function updateWeekStop(days:WeekDay[],dayIndex:number,stopIndex:number,p
 }
 export function addCalendarDays(date:string,offset:number){if(!/^\d{4}-\d{2}-\d{2}$/.test(date))throw Error('Choose a valid date.');const value=new Date(`${date}T12:00:00Z`);if(Number.isNaN(value.getTime())||value.toISOString().slice(0,10)!==date)throw Error('Choose a valid date.');value.setUTCDate(value.getUTCDate()+offset);return value.toISOString().slice(0,10);}
 /** Uses only current validated city places; gaps remain explicit. */
-export function firstWeek(cards:Card[],city:string,startDate:string,roots?:WeekRoots):WeekDay[]{
- const available=dayOutOptions(cards,city),used=new Set<string>();
+export function firstWeek(cards:Card[],city:string,startDate:string,roots?:WeekRoots,validatedOptions?:Card[]):WeekDay[]{
+ const available=validatedOptions??dayOutOptions(cards,city),used=new Set<string>();
+ // Each audience pool is stable for the whole itinerary. Derive it once rather
+ // than rescanning and revalidating the same cards for every day.
+ const audiencePools=roots?{
+  you:dayOutOptions(roots.you,city),
+  partner:dayOutOptions(roots.partner,city),
+  both:dayOutOptions(roots.both,city),
+ }:undefined;
  const audiences:WeekAudience[]=['you','both','partner','both','you','partner','both'];
  return days.map(([title,activities],dayIndex)=>({title,date:addCalendarDays(startDate,dayIndex),stops:activities.map((activity,stopIndex)=>{
    const audience=roots?audiences[dayIndex]:undefined;
-   const pool=audience&&roots?dayOutOptions(roots[audience],city):available;
+   const pool=audience&&audiencePools?audiencePools[audience]:available;
    const card=pool.find(option=>!used.has(option.id)&&activityMatches(option,activity));
    if(card)used.add(card.id);
    return {activity,card,time:['10:00','14:00','18:00'][stopIndex],...(audience?{audience}:{})};

@@ -186,6 +186,7 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
   const [workspaceView, setWorkspaceView] = useState<
     "discover" | "plan" | "preferences" | "together" | "connections" | "shares"
   >("discover");
+  const [vibeDialOpen,setVibeDialOpen]=useState(false);
   const [accountSignedIn, setAccountSignedIn] = useState(false);
   const [accountFirstName, setAccountFirstName] = useState("");
   const [savePlanRequest, setSavePlanRequest] = useState(0);
@@ -782,7 +783,8 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
   const stableFeedback = useCallback((id:string,value:Feedback)=>feedbackHandler.current(id,value),[]);
   const visibleResult = useMemo(()=>result?{...result,cards:result.cards.filter(card=>!result.session?.hiddenCategories.includes(card.section))}:undefined,[result]);
   const mappedPlaceCount = useMemo(()=>mappedPlaces(visibleResult?.cards??[]).length,[visibleResult]);
-  const plannableIds=useMemo(()=>new Set(result?dayOutOptions(result.cards,result.city).map(card=>card.id):[]),[result]);
+  const plannableCards=useMemo(()=>result?dayOutOptions(result.cards,result.city):[],[result]);
+  const plannableIds=useMemo(()=>new Set(plannableCards.map(card=>card.id)),[plannableCards]);
   const placeClusters=useMemo(()=>clusterPlaces(visibleResult?.cards??[]),[visibleResult]);
   const activeCluster=placeClusters.find(cluster=>cluster.id===selectedCluster);
   const clusteredResult=useMemo(()=>visibleResult&&activeCluster?{...visibleResult,cards:activeCluster.cards}:visibleResult,[visibleResult,activeCluster]);
@@ -817,7 +819,7 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
   },[]);
   const openAssistantFromDiscover=useCallback((request?:string)=>{if(request)setComposer(request);setAssistantTab('ask');setAssistantOpen(true);},[]);
   const shareFromDiscover=useCallback(()=>stableSelectWorkspaceView('shares'),[stableSelectWorkspaceView]);
-  const openVibeDial=useCallback(()=>{const dial=document.querySelector<HTMLElement>('.vibe-dial');dial?.setAttribute('open','');dial?.scrollIntoView({behavior:'smooth',block:'center'});},[]);
+  const openVibeDial=useCallback(()=>{setShowSaved(false);setWorkspaceView('discover');setVisitedViews(current=>new Set([...current,'discover']));setVibeDialOpen(true);requestAnimationFrame(()=>document.querySelector<HTMLElement>('.vibe-dial')?.scrollIntoView({behavior:'smooth',block:'center'}));},[]);
   const openAssistant=useCallback(()=>setAssistantOpen(true),[]);
   const navigateWorkspace=useCallback((destination:'discover'|'saved'|'plan'|'preferences'|'together'|'connections'|'shares')=>{
     setShowSaved(destination==='saved');
@@ -912,8 +914,8 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
             FaveRoam
           </span>
         </a>
-        {accountSignedIn&&<span className="header-greeting" aria-label={accountFirstName?"Signed in as "+accountFirstName:"Signed in"}>{accountFirstName?"Hi, "+accountFirstName:"Welcome back"}</span>}
         <nav className="header-controls" aria-label="Passport actions">
+          {accountSignedIn&&<span className="header-greeting" aria-label={accountFirstName?"Signed in as "+accountFirstName:"Signed in"}>{accountFirstName?"Hi, "+accountFirstName:"Welcome back"}</span>}
           {result && (
             <div className="topbar-actions">
               <span className="current-city">
@@ -1079,7 +1081,6 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
             >
               {visitedViews.has("discover") && <>
               {!showSaved && <DiscoveryConcierge city={result.city} firstName={accountSignedIn?accountFirstName:undefined} busy={busy} onAsk={openAssistantFromDiscover} onNavigate={stableSelectWorkspaceView} onShare={shareFromDiscover} onVibe={openVibeDial}/>}
-              {!showSaved && <VibeDial key={`vibe:${result.agent?.sessionId??result.city}`} passport={result} busy={busy} onApply={stableRefine}/>}
               {result.session && !showSaved && (
                 <details className="vibe-tuning-disclosure familiarity-disclosure"><summary>Fine-tune discoveries <span>Optional · familiar, balanced or explore</span></summary><FamiliarityControl
                   session={result.session}
@@ -1087,6 +1088,7 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
                   onChange={(input) => {setShowSaved(false);setWorkspaceView("discover");void refine(input);}}
                 /></details>
               )}
+              {!showSaved&&<VibeDial key={`vibe:${result.agent?.sessionId??result.city}`} passport={result} busy={busy} open={vibeDialOpen} onClose={()=>setVibeDialOpen(false)} onApply={stableRefine}/>}
               </>}
             </div>
             {workspaceView === "discover" && !showSaved && missingSections.length > 0 && (
@@ -1131,7 +1133,6 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
                     <button className="quiet-button map-toggle" type="button" aria-expanded={showMap} onClick={()=>setShowMap(value=>!value)}>{showMap?'Collapse map':'Explore map'} <span aria-hidden="true">{showMap?'−':'↗'}</span></button>
                   </div>}
                   {visibleResult&&mappedPlaceCount>0&&<div hidden={!showMap}><PassportMap cards={visibleResult.cards} cartoKey={cartoKey} active={workspaceView==='discover'&&!showSaved&&showMap} selectedCluster={activeCluster?.id} onClusterSelect={setSelectedCluster} onSelect={openMappedCard} onPlanFrom={planFromMap} plannableIds={plannableIds}/></div>}
-                  {activeCluster&&<div className="active-area-banner" role="status"><p>Showing {activeCluster.cards.length} returned places around {activeCluster.anchor.name}.</p><button type="button" className="quiet-button" onClick={()=>setSelectedCluster(undefined)}>Show all discoveries</button></div>}
                   {visibleResult&&<PassportSections disabled={busy} result={clusteredResult!} feedback={feedback} onFeedback={stableFeedback} updates={updates} updating={updating}/>}
                 </div>
             </div>
@@ -1154,7 +1155,7 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
                 saveRequest={savePlanRequest}
                 onSaveRequestHandled={planSaveHandled}
               />}</div>
-              <div hidden={planMode!=='week'}>{visitedPlanModes.has('week')&&<FirstWeek key={`first-week:${result.session?.id??result.city}`} passport={result} cartoKey={cartoKey} signedIn={accountSignedIn} editWeek={editingFirstWeek} onEditWeekHandled={editWeekHandled}/>}</div>
+              <div hidden={planMode!=='week'}>{visitedPlanModes.has('week')&&<FirstWeek key={`first-week:${result.session?.id??result.city}`} passport={result} options={plannableCards} cartoKey={cartoKey} signedIn={accountSignedIn} editWeek={editingFirstWeek} onEditWeekHandled={editWeekHandled}/>}</div>
               </>}
             </div>
             <div

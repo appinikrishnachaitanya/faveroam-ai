@@ -163,6 +163,12 @@
 .near-me-choice { display:grid; gap:5px; min-width:0; padding:12px; border:1px solid var(--ui-border); border-radius:10px; background:#fffdf6; color:var(--ui-ink); text-align:left; }
 .near-me-choice span,.near-me-choice small { color:var(--ui-muted); }
 .rituals-panel { margin:20px 0 30px; padding:clamp(16px,3vw,28px); border:1px solid var(--ui-border); border-radius:22px; background:var(--ui-surface); color:var(--ui-ink); text-align:start; }
+.rituals-heading { display:grid; justify-items:start; gap:6px; text-align:left; }
+.rituals-heading h2 { margin:2px 0 0; font-size:clamp(26px,3vw,34px); line-height:1.2; }
+.rituals-heading p { max-width:62ch; margin:4px 0 0; color:var(--ui-muted); font-size:15px; line-height:1.65; text-align:left; }
+.ritual-guest-note { display:grid; grid-template-columns:minmax(95px,auto) minmax(0,1fr); gap:8px 16px; align-items:start; margin-top:18px; padding:14px 16px; border:1px solid #d7dfcf; border-radius:12px; background:#f3f5ec; text-align:left; }
+.ritual-guest-note strong { color:#365441; font-size:13px; }
+.ritual-guest-note p { margin:0; max-width:70ch; color:#4e5d50; line-height:1.55; text-align:left; }
 .rituals-panel h2,.rituals-panel h3 { margin:10px 0; line-height:1.25; overflow-wrap:anywhere; }
 .rituals-panel p,.rituals-panel small { line-height:1.6; overflow-wrap:anywhere; }
 .ritual-form { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr)); gap:16px; margin:24px 0; padding:20px; border:1px solid var(--ui-border); border-radius:16px; }
@@ -174,6 +180,7 @@
 .ritual-list { display:grid; gap:16px; }
 .ritual-list article,.ritual-proposal { padding:20px; border:1px solid var(--ui-border); border-radius:16px; min-width:0; }
 .ritual-note { padding:14px; border-radius:10px; background:var(--ui-tint); color:var(--ui-ink); margin:14px 0; }
+@media(max-width:600px){.ritual-guest-note{grid-template-columns:1fr;gap:4px}.ritual-guest-note p{font-size:13px}}
 @media(max-width:480px){.ritual-actions>*{flex:1 1 100%;justify-content:center}.ritual-form{padding:14px}.ritual-list article{padding:16px}}
 
 .chat-broader-badge{display:inline-block;margin:0 0 .35rem;padding:.15rem .5rem;border-radius:999px;border:1px solid currentColor;font-size:.72rem;font-weight:600;opacity:.85}

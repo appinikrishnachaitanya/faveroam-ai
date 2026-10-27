@@ -36,8 +36,8 @@ export default memo(function Rituals({passport,signedIn,initialCardId,onInitialH
  }
  const update=(ritual:Ritual,status:Ritual['status'])=>void mutate({action:'update',id:ritual.id,updatedAt:ritual.updated_at,name:ritual.name,weekday:ritual.weekday,recurrence:ritual.recurrence,status});
  return <section className="rituals-panel" aria-labelledby="rituals-title">
-  <header><span className="micro-label">MAKE THIS CITY YOURS</span><h2 id="rituals-title">My Rituals</h2><p>Turn a returned discovery into something you come back to. A weekly coffee, a film night, or your next favourite place.</p></header>
-  {!signedIn&&<p className="ritual-note">You can prepare a ritual as a guest. Sign in to save it across visits. These schedules do not send notifications or book anything.</p>}
+  <header className="rituals-heading"><span className="micro-label">MAKE THIS CITY YOURS</span><h2 id="rituals-title">My Rituals</h2><p>Turn a place you’ve saved into a regular part of your week—like a coffee stop or a film night.</p></header>
+  {!signedIn&&<aside className="ritual-guest-note"><strong>Guest mode</strong><p>You can set up a ritual now. Sign in to keep it across visits. Rituals don’t send reminders or make bookings.</p></aside>}
   <form className="ritual-form" onSubmit={e=>{e.preventDefault();void mutate({action:editing?'update':'create',...(editing?{id:editing.id,updatedAt:editing.updated_at,status:editing.status}:{sessionId:passport.agent?.sessionId,revision:passport.agent?.revision,cardId,status:'planned'}),name,weekday,recurrence});}}>
    <h3>{editing?'Edit your ritual':'Create a ritual'}</h3>
    {!editing&&<label>From My Vibe<select required value={cardId} disabled={busy||!choices.length} onChange={e=>setCardId(e.target.value)}><option value="">Choose a saved favorite</option>{[...new Set(choices.map(c=>c.section))].map(section=><optgroup key={section} label={sectionLabel(section)}>{choices.filter(c=>c.section===section).map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</optgroup>)}</select></label>}

@@ -1,6 +1,7 @@
 "use client";
 import {memo,useEffect,useMemo,useState} from 'react';
 import type {Passport} from '../../src/workspace/state';
+import type {Card} from '../../src/passport/model';
 import {activityMatches,dayOutOptions,outingActivities} from '../../src/passport/day-out';
 import {cityDate,cityTimeZone} from '../../src/account/plans';
 import {firstWeek,firstWeekIcs,updateWeekStop,type WeekDay,type WeekRoots} from '../../src/passport/first-week';
@@ -8,7 +9,7 @@ import PassportMap from './passport-map';
 import {accountRequest,showNotice} from '../../src/account/browser';
 import type {SavedFirstWeek} from '../../src/account/first-weeks';
 
-export default memo(function FirstWeek({passport,cartoKey='',roots,onLocksChange,signedIn=false,editWeek,onEditWeekHandled}:{passport:Passport;cartoKey?:string;roots?:WeekRoots;onLocksChange?:(locked:boolean)=>void;signedIn?:boolean;editWeek?:{week:SavedFirstWeek;nonce:number};onEditWeekHandled?:()=>void}){
+export default memo(function FirstWeek({passport,options:validatedOptions,cartoKey='',roots,onLocksChange,signedIn=false,editWeek,onEditWeekHandled}:{passport:Passport;options?:Card[];cartoKey?:string;roots?:WeekRoots;onLocksChange?:(locked:boolean)=>void;signedIn?:boolean;editWeek?:{week:SavedFirstWeek;nonce:number};onEditWeekHandled?:()=>void}){
  const [date,setDate]=useState(()=>cityDate(passport.city));
  const [days,setDays]=useState<WeekDay[]>();
  const [active,setActive]=useState(0);
@@ -17,8 +18,13 @@ export default memo(function FirstWeek({passport,cartoKey='',roots,onLocksChange
  const [saving,setSaving]=useState(false);
  const [weekId,setWeekId]=useState<string>();
  const [editingSavedWeek,setEditingSavedWeek]=useState(false);
- const options=useMemo(()=>dayOutOptions(roots?Object.values(roots).flat():passport.cards,passport.city),[roots,passport.cards,passport.city]);
- const chosen=new Set(days?.flatMap(day=>day.stops.flatMap(stop=>stop.card?.id??[]))??[]);
+ const options=useMemo(()=>validatedOptions??dayOutOptions(roots?Object.values(roots).flat():passport.cards,passport.city),[validatedOptions,roots,passport.cards,passport.city]);
+ const optionsByAudience=useMemo(()=>roots&&days?{
+   you:dayOutOptions(roots.you,passport.city),
+   partner:dayOutOptions(roots.partner,passport.city),
+   both:dayOutOptions(roots.both,passport.city),
+ }:undefined,[roots,passport.city,Boolean(days)]);
+ const chosen=useMemo(()=>new Set(days?.flatMap(day=>day.stops.flatMap(stop=>stop.card?.id??[]))??[]),[days]);
  function editStop(dayIndex:number,stopIndex:number,patch:Parameters<typeof updateWeekStop>[3]){
    if(!days)return;
    try { const updated=updateWeekStop(days,dayIndex,stopIndex,patch);setUndo(days);setDays(updated);setStatus('Your stop is updated. Other activities are unchanged.'); }
@@ -58,12 +64,12 @@ export default memo(function FirstWeek({passport,cartoKey='',roots,onLocksChange
    <header className="first-week-heading"><div><span className="micro-label">A USEFUL START IN A NEW CITY</span><h3 id="first-week-title">{roots?'Two Roots, One City':'Plan my first week'}</h3>
    <p>{roots?'A week with room for you, for them, and for both. Each place comes from the corresponding confirmed-profile search; it is a starting idea, not a promise of shared enjoyment.':'Seven editable days made from your returned places. Unfilled stops stay open when there isn’t a verified choice.'}</p></div><img src="/illustrations/first-week-route.svg" width="140" height="105" alt="" aria-hidden="true" loading="lazy" decoding="async"/></header>
    <div className="first-week-controls"><label>Start date <input type="date" disabled={hasLocks||saving} min={cityDate(passport.city)} value={date} onChange={event=>{setDate(event.target.value);setDays(undefined);setStatus('');}}/></label>
-     <button type="button" className="primary-button" disabled={hasLocks||saving||!options.length||!date||date<cityDate(passport.city)} onClick={()=>{try{setDays(firstWeek(passport.cards,passport.city,date,roots));if(!editingSavedWeek)setWeekId(undefined);setActive(0);setUndo(undefined);setStatus('');}catch{setStatus('Choose a valid start date before building your week.');}}}>{editingSavedWeek?'Rebuild this week':'Build my first week'}</button>{weekId&&<button type="button" className="quiet-button" disabled={saving} onClick={()=>{setWeekId(undefined);setEditingSavedWeek(false);setDate(cityDate(passport.city));setDays(undefined);setUndo(undefined);setStatus('Choose a date to build a separate First Week. Your saved week stays in Upcoming plans.');}}>Start a different week</button>}</div>
+     <button type="button" className="primary-button" disabled={hasLocks||saving||!options.length||!date||date<cityDate(passport.city)} onClick={()=>{try{setDays(firstWeek(passport.cards,passport.city,date,roots,options));if(!editingSavedWeek)setWeekId(undefined);setActive(0);setUndo(undefined);setStatus('');}catch{setStatus('Choose a valid start date before building your week.');}}}>{editingSavedWeek?'Rebuild this week':'Build my first week'}</button>{weekId&&<button type="button" className="quiet-button" disabled={saving} onClick={()=>{setWeekId(undefined);setEditingSavedWeek(false);setDate(cityDate(passport.city));setDays(undefined);setUndo(undefined);setStatus('Choose a date to build a separate First Week. Your saved week stays in Upcoming plans.');}}>Start a different week</button>}</div>
    {!options.length&&<p role="status">No verified local place is available in this Passport yet. Try Food, Coffee or Culture in Discover first.</p>}
    {status&&<p className="week-status" role="status">{status}</p>}
    {days&&<><div className="week-save-summary"><div><strong>Your week, ready to review</strong><p>{chosen.size} places across seven days. Open stops stay visible.</p></div>     <div className="first-week-actions">{roots?<p className="helper">Download this shared week here. To save a personal week to Upcoming plans, open First Week from your own Discover workspace.</p>:<button type="button" className="primary-button" disabled={saving||!passport.agent||!days.some(day=>day.stops.some(stop=>stop.card))} onClick={()=>void saveWeek()}>{saving?'Saving your week…':weekId?'Update saved week':'Save First Week'}</button>}<button type="button" className="quiet-button" onClick={download}>Download calendar (.ics)</button></div></div><div className="week-days" role="group" aria-label="First week days">{days.map((day,index)=><button key={day.date} type="button" aria-pressed={active===index} onClick={()=>setActive(index)}><strong>Day {index+1}</strong><span className="week-day-date">{new Date(`${day.date}T12:00:00Z`).toLocaleDateString(undefined,{month:"short",day:"numeric",timeZone:"UTC"})}</span><small>{day.title}</small></button>)}</div>
      <h4>{days[active].title} · {days[active].date}</h4><div className="week-stops">{days[active].stops.map((stop,index)=>{
-       const allowed=stop.audience&&roots?dayOutOptions(roots[stop.audience],passport.city):options;
+       const allowed=stop.audience&&optionsByAudience?optionsByAudience[stop.audience]:options;
        const available=stop.card&&!allowed.some(card=>card.id===stop.card!.id)?[stop.card,...allowed]:allowed;
        const alternatives=available.filter(card=>activityMatches(card,stop.activity)&&(!chosen.has(card.id)||card.id===stop.card?.id));
        return <div className="week-stop-editor" key={`${active}-${index}`}><span>{stop.audience?`${stop.audience==='you'?'For you':stop.audience==='partner'?'For them':'For both'} · `:''}{outingActivities.find(item=>item.id===stop.activity)?.label??stop.activity}</span>

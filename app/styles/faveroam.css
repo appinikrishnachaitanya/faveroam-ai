@@ -78,6 +78,7 @@ body,.progressive-app,.progressive-app button,.progressive-app input,.progressiv
 :root { --ui-ink:#17243b; --ui-muted:#526078; --ui-action:#17243b; --ui-action-hover:#273c59; --ui-surface:#fffefa; --ui-tint:#f5f3ed; --ui-border:#d8dee4; --ui-accent:#8b5707; }
 .app-shell { width:100%; max-width:none; margin:0; padding:0 clamp(14px,2.4vw,40px) 32px; }
 .progressive-app .move-onboarding { width:100%; max-width:none; padding-inline:clamp(0px,1vw,16px); }
+.progressive-app .taste-confirmation { width:100%; max-width:none; margin:0; }
 .progressive-app :is(.passport-sidebar,.discovery-concierge,.day-out-plan,.first-week-panel,.taste-analysis,.analysis-result,.intelligence-preferences,.together-reveal,.shared-story,.partner-interests,.together-differences,.area-choices article,.taste-theme-list button,.week-stop-editor,.upcoming-plans,.saved-plan) { color:var(--ui-ink); }
 .progressive-app :is(.passport-sidebar,.day-out-plan,.first-week-panel,.analysis-result,.intelligence-preferences,.together-reveal,.together-differences,.area-choices article,.week-stop-editor,.upcoming-plans,.saved-plan) :is(h2,h3,h4,p,small,label,summary,legend,span) { color:var(--ui-ink); }
 .progressive-app :is(.analysis-result,.intelligence-preferences,.together-reveal,.together-differences,.week-stop-editor,.saved-plan) :is(.helper,small,.micro-label) { color:var(--ui-muted); }
