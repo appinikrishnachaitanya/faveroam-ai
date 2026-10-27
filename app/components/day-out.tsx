@@ -24,6 +24,7 @@ export default memo(function DayOutPlan({
   onSaveRequestHandled,
   expanded,
   editPlan,
+  startFrom,
   onFindActivity,
 }: {
   passport: Passport;
@@ -33,6 +34,7 @@ export default memo(function DayOutPlan({
   onSaveRequestHandled?: () => void;
   expanded?: boolean;
   editPlan?: {plan:SavedPlan;nonce:number};
+  startFrom?: {cardId:string;sessionId?:string;nonce:number};
   onFindActivity?: (id:string)=>void;
 }) {
   const [choices, setChoices] = useState<Record<string, string>>({});
@@ -46,6 +48,22 @@ export default memo(function DayOutPlan({
   const orderKey=requestOrder?.join(',') ?? '';
   useEffect(()=>{if(orderKey)setActivities(orderKey.split(','));},[orderKey]);
   const options = useMemo(()=>dayOutOptions(passport.cards, passport.city),[passport.cards,passport.city]);
+  const [handledStartNonce,setHandledStartNonce]=useState<number>();
+  const startPending=Boolean(startFrom&&startFrom.sessionId===passport.session?.id&&startFrom.nonce!==handledStartNonce);
+  useEffect(()=>{
+    if(!startFrom||!startPending)return;
+    const card=options.find(option=>option.id===startFrom.cardId);
+    setHandledStartNonce(startFrom.nonce);
+    if(!card){setStatus('That place is no longer in your discoveries. Choose another place on the map.');return;}
+    const activity=['Cinema','Nightlife','Coffee','Eat','Culture'].find(id=>activityMatches(card,id));
+    if(!activity){setStatus('This place cannot be added to a day out. Choose another place on the map.');return;}
+    const extras=['Coffee','Culture','Eat'].filter(id=>id!==activity&&options.some(option=>activityMatches(option,id))).slice(0,2);
+    setActivities([activity,...extras]);
+    setChoices({[activity]:card.id});
+    setOmitted({});
+    setStopTimes({});
+    setStatus(`Starting with ${card.name}. You can add or swap stops below. Check routes, hours and availability before going.`);
+  },[startFrom?.nonce,options]);
   useEffect(()=>{
     if(!editPlan || editPlan.plan.city!==passport.city)return;
     const plan=editPlan.plan;
@@ -67,20 +85,22 @@ export default memo(function DayOutPlan({
   const editingSameDate=editPlan?.plan.city===passport.city && editPlan.plan.scheduled_date===date;
   const foodAnchor=activities.includes("Eat") ? options.find(card=>card.id===choices.Eat) ?? options.find(card=>activityMatches(card,"Eat")) : undefined;
   let previousStop:Card | undefined;
+  const usedDefaults=new Set<string>();
   const stops = activities.map(id => ({ ...outingActivities.find(a => a.id === id)!, id })).map((stop) => {
     const pool = nearbyOutingOptions(options.filter((card) => activityMatches(card, stop.id)),previousStop??foodAnchor);
     // A choice removed by refinement requires explicit reselection.
     const selected = choices[stop.id]
       ? pool.find((card) => card.id === choices[stop.id])
-      : suggestedOutingChoice(pool,previousStop??foodAnchor);
+      : suggestedOutingChoice(pool.filter(card=>!usedDefaults.has(card.id)),previousStop??foodAnchor);
     const chosen=omitted[stop.id] ? undefined : selected;
     const distance=previousStop && chosen ? stopDistance(previousStop,chosen) : undefined;
-    if(chosen)previousStop=chosen;
+    if(chosen){previousStop=chosen;usedDefaults.add(chosen.id);}
     return {...stop,pool,selected:chosen,distance};
   });
   // Pin every displayed default; sequence changes must never choose new venues.
   const displayedKey = stops.map(stop => `${stop.id}:${stop.selected?.id ?? ""}`).join("|");
   useEffect(() => {
+    if(startPending)return;
     setChoices(current => {
       const next = {...current};
       let changed = false;
@@ -90,7 +110,7 @@ export default memo(function DayOutPlan({
       }
       return changed ? next : current;
     });
-  }, [displayedKey]);
+  }, [displayedKey,startPending]);
   const selected = stops.flatMap((stop) =>
     stop.selected ? [stop.selected] : [],
   );
