@@ -16,6 +16,10 @@
 .together-reveal .together-two-profiles > div { padding: 10px 12px; background: var(--ui-tint); border: 0; border-radius: 10px; }
 .together-reveal .together-two-profiles p { margin: 4px 0 0; font-size: 14px; }
 .together-reveal .partner-interests { padding: 0; border: 0; background: transparent; gap: 12px; margin: 12px 0; }
+.together-reveal .partner-interests { grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),360px)); align-items:stretch; }
+.progressive-app .together-reveal .partner-interests label { display:grid; align-content:start; gap:8px; width:100%; max-width:none; min-width:0; min-height:140px; padding:14px; border:1px solid #d8dee4; border-radius:14px; background:#fffefa; box-shadow:none; }
+.progressive-app .together-reveal .partner-interests input { display:block; width:100%; min-width:0; min-height:48px; margin:0; border-radius:10px; }
+.progressive-app .together-reveal .partner-interests label .text-button { justify-self:start; min-height:32px; padding:0 4px; }
 .together-reveal .common-ground-setup form > button { margin: 0 8px 8px 0; min-height: 44px; }
 .together-reveal .shared-story { padding: 16px 0 8px; background: transparent; border: 0; }
 .together-reveal .shared-story h3 { margin: 6px 0; font-size: 24px; }
