@@ -63,6 +63,29 @@
 @container(max-width:520px){.first-week-controls .primary-button{width:100%;justify-self:stretch}}
 @media(max-width:600px){.discovery-welcome-actions .primary-button{white-space:nowrap}.discovery-welcome-actions .primary-button svg{display:none}.passport-workspace-content{padding-bottom:80px}}
 .progressive-app .discovery-welcome p { color:#47566b; }
+
+/* Each workspace area gets one restrained editorial scene; cards remain data-led. */
+.progressive-app :is(.vibe-intro,.analysis-intro,.outing-intro,.first-week-heading) .flow-scene {
+  display:block;
+  flex:0 0 clamp(128px,19vw,220px);
+  width:clamp(128px,19vw,220px);
+  height:clamp(104px,13vw,148px);
+  max-width:100%;
+  margin:0 0 0 auto;
+  object-fit:cover;
+  border-radius:14px;
+  border:1px solid #dfd9ca;
+  animation:none;
+}
+.progressive-app :is(.vibe-intro,.analysis-intro,.outing-intro,.first-week-heading) > div { min-width:0; }
+.progressive-app .intelligence-intro-mark { color:#f3b65c; background:#f3b65c20; border-color:#f3b65c80; }
+.progressive-app .intelligence-preferences .intelligence-modes button[aria-pressed="true"] :is(strong,small,span) { color:#fffefa; }
+.progressive-app .vibe-intro :is(h2,p) { color:#17243b; }
+@media(max-width:680px){
+  .progressive-app :is(.vibe-intro,.analysis-intro,.outing-intro) { flex-wrap:wrap; }
+  .progressive-app :is(.vibe-intro,.analysis-intro,.outing-intro,.first-week-heading) .flow-scene { flex:0 0 100%; width:100%; height:130px; margin:8px 0 0; }
+  .progressive-app .first-week-heading { flex-wrap:wrap; }
+}
 .two-profile-summary,.shared-theme-explanations { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr)); gap:12px; margin-block:16px; }
 .two-profile-summary p,.shared-theme-explanations article,.common-ground-evidence>article { padding:16px; border:1px solid var(--ui-border); border-radius:14px; background:var(--ui-surface); min-width:0; overflow-wrap:anywhere; line-height:1.6; }
 .two-profile-summary strong { display:block; margin-bottom:8px; }

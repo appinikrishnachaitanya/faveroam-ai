@@ -76,7 +76,7 @@ export default memo(function TasteAnalysis({passport,busy,onRefine}:{passport:Pa
     onRefine({discovery:{sections:['Eat'],preferences:{locationPoint:`POINT(${point.longitude} ${point.latitude})`,radius:1500}}});
   }
   return <section className="taste-analysis" aria-labelledby="analysis-title">
-    <div className="analysis-intro"><span className="analysis-emblem" aria-hidden="true"><Icon name="star" size={28}/></span><div><span className="micro-label">MAKE THE CITY FEEL MORE LIKE YOU</span><h2 id="analysis-title">Find your next direction.</h2><p>Turn what you love into a new direction. Find a theme, or pick a starting place and explore food nearby.</p></div><img className="insight-illustration" src="/illustrations/taste-threads.svg" width="160" height="110" alt="" aria-hidden="true" loading="lazy"/></div>
+    <div className="analysis-intro"><span className="analysis-emblem" aria-hidden="true"><Icon name="star" size={28}/></span><div><span className="micro-label">MAKE THE CITY FEEL MORE LIKE YOU</span><h2 id="analysis-title">Find your next direction.</h2><p>Turn what you love into a new direction. Find a theme, or pick a starting place and explore food nearby.</p></div><img className="insight-illustration flow-scene" src="/illustrations/faveroam-taste-insights.webp" width="960" height="640" alt="" aria-hidden="true" loading="lazy" decoding="async"/></div>
     <ol className="insight-steps" aria-label="How Taste Insights works"><li><span>01</span>Choose your tastes</li><li><span>02</span>Find a connection</li><li><span>03</span>Explore it in Discover</li></ol>
     <fieldset className="analysis-interest-picker" disabled={busy||Boolean(loading)}>
       <legend>Choose the interests to explore</legend>
