@@ -131,17 +131,20 @@ grant select, insert, update, delete on public.active_passport_sessions to servi
 -- Public links contain a deliberately limited snapshot, never editable sessions.
 create table public.share_links (
   token_hash text primary key,
+  public_token text not null,
   revoke_hash text not null,
   owner_session_hash text not null,
+  owner_user_id uuid not null references auth.users(id) on delete cascade,
   snapshot jsonb not null,
   created_at timestamptz not null default now(),
-  expires_at timestamptz not null
+  expires_at timestamptz not null,
+  revoked_at timestamptz
 );
-create index share_links_owner_expiry_idx on public.share_links(owner_session_hash,expires_at);
+create index share_links_owner_expiry_idx on public.share_links(owner_user_id,expires_at);
 create index share_links_expiry_idx on public.share_links(expires_at);
 alter table public.share_links enable row level security;
 revoke all on public.share_links from anon, authenticated;
-grant select, insert, delete on public.share_links to service_role;
+grant select, insert, update, delete on public.share_links to service_role;
 
 create table if not exists public.saved_rituals (
  id uuid primary key default gen_random_uuid(),

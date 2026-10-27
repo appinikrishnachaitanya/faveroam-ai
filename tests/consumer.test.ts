@@ -202,7 +202,6 @@ test("consumer cover and connection reveal use real query relationships rather t
   const cover = renderToStaticMarkup(
     createElement(PassportCover, {
       passport,
-      origin: "",
       onConnections: () => {},
     }),
   );

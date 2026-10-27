@@ -376,7 +376,7 @@ export function DiscoveryCard({
           onClick={async () => {if(saving)return;setSaving(true);try{await onFeedback(card.id,'like');}finally{setSaving(false);}}}
         >
           <Icon name="heart" size={14} />
-          {saving ? (feedback==='like'?'Removing…':'Saving…') : feedback==='like'?'Saved to My Vibe':'Save to My Vibe'}
+          {saving ? (feedback==='like'?'Saved to My Vibe':'Saving…') : feedback==='like'?'Saved to My Vibe':'Save to My Vibe'}
         </button>
         <button
           type="button"
@@ -389,7 +389,6 @@ export function DiscoveryCard({
           Not my vibe
         </button>
       </div>
-      {card.evidence?.source==='Qloo'&&card.evidence.result.id===card.id&&<button type="button" className="quiet-button ritual-card-action" disabled={disabled||saving} onClick={()=>window.dispatchEvent(new CustomEvent('faveroam:create-ritual',{detail:{id:card.id}}))}>Make a ritual</button>}
       {feedback && (
         <small className="feedback-note">
           {live

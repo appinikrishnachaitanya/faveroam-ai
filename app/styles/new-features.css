@@ -178,3 +178,38 @@
 
 .chat-broader-badge{display:inline-block;margin:0 0 .35rem;padding:.15rem .5rem;border-radius:999px;border:1px solid currentColor;font-size:.72rem;font-weight:600;opacity:.85}
 .chat-request-inputs{display:block;margin-top:.35rem;opacity:.85}
+
+/* Broad workspace: full available viewport with responsive breathing room. */
+.app-shell { width:100%; max-width:none; margin:0; padding:0 clamp(14px,2.4vw,40px) 32px; }
+.place-clusters { padding:clamp(18px,2.4vw,28px); background:linear-gradient(135deg,#fffefa,#f5f4eb); }
+.place-clusters-heading { max-width:72ch; }
+.place-clusters h3 { margin:5px 0 8px; color:var(--ui-ink); font-size:clamp(22px,2.4vw,29px); }
+.place-clusters-heading p { color:var(--ui-muted); line-height:1.6; }
+.cluster-option[aria-pressed=true] { border-color:#487451; background:#eff4e9; box-shadow:inset 0 0 0 1px #487451,0 7px 20px #173d2c10; }
+.all-discoveries-option { justify-content:center; min-height:190px; background:linear-gradient(145deg,#f4f1e3,#e8f0e6); }
+.all-discoveries-option strong,.area-cluster-option>strong { font-size:18px; }
+.all-discoveries-mark { display:grid; place-items:center; width:40px; height:40px; border-radius:13px; background:#fff8e5; color:#a36c25; font-size:22px; }
+.all-discoveries-option>span:not(.all-discoveries-mark),.area-cluster-option>span { color:var(--ui-muted); line-height:1.5; }
+.area-cluster-option { min-height:190px; background:linear-gradient(145deg,#fffefa,#f8f5ec); }
+.area-cluster-kicker { color:#8b6b39!important; font-size:10px; font-weight:800; letter-spacing:.12em; }
+.area-cluster-count { padding:4px 9px; border-radius:99px; background:#e9efe4; color:#31573d!important; font-size:12px; font-weight:750; }
+.share-management { width:100%; padding:clamp(20px,3vw,36px); border:1px solid var(--ui-border); border-radius:20px; background:var(--ui-surface); }
+.share-management header { margin-bottom:22px; }
+.share-management header h2 { margin:6px 0; font-size:clamp(26px,3vw,36px); }
+.share-management header p { max-width:70ch; color:var(--ui-muted); line-height:1.6; }
+.share-link-counts { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; margin:20px 0; }
+.share-link-counts article { display:grid; gap:5px; padding:18px; border:1px solid var(--ui-border); border-radius:14px; background:linear-gradient(140deg,#f4f4e9,#fffdf6); }
+.share-link-counts strong { color:var(--ui-ink); font-size:30px; }
+.share-link-counts span { color:var(--ui-muted); font-size:13px; }
+.share-management-table-wrap { overflow-x:auto; border:1px solid var(--ui-border); border-radius:14px; }
+.share-management-table { width:100%; border-collapse:collapse; text-align:left; }
+.share-management-table th,.share-management-table td { padding:13px 15px; border-bottom:1px solid #e5e6dc; }
+.share-management-table th { background:#f5f3e8; color:#425643; font-size:12px; letter-spacing:.06em; text-transform:uppercase; }
+.share-management-table tr:last-child td { border-bottom:0; }
+.share-link-status { display:inline-flex; padding:4px 9px; border-radius:99px; background:#e5f1e4; color:#285738; font-size:12px; font-weight:700; text-transform:capitalize; }
+.share-link-status.revoked,.share-link-status.expired { background:#f3e9de; color:#79563c; }
+.share-management-actions,.share-management-pagination>div { display:flex; align-items:center; flex-wrap:wrap; gap:8px; }
+.share-management-pagination { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-top:14px; color:var(--ui-muted); }
+.share-management-empty { padding:20px; border:1px dashed var(--ui-border); border-radius:14px; background:#fbfaf4; color:var(--ui-muted); }
+.share-management-message { padding:12px; border-radius:10px; background:#e8f1e6; color:#285738; }
+@media(max-width:600px){.app-shell{padding-inline:12px}.share-link-counts{grid-template-columns:1fr}.share-link-counts article{grid-template-columns:auto 1fr;align-items:center}.share-link-counts strong{font-size:24px}.share-management-table thead{display:none}.share-management-table,.share-management-table tbody,.share-management-table tr,.share-management-table td{display:block;width:100%;box-sizing:border-box}.share-management-table tr{padding:10px 12px;border-bottom:1px solid var(--ui-border)}.share-management-table td{display:grid;grid-template-columns:90px minmax(0,1fr);gap:8px;padding:7px 0;border:0}.share-management-table td::before{content:attr(data-label);color:var(--ui-muted);font-size:12px;font-weight:700}.share-management-pagination{align-items:stretch;flex-direction:column}.share-management-pagination>div button{flex:1}}

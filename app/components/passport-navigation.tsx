@@ -3,14 +3,15 @@
 import { memo, useEffect, useId, useRef, useState } from "react";
 import { FlowNavIcon } from "./flow-nav-icon";
 
-export type PassportDestination = "discover" | "saved" | "plan" | "preferences" | "together" | "connections";
+export type PassportDestination = "discover" | "saved" | "plan" | "preferences" | "together" | "connections" | "shares";
 const destinations: {id: PassportDestination; label: string}[] = [
   {id:"discover",label:"Discover"},
-  {id:"saved",label:"My places"},
+  {id:"saved",label:"My Places and Rituals"},
   {id:"plan",label:"First Week"},
   {id:"preferences",label:"Preferences"},
   {id:"together",label:"Common Ground"},
   {id:"connections",label:"Taste insights"},
+  {id:"shares",label:"Share my tastes"},
 ];
 
 function PassportNavigation({active,savedCount,onNavigate}:{

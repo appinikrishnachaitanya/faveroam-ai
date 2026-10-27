@@ -3,13 +3,14 @@
 import {memo} from 'react';
 import {Icon} from './passport';
 
-function DiscoveryConcierge({city,firstName,busy,onAsk,onNavigate,onShare}:{
+function DiscoveryConcierge({city,firstName,busy,onAsk,onNavigate,onShare,onVibe}:{
   city:string;
   firstName?:string;
   busy:boolean;
   onAsk:(request?:string)=>void;
   onNavigate:(view:'plan'|'together')=>void;
   onShare:()=>void;
+  onVibe:()=>void;
 }) {
   return <section className="discovery-concierge discovery-welcome" aria-labelledby="discovery-concierge-title">
     <div className="discovery-concierge-copy">
@@ -25,6 +26,7 @@ function DiscoveryConcierge({city,firstName,busy,onAsk,onNavigate,onShare}:{
       <button type="button" onClick={()=>onNavigate('plan')}><Icon name="pin" size={18}/><span>Plan my first week</span></button>
       <button type="button" onClick={()=>onNavigate('together')}><Icon name="star" size={18}/><span>Explore together</span></button>
       <button type="button" onClick={onShare}><Icon name="arrow" size={18}/><span>Share my tastes</span></button>
+      <button type="button" onClick={onVibe}><Icon name="sparkles" size={18}/><span>Vibe Dial</span></button>
     </div>
   </section>;
 }

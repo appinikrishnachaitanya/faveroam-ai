@@ -619,7 +619,7 @@ function AccountControl({
                 )}
               </>
             ) : (
-              <form onSubmit={submit}>
+              <form className={tab==="register"?"account-register-form":undefined} onSubmit={submit}>
                 {(tab === "login" || tab === "register") && <div className="account-tabs" role="group" aria-label="Account access">
                   {(["login", "register"] as const).map((value) => (
                     <button

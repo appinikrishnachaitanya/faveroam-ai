@@ -9,11 +9,9 @@ import { DiscoveryCard, Icon } from "./passport";
 import type { Feedback } from "./passport";
 export const PassportCover = memo(function PassportCover({
   passport,
-  origin,
   onConnections,
 }: {
   passport: Passport;
-  origin: string;
   onConnections: () => void;
 }) {
   const count = passport.cards.filter(
@@ -23,11 +21,6 @@ export const PassportCover = memo(function PassportCover({
     <header className="passport-cover">
       <div className="cover-copy">
         <span className="micro-label">FROM WHAT YOU LOVE TO WHERE YOU BELONG.</span>
-        <div className="cover-journey">
-          <span>{origin || "Your interests"}</span>
-          <Icon name="arrow" size={16} />
-          <span>{passport.city}</span>
-        </div>
         <h1 id="passport-title">
           Your {passport.city}
           <br />

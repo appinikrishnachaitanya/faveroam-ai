@@ -61,6 +61,7 @@ import Rituals from "./components/rituals";
 import PassportMap, {mappedPlaces} from './components/passport-map';
 import FirstWeek from './components/first-week';
 import ShareTasteCard from './components/share-taste-card';
+import ShareManagement from './components/share-management';
 import { rememberGuestPassport, restoreGuestPassport, clearGuestPassport } from "../src/workspace/guest-recovery";
 import { rememberActiveSession, restoreActiveSession, clearActiveSession, rememberSavedSession, restoreSavedSession, clearSavedSession } from "../src/workspace/active-session";
 import { accountRequest, showNotice } from "../src/account/browser";
@@ -183,7 +184,7 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
   },[result?.agent?.sessionId,result?.session?.id]);
   useEffect(()=>{if(result&&sharedPartnerTastes.length&&!sharedOfferShown.current){sharedOfferShown.current=true;setShowSaved(false);setWorkspaceView('together');}},[result,sharedPartnerTastes]);
   const [workspaceView, setWorkspaceView] = useState<
-    "discover" | "plan" | "preferences" | "together" | "connections"
+    "discover" | "plan" | "preferences" | "together" | "connections" | "shares"
   >("discover");
   const [accountSignedIn, setAccountSignedIn] = useState(false);
   const [accountFirstName, setAccountFirstName] = useState("");
@@ -588,6 +589,7 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
             .getElementById(`section-${reply.state.feedback.at(-1)?.section}`)
             ?.focus(),
         );
+      return true;
     } catch (e) {
       if (activeTurn.current !== controller) return;
       if (controller.signal.aborted) {
@@ -607,6 +609,7 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
       say(
         "Your discoveries are still here. You can try your request again or keep exploring.",
       );
+      return false;
     } finally {
       if (activeTurn.current === controller) {
         activeTurn.current = null;
@@ -755,15 +758,24 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
       if(generationRequest.current===controller)generationRequest.current=null;
     }
   }
-  function recordFeedback(id: string, value: Feedback) {
+  async function recordFeedback(id: string, value: Feedback) {
     if (busy) return;
     if (value === "dislike") {
       feedbackOpener.current = document.activeElement as HTMLElement;
       setRejectionId(id);
     } else
-      return refine({
-        feedback: { id, accepted: true, clear: feedback[id] === "like" },
-      });
+      {
+        const prior=result;
+        if(prior){
+          const nextFeedback={...feedback,[id]:feedback[id]==="like"?undefined:"like"};
+          const card=prior.cards.find(item=>item.id===id);
+          const saved=new Map((prior.session?.savedCards??[]).map(item=>[item.id,item]));
+          if(feedback[id]==="like")saved.delete(id);else if(card)saved.set(id,card);
+          setResult({...prior,session:prior.session?{...prior.session,feedback:[...prior.session.feedback.filter(item=>item.id!==id),...(nextFeedback[id]==="like"?[{id,section:card?.section??"Eat",accepted:true}]:[])],savedCards:[...saved.values()]}:prior.session});
+        }
+        const saved=await refine({feedback:{id,accepted:true,clear:feedback[id]==="like"}});
+        if(saved===false&&prior)setResult(prior);
+      }
   }
   const feedbackHandler = useRef(recordFeedback);
   useLayoutEffect(()=>{feedbackHandler.current=recordFeedback;});
@@ -785,7 +797,6 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
   const saveFromChat = useCallback((id:string)=>feedbackHandler.current(id,"like"),[]);
   const stableRefine = useCallback((input:AgentInput)=>{void panelActions.current.refine(input);},[]);
   const refineFromPanel = useCallback((input:AgentInput)=>{setShowSaved(false);panelActions.current.selectWorkspaceView('discover');void panelActions.current.refine(input);},[]);
-  useEffect(()=>{const handler=(event:Event)=>{const id=(event as CustomEvent<{id?:unknown}>).detail?.id;if(typeof id!=='string')return;setRitualCardId(id);setShowSaved(true);setVisitedViews(current=>new Set([...current,"saved"]));panelActions.current.selectWorkspaceView('discover');};window.addEventListener('faveroam:create-ritual',handler);return()=>window.removeEventListener('faveroam:create-ritual',handler);},[]);
   const stableSelectWorkspaceView=useCallback((next:typeof workspaceView)=>panelActions.current.selectWorkspaceView(next),[]);
   const openPreferences = useCallback(()=>panelActions.current.selectWorkspaceView('preferences'),[]);
   const planSaveHandled = useCallback(()=>setSavePlanRequest(0),[]);
@@ -805,9 +816,10 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
     setAdaptation('Your saved Passport is back. Refine a chapter for fresh suggestions.');
   },[]);
   const openAssistantFromDiscover=useCallback((request?:string)=>{if(request)setComposer(request);setAssistantTab('ask');setAssistantOpen(true);},[]);
-  const shareFromDiscover=useCallback(()=>document.getElementById('share-taste-title')?.scrollIntoView({behavior:'smooth',block:'center'}),[]);
+  const shareFromDiscover=useCallback(()=>stableSelectWorkspaceView('shares'),[stableSelectWorkspaceView]);
+  const openVibeDial=useCallback(()=>{const dial=document.querySelector<HTMLElement>('.vibe-dial');dial?.setAttribute('open','');dial?.scrollIntoView({behavior:'smooth',block:'center'});},[]);
   const openAssistant=useCallback(()=>setAssistantOpen(true),[]);
-  const navigateWorkspace=useCallback((destination:'discover'|'saved'|'plan'|'preferences'|'together'|'connections')=>{
+  const navigateWorkspace=useCallback((destination:'discover'|'saved'|'plan'|'preferences'|'together'|'connections'|'shares')=>{
     setShowSaved(destination==='saved');
     if(destination==='saved')setVisitedViews(current=>new Set([...current,'saved']));
     stableSelectWorkspaceView(destination==='saved'?'discover':destination);
@@ -900,19 +912,8 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
             FaveRoam
           </span>
         </a>
-        <span className="topbar-caption">From what you love to where you belong.</span>
+        {accountSignedIn&&<span className="header-greeting" aria-label={accountFirstName?"Signed in as "+accountFirstName:"Signed in"}>{accountFirstName?"Hi, "+accountFirstName:"Welcome back"}</span>}
         <nav className="header-controls" aria-label="Passport actions">
-          {accountSignedIn && <span className="header-greeting" aria-label={accountFirstName ? `Signed in as ${accountFirstName}` : "Signed in"}>{accountFirstName ? `Hi, ${accountFirstName}` : "Welcome back"}</span>}
-          <AccountControl
-            onAccountChange={accountChangedHandler}
-            onPassportSaved={passportSavedHandler}
-            onEditPlan={editPlanHandler}
-            onEditWeek={editWeekHandler}
-            passport={result}
-            disabled={busy}
-            onSignOut={stableFresh}
-            onRestore={restoreAccountPassport}
-          />
           {result && (
             <div className="topbar-actions">
               <span className="current-city">
@@ -933,6 +934,16 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
               </button>
             </div>
           )}
+          <AccountControl
+            onAccountChange={accountChangedHandler}
+            onPassportSaved={passportSavedHandler}
+            onEditPlan={editPlanHandler}
+            onEditWeek={editWeekHandler}
+            passport={result}
+            disabled={busy}
+            onSignOut={stableFresh}
+            onRestore={restoreAccountPassport}
+          />
         </nav>
       </header>
       <div className="progressive-content" id="passport-content" tabIndex={-1}>
@@ -1023,7 +1034,6 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
           >
             <PassportCover
               passport={result}
-              origin={origin}
               onConnections={openConnections}
             />
             <div className="passport-workspace">
@@ -1068,7 +1078,7 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
               hidden={workspaceView !== "discover"}
             >
               {visitedViews.has("discover") && <>
-              {!showSaved && <DiscoveryConcierge city={result.city} firstName={accountSignedIn?accountFirstName:undefined} busy={busy} onAsk={openAssistantFromDiscover} onNavigate={stableSelectWorkspaceView} onShare={shareFromDiscover}/>}
+              {!showSaved && <DiscoveryConcierge city={result.city} firstName={accountSignedIn?accountFirstName:undefined} busy={busy} onAsk={openAssistantFromDiscover} onNavigate={stableSelectWorkspaceView} onShare={shareFromDiscover} onVibe={openVibeDial}/>}
               {!showSaved && <VibeDial key={`vibe:${result.agent?.sessionId??result.city}`} passport={result} busy={busy} onApply={stableRefine}/>}
               {result.session && !showSaved && (
                 <details className="vibe-tuning-disclosure familiarity-disclosure"><summary>Fine-tune discoveries <span>Optional · familiar, balanced or explore</span></summary><FamiliarityControl
@@ -1123,7 +1133,6 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
                   {visibleResult&&mappedPlaceCount>0&&<div hidden={!showMap}><PassportMap cards={visibleResult.cards} cartoKey={cartoKey} active={workspaceView==='discover'&&!showSaved&&showMap} selectedCluster={activeCluster?.id} onClusterSelect={setSelectedCluster} onSelect={openMappedCard} onPlanFrom={planFromMap} plannableIds={plannableIds}/></div>}
                   {activeCluster&&<div className="active-area-banner" role="status"><p>Showing {activeCluster.cards.length} returned places around {activeCluster.anchor.name}.</p><button type="button" className="quiet-button" onClick={()=>setSelectedCluster(undefined)}>Show all discoveries</button></div>}
                   {visibleResult&&<PassportSections disabled={busy} result={clusteredResult!} feedback={feedback} onFeedback={stableFeedback} updates={updates} updating={updating}/>}
-                  <ShareTasteCard key={`share:${result.agent?.sessionId??result.city}`} passport={result} ownerName={accountSignedIn?accountFirstName:undefined}/>
                 </div>
             </div>
             <div
@@ -1190,6 +1199,9 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
                   disabled={busy}
                 />
               </details>}
+            </div>
+            <div className="workspace-panel" id="view-shares" hidden={workspaceView!=="shares"}>
+              {visitedViews.has("shares")&&<><ShareTasteCard key={`share:${result.agent?.sessionId??result.city}`} passport={result} ownerName={accountSignedIn?accountFirstName:undefined}/><ShareManagement signedIn={accountSignedIn}/></>}
             </div>
             {result.session &&
               process.env.NODE_ENV === "development" &&
