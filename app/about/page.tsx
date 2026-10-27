@@ -85,8 +85,8 @@ export default function About() {
         </Link>
       </section>
       <footer className="workspace-footer">
-        <Link href="/">FaveRoam</Link>
-        <Link href="/privacy">Privacy &amp; your data</Link>
+        <span>© 2026 FaveRoam</span>
+        <nav aria-label="About FaveRoam"><Link href="/">Home</Link><Link href="/about" aria-current="page">About us</Link><Link href="/privacy">Privacy policy</Link></nav>
       </footer>
     </main>
   );

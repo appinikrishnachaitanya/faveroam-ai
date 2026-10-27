@@ -769,6 +769,7 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
   useLayoutEffect(()=>{feedbackHandler.current=recordFeedback;});
   const stableFeedback = useCallback((id:string,value:Feedback)=>feedbackHandler.current(id,value),[]);
   const visibleResult = useMemo(()=>result?{...result,cards:result.cards.filter(card=>!result.session?.hiddenCategories.includes(card.section))}:undefined,[result]);
+  const mappedPlaceCount = useMemo(()=>mappedPlaces(visibleResult?.cards??[]).length,[visibleResult]);
   const plannableIds=useMemo(()=>new Set(result?dayOutOptions(result.cards,result.city).map(card=>card.id):[]),[result]);
   const placeClusters=useMemo(()=>clusterPlaces(visibleResult?.cards??[]),[visibleResult]);
   const activeCluster=placeClusters.find(cluster=>cluster.id===selectedCluster);
@@ -1115,8 +1116,11 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
                   disabled={busy}
                 /></>}</div>
                 <div hidden={showSaved}>
-                  {mappedPlaces(result.cards.filter(card=>!result.session?.hiddenCategories.includes(card.section))).length>0&&<button className="quiet-button map-toggle" type="button" aria-expanded={showMap} onClick={()=>setShowMap(value=>!value)}>{showMap?'Hide map':'Show map'}</button>}
-                  {visibleResult&&mappedPlaces(visibleResult.cards).length>0&&<div hidden={!showMap}><PassportMap cards={visibleResult.cards} cartoKey={cartoKey} active={workspaceView==='discover'&&!showSaved&&showMap} selectedCluster={activeCluster?.id} onClusterSelect={setSelectedCluster} onSelect={openMappedCard} onPlanFrom={planFromMap} plannableIds={plannableIds}/></div>}
+                  {mappedPlaceCount>0&&<div className="map-section-heading">
+                    <div className="map-section-title"><span className="map-section-icon" aria-hidden="true"><Icon name="pin" size={20}/></span><div><span className="micro-label">DISCOVER THE CITY</span><h3>Places on a map</h3><p>See where {mappedPlaceCount} returned places sit, then pick one to explore.</p></div></div>
+                    <button className="quiet-button map-toggle" type="button" aria-expanded={showMap} onClick={()=>setShowMap(value=>!value)}>{showMap?'Collapse map':'Explore map'} <span aria-hidden="true">{showMap?'−':'↗'}</span></button>
+                  </div>}
+                  {visibleResult&&mappedPlaceCount>0&&<div hidden={!showMap}><PassportMap cards={visibleResult.cards} cartoKey={cartoKey} active={workspaceView==='discover'&&!showSaved&&showMap} selectedCluster={activeCluster?.id} onClusterSelect={setSelectedCluster} onSelect={openMappedCard} onPlanFrom={planFromMap} plannableIds={plannableIds}/></div>}
                   {activeCluster&&<div className="active-area-banner" role="status"><p>Showing {activeCluster.cards.length} returned places around {activeCluster.anchor.name}.</p><button type="button" className="quiet-button" onClick={()=>setSelectedCluster(undefined)}>Show all discoveries</button></div>}
                   {visibleResult&&<PassportSections disabled={busy} result={clusteredResult!} feedback={feedback} onFeedback={stableFeedback} updates={updates} updating={updating}/>}
                   <ShareTasteCard key={`share:${result.agent?.sessionId??result.city}`} passport={result} ownerName={accountSignedIn?accountFirstName:undefined}/>
@@ -1209,10 +1213,10 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
         )}
       </div>
       <footer className="workspace-footer">
-        <span>From what you love to where you belong.</span>
+        <span>© 2026 FaveRoam · From what you love to where you belong.</span>
         <nav aria-label="About FaveRoam">
           <a href="/about">About us</a>
-          <a href="/privacy">Privacy</a>
+          <a href="/privacy">Privacy policy</a>
         </nav>
       </footer>
       {result && (assistantOpen || assistantVisited) && (

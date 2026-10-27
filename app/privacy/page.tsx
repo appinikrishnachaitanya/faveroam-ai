@@ -57,6 +57,10 @@ export default function Privacy() {
         must publish a private support channel and applicable retention details
         before public launch.
       </p>
+      <footer className="workspace-footer">
+        <span>© 2026 FaveRoam</span>
+        <nav aria-label="About FaveRoam"><a href="/">Home</a><a href="/about">About us</a><a href="/privacy" aria-current="page">Privacy policy</a></nav>
+      </footer>
     </main>
   );
 }
