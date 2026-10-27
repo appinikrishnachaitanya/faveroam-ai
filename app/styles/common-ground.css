@@ -50,3 +50,33 @@
 .together-reveal .together-cards article > :is(h4, p) { margin: 4px 0; }
 .together-reveal .together-cards article .result-metrics { margin: 8px 0; }
 .together-reveal .together-cards article > a { margin-top: 8px; }
+
+/* The shared outing is the decision; evidence and extra controls follow it. */
+.progressive-app .together-reveal { padding:clamp(16px,2vw,26px); background:#fffefa; border-color:#d8dee4; box-shadow:none; }
+.progressive-app .together-reveal .together-heading { min-height:0; margin:10px 0 14px; padding:0; border:0; background:none; }
+.progressive-app .together-reveal .together-heading > img { display:none; }
+.progressive-app .together-reveal .together-heading h3 { margin:4px 0; font-size:clamp(21px,2.4vw,29px); }
+.together-reveal .together-heading p { max-width:65ch; margin:4px 0; color:#526078; }
+.together-reveal .together-preference-summary { gap:10px; padding:8px 0 12px; }
+.together-reveal .together-preference-summary .helper { margin:3px 0 0; color:#526078; }
+.together-reveal .together-two-profiles { margin:8px 0; }
+.together-reveal .together-two-profiles > div { padding:8px 0; background:none; }
+.progressive-app .together-reveal .partner-interests label { min-height:0; padding:0; border:0; background:none; }
+.together-reveal .partner-interests { margin:10px 0; }
+.together-reveal .together-results { display:flex; flex-direction:column; gap:0; margin-top:14px; }
+.together-reveal .shared-story { margin:0 0 12px; padding:0; }
+.together-reveal .shared-story h3 { font-size:clamp(24px,2.8vw,32px); color:#17243b; }
+.together-reveal .shared-hangout { margin:0 0 12px; padding:clamp(18px,2.5vw,26px); border:1px solid #d8dee4; border-radius:16px; background:#f7f6f1; }
+.together-reveal .shared-hangout h4 { margin:6px 0; font-size:clamp(22px,2.7vw,30px); line-height:1.25; color:#17243b; }
+.together-reveal .shared-hangout p { max-width:76ch; margin:7px 0; color:#35445b; line-height:1.55; }
+.together-reveal .shared-hangout > a { display:inline-flex; align-items:center; min-height:42px; margin-top:8px; padding:8px 14px; border-radius:10px; background:#195d58; color:#fffefa; font-weight:700; text-decoration:none; }
+.together-reveal .shared-hangout .common-ground-more { margin-top:14px; }
+.together-reveal .taste-exchange { margin:0 0 10px; padding:16px; border:0; border-radius:14px; background:#eaf4f1; }
+.together-reveal .taste-exchange > p { margin:5px 0; color:#35445b; }
+.together-reveal .taste-exchange-grid article { padding:14px; border:1px solid #cbded9; border-radius:11px; background:#fffefa; }
+.together-reveal .together-results > .common-ground-more,
+.together-reveal .together-results > .common-ground-week { margin:0; border-bottom:1px solid #d8dee4; border-top:0; }
+.together-reveal .together-results > .common-ground-more:first-of-type { border-top:1px solid #d8dee4; }
+.together-reveal .together-results > .common-ground-more > summary,
+.together-reveal .together-results > .common-ground-week > summary { padding:13px 4px; color:#17243b; }
+@media(max-width:600px){.progressive-app .together-reveal .together-heading{display:block}.together-reveal .taste-exchange-grid{grid-template-columns:minmax(0,1fr)}.together-reveal .shared-hangout{padding:16px}.together-reveal .shared-hangout > a{width:100%;justify-content:center}.together-reveal .together-preference-summary{align-items:stretch;flex-direction:column}.together-reveal .together-preference-summary button{align-self:flex-start}}

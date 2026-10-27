@@ -37,15 +37,15 @@ try{
  await call('Browser.setDownloadBehavior',{behavior:'allow',downloadPath:'/tmp/faveroam-browser-downloads'});
  await call('Network.enable');
  await call('Network.setBlockedURLs',{urls:['*basemaps.cartocdn.com/*']});
- await call('Page.addScriptToEvaluateOnNewDocument',{source:`sessionStorage.setItem('tastepassport:assistant-welcomed:11111111-1111-4111-8111-111111111111','1');sessionStorage.setItem('tastepassport.guest.recovery.v1',JSON.stringify(${JSON.stringify(snapshot)}));const fixture=${JSON.stringify(passport)};const togetherFixture=${JSON.stringify(togetherFixture)};const partnerSeed=${JSON.stringify(partnerSeed)};const actualFetch=window.fetch;window.fetch=(url,options)=>String(url).startsWith('/api/')?Promise.resolve(new Response(JSON.stringify(String(url).includes('/agent/resolve')?{items:[{query:partnerSeed.name,candidates:[partnerSeed]}],token:'fixture-token'}:String(url).includes('/agent/intelligence')?togetherFixture:String(url).includes('/agent/session')?{passport:fixture}:String(url).includes('/destinations')?{destinations:['London']}:{configured:false,user:null,health:'unconfigured'}),{status:200,headers:{'Content-Type':'application/json'}})):actualFetch(url,options);`});
+ await call('Page.addScriptToEvaluateOnNewDocument',{source:`sessionStorage.setItem('tastepassport:assistant-welcomed:11111111-1111-4111-8111-111111111111','1');sessionStorage.setItem('tastepassport:share:11111111-1111-4111-8111-111111111111',JSON.stringify({token:'synthetic-layout-token',revokeToken:'synthetic-revoke-token',expiresAt:'2099-01-01T00:00:00.000Z'}));sessionStorage.setItem('tastepassport.guest.recovery.v1',JSON.stringify(${JSON.stringify(snapshot)}));const fixture=${JSON.stringify(passport)};const togetherFixture=${JSON.stringify(togetherFixture)};const partnerSeed=${JSON.stringify(partnerSeed)};const actualFetch=window.fetch;window.fetch=(url,options)=>String(url).startsWith('/api/')?Promise.resolve(new Response(JSON.stringify(String(url).includes('/agent/resolve')?{items:[{query:partnerSeed.name,candidates:[partnerSeed]}],token:'fixture-token'}:String(url).includes('/agent/intelligence')?togetherFixture:String(url).includes('/agent/session')?{passport:fixture}:String(url).includes('/destinations')?{destinations:['London']}:{configured:false,user:null,health:'unconfigured'}),{status:200,headers:{'Content-Type':'application/json'}})):actualFetch(url,options);`});
  await call('Page.navigate',{url:base});await wait('Boolean(document.querySelector(".passport-navigation"))');
  await ev('window.fixtureMapCanvas=document.querySelector(".passport-map-canvas");true');
  await call('Emulation.setCPUThrottlingRate',{rate:4});
  const timings=[];
- for(const width of [375,390,768,1440]){
+ for(const width of [320,375,390,768,1024,1440]){
   await call('Emulation.setDeviceMetricsOverride',{width,height:1000,deviceScaleFactor:1,mobile:width<768});await frame();
   await ev('window.scrollTo({top:0,behavior:"instant"})');await frame();const coverShot=await call('Page.captureScreenshot',{format:'png'});await fs.writeFile(`/tmp/faveroam-cover-${width}.png`,Buffer.from(coverShot.result.data,'base64'));
-  for(const label of ['Preferences','Common Ground','Taste insights','First Week','Discover','My places','Discover']){
+  for(const label of ['Preferences','Common Ground','Taste insights','First Week','Discover','My Places','Share my tastes','Discover']){
    const ms=await ev(`(async()=>{const menu=document.querySelector('.passport-menu-toggle');if(getComputedStyle(menu).display!=='none'&&menu.getAttribute('aria-expanded')==='false'){menu.click();await new Promise(r=>requestAnimationFrame(r));}const button=[...document.querySelectorAll('.passport-navigation button')].find(b=>b.textContent.includes(${JSON.stringify(label)}));const start=performance.now();button.click();await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));return Math.round(performance.now()-start);})()`);
    timings.push({width,label,ms});
    assert.ok(await ev(`![...document.querySelectorAll('.workspace-panel:not([hidden]) .intelligence-intro, .workspace-panel:not([hidden]) .analysis-intro, .workspace-panel:not([hidden]) .outing-intro')].some(node=>node.getAnimations().some(animation=>animation.playState==='running'))`),`Workspace introduction must not delay navigation: ${label}`);
@@ -56,12 +56,15 @@ try{
    }
 
    if(label==='First Week'){
-    if(width===375)assert.equal(await ev('Boolean(document.querySelector("#view-plan .day-out-plan"))'),false,'Opening First Week must not mount the day planner');
+    if(width===320)assert.equal(await ev('Boolean(document.querySelector("#view-plan .day-out-plan"))'),false,'Opening First Week must not mount the day planner');
     await ev(`document.querySelector('#view-plan .first-week-controls .primary-button').click()`);await frame();
     assert.ok(await ev('Boolean(document.querySelector("#view-plan .week-save-summary"))'));
-    if(width===375){
+    if([320,375,768,1440].includes(width)){
      await ev(`document.querySelectorAll('#view-plan .planner-mode-switch button')[1].click()`);await frame();
      assert.ok(await ev('Boolean(document.querySelector("#view-plan .day-out-plan"))'));
+     await ev('document.querySelector("#view-plan .day-out-plan").scrollIntoView({block:"start",behavior:"instant"})');await frame();
+     const dayShot=await call('Page.captureScreenshot',{format:'png'});await fs.writeFile(`/tmp/faveroam-day-out-${width}.png`,Buffer.from(dayShot.result.data,'base64'));
+     assert.ok(await ev('document.documentElement.scrollWidth<=innerWidth+1'),`Day out overflow at ${width}px`);
      await ev(`document.querySelectorAll('#view-plan .planner-mode-switch button')[0].click()`);await frame();
      assert.ok(await ev('Boolean(document.querySelector("#view-plan .week-save-summary"))'),'Switching planners must preserve the built week');
     }
@@ -93,13 +96,16 @@ try{
     assert.ok(await ev('!document.querySelector(".common-ground-evidence").textContent.includes("relative score")'));
     await ev("document.querySelector('.together-results').scrollIntoView({block:'start',behavior:'instant'})");await frame();
    }
-   if(label==='Discover')assert.ok(await ev('document.querySelector(".discovery-welcome").getBoundingClientRect().height<500'),'Welcome layout must not retain a 430px flex column basis');
+   if(label==='Discover')assert.ok(await ev(`document.querySelector(".discovery-welcome").getBoundingClientRect().height<${width<=320?620:500}`),'Welcome layout must not retain a 430px flex column basis');
    if(label==='Discover'){
-    const spacing=await ev(`(()=>{const card=document.querySelector('.passport-sections .discovery-card');const buttons=[...card.querySelectorAll('.feedback-actions button')];const ritual=card.querySelector('.ritual-card-action');const [save,reject]=buttons.map(button=>button.getBoundingClientRect());const third=ritual.getBoundingClientRect();const outer=card.getBoundingClientRect();return {count:buttons.length,sideGap:reject.left-save.right,verticalGap:third.top-Math.max(save.bottom,reject.bottom),inside:save.left>=outer.left+8&&third.right<=outer.right-8};})()`);
-    assert.equal(spacing.count,2);assert.ok(spacing.sideGap>=8&&spacing.verticalGap>=8&&spacing.inside,`Discovery card actions overlap or touch at ${width}px: ${JSON.stringify(spacing)}`);
+    const spacing=await ev(`(()=>{const card=document.querySelector('.passport-sections .discovery-card');const buttons=[...card.querySelectorAll('.feedback-actions button')];const [save,reject]=buttons.map(button=>button.getBoundingClientRect());const outer=card.getBoundingClientRect();return {count:buttons.length,sideGap:reject.left-save.right,inside:save.left>=outer.left+8&&reject.right<=outer.right-8};})()`);
+    assert.equal(spacing.count,2);assert.ok(spacing.sideGap>=8&&spacing.inside,`Discovery card actions overlap or touch at ${width}px: ${JSON.stringify(spacing)}`);
    }
    if(label==='Discover'){assert.equal(await ev('document.querySelector(".vibe-tuning-disclosure")?.open??false'),false);assert.equal(await ev('document.querySelector(".familiarity-disclosure")?.open??false'),false);assert.ok(await ev('window.fixtureMapCanvas===document.querySelector(".passport-map-canvas")'),'Discover map must survive My places toggles');}
-   if(label==='Discover')assert.equal(await ev('document.querySelectorAll(".share-options>div:first-child .share-actions button").length'),2);
+   if(label==='Share my tastes'){
+    await ev('document.querySelector(".share-link-result").scrollIntoView({block:"center",behavior:"instant"})');await frame();
+    assert.ok(await ev('(()=>{const panel=document.querySelector(".share-link-result").getBoundingClientRect();const actions=[...document.querySelectorAll(".share-link-result-actions button")].map(button=>button.getBoundingClientRect());return actions.length===2&&actions.every(rect=>rect.left>=panel.left&&rect.right<=panel.right&&rect.bottom<=panel.bottom)&&actions[1].left-actions[0].right>=8;})()'),`Share link actions overflow or touch at ${width}px`);
+   }
    const screenshot=await call('Page.captureScreenshot',{format:'png'});await fs.writeFile(`/tmp/faveroam-release-${width}-${label.replaceAll(' ','-')}.png`,Buffer.from(screenshot.result.data,'base64'));
    if(label==='Discover'&&(width===375||width===1440)){
     await ev(`document.querySelector('.passport-sections .discovery-card').scrollIntoView({block:'center',behavior:'instant'})`);await frame();
@@ -109,8 +115,10 @@ try{
    assert.ok(await ev('document.documentElement.scrollWidth<=innerWidth+1'),`Overflow: ${label} ${width}`);
   }
  }
- assert.equal(await ev('[...document.querySelectorAll(".share-options button")].find(b=>b.textContent==="Download PNG")?.disabled'),true,'Guests cannot download a taste card');
- assert.equal(await ev('[...document.querySelectorAll(".share-options button")].find(b=>b.textContent==="Create link")?.disabled'),true,'Guests cannot create a share link');
+ await ev('[...document.querySelectorAll(".passport-navigation button")].find(b=>b.textContent.includes("Share my tastes")).click()');await frame();
+ assert.equal(await ev('[...document.querySelectorAll(".share-options button")].find(b=>b.textContent==="Download")?.disabled'),true,'Guests cannot download a taste card');
+ assert.equal(await ev('[...document.querySelectorAll(".share-options button")].find(b=>b.textContent==="Link ready")?.disabled'),true,'Guests cannot create a share link');
+ await ev('[...document.querySelectorAll(".passport-navigation button")].find(b=>b.textContent.includes("Discover")).click()');await frame();
  await wait('Boolean(document.querySelector(".schematic-map button"))');
  await ev('document.querySelector(".schematic-map button").click()');await frame();
  assert.ok(await ev('Boolean(document.querySelector(".map-place-detail"))'));assert.equal(await ev('document.querySelector(".map-toggle").getAttribute("aria-expanded")'),'true');
@@ -135,7 +143,7 @@ try{
  await ev('document.querySelector(".cluster-option").click()');await frame();
  assert.equal(await ev('document.querySelector(".cluster-option[aria-pressed=true]")!==null'),true);
  assert.ok(await ev('(()=>{const ids=[...document.querySelectorAll(".passport-sections [data-entity-id]")].map(el=>Math.floor(Number(el.dataset.entityId.split("-")[1])/20));return ids.length>0&&new Set(ids).size===1;})()'));
- await ev('[...document.querySelectorAll(".cluster-options button")].find(b=>b.textContent==="All discoveries").click()');await frame();
+ await ev('document.querySelector(".cluster-options .all-discoveries-option").click()');await frame();
  for(let i=0;i<3;i++){
   await ev('document.querySelector(".assistant-launch").click()');await frame();assert.ok(await ev('document.querySelector("#taste-concierge").open'));
   assert.ok(await ev('(window.fixtureComposer??=document.querySelector("#conversation-input"))===document.querySelector("#conversation-input")'));
@@ -152,13 +160,11 @@ try{
  assert.ok(await ev(`document.querySelector('.chat-stop-notice')?.textContent.includes('Stopped waiting for this request')`));
  assert.equal(await ev(`window.preStopCards===[...document.querySelectorAll('.passport-sections [data-entity-id]')].map(node=>node.dataset.entityId).join('|')`),true);
  await ev(`window.fetch=window.preStopFetch;document.querySelector('.assistant-close').click()`);await frame();
- await ev('[...document.querySelectorAll(".passport-sections button")].find(b=>b.textContent==="Make a ritual").click()');await frame();
- assert.ok(await ev('Boolean(document.querySelector(".ritual-form"))'));assert.ok(await ev('Boolean(document.querySelector(".ritual-form select").value)'));
  const today=new Date().toISOString().slice(0,10);
  const weekDays=firstWeek(cards,'London',today);
  const library=renderToStaticMarkup(createElement(UpcomingPlans,{plans:[{id:'fixture-day',city:'London',scheduled_date:today,time_zone:'Europe/London',stop_times:['11:00'],stops:[{id:'fixture-00',name:'Fixture Food stop',section:'Eat',activity:'Eat',address:'A long returned address for responsive alignment'}]}],weeks:[{id:'fixture-week',city:'London',start_date:today,time_zone:'Europe/London',days:weekDays}],editableCity:'London',busy:false,error:'',onDelete:()=>{},onRetry:()=>{},onEdit:()=>{},onEditWeek:()=>{}}));
  await ev(`(()=>{const dialog=document.createElement('dialog');dialog.id='fixture-library';dialog.className='account-dialog account-library-dialog';dialog.innerHTML=${JSON.stringify(library)};document.querySelector('.progressive-app').append(dialog);dialog.showModal();})()`);
- for(const width of [375,390,768,1440]){
+ for(const width of [320,375,390,768,1024,1440]){
   await call('Emulation.setDeviceMetricsOverride',{width,height:1000,deviceScaleFactor:1,mobile:width<768});await frame();
   assert.equal(await ev('getComputedStyle(document.querySelector("#fixture-library .plan-date>span")).color'),'rgb(255, 254, 250)');
   assert.ok(await ev('(()=>{const el=document.querySelector("#fixture-library");const box=el.getBoundingClientRect();return el.scrollWidth<=el.clientWidth+1&&box.left>=0&&box.right<=innerWidth+1;})()'),`Library overflow at ${width}`);

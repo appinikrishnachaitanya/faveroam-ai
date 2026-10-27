@@ -33,12 +33,12 @@ function PassportNavigation({active,savedCount,onNavigate}:{
     }}>
       <span className="passport-sidebar-title micro-label">YOUR CITY COMPANION</span>
       <div className="passport-mobile-heading">
-        <button ref={toggle} type="button" className="passport-menu-toggle" aria-expanded={open}
+        <button ref={toggle} type="button" className="passport-menu-toggle" aria-label="Passport menu" aria-expanded={open}
           aria-controls={menuId} onClick={()=>setOpen(value=>!value)}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
             {open ? <path d="m6 6 12 12M6 18 18 6"/> : <path d="M4 6h16M4 12h16M4 18h16"/>}
           </svg>
-          Passport menu
+          Menu
         </button>
         <span className="passport-current-view">{destinations.find(item=>item.id===active)?.label}</span>
       </div>

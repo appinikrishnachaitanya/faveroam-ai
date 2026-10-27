@@ -15,6 +15,7 @@ import type { AnalysisKind, AnalysisResult } from '../../src/qloo/analysis';
 
 export default memo(function TasteAnalysis({passport,busy,onRefine}:{passport:Passport;busy:boolean;onRefine:(input:AgentInput)=>void}) {
   const [results,setResults]=useState<Partial<Record<AnalysisKind,AnalysisResult>>>({});
+  const [expanded,setExpanded]=useState<Partial<Record<AnalysisKind,boolean>>>({});
   const scope=[passport.agent?.sessionId ?? '',passport.city,...passport.selected.map(i=>i.id)].join('|');
   const latestScope=useRef(scope);
   latestScope.current=scope;
@@ -30,7 +31,7 @@ export default memo(function TasteAnalysis({passport,busy,onRefine}:{passport:Pa
   const active=useRef(false);
   useEffect(()=>{
     setInterestIds(passport.selected.map(interest=>interest.id));
-    setResults({});setResultScope(scope);setThemeId('');setError('');setThemeNotice('');
+    setResults({});setExpanded({});setResultScope(scope);setThemeId('');setError('');setThemeNotice('');
   },[scope]);
 
   async function load(kind:AnalysisKind) {
@@ -44,6 +45,7 @@ export default memo(function TasteAnalysis({passport,busy,onRefine}:{passport:Pa
       if (latestScope.current !== scope) return;
       setResultScope(scope);
       setResults(current=>({...current,[kind]:data.analysis}));
+      setExpanded(current=>({...current,[kind]:true}));
       if(kind==='taste'){
         const unavailable=Array.isArray(data.themeStatus?.unavailable)?data.themeStatus.unavailable:[];
         const noConnections=Array.isArray(data.themeStatus?.noConnections)?data.themeStatus.noConnections:[];
@@ -85,21 +87,21 @@ export default memo(function TasteAnalysis({passport,busy,onRefine}:{passport:Pa
         {passport.selected.map(interest=><label key={interest.id} className={interestIds.includes(interest.id)?"selected":""}>
           <input type="checkbox" checked={interestIds.includes(interest.id)} onChange={event=>{
             setInterestIds(previous=>event.target.checked?[...previous,interest.id]:previous.filter(id=>id!==interest.id));
-            setResults({});setThemeId('');setError('');setThemeNotice('');
+            setResults({});setExpanded({});setThemeId('');setError('');setThemeNotice('');
           }}/><span>{interest.name}</span>
         </label>)}
       </div>
-      <div className="analysis-selection-summary"><small>{interestIds.length} of {passport.selected.length} selected</small>{passport.selected.length>1 && interestIds.length<passport.selected.length && <button type="button" onClick={()=>{setInterestIds(passport.selected.map(interest=>interest.id));setResults({});setThemeId('');setError('');setThemeNotice('');}}>Use all my tastes</button>}</div>
+      <div className="analysis-selection-summary"><small>{interestIds.length} of {passport.selected.length} selected</small>{passport.selected.length>1 && interestIds.length<passport.selected.length && <button type="button" onClick={()=>{setInterestIds(passport.selected.map(interest=>interest.id));setResults({});setExpanded({});setThemeId('');setError('');setThemeNotice('');}}>Use all my tastes</button>}</div>
     </fieldset>
     <div className="analysis-actions">
-      <button className="analysis-action" aria-pressed={Boolean(taste)} disabled={busy||Boolean(loading)||!interestIds.length} onClick={()=>void load('taste')}><Icon name="star" size={22}/><span><strong>{loading==='taste'?'Finding taste connections…':'Explore a new side of my taste'}</strong><small>Find returned connections for each selected interest, then use one to discover something new.</small></span><Icon name="arrow" size={18}/></button>
-      <button className="analysis-action" aria-pressed={Boolean(heat)} disabled={busy||Boolean(loading)||!interestIds.length} onClick={()=>void load('heatmap')}><Icon name="pin" size={22}/><span><strong>{loading==='heatmap'?'Finding a place to start…':`Start from a place in ${passport.city}`}</strong><small>See a named place from your discoveries, then search for food nearby.</small></span><Icon name="arrow" size={18}/></button>
+      <button className="analysis-action" aria-expanded={Boolean(taste&&expanded.taste)} disabled={busy||Boolean(loading)||!interestIds.length} onClick={()=>taste?setExpanded(current=>({...current,taste:!current.taste})):void load('taste')}><Icon name="star" size={22}/><span><strong>{loading==='taste'?'Finding taste connections…':taste?(expanded.taste?'Hide your taste themes':'Show your taste themes'):'Explore a new side of my taste'}</strong><small>Find returned connections for each selected interest, then use one to discover something new.</small></span><Icon name="arrow" size={18}/></button>
+      <button className="analysis-action" aria-expanded={Boolean(heat&&expanded.heatmap)} disabled={busy||Boolean(loading)||!interestIds.length} onClick={()=>heat?setExpanded(current=>({...current,heatmap:!current.heatmap})):void load('heatmap')}><Icon name="pin" size={22}/><span><strong>{loading==='heatmap'?'Finding a place to start…':heat?(expanded.heatmap?'Hide places to start':'Show places to start'):`Start from a place in ${passport.city}`}</strong><small>See a named place from your discoveries, then search for food nearby.</small></span><Icon name="arrow" size={18}/></button>
     </div>
     {!interestIds.length&&<p role="status">Choose at least one interest to see relevant insights.</p>}
     {error&&<p role="alert">{error}</p>}
     {themeNotice&&<p className="theme-source-notice" role="status">{themeNotice}</p>}
     {loading&&<p role="status">Looking for patterns in your confirmed tastes…</p>}
-    {taste&&<div className="analysis-result"><span className="micro-label">THE THREADS BETWEEN YOUR FAVORITES</span><h3>Your taste themes</h3><p>We checked each selected favorite separately. The label on every theme shows which one it came from; these are audience associations, not personality predictions.</p>
+    {taste&&expanded.taste&&<div id="taste-theme-result" className="analysis-result"><div className="analysis-result-heading"><div><span className="micro-label">THE THREADS BETWEEN YOUR FAVORITES</span><h3>Your taste themes</h3></div><button type="button" className="analysis-collapse" onClick={()=>setExpanded(current=>({...current,taste:false}))}>Hide themes</button></div><p>We checked each selected favorite separately. The label on every theme shows which one it came from; these are audience associations, not personality predictions.</p>
       {themes.length ? <>
         <div className="taste-theme-list" role="group" aria-label="Choose a taste theme">
           {primaryThemes.map(tag => <button key={`${tag.sourceInterestId??'combined'}:${tag.id}`} type="button"
@@ -119,8 +121,7 @@ export default memo(function TasteAnalysis({passport,busy,onRefine}:{passport:Pa
       </> : <div className="theme-empty-state"><strong>No clear new connection for this selection yet.</strong><p>Choose a different favorite above, try your tastes together, or start from a nearby place.</p><button type="button" disabled={busy||Boolean(loading)} onClick={()=>void load('heatmap')}>Find a place to start <Icon name="arrow" size={16}/></button><small>Your Discover results haven’t changed.</small></div>}
 
     </div>}
-    {heat&&<div className="analysis-result area-guide"><span className="micro-label">TURN A PLACE INTO AN OUTING</span>
-      <h3>Start somewhere you can actually visit</h3>
+    {heat&&expanded.heatmap&&<div id="taste-area-result" className="analysis-result area-guide"><div className="analysis-result-heading"><div><span className="micro-label">TURN A PLACE INTO AN OUTING</span><h3>Start somewhere you can actually visit</h3></div><button type="button" className="analysis-collapse" onClick={()=>setExpanded(current=>({...current,heatmap:false}))}>Hide places</button></div>
       <h4>Nearby Passport discoveries</h4>
       <p>{areas.some(area=>area.fromAreaSignal)
         ? "These are named places already in your Passport near suggested areas. Pick one as a starting point, then see food nearby."

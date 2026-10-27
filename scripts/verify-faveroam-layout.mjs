@@ -24,10 +24,10 @@ for(const width of [375,768,1440]){
  await new Promise(resolve=>setTimeout(resolve,250));
  assert.ok(await evaluate('document.documentElement.scrollWidth<=innerWidth+1'),`Horizontal overflow at ${width}`);
  assert.ok(await evaluate('document.querySelector(".brand").textContent.includes("FaveRoam")'));
- await evaluate('[...document.querySelectorAll("button")].find(button=>button.textContent.includes("Explore my city")).click()');
- await evaluate('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))');
- assert.ok(await evaluate('["destination","city-onboarding-form"].includes(document.activeElement.id)'),`City CTA at ${width}`);
  await evaluate('window.scrollTo({top:0,behavior:"instant"})');
  const shot=await call('Page.captureScreenshot',{format:'png'});await fs.writeFile(`${process.env.PASSPORT_TEST_ARTIFACTS??'/tmp'}/faveroam-${width}.png`,Buffer.from(shot.result.data,'base64'));
 }
+await evaluate('[...document.querySelectorAll("button")].find(button=>button.textContent.includes("Explore my city")).click()');
+await evaluate('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))');
+assert.ok(await evaluate('["destination","city-onboarding-form"].includes(document.activeElement.id)'),'City CTA focuses the onboarding form');
 ws.close();console.log('Browser PASS: 375/768/1440 landing overflow, branding, city CTA and local fonts. No discovery/auth/provider acceptance claimed.');

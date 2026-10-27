@@ -7,9 +7,10 @@
 .day-out-summary { margin:0 0 14px !important; color:var(--ui-muted); font-size:14px; font-weight:650; }
 .day-out-notice { margin:12px 0 !important; padding:12px 14px; border:1px solid #d7dfcf; border-radius:12px; background:#f3f5ec; color:#405848; font-size:14px; line-height:1.55; }
 .day-out-guidance { margin:12px 0 !important; color:var(--ui-muted); font-size:13px; line-height:1.5; }
-.day-out-schedule { grid-template-columns:minmax(180px,240px) auto minmax(0,1fr); padding:16px; }
-.day-out-schedule .quiet-button { min-height:46px; justify-self:start; }
-.day-out-schedule .plan-zone { align-self:center; color:var(--ui-muted); font-size:13px; line-height:1.45; }
+.progressive-app .day-out-schedule { display:grid; grid-template-columns:minmax(0,240px) auto minmax(0,1fr); align-items:end; gap:12px; margin:16px 0; padding:16px; }
+.day-out-schedule label,.day-out-schedule input { min-width:0; width:100%; }
+.progressive-app .day-out-schedule > .quiet-button { grid-column:auto; min-height:48px; margin:0; justify-self:start; white-space:nowrap; }
+.day-out-schedule .plan-zone { align-self:center; min-width:0; color:var(--ui-muted); font-size:13px; line-height:1.45; overflow-wrap:anywhere; }
 .progressive-app .outing-activities { gap:8px; margin:16px 0; padding:12px 14px; border-color:var(--ui-border); background:#fffefa; }
 .outing-activities legend { padding-inline:4px; font-size:14px; }
 .outing-activities label { min-height:40px; padding:7px 11px; border-radius:999px; background:#f8f6f1; font-size:13px; }
@@ -24,7 +25,9 @@
 .day-out-plan .outing-order { gap:6px; margin:0 0 10px; }
 .day-out-plan .outing-order button { min-height:38px; padding:7px 10px; font-size:13px; }
 .day-out-plan .day-out-stops select { width:100%; min-height:46px; }
-.day-out-plan .plan-save-actions { margin-top:18px; }
+.day-out-plan .plan-save-actions { display:flex; align-items:center; gap:10px; margin-top:18px; }
+.day-out-plan .plan-save-actions > p { flex-basis:100%; margin:0; }
+.day-out-plan .plan-save-actions > button { flex:0 1 auto; min-height:46px; margin:0; white-space:normal; text-align:center; }
 .first-week-heading { align-items:flex-start; }
 .first-week-heading p { max-width:64ch; line-height:1.65; margin-top:12px; }
 .first-week-controls { display:grid; grid-template-columns:minmax(160px,240px) minmax(0,1fr); align-items:end; gap:16px; padding:20px; border:1px solid var(--ui-border); border-radius:16px; background:var(--ui-tint); }
@@ -63,7 +66,8 @@
 .account-library-tabs { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); }
 .account-library-tabs button { padding:10px; white-space:normal; }
 @container(max-width:520px){.first-week-controls{grid-template-columns:minmax(0,1fr);padding:16px}.week-save-summary{padding:16px}.week-save-summary>.first-week-actions{width:100%;display:grid;grid-template-columns:1fr}.week-save-summary .first-week-actions>*{width:100%;margin:0}.first-week-heading img{display:none}}
-@container(max-width:560px){.day-out-schedule{grid-template-columns:minmax(0,1fr);padding:14px}.day-out-schedule .quiet-button{width:100%;justify-content:center}.day-out-plan .stop-time-label{grid-template-columns:minmax(0,1fr)}}
+@container(max-width:700px){.progressive-app .day-out-schedule{grid-template-columns:minmax(0,1fr) minmax(0,1fr);padding:14px}.day-out-schedule .plan-zone{grid-column:1/-1}.day-out-plan .stop-time-label{grid-template-columns:minmax(0,1fr)}}
+@container(max-width:480px){.progressive-app .day-out-schedule{grid-template-columns:minmax(0,1fr)}.progressive-app .day-out-schedule > .quiet-button{width:100%;justify-content:center}.day-out-schedule .plan-zone{grid-column:auto}.day-out-plan .plan-save-actions{display:grid;grid-template-columns:minmax(0,1fr)}.day-out-plan .plan-save-actions > button{width:100%;justify-content:center}}
 @media(max-width:480px){.saved-plan{grid-template-columns:minmax(0,1fr);padding:18px;gap:14px}.saved-plan .plan-date{flex-direction:row;width:max-content;align-items:center;border-radius:10px}.plan-date>span{width:auto;align-self:stretch;display:flex;align-items:center}.plan-date>strong{font-size:22px}.plan-details .plan-actions{display:grid;grid-template-columns:1fr}.plan-details .plan-actions>button{width:100%;justify-content:center}.account-library-dialog{padding:18px}.week-save-summary .first-week-actions>*{flex:none}}
 @media(max-width:600px){.progressive-app .day-out-plan{padding:16px}.progressive-app .day-out-plan .outing-intro{padding:0;margin-bottom:12px}.day-out-plan .outing-intro img{display:none}.progressive-app .day-out-stops>li{padding:14px}.day-out-plan .stop-heading{gap:9px}.day-out-plan .day-out-guidance{font-size:12px}}
 /* Compact discovery introduction: flex-basis becomes height in a column. */
@@ -89,6 +93,31 @@
 @container(max-width:520px){.first-week-controls .primary-button{width:100%;justify-self:stretch}}
 @media(max-width:600px){.discovery-welcome-actions .primary-button{white-space:nowrap}.discovery-welcome-actions .primary-button svg{display:none}.passport-workspace-content{padding-bottom:80px}}
 .progressive-app .discovery-welcome p { color:#47566b; }
+
+/* Preferences: a quick style choice first, with details available on demand. */
+.progressive-app .intelligence-preferences { display:grid; gap:16px; padding:clamp(16px,2.5vw,26px); border:1px solid #d8dee4; border-radius:18px; background:#fffefa; box-shadow:none; }
+.preference-style-heading { display:flex; align-items:end; justify-content:space-between; flex-wrap:wrap; gap:12px; }
+.preference-style-heading .preference-section-heading { margin:0; }
+.progressive-app .preference-pick { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:42px; margin:0; padding:8px 13px; border:1px solid #b8c7c5; border-radius:10px; background:#eaf4f1; color:#195d58; font-weight:700; }
+.progressive-app .intelligence-modes { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,155px),1fr)); gap:8px; margin:0; }
+.progressive-app .intelligence-modes button { display:flex; align-items:center; justify-content:flex-start; gap:9px; min-width:0; min-height:54px; padding:10px 12px; border:1px solid #c8cfd5; border-radius:11px; background:#f7f6f1; color:#17243b; box-shadow:none; text-align:left; transition:background .15s ease,border-color .15s ease; }
+.progressive-app .intelligence-modes button:hover:not(:disabled) { transform:none; border-color:#277c78; background:#eaf4f1; box-shadow:none; }
+.progressive-app .intelligence-modes button[aria-pressed="true"] { border-color:#195d58; background:#195d58; color:#fffefa; box-shadow:none; }
+.progressive-app .intelligence-modes button > svg { flex:0 0 auto; color:inherit; }
+.progressive-app .intelligence-modes button strong { color:inherit; font-size:13px; line-height:1.35; overflow-wrap:anywhere; }
+.progressive-app .preference-style-description { display:flex; align-items:baseline; flex-wrap:wrap; gap:6px 10px; margin:0; padding:12px 14px; border-left:3px solid #277c78; border-radius:0 9px 9px 0; background:#eaf4f1; color:#35445b; font-size:13px; line-height:1.55; }
+.preference-style-description strong { color:#173a3b; }
+.progressive-app .intelligence-preferences .intelligence-filters { gap:12px; margin:0; }
+.progressive-app .intelligence-preferences .intelligence-filters > .preference-section-heading { grid-column:1/-1; }
+.progressive-app .intelligence-preferences .advanced-taste-filters { margin:0; padding:12px 14px; border:1px solid #d8dee4; border-radius:11px; background:#f7f6f1; }
+.progressive-app .intelligence-preferences .advanced-taste-filters summary { min-height:30px; color:#17243b; font-weight:700; cursor:pointer; }
+.progressive-app .intelligence-preferences .advanced-taste-filters[open] summary { margin-bottom:12px; }
+.progressive-app .intelligence-preferences .active-preferences { display:block; margin:0; padding:12px 14px; border:1px solid #d8dee4; border-left:3px solid #b9853d; border-radius:9px; background:#f7f6f1; color:#35445b; line-height:1.55; }
+.progressive-app .intelligence-preferences .active-preferences summary { min-height:28px; color:#17243b; font-size:13px; font-weight:700; cursor:pointer; }
+.progressive-app .intelligence-preferences .active-preferences p { margin:10px 0 0; color:#35445b; font-size:13px; line-height:1.6; }
+.progressive-app .intelligence-preferences .intelligence-apply { justify-self:start; min-height:48px; margin:0; }
+@media(max-width:640px){.progressive-app .intelligence-modes{grid-template-columns:repeat(2,minmax(0,1fr))}.progressive-app .intelligence-preferences .intelligence-filters{grid-template-columns:minmax(0,1fr)}.progressive-app .intelligence-preferences .intelligence-apply{width:100%;justify-content:center}.progressive-app .preference-pick{width:100%}}
+@media(max-width:360px){.progressive-app .intelligence-modes{grid-template-columns:1fr}.progressive-app .intelligence-modes button{min-height:44px}}
 
 .progressive-app :is(.vibe-intro,.analysis-intro,.outing-intro,.first-week-heading) > div { min-width:0; }
 .progressive-app .intelligence-intro-mark { color:#f3b65c; background:#f3b65c20; border-color:#f3b65c80; }
