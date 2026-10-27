@@ -47,6 +47,7 @@ import { reviewMatches } from "../src/passport/matching";
 import AccountControl from "./components/account";
 import ReusableTastes from "./components/taste-profile";
 import DayOutPlan from "./components/day-out";
+import {dayOutOptions} from '../src/passport/day-out';
 import TasteIntelligence from "./components/intelligence";
 import { JourneyLoading, ToastNotice } from "./components/status";
 import {
@@ -122,6 +123,7 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
   useEffect(() => { if (assistantOpen) setAssistantVisited(true); }, [assistantOpen]);
   const [visitedViews, setVisitedViews] = useState<Set<string>>(() => new Set(["discover"]));
   const [planMode,setPlanMode]=useState<"week"|"day">("week");
+  const [planFrom,setPlanFrom]=useState<{cardId:string;sessionId?:string;nonce:number}>();
   const [ritualCardId,setRitualCardId]=useState<string>();
   const ritualInitialHandled=useCallback(()=>setRitualCardId(undefined),[]);
   const [selectedCluster,setSelectedCluster]=useState<string>();
@@ -761,6 +763,7 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
   useLayoutEffect(()=>{feedbackHandler.current=recordFeedback;});
   const stableFeedback = useCallback((id:string,value:Feedback)=>feedbackHandler.current(id,value),[]);
   const visibleResult = useMemo(()=>result?{...result,cards:result.cards.filter(card=>!result.session?.hiddenCategories.includes(card.section))}:undefined,[result]);
+  const plannableIds=useMemo(()=>new Set(result?dayOutOptions(result.cards,result.city).map(card=>card.id):[]),[result]);
   const placeClusters=useMemo(()=>clusterPlaces(visibleResult?.cards??[]),[visibleResult]);
   const activeCluster=placeClusters.find(cluster=>cluster.id===selectedCluster);
   const clusteredResult=useMemo(()=>visibleResult&&activeCluster?{...visibleResult,cards:activeCluster.cards}:visibleResult,[visibleResult,activeCluster]);
@@ -770,6 +773,7 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
   },[]);
   const panelActions = useRef({refine,selectWorkspaceView});
   useLayoutEffect(()=>{panelActions.current={refine,selectWorkspaceView};});
+  const planFromMap=useCallback((card:import('../src/passport/model').Card)=>{setEditingPlan(undefined);setPlanFrom(current=>({cardId:card.id,sessionId:result?.session?.id,nonce:(current?.nonce??0)+1}));setPlanMode('day');panelActions.current.selectWorkspaceView('plan');},[result?.session?.id]);
   const askFromChat = useCallback((message:string)=>{void panelActions.current.refine({message});},[]);
   const saveFromChat = useCallback((id:string)=>feedbackHandler.current(id,"like"),[]);
   const stableRefine = useCallback((input:AgentInput)=>{void panelActions.current.refine(input);},[]);
@@ -1105,7 +1109,7 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
                 /></>}</div>
                 <div hidden={showSaved}>
                   {mappedPlaces(result.cards.filter(card=>!result.session?.hiddenCategories.includes(card.section))).length>0&&<button className="quiet-button map-toggle" type="button" aria-expanded={showMap} onClick={()=>setShowMap(value=>!value)}>{showMap?'Hide map':'Show map'}</button>}
-                  {visibleResult&&mappedPlaces(visibleResult.cards).length>0&&<div hidden={!showMap}><PassportMap cards={visibleResult.cards} cartoKey={cartoKey} active={workspaceView==='discover'&&!showSaved&&showMap} selectedCluster={activeCluster?.id} onClusterSelect={setSelectedCluster} onSelect={openMappedCard}/></div>}
+                  {visibleResult&&mappedPlaces(visibleResult.cards).length>0&&<div hidden={!showMap}><PassportMap cards={visibleResult.cards} cartoKey={cartoKey} active={workspaceView==='discover'&&!showSaved&&showMap} selectedCluster={activeCluster?.id} onClusterSelect={setSelectedCluster} onSelect={openMappedCard} onPlanFrom={planFromMap} plannableIds={plannableIds}/></div>}
                   {activeCluster&&<div className="active-area-banner" role="status"><p>Showing {activeCluster.cards.length} returned places around {activeCluster.anchor.name}.</p><button type="button" className="quiet-button" onClick={()=>setSelectedCluster(undefined)}>Show all discoveries</button></div>}
                   {visibleResult&&<PassportSections disabled={busy} result={clusteredResult!} feedback={feedback} onFeedback={stableFeedback} updates={updates} updating={updating}/>}
                   <ShareTasteCard key={`share:${result.agent?.sessionId??result.city}`} passport={result}/>
@@ -1121,6 +1125,7 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
               <div hidden={planMode!=='day'}><DayOutPlan
                 key={`day-out:${result.session?.id ?? result.city}`}
                 editPlan={editingPlan}
+                startFrom={planFrom}
                 expanded={workspaceView === "plan"}
                 onFindActivity={findPlanActivity}
                 passport={result}

@@ -103,6 +103,12 @@ try{
  await wait('Boolean(document.querySelector(".schematic-map button"))');
  await ev('document.querySelector(".schematic-map button").click()');await frame();
  assert.ok(await ev('Boolean(document.querySelector(".map-place-detail"))'));assert.equal(await ev('document.querySelector(".map-toggle").getAttribute("aria-expanded")'),'true');
+ const mappedCardId=await ev('document.querySelector(".schematic-map button[aria-pressed=true]").title');
+ await ev('[...document.querySelectorAll(".map-place-detail button")].find(button=>button.textContent==="Plan from here").click()');
+ await wait('Boolean(document.querySelector("#view-plan:not([hidden]) #day-out-Eat"))');
+ assert.equal(await ev(`document.querySelector("#day-out-Eat").selectedOptions[0].textContent.includes(${JSON.stringify(mappedCardId)})`),true,'Map place must anchor the day plan');
+ assert.equal(await ev('document.querySelector("#view-plan .planner-mode-switch button[aria-pressed=true]").textContent'),'A day out');
+ await ev('[...document.querySelectorAll(".passport-navigation button")].find(button=>button.textContent.includes("Discover")).click()');await frame();
  await ev('document.querySelector(".cluster-option").click()');await frame();
  assert.equal(await ev('document.querySelector(".cluster-option[aria-pressed=true]")!==null'),true);
  assert.ok(await ev('(()=>{const ids=[...document.querySelectorAll(".passport-sections [data-entity-id]")].map(el=>Math.floor(Number(el.dataset.entityId.split("-")[1])/20));return ids.length>0&&new Set(ids).size===1;})()'));
