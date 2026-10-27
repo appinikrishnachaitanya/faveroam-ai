@@ -39,7 +39,7 @@ try {
   assert.equal(root.status, 200);
   assert.equal(root.headers.get("x-content-type-options"), "nosniff");
   assert.equal(root.headers.get("x-frame-options"), "DENY");
-  assert.equal(root.headers.get("referrer-policy"), "no-referrer");
+  assert.equal(root.headers.get("referrer-policy"), "strict-origin-when-cross-origin");
   assert.match(root.headers.get("content-security-policy") || "", /frame-ancestors 'none'/);
   assert.match(await root.text(), /FaveRoam/);
   const blocked = await fetch(new URL("/api/agent/interpret", base), {

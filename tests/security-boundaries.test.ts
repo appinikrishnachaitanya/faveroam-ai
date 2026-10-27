@@ -59,11 +59,11 @@ test("all guest writes reject cross-site requests before reading bodies or calli
   assert.match(output, /Guest origin boundaries PASS/);
 });
 
-test("all pages receive framing, MIME and referrer safeguards", async () => {
+test("all pages receive framing, MIME and origin-only cross-site referrer safeguards", async () => {
   const rules = await config.headers!();
   const headers = Object.fromEntries(rules.find(rule => rule.source === "/:path*")!.headers.map(header => [header.key, header.value]));
   assert.equal(headers["X-Frame-Options"], "DENY");
   assert.equal(headers["X-Content-Type-Options"], "nosniff");
-  assert.equal(headers["Referrer-Policy"], "no-referrer");
+  assert.equal(headers["Referrer-Policy"], "strict-origin-when-cross-origin");
   assert.match(headers["Content-Security-Policy"], /frame-ancestors 'none'/);
 });

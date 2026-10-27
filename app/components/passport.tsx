@@ -388,7 +388,7 @@ export function DiscoveryCard({
           Not my vibe
         </button>
       </div>
-      {card.evidence?.source==='Qloo'&&card.evidence.result.id===card.id&&<button type="button" className="quiet-button" disabled={disabled||saving} onClick={()=>window.dispatchEvent(new CustomEvent('faveroam:create-ritual',{detail:{id:card.id}}))}>Make a ritual</button>}
+      {card.evidence?.source==='Qloo'&&card.evidence.result.id===card.id&&<button type="button" className="quiet-button ritual-card-action" disabled={disabled||saving} onClick={()=>window.dispatchEvent(new CustomEvent('faveroam:create-ritual',{detail:{id:card.id}}))}>Make a ritual</button>}
       {feedback && (
         <small className="feedback-note">
           {live
