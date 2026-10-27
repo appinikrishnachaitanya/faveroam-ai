@@ -25,7 +25,7 @@ const cards=Array.from({length:60},(_,i)=>{
  const latitude=51.5+Math.floor(i/20)*.08+(i%20)*.0001,longitude=-.12+(i%4)*.0001;
  return {id:`fixture-${String(i).padStart(2,'0')}`,name:`Fixture place ${i}`,detail:'Fixture only',section,types:[type],address:`Fixture address ${i}`,evidence:{source:'Qloo',operation:'/v2/insights/',queryId:'fixture',recordedAt:'2026-10-26T00:00:00Z',destination:'London',locality:'physical-city',mode:'familiar',pool:'direct',params:{},inputs:[{...seed,role:'entity-signal'}],result:{id:`fixture-${String(i).padStart(2,'0')}`,type,tags:[{id:`urn:tag:genre:place:${section==='Coffee'?'coffee_shop':section==='Eat'?'restaurant':'museum'}`,type:'urn:tag:genre:place',name:section==='Coffee'?'Coffee shop':section==='Eat'?'Restaurant':'Museum'}]}},intelligence:{id:`fixture-${String(i).padStart(2,'0')}`,name:`Fixture place ${i}`,type,taste:{contributingSignals:[]},quality:{},commercial:{},externalProof:{},location:{latitude,longitude}}};
 });
-const session={id:'11111111-1111-4111-8111-111111111111',revision:0,expires:Date.now()+3600000,city:'London',selected:[seed],tags:[],constraints:[],categoryConstraints:{},cards,previous:[],feedback:[],notices:[],activeCategories:['Eat','Coffee','Culture'],hiddenCategories:[],preferences:{},explorationMode:'aligned',discoveryMode:'familiar',categoryConcepts:{},categoryModes:{},categoryTags:{},history:[],providerHealth:'unconfigured',recovery:[],relaxed:[],savedCards:[]};
+const session={id:'11111111-1111-4111-8111-111111111111',revision:0,expires:Date.now()+3600000,city:'London',selected:[seed],tags:[],constraints:[],categoryConstraints:{},cards,previous:[],feedback:[],notices:[],activeCategories:['Eat','Coffee','Culture'],hiddenCategories:[],preferences:{},explorationMode:'aligned',discoveryMode:'familiar',categoryConcepts:{},categoryModes:{},categoryTags:{},history:[],providerHealth:'unconfigured',recovery:[],relaxed:[],savedCards:[cards[0]]};
 const passport={city:'London',selected:[seed],cards,notices:[],explanation:'Fixture only',session,agent:{sessionId:session.id,revision:0,tags:[],constraints:[]}};
 const partnerSeed={id:'fixture-artist',name:'Fixture artist',types:['urn:entity:artist'],detail:'Fixture only'};
 const togetherFixture={comparison:{shared:[{id:'urn:tag:genre:music:jazz',name:'Jazz',score:1},{id:'urn:tag:mood:dynamic',name:'Dynamic',score:1}],aOnly:[],bOnly:[],recordedAt:'2026-10-26T00:00:00Z'},partner:[partnerSeed.name],partnerSignals:[partnerSeed],cards:cards.slice(40),exchange:[{person:'you',cards:cards.slice(0,20),card:cards[0]},{person:'them',cards:cards.slice(20,40),card:cards[20]}],notice:'Synthetic fixture only'};
@@ -109,9 +109,8 @@ try{
    assert.ok(await ev('document.documentElement.scrollWidth<=innerWidth+1'),`Overflow: ${label} ${width}`);
   }
  }
- await ev('[...document.querySelectorAll(".share-options button")].find(b=>b.textContent==="Download PNG").click()');
- let png;for(let i=0;i<100;i++){try{png=await fs.readFile('/tmp/faveroam-browser-downloads/my-faveroam-card.png');break;}catch{await new Promise(r=>setTimeout(r,100));}}
- assert.ok(png&&png.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10])),'Download must be a PNG file');
+ assert.equal(await ev('[...document.querySelectorAll(".share-options button")].find(b=>b.textContent==="Download PNG")?.disabled'),true,'Guests cannot download a taste card');
+ assert.equal(await ev('[...document.querySelectorAll(".share-options button")].find(b=>b.textContent==="Create link")?.disabled'),true,'Guests cannot create a share link');
  await wait('Boolean(document.querySelector(".schematic-map button"))');
  await ev('document.querySelector(".schematic-map button").click()');await frame();
  assert.ok(await ev('Boolean(document.querySelector(".map-place-detail"))'));assert.equal(await ev('document.querySelector(".map-toggle").getAttribute("aria-expanded")'),'true');

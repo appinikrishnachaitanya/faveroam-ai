@@ -138,16 +138,15 @@ function AccountControl({
         accountChanged();
       }
       if (data.user && loadLibrary) {
-        try {
-          const list = await request("/api/account/passports");
-          if (epoch === authEpoch.current) setEntries(list.passports);
-        } catch {
-          if (epoch === authEpoch.current)
-            setMessage(
-              "Your saved Passports could not load. Try opening them again.",
-            );
-        }
-        if (epoch === authEpoch.current) await Promise.all([refreshPlans(),refreshWeeks()]);
+        await Promise.all([
+          request("/api/account/passports").then(list => {
+            if (epoch === authEpoch.current) setEntries(list.passports);
+          }).catch(() => {
+            if (epoch === authEpoch.current) setMessage("Your saved Passports could not load. Try opening them again.");
+          }),
+          refreshPlans(),
+          refreshWeeks(),
+        ]);
       } else if (!data.user) {
         setEntries([]);
         setPlans([]);

@@ -9,7 +9,7 @@
 .progressive-app .together-reveal .together-heading h3 { font-size: clamp(21px, 2.5vw, 27px); line-height: 1.25; margin: 6px 0 10px; }
 .together-reveal .together-heading > img { width: 110px; height: auto; flex: 0 0 110px; animation: none; }
 .progressive-app .together-reveal .together-heading { overflow:hidden; border:1px solid #e8dfce; border-radius:16px; background:#faf7f0; }
-.progressive-app .together-reveal .together-heading > img { display:block; width:min(38%,320px); height:190px; flex:0 0 min(38%,320px); object-fit:cover; object-position:center; border-radius:12px; }
+.progressive-app .together-reveal .together-heading > img { display:block; width:min(32%,230px); height:160px; flex:0 0 min(32%,230px); object-fit:contain; border-radius:12px; }
 .together-reveal .together-preference-summary { padding: 12px 0; background: transparent; border: 0; border-bottom: 1px solid var(--ui-border); border-radius: 0; margin: 0; gap: 12px; }
 .together-reveal .together-preference-summary .helper { font-size: 13px; }
 .together-reveal .together-two-profiles { display: block; margin: 12px 0; }

@@ -1119,7 +1119,7 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
                   {visibleResult&&mappedPlaces(visibleResult.cards).length>0&&<div hidden={!showMap}><PassportMap cards={visibleResult.cards} cartoKey={cartoKey} active={workspaceView==='discover'&&!showSaved&&showMap} selectedCluster={activeCluster?.id} onClusterSelect={setSelectedCluster} onSelect={openMappedCard} onPlanFrom={planFromMap} plannableIds={plannableIds}/></div>}
                   {activeCluster&&<div className="active-area-banner" role="status"><p>Showing {activeCluster.cards.length} returned places around {activeCluster.anchor.name}.</p><button type="button" className="quiet-button" onClick={()=>setSelectedCluster(undefined)}>Show all discoveries</button></div>}
                   {visibleResult&&<PassportSections disabled={busy} result={clusteredResult!} feedback={feedback} onFeedback={stableFeedback} updates={updates} updating={updating}/>}
-                  <ShareTasteCard key={`share:${result.agent?.sessionId??result.city}`} passport={result}/>
+                  <ShareTasteCard key={`share:${result.agent?.sessionId??result.city}`} passport={result} ownerName={accountSignedIn?accountFirstName:undefined}/>
                 </div>
             </div>
             <div

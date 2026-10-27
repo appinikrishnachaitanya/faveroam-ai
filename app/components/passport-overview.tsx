@@ -44,7 +44,7 @@ export const PassportCover = memo(function PassportCover({
         </button>
       </div>
       <div className="cover-art" aria-hidden="true">
-        <img className="cover-illustration" src="/illustrations/faveroam-city-journey.webp" width="1536" height="1024" alt="" loading="lazy" decoding="async" />
+        <img className="cover-illustration" src="/illustrations/passport-journey.svg" width="440" height="300" alt="" loading="lazy" decoding="async" />
         <div className="cover-stamp">
           <strong>{count}</strong>
           <span>
@@ -79,7 +79,7 @@ export const SavedDiscoveries = memo(function SavedDiscoveries({
           <p>Your saved discoveries also help shape future refinements in this Passport. Save your Passport to keep this collection for your next visit.</p>
           <div className="vibe-summary"><span>{cards.length} saved {cards.length === 1 ? "discovery" : "discoveries"}</span><span>{new Set(cards.map(card=>card.section)).size} categories</span></div>
         </div>
-        <img className="vibe-collection-illustration flow-scene" src="/illustrations/faveroam-my-vibe.webp" width="960" height="640" alt="" aria-hidden="true" loading="lazy" decoding="async"/>
+        <img className="vibe-collection-illustration" src="/illustrations/vibe-collection.svg" width="130" height="108" alt="" aria-hidden="true" loading="lazy" decoding="async"/>
       </header>
       {cards.length ? (
         <div className="discovery-grid">

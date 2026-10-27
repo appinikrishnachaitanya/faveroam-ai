@@ -10,4 +10,7 @@ test('portable taste card uses confirmed/returned words and escapes untrusted la
  const fallback=tasteCardSvg('Toronto',[],['Interstellar']);
  assert.match(fallback,/Interstellar/);
  assert.match(fallback,/width="1200" height="630"/);
+ const named=tasteCardSvg('London',[],['Interstellar'],'Krishna <script>');
+ assert.match(named,/Krishna &lt;script&gt;&apos;s FaveRoam/);
+ assert.doesNotMatch(named,/<script>/);
 });

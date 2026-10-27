@@ -6,12 +6,12 @@ import {normalizeSession} from '../src/agent/session.ts';
 import type {Card} from '../src/passport/model.ts';
 const owner='11111111-1111-4111-8111-111111111111',ritualId='22222222-2222-4222-8222-222222222222',proposalId='33333333-3333-4333-8333-333333333333';
 const place=(id:string):Card=>({id,name:id,section:'Coffee',types:['urn:entity:place'],detail:'',evidence:{source:'Qloo',operation:'/v2/insights/',queryId:'fixture',recordedAt:'2026-10-26T00:00:00Z',destination:'London',locality:'physical-city',mode:'familiar',pool:'direct',inputs:[],params:{},result:{id,type:'urn:entity:place',tags:[]}}});
-function state(){return normalizeSession({id:owner,revision:2,expires:Date.now()+600000,city:'London',cards:[place('original')],selected:[{id:'confirmed',name:'Confirmed artist',types:['urn:entity:artist'],detail:''}],tags:[],constraints:[],categoryConstraints:{Coffee:['mainstream']},queryPreferences:{Coffee:{priceMax:2}},feedback:[],notices:[],previous:[]});}
+function state(){return normalizeSession({id:owner,revision:2,expires:Date.now()+600000,city:'London',cards:[place('original'),place('unsaved')],savedCards:[place('original')],selected:[{id:'confirmed',name:'Confirmed artist',types:['urn:entity:artist'],detail:''}],tags:[],constraints:[],categoryConstraints:{Coffee:['mainstream']},queryPreferences:{Coffee:{priceMax:2}},feedback:[],notices:[],previous:[]});}
 const input={revision:2,cardId:'original',name:'Saturday coffee',weekday:6,recurrence:'weekly',status:'planned'};
 test('rituals require a verified current entity, valid recurrence and revision and never save history or identity',()=>{
  const s=state(),value=ritualFromSession(s,input);assert.equal(value.card.id,'original');
  assert.ok(!('history'in value.context));assert.ok(!('id'in value.context));
- for(const patch of [{revision:1},{cardId:'invented'},{weekday:7},{name:'<script>'},{recurrence:'daily'}])assert.throws(()=>ritualFromSession(s,{...input,...patch}));
+ for(const patch of [{revision:1},{cardId:'invented'},{cardId:'unsaved'},{weekday:7},{name:'<script>'},{recurrence:'daily'}])assert.throws(()=>ritualFromSession(s,{...input,...patch}));
  s.feedback.push({id:'original',section:'Coffee',accepted:false});assert.throws(()=>ritualFromSession(s,input));
 });
 test('replacement retains saved interests and current geography, excludes rejected venues, and preserves the active Passport',()=>{
@@ -47,5 +47,5 @@ test('ritual CRUD, replacement consent, ownership, expiry and stale writes are e
  const approved=await ritualHandler(req({...approve,cardId:'alternative'}),deps);assert.equal(approved.status,200);ritual=(await approved.json()).ritual;assert.equal(ritual.card.id,'alternative');assert.equal(db.rows.ritual_replacement_proposals.length,0);
  assert.equal((await ritualHandler(req({...input,action:'update',id:ritualId,updatedAt:'stale'}),deps)).status,409);
  const kept=await ritualHandler(req({...input,action:'update',id:ritualId,updatedAt:ritual.updated_at,status:'kept'}),deps);assert.equal(kept.status,200);ritual=(await kept.json()).ritual;assert.equal(ritual.status,'kept');
- assert.equal((await ritualHandler(req({action:'delete',id:ritualId,updatedAt:ritual.updated_at}),deps)).status,200);assert.equal(db.rows.saved_rituals.length,0);assert.deepEqual(s.cards,[place('original')]);
+ assert.equal((await ritualHandler(req({action:'delete',id:ritualId,updatedAt:ritual.updated_at}),deps)).status,200);assert.equal(db.rows.saved_rituals.length,0);assert.deepEqual(s.cards,[place('original'),place('unsaved')]);
 });

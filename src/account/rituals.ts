@@ -23,7 +23,7 @@ export function verifiedRitualCard(card:Card|undefined,city:string):Card {
 }
 export function ritualFromSession(state:AgentState,body:Record<string,unknown>){
  if(body.revision!==state.revision)throw Error('Your Passport changed. Choose the latest discovery again.');
- const card=[...state.cards,...(state.savedCards??[])].find(c=>c.id===body.cardId&&!state.hiddenCategories?.includes(c.section)&&!state.feedback.some(f=>f.id===c.id&&!f.accepted));
+ const card=(state.savedCards??[]).find(c=>c.id===body.cardId&&!state.hiddenCategories?.includes(c.section)&&!state.feedback.some(f=>f.id===c.id&&!f.accepted));
  return {...ritualFields(body),city:state.city,card:verifiedRitualCard(card,state.city),context:ritualContext(state)};
 }
 /** Replacement searches use saved confirmed interests, current relevant constraints,

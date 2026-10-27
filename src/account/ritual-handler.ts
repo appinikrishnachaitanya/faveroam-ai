@@ -22,7 +22,7 @@ export async function ritualHandler(request?:Request,deps=defaultDependencies){
    if(!uuid(body.sessionId))return privateJson({error:'Open a Passport first.'},400);
    const count=await writer.from('saved_rituals').select('id',{head:true,count:'exact'}).eq('user_id',user.id);if(count.error)throw count.error;
    if((count.count??0)>=50)return privateJson({error:'You have 50 rituals. Remove one before adding another.'},409);
-   let value;try{value=ritualFromSession(await deps.loadSession(body.sessionId),body);}catch{return privateJson({error:'Choose a verified discovery, a name, weekday and recurrence from your latest Passport.'},409);}
+   let value;try{value=ritualFromSession(await deps.loadSession(body.sessionId),body);}catch{return privateJson({error:'Choose a place saved to My Vibe, a name, weekday and recurrence from your latest Passport.'},409);}
    const {data,error}=await writer.from('saved_rituals').insert({user_id:user.id,...value}).select(fields).single();if(error)throw error;return privateJson({ritual:data});
   }
   if(!uuid(body.id))return privateJson({error:'Choose a ritual.'},400);

@@ -125,7 +125,7 @@ export function MoveForm({
         <p>Discover places that feel like you, build your first week, and find Common Ground in a new city.</p>
         <div className="landing-actions">{onSample&&<button type="button" className="primary-button" disabled={disabled||loadingCities||!destinations.length} onClick={()=>onSample(destinations.includes('London')?'London':destinations[0])}>Try a sample <Icon name="arrow" size={16}/></button>}<button type="button" className="quiet-button" onClick={()=>{const form=document.getElementById('city-onboarding-form');form?.scrollIntoView({behavior:'smooth',block:'start'});const destination=document.querySelector<HTMLSelectElement>('#destination');if(destination&&!destination.disabled)destination.focus({preventScroll:true});else form?.focus({preventScroll:true});}}>Explore my city</button></div>
         <div className="onboarding-story">
-          <img className="journey-illustration" src="/illustrations/faveroam-city-journey.webp" width="1536" height="1024" alt="" aria-hidden="true" fetchPriority="high" decoding="async" />
+          <img className="journey-illustration" src="/illustrations/faveroam-journey.svg" width="440" height="260" alt="" aria-hidden="true" fetchPriority="high" decoding="async" />
           <ul>
             <li><Icon name="check" size={16} /> Your tastes, explicitly confirmed</li>
             <li><Icon name="check" size={16} /> Real discoveries. Visible connections.</li>
