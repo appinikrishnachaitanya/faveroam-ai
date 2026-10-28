@@ -1,6 +1,6 @@
 # FaveRoam
 
-**From what you love to where you belong.**
+**Move anywhere. Keep what moves you.**
 
 FaveRoam is an agent-powered cultural discovery app for people making a new city feel like home. Tell it a film, an artist or a cuisine you already love. It turns those confirmed tastes into places and culture in your destination, a first-week plan, weekly rituals, and common ground with someone you've just met. Suggestions disclose the evidence available; when Qloo returns nothing suitable, the app shows a gap instead of inventing a venue.
 
@@ -9,7 +9,7 @@ FaveRoam is an agent-powered cultural discovery app for people making a new city
 ![Next.js 16](https://img.shields.io/badge/Next.js-16-black)
 ![Built for the Qloo Agentic Hackathon](https://img.shields.io/badge/built%20for-Qloo%20Agentic%20Hackathon-6f42c1)
 
-**[Live demo](https://my-faveroam-app.cloud.run/)** · [Qloo Agentic Hackathon](https://qloo.devpost.com/) · [Project guide](docs/PROJECT_GUIDE.md) · [MIT license](LICENSE)
+**[Live demo](https://my-faveroam-app.cloud.run/)** · [Qloo Agentic Hackathon](https://qloo.devpost.com/) · [Devpost submission copy](docs/DEVPOST_SUBMISSION.md) · [Project guide](docs/PROJECT_GUIDE.md) · [MIT license](LICENSE)
 
 ![FaveRoam: From what you love to where you belong](public/brand/faveroam-cover.png)
 
