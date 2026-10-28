@@ -1,6 +1,6 @@
 "use client";
 import { sectionLabel } from "../../src/passport/labels";
-import { memo, useEffect, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import type { Passport, Resolution } from "../../src/workspace/state";
 import { activeCategories } from "../../src/passport/active-categories";
 import { sectionOrder } from "../../src/workspace/state";
@@ -8,6 +8,7 @@ import { CategoryMultiSelect } from "./category-multi-select";
 import type { AgentInput } from "../../src/agent/types";
 import type { Card, Section } from "../../src/passport/model";
 import type { TasteComparison } from "../../src/qloo/compare";
+import { createLatestRequest } from "../../src/workspace/latest-request";
 import { audienceAgeBands, type AudienceAgeBand, type DiscoveryGoal, type QueryPreferences } from "../../src/qloo/query-plan";
 import { ResultMetrics, WhyEvidence } from "./intelligence-evidence";
 import { priceLabel } from "../../src/passport/pricing";
@@ -126,9 +127,26 @@ export default memo(function TasteIntelligence({
   const sharedCards=nearbySharedPlaces(together?.cards??[],sharedAnchor,sharedRadius);
   const [debug, setDebug] = useState<unknown>();
   const hasEntityProfile = passport.selected.some(candidate => !candidate.id.startsWith("urn:tag:"));
-  async function post(path: string, body: unknown) {
+  const profileScope = `${passport.agent?.sessionId ?? ""}|${passport.agent?.revision ?? ""}|${passport.city}|${passport.selected.map(item => item.id).join(",")}`;
+  const currentProfileScope = useRef(profileScope);
+  currentProfileScope.current = profileScope;
+  const comparisonRequests = useRef<ReturnType<typeof createLatestRequest> | null>(null);
+  if (!comparisonRequests.current) comparisonRequests.current = createLatestRequest();
+  useEffect(() => {
+    comparisonRequests.current?.cancel();
+    setResolution(undefined);
+    setIds({});
+    setTogether(undefined);
+    setDebug(undefined);
+    setError("");
+    setLoading(false);
+    return () => comparisonRequests.current?.cancel();
+  }, [profileScope]);
+  async function post(path: string, body: unknown, signal?: AbortSignal) {
     const r = await fetch(path, {
-      signal: AbortSignal.timeout(75_000),
+      signal: signal
+        ? AbortSignal.any([signal, AbortSignal.timeout(75_000)])
+        : AbortSignal.timeout(75_000),
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
@@ -138,44 +156,57 @@ export default memo(function TasteIntelligence({
     return b;
   }
   async function resolvePartner() {
+    const scope = profileScope;
+    const request = comparisonRequests.current!.start();
     setLoading(true);
     setError("");
     setTogether(undefined);
     try {
-      const matches = await post("/api/agent/resolve", { seeds: partner.map(value=>value.trim()).filter(Boolean) });
+      const matches = await post("/api/agent/resolve", { seeds: partner.map(value=>value.trim()).filter(Boolean) }, request.signal);
+      if (!comparisonRequests.current?.isCurrent(request) || currentProfileScope.current !== scope) return;
       setResolution(matches);
       setExpandedMatch(undefined);
       setIds(suggestedMatches(matches.items.map((item: Resolution["items"][number]) => ({ ...item, candidates: item.candidates.filter(candidate => !candidate.id.startsWith("urn:tag:")) }))));
     } catch {
+      if (!comparisonRequests.current?.isCurrent(request) || currentProfileScope.current !== scope) return;
       setError(
         "Could not find that interest. Try a specific artist, film, book or brand.",
       );
     } finally {
-      setLoading(false);
+      if (comparisonRequests.current?.isCurrent(request)) {
+        comparisonRequests.current.cancel();
+        setLoading(false);
+      }
     }
   }
   async function commonGround() {
     if (!passport.agent || !resolution) return;
+    const scope = profileScope;
+    const request = comparisonRequests.current!.start();
     setLoading(true);
     setError("");
     try {
-      setTogether(
-        await post("/api/agent/intelligence", {
-          ...passport.agent,
-          action: "together",
-          token: resolution.token,
-          ids: [...new Set(Object.values(ids))],
-          sections: selectedSections,
-        }),
-      );
+      const comparison = await post("/api/agent/intelligence", {
+        ...passport.agent,
+        action: "together",
+        token: resolution.token,
+        ids: [...new Set(Object.values(ids))],
+        sections: selectedSections,
+      }, request.signal);
+      if (!comparisonRequests.current?.isCurrent(request) || currentProfileScope.current !== scope) return;
+      setTogether(comparison);
     } catch (e) {
+      if (!comparisonRequests.current?.isCurrent(request) || currentProfileScope.current !== scope) return;
       setError(
         e instanceof Error
           ? e.message
           : "Comparison is unavailable. Your Passport is preserved.",
       );
     } finally {
-      setLoading(false);
+      if (comparisonRequests.current?.isCurrent(request)) {
+        comparisonRequests.current.cancel();
+        setLoading(false);
+      }
     }
   }
   return (
