@@ -581,10 +581,9 @@ async function executeTurn(
     intent = {
       kind: "refine",
       seeds: [],
-      concepts:
-        outputChoice ? pending.remainingConcepts ?? [] : pending.optional || pending.exclude
-          ? []
-          : [pending.query, ...(pending.remainingConcepts ?? [])],
+      // The selected Qloo tag was applied above. Only unresolved concepts may
+      // enter the lookup loop; re-queuing this query repeats the same picker.
+      concepts: pending.remainingConcepts ?? [],
       sections: pending.sections,
       constraints: pending.constraints,
       excludeConcepts: pending.remainingExcludeConcepts,
