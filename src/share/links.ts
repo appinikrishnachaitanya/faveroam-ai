@@ -24,12 +24,12 @@ export async function createShare(sessionId:string,revision:number,ownerName:str
  if(state.revision!==revision)throw Error('Your Passport changed. Refresh before sharing.');
  const writer=storageWriter(),owner=hash(sessionId);
  const {count,error:countError}=await writer.from('share_links').select('*',{count:'exact',head:true}).eq('owner_user_id',ownerUserId).eq('snapshot->>city',state.city).is('revoked_at',null).gt('expires_at',new Date().toISOString());
- if(countError){debugEvent('share.create_failed',{reason:'storage-read'});throw Error('Share storage is not ready. Apply the share-links database script.');}
+ if(countError){debugEvent('share.create_failed',{reason:`storage-read:${countError.code??'unknown'}`});throw Error('Share storage is not ready. Check that db-scripts/setup.sql has been applied.');}
  if((count??0)>=5)throw Error(`You have five active links for ${state.city}. Revoke one before creating another.`);
  const publicToken=token(),revokeToken=token(),snapshot=shareSnapshot(state,ownerName);
  const expiresAt=new Date(Date.now()+14*24*60*60*1000).toISOString();
  const {error}=await writer.from('share_links').insert({token_hash:hash(publicToken),public_token:publicToken,revoke_hash:hash(revokeToken),owner_session_hash:owner,owner_user_id:ownerUserId,snapshot,expires_at:expiresAt});
- if(error){debugEvent('share.create_failed',{reason:'storage-write'});throw Error('Could not create this share link.');}
+ if(error){debugEvent('share.create_failed',{reason:`storage-write:${error.code??'unknown'}`});throw Error('Could not create this share link. Please try again.');}
  debugEvent('share.created');
  return {token:publicToken,revokeToken,expiresAt,snapshot};
 }
