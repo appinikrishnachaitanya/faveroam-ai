@@ -9,7 +9,7 @@ FaveRoam is an agent-powered cultural discovery app for people making a new city
 ![Next.js 16](https://img.shields.io/badge/Next.js-16-black)
 ![Built for the Qloo Agentic Hackathon](https://img.shields.io/badge/built%20for-Qloo%20Agentic%20Hackathon-6f42c1)
 
-**[Live demo](https://my-faveroam-app.cloud.run/)** · [Qloo Agentic Hackathon](https://qloo.devpost.com/) · [Devpost submission copy](docs/DEVPOST_SUBMISSION.md) · [Project guide](docs/PROJECT_GUIDE.md) · [MIT license](LICENSE)
+**[Live demo](https://my-faveroam-app.cloud.run/)** · [Project guide](docs/PROJECT_GUIDE.md) · [MIT license](LICENSE)
 
 ![FaveRoam: From what you love to where you belong](public/brand/faveroam-cover.png)
 
@@ -172,4 +172,4 @@ FaveRoam does not book venues, verify opening hours or showtimes, guarantee trav
 
 ## Acknowledgements and license
 
-Built for the [Qloo Agentic Hackathon](https://qloo.devpost.com/) with Qloo's cultural API, Google Gemini and Google Cloud Run. Map data © OpenStreetMap contributors, © CARTO. Released under the [MIT license](LICENSE).
+Built for the Qloo Agentic Hackathon with Qloo's cultural API, Google Gemini and Google Cloud Run. Map data © OpenStreetMap contributors, © CARTO. Released under the [MIT license](LICENSE).
