@@ -9,7 +9,7 @@ import PassportMap from './passport-map';
 import {accountRequest,showNotice} from '../../src/account/browser';
 import type {SavedFirstWeek} from '../../src/account/first-weeks';
 
-export default memo(function FirstWeek({passport,options:validatedOptions,cartoKey='',roots,onLocksChange,signedIn=false,editWeek,onEditWeekHandled}:{passport:Passport;options?:Card[];cartoKey?:string;roots?:WeekRoots;onLocksChange?:(locked:boolean)=>void;signedIn?:boolean;editWeek?:{week:SavedFirstWeek;nonce:number};onEditWeekHandled?:()=>void}){
+export default memo(function FirstWeek({passport,options:validatedOptions,cartoKey='',roots,onLocksChange,signedIn=false,editWeek,onEditWeekHandled,isActive=true}:{passport:Passport;options?:Card[];cartoKey?:string;roots?:WeekRoots;onLocksChange?:(locked:boolean)=>void;signedIn?:boolean;editWeek?:{week:SavedFirstWeek;nonce:number};onEditWeekHandled?:()=>void;isActive?:boolean}){
  const [date,setDate]=useState(()=>cityDate(passport.city));
  const [days,setDays]=useState<WeekDay[]>();
  const [active,setActive]=useState(0);
@@ -79,7 +79,7 @@ export default memo(function FirstWeek({passport,options:validatedOptions,cartoK
        </div>;
 
      })}</div>
-     <PassportMap cards={days[active].stops.flatMap(stop=>stop.card??[])} cartoKey={cartoKey} dayLabels={Object.fromEntries(days[active].stops.flatMap((stop,index)=>stop.card?[[stop.card.id,String(index+1)]]:[]))}/>
+     <PassportMap cards={days[active].stops.flatMap(stop=>stop.card??[])} cartoKey={cartoKey} active={isActive} dayLabels={Object.fromEntries(days[active].stops.flatMap((stop,index)=>stop.card?[[stop.card.id,String(index+1)]]:[]))}/>
      <p className="helper">{chosen.size} unique places selected across seven days. Map distances are visual only; travel times, opening hours and events are unverified.</p>
      {hasLocks&&<p className="helper">Unlock approved stops before rebuilding the week or changing its date.</p>}
      {undo&&<button type="button" className="quiet-button" onClick={()=>{setDays(undo);setUndo(undefined);setStatus('Your last edit was undone.');}}>Undo last edit</button>}

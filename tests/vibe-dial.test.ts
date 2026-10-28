@@ -35,3 +35,17 @@ test('exploring a returned theme requests unseen alternatives without persisting
  assert.deepEqual(result.state.cards.map(card=>card.id),['new-place']);
  assert.equal(result.state.queryPreferences?.Eat?.excludeEntities,undefined);
 });
+test('a theme can apply when the verified match is an existing place',async()=>{
+ const existing={id:'old-place',name:'Existing place',section:'Eat',types:['urn:entity:place'],detail:''} as Card;
+ const theme='urn:tag:genre:place:gallery';
+ const session=normalizeSession({id:'fixture',revision:0,expires:Date.now()+60000,city:'London',selected:[],tags:[],constraints:[],categoryConstraints:{Eat:[]},cards:[existing],previous:[],feedback:[],notices:[],activeCategories:['Eat']});
+ const unused=async():Promise<never>=>{throw Error('Unexpected tool call');};
+ const deps:AgentDependencies={tools:unused,workflow:unused,discover:async(state,_section,_constraints,excluded)=>{
+  assert.ok(!excluded.includes(existing.id));
+  assert.deepEqual(state.queryPreferences?.Eat?.inspirationTags,[theme]);
+  return [existing];
+ }};
+ const result=await runTurn(session,{discovery:{sections:['Eat'],preferences:{inspirationTags:[theme],inspirationName:'Gallery evenings'}}},deps);
+ assert.deepEqual(result.changed,['Eat']);
+ assert.deepEqual(result.state.queryPreferences?.Eat?.inspirationTags,[theme]);
+});

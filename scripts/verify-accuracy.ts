@@ -33,11 +33,13 @@ else try {
   console.log(JSON.stringify({check:'live-dish-refinement',changed:reply.changed,pending:Boolean(reply.state.pending),recovery:reply.state.recovery,otherCategoryPreserved:reply.state.cards.filter(c=>c.section==='Movies').map(c=>c.id).join(',')===state.cards.filter(c=>c.section==='Movies').map(c=>c.id).join(',')}));
   assert.ok(!reply.state.pending,'Dish refinement should complete without a repeated confirmation');
   assert.ok(reply.changed.includes('Eat'),'Dish refinement requires eligible dining results');
-  const budget=await runTurn(reply.state,{discovery:{section:'Eat',preferences:{priceMax:2}}},deps);
+  const budget=await runTurn(reply.state,{discovery:{sections:['Eat'],preferences:{priceMax:2}}},deps);
   assert.ok(budget.changed.includes('Eat'),'Budget refinement requires eligible dining results');
   assert.ok(budget.state.cards.filter(c=>c.section==='Eat').every(c=>c.intelligence?.commercial.priceLevel!==undefined && c.intelligence.commercial.priceLevel<=2));
   console.log('PASS live price cap: every retained dining result has a known eligible price.');
-  const outing=await runTurn(budget.state,{message:'movie then party then dinner'},deps);
+  // Compound planning needs model interpretation; the deterministic fallback
+  // deliberately asks for clarification rather than guessing an itinerary.
+  const outing=await runTurn(budget.state,{message:'movie then party then dinner'},agentDependencies());
   assert.ok(outing.changed.includes('Culture'),'Outing refinement requires eligible cinema/nightlife venues');
   const culture=outing.state.cards.filter(c=>c.section==='Culture');
   const genres=culture.map(c=>c.evidence?.result.tags.map(t=>t.name).join(' ') ?? '');
@@ -68,4 +70,10 @@ else try {
     console.log(JSON.stringify({check:'reported-profile-initial-style',mode,counts}));
   }
   console.log(JSON.stringify({check:'mode-preview-overlap',familiarChoices:modeChoices.familiar.length,balancedChoices:modeChoices.balanced.length,sharedDiningChoices:modeChoices.familiar.filter(id=>modeChoices.balanced.includes(id)).length}));
-}catch(error){console.error(`Accuracy acceptance FAIL${error instanceof QlooError&&error.status?` HTTP ${error.status}`:''}; request details and credentials withheld.`);process.exitCode=1;}
+}catch(error){
+  const safeMessage=error instanceof Error && !/key|token|secret|credential|https?:|authorization/i.test(error.message)
+    ? error.message.slice(0,180) : 'request details withheld';
+  console.error(`Accuracy acceptance FAIL${error instanceof QlooError&&error.status?` HTTP ${error.status}`:''}: ${safeMessage}`);
+  if(error instanceof TypeError)console.error(error.stack?.split('\n').slice(1,4).join('\n'));
+  process.exitCode=1;
+}

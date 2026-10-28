@@ -24,7 +24,7 @@ export async function POST(request:Request){
    const {data:{user},error}=await (await accountClient()).auth.getUser();
    if(error||!user)return respond({error:'Sign in to share your FaveRoam.'},401);
    const ownerName=accountName(user.user_metadata?.first_name);
-   const body=JSON.parse(await readRequestText(request,500));
+   const body=JSON.parse(await readRequestText(request,200));
    if(!validSessionId(body.sessionId)||!Number.isSafeInteger(body.revision))return respond({error:'Open your Passport before sharing.'},400);
    const shared=await createShare(body.sessionId,body.revision,ownerName,user.id);
    return respond(shared,201);

@@ -2,7 +2,7 @@
 
 **Move anywhere. Keep what moves you.**
 
-FaveRoam is an agent-powered cultural discovery app for people making a new city feel like home. Tell it a film, an artist or a cuisine you already love. It turns those confirmed tastes into places and culture in your destination, a first-week plan, weekly rituals, and common ground with someone you've just met. Suggestions disclose the evidence available; when Qloo returns nothing suitable, the app shows a gap instead of inventing a venue.
+FaveRoam is an agent-powered cultural discovery app for people making a new city feel like home. Tell it a film, an artist or a cuisine you already love. It turns those confirmed tastes into places and culture in your destination, a first-week plan, recurring rituals, and common ground with someone you've just met. Suggestions disclose the evidence available; when Qloo returns nothing suitable, the app shows a gap instead of inventing a venue.
 
 ![License: MIT](https://img.shields.io/badge/license-MIT-blue)
 ![Node 24+](https://img.shields.io/badge/node-%E2%89%A524-339933)
@@ -41,7 +41,7 @@ FaveRoam starts from **confirmed cultural interests** and keeps the person in co
 | **My Rituals** | Turn a verified discovery into a weekly or fortnightly routine; replace it only by approving a returned alternative. |
 | **Common Ground** | Compare two people's confirmed tastes, get one first place to try, grounded conversation starters, and a shared first week where each stop is marked *you*, *partner* or *both*. |
 | **Share** | Signed-in users can download a taste card or create an expiring, revocable, read-only link, and manage their links from their account. |
-| **Accounts** | Save Passports, plans, First Weeks, rituals and taste profiles, and share. Guests can explore discovery, the map and Common Ground without signing in. |
+| **Accounts** | Save Passports, plans, First Weeks, rituals and taste profiles, then share your tastes. Guests can explore discovery, the map and Common Ground without signing in. |
 
 ## Why it is different
 
@@ -58,15 +58,13 @@ FaveRoam starts from **confirmed cultural interests** and keeps the person in co
 
 | Qloo capability | Used for |
 |---|---|
-| Entity search and lookup (`/search`, `/entities`) | Resolve and confirm the artists, films, cuisines and places a person names. |
+| Entity search and lookup (`/search`, `/entities`) | Resolve and confirm the artists, films and places a person names. |
 | Tags (`/v2/tags`, `/v2/tags/types`) | Turn a concept such as a cuisine, dish or atmosphere into a Qloo tag. |
 | Insights (`/v2/insights/`) | Discovery. `filter.type` is the requested **output type** (for example `urn:entity:place`), while confirmed entities and tags are the input signals. |
 | Compare (`/v2/analysis/compare`) | Shared and distinct cultural themes between two people. |
 | Trending (`/v2/trending`) and analysis views | Audience context: taste, heatmap and demographic analysis ([`src/qloo/analysis.ts`](src/qloo/analysis.ts)). |
 
 Validated official harness/MCP functions are used where appropriate. See the [Qloo developer guide](https://docs.qloo.com/reference/qloo-llm-hackathon-developer-guide).
-
-This table describes a difference in workflow and evidence. It is not a measured claim that every FaveRoam result beats every LLM answer.
 
 ## Architecture
 
@@ -99,8 +97,6 @@ flowchart LR
   Compose --> Reply
 ```
 
-This is **structured intent plus server-orchestrated retrieval** with a bounded taxonomy tool loop. It is not a fully autonomous multi-agent system: Gemini does not choose arbitrary endpoints, make bookings or commit changes. Schemas, input checks, tool allow-lists, evidence validation, preservation checks and revision checks are the safety boundary, not model temperature. The [project guide](docs/PROJECT_GUIDE.md) documents the details.
-
 ## Tech stack
 
 | Layer | Technology |
@@ -131,11 +127,9 @@ Open `http://localhost:3000`. Set these **server-side** values in `.env.local`:
 | `GEMINI_API_KEY` | Recommended | Native Gemini conversation. Without it the app falls back to deterministic interpretation. |
 | `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY` | Optional | Accounts and saved data. Keep the service-role key server-only. |
 | `APP_ORIGIN` | Optional | Canonical HTTPS origin for account email redirects. |
-| `CARTO_API_KEY` | Optional | Website key for map tiles. Without it the map shows a setup message and a schematic view. |
+| `CARTO_API_KEY` | Required for the map | Website key for CARTO map tiles. Without it, the app shows a setup message and a schematic view instead of the tiled map. |
 
-Never put a provider or service-role secret in a `NEXT_PUBLIC_` variable, a commit, logs or screenshots. The CARTO key is the exception: it is visible to anyone inspecting browser requests, so restrict it to your site's origins in the CARTO dashboard (for example `https://my-faveroam-app.cloud.run`, and localhost for local testing only).
-
-For accounts, create a Supabase project, enable email/password sign-in, set the `/auth/callback` redirect URLs, and run [`db-scripts/setup.sql`](db-scripts/setup.sql) manually in the SQL Editor. **It is a destructive reset** of app-owned data (Auth users are kept), so never run it from startup or CI. After running it, start a New Passport.
+Database setup: run [`db-scripts/setup.sql`](db-scripts/setup.sql) in the Supabase SQL Editor. It resets app-owned data.
 
 ## Verify
 
@@ -150,10 +144,6 @@ npm run smoke:production
 These checks use local fixtures and a production smoke test; they do not certify live Qloo, Gemini, map-tile or email behaviour. Opt-in live checks are `npm run verify:qloo`, `npm run verify:gemini`, `npm run verify:accuracy` and `npm run verify:relevance`. They consume provider quota.
 
 The app listens on the host-provided `PORT` and exposes `/api/health` for readiness. GitHub Actions checks the configured branches; verify the latest workflow run before deploying.
-
-## Honest boundaries
-
-FaveRoam does not book venues, verify opening hours or showtimes, guarantee travel times, or certify dietary or medical safety. Some Qloo entities have no image, rating or venue details, and the app does not infer missing facts. Audience associations and geographic affinity describe aggregate patterns, not an individual. Live coverage varies by city and interest.
 
 ## Repository layout
 

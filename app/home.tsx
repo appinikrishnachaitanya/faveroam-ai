@@ -5,6 +5,7 @@ import GenerationPreview from './components/generation-preview';
 import { sectionLabel } from "../src/passport/labels";
 import { startTransition, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { validDestination } from "../src/workspace/location";
+import { createLatestRequest } from "../src/workspace/latest-request";
 import { AgentTurnError, sendAgentTurn } from "../src/agent/browser";
 import type { Intent } from "../src/agent/types";
 import type { AgentInput, Constraint } from "../src/agent/types";
@@ -81,12 +82,15 @@ const welcome: Message = {
   text: "From what you love to where you belong. Tell me your new city and one to five cultural tastes you love. We’ll build a bridge between your world and your next chapter.",
 };
 const verifyShareToken=(value:string)=>/^[a-zA-Z0-9_-]{32}$/.test(value);
-async function post<T>(path: string, body: unknown): Promise<T> {
+async function post<T>(path: string, body: unknown, cancellation?: AbortSignal): Promise<T> {
+  const signal = cancellation
+    ? AbortSignal.any([cancellation, AbortSignal.timeout(95_000)])
+    : AbortSignal.timeout(95_000);
   const response = await fetch(path, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
-    signal: AbortSignal.timeout(95_000),
+    signal,
   });
   const data = await response.json();
   if (!response.ok)
@@ -124,7 +128,7 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
   useEffect(() => { if (assistantOpen) setAssistantVisited(true); }, [assistantOpen]);
   const [visitedViews, setVisitedViews] = useState<Set<string>>(() => new Set(["discover"]));
   const [planMode,setPlanMode]=useState<"week"|"day">("week");
-  const [visitedPlanModes,setVisitedPlanModes]=useState<Set<"week"|"day">>(()=>new Set(["week"]));
+  const [visitedPlanModes,setVisitedPlanModes]=useState<Set<"week"|"day">>(()=>new Set());
   const choosePlanMode=useCallback((mode:"week"|"day")=>{
     setVisitedPlanModes(current=>current.has(mode)?current:new Set([...current,mode]));
     setPlanMode(mode);
@@ -166,6 +170,9 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
     return () => window.removeEventListener("tastepassport:plans-updated", onPlansUpdated);
   }, []);
   const [phase, setPhase] = useState<Phase>("idle");
+  const draftRequests = useRef<ReturnType<typeof createLatestRequest> | null>(null);
+  if (!draftRequests.current) draftRequests.current = createLatestRequest();
+  useEffect(() => () => draftRequests.current?.cancel(), []);
   useEffect(()=>{
     if(phase==='exploring')document.getElementById('generation-heading')?.focus();
   },[phase]);
@@ -335,7 +342,9 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
     let cancelled = false;
     let idle: number | undefined;
     let timer: ReturnType<typeof setTimeout> | undefined;
-    const queue = ["preferences", "connections", "plan"];
+    // Prepare the planner shell first. Its day/week editors remain unmounted
+    // until selected; heavier insight panels can be prepared afterward.
+    const queue = ["plan", "preferences", "connections"];
     const prepare = () => {
       if (cancelled) return;
       const next = queue.shift();
@@ -406,13 +415,14 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
   ]);
   useEffect(() => {
     setVisitedViews(new Set(["discover"]));
-    setVisitedPlanModes(new Set(["week"]));
+    setVisitedPlanModes(new Set());
     setShowEarlierConversation(false);
   }, [result?.session?.id]);
   function say(text: string) {
     setMessages((m) => [...m, { role: "agent", text }]);
   }
   function resetMatches(nextPhase: Phase = "review") {
+    draftRequests.current?.cancel();
     setResolution(undefined);
     setChosen({});
     setRemoved([]);
@@ -431,10 +441,10 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
       )
     ) {
       setMessages((m) => [...m, { role: "user", text }]);
-      const visibleIds=/\bcompare\b/i.test(text)&&/\bvisible\b/i.test(text)?[...document.querySelectorAll<HTMLElement>('.passport-sections [data-entity-id]')].filter(element=>element.getClientRects().length>0).map(element=>element.dataset.entityId!).filter(Boolean).slice(0,40):undefined;
-      await refine({ message: text,...(visibleIds?{visibleIds}:{}) });
+      await refine({ message: text });
       return;
     }
+    const request = draftRequests.current!.start();
     setPhase("interpreting");
     setError("");
     try {
@@ -445,7 +455,8 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
       }>("/api/agent/interpret", {
         message: text,
         city: city || "New York City",
-      });
+      }, request.signal);
+      if (!draftRequests.current?.isCurrent(request)) return;
       const combined = onboardingTastes(interpreted.intent);
       const parsed = {
         city: validDestination(interpreted.intent.destination ?? city) ? (interpreted.intent.destination ?? city) : "",
@@ -467,10 +478,13 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
       setEditing(true);
       resetMatches();
     } catch (e) {
+      if (!draftRequests.current?.isCurrent(request)) return;
       setError(
         e instanceof Error ? e.message : "Could not interpret the request.",
       );
       setPhase("error");
+    } finally {
+      if (draftRequests.current?.isCurrent(request)) draftRequests.current.cancel();
     }
   }
   const submitConversationHandler = useRef(submitConversation);
@@ -643,6 +657,7 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
       return;
     }
     resetMatches("resolving");
+    const request = draftRequests.current!.start();
     setEditing(false);
     say(
       "I’m looking up your cultural signals. You’ll choose the intended match for each taste.",
@@ -651,7 +666,8 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
       const r = await post<Resolution>("/api/agent/resolve", {
         seeds: queries,
         concepts: sample ? ["Indian cuisine"] : conceptSeeds,
-      });
+      }, request.signal);
+      if (!draftRequests.current?.isCurrent(request)) return;
       setResolution(r);
       setChosen(reviewMatches(r.items));
       setPhase("confirming");
@@ -661,6 +677,7 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
           : "Your matches are ready. Confirm each intended entity to bring your taste DNA into focus.",
       );
     } catch (e) {
+      if (!draftRequests.current?.isCurrent(request)) return;
       setError(
         e instanceof Error ? e.message : "Could not resolve your tastes.",
       );
@@ -668,6 +685,8 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
       say(
         "The taste lookup couldn’t complete. Your draft is still here; you can retry.",
       );
+    } finally {
+      if (draftRequests.current?.isCurrent(request)) draftRequests.current.cancel();
     }
   }
   function choose(index: number, id: string) {
@@ -784,11 +803,18 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
   const feedbackHandler = useRef(recordFeedback);
   useLayoutEffect(()=>{feedbackHandler.current=recordFeedback;});
   const stableFeedback = useCallback((id:string,value:Feedback)=>feedbackHandler.current(id,value),[]);
-  const visibleResult = useMemo(()=>result?{...result,cards:result.cards.filter(card=>!result.session?.hiddenCategories.includes(card.section))}:undefined,[result]);
-  const mappedPlaceCount = useMemo(()=>mappedPlaces(visibleResult?.cards??[]).length,[visibleResult]);
-  const plannableCards=useMemo(()=>result?dayOutOptions(result.cards,result.city):[],[result]);
+  const visibleCards = useMemo(
+    () => result?.cards.filter(card => !result.session?.hiddenCategories.includes(card.section)) ?? [],
+    [result?.cards, result?.session?.hiddenCategories],
+  );
+  const visibleResult = useMemo(
+    () => result ? { ...result, cards: visibleCards } : undefined,
+    [result, visibleCards],
+  );
+  const mappedPlaceCount = useMemo(()=>mappedPlaces(visibleCards).length,[visibleCards]);
+  const plannableCards=useMemo(()=>result?dayOutOptions(result.cards,result.city):[],[result?.cards,result?.city]);
   const plannableIds=useMemo(()=>new Set(plannableCards.map(card=>card.id)),[plannableCards]);
-  const placeClusters=useMemo(()=>clusterPlaces(visibleResult?.cards??[]),[visibleResult]);
+  const placeClusters=useMemo(()=>clusterPlaces(visibleCards),[visibleCards]);
   const activeCluster=placeClusters.find(cluster=>cluster.id===selectedCluster);
   const clusteredResult=useMemo(()=>visibleResult&&activeCluster?{...visibleResult,cards:activeCluster.cards}:visibleResult,[visibleResult,activeCluster]);
   const openMappedCard = useCallback((card:import('../src/passport/model').Card)=>{
@@ -869,7 +895,7 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
     setShowMap(true);
     setWorkspaceView("discover");
     setVisitedViews(new Set(["discover"]));
-    setVisitedPlanModes(new Set(["week"]));
+    setVisitedPlanModes(new Set());
     setShowEarlierConversation(false);
     setEditingPlan(undefined);
     setSavePlanRequest(0);
@@ -1159,7 +1185,7 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
                 saveRequest={savePlanRequest}
                 onSaveRequestHandled={planSaveHandled}
               />}</div>
-              <div hidden={planMode!=='week'}>{visitedPlanModes.has('week')&&<FirstWeek key={`first-week:${result.session?.id??result.city}`} passport={result} options={plannableCards} cartoKey={cartoKey} signedIn={accountSignedIn} editWeek={editingFirstWeek} onEditWeekHandled={editWeekHandled}/>}</div>
+              <div hidden={planMode!=='week'}>{visitedPlanModes.has('week')&&<FirstWeek key={`first-week:${result.session?.id??result.city}`} passport={result} options={plannableCards} cartoKey={cartoKey} isActive={workspaceView==='plan'&&planMode==='week'} signedIn={accountSignedIn} editWeek={editingFirstWeek} onEditWeekHandled={editWeekHandled}/>}</div>
               </>}
             </div>
             <div
@@ -1206,7 +1232,7 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
               </details>}
             </div>
             <div className="workspace-panel" id="view-shares" hidden={workspaceView!=="shares"}>
-              {visitedViews.has("shares")&&<><ShareTasteCard key={`share:${result.agent?.sessionId??result.city}`} passport={result} ownerName={accountSignedIn?accountFirstName:undefined}/><ShareManagement key={`share-management:${result.city}`} signedIn={accountSignedIn} city={result.city}/></>}
+              {visitedViews.has("shares")&&<><ShareTasteCard key={`share:${result.agent?.sessionId??result.city}`} passport={result} ownerName={accountSignedIn?accountFirstName:undefined}/><ShareManagement key={`share-management:${result.city}:${accountSignedIn?'signed-in':'guest'}`} signedIn={accountSignedIn} city={result.city}/></>}
             </div>
             {result.session &&
               process.env.NODE_ENV === "development" &&

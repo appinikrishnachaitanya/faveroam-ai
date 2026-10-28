@@ -18,6 +18,23 @@ function initial() {
 }
 const unexpected=async():Promise<never>=>{throw Error("Choosing existing results must not call Gemini, Qloo or MCP");};
 const noTools:AgentDependencies={tools:unexpected,workflow:unexpected,discover:unexpected,provider:{interpret:unexpected,choose:unexpected}};
+test('which one of those is best uses the latest shown taste order',async()=>{
+ const state=initial();state.history=[{role:'agent',text:'Fresh shortlist',recommendationIds:['first-club','second-club']}];
+ const result=await runTurn(state,{message:'Which one of those is best?'},noTools);
+ assert.deepEqual(result.state.history.at(-1)?.recommendationIds,['first-club']);
+ assert.match(result.message,/First returned club/);
+ assert.deepEqual(result.changed,[]);
+});
+test('comparison preserves ordinal identity when an unrelated shown card disappears',async()=>{
+ const state=initial();state.cards=state.cards.filter(card=>card.id!=='museum');
+ const result=await runTurn(state,{message:'Compare the second and third choices'},noTools);
+ assert.deepEqual(result.comparisonIds,['first-club','second-club']);
+ const stale=await runTurn(state,{message:'Compare the first and third choices'},noTools);
+ assert.deepEqual(stale.comparisonIds,undefined);
+ assert.match(stale.message,/no longer/);
+ const named=await runTurn(state,{message:'Compare First returned club and Second returned club'},noTools);
+ assert.deepEqual(named.comparisonIds,['first-club','second-club']);
+});
 for(const message of ["From the above pick one best night club","From the above pick one best night club for mr","Pick one nightclub for me","Which nightclub should I choose?","Which one is best from those nightclubs?"])test(message,async()=>{
  const state=initial();const result=await runTurn(state,{message},noTools);
  assert.deepEqual(result.changed,[]);

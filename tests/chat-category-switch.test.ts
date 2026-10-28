@@ -9,6 +9,17 @@ const card=(id:string,section:Card['section']):Card=>({id,name:'Fixture '+id,sec
 const initial=()=>normalizeSession({id:'category-switch',revision:1,expires:Date.now()+60_000,city:'London',selected:[],tags:[],constraints:[],categoryConstraints:{},cards:[card('Coffee one','Coffee'),card('Coffee two','Coffee'),card('Coffee three','Coffee'),card('Restaurant','Eat'),card('Artist','Music'),card('Movie','Movies')],previous:[],feedback:[],notices:[],activeCategories:['Coffee','Eat','Music','Movies'],intent:{kind:'refine',sections:['Coffee'],seeds:[],concepts:[],constraints:[],strategy:'discover'},history:[{role:'agent',text:'Here are three coffee shops',recommendationIds:['Coffee one','Coffee two','Coffee three']}],conversationMemory:{version:1,focusSections:['Coffee'],lastPresentedIds:['Coffee one','Coffee two','Coffee three'],recentChanges:[],dismissedConcepts:[],lastPreservedSections:[]}});
 const forbidden=async():Promise<never>=>{throw Error('No discovery for a current shortlist');};
 const deps:AgentDependencies={tools:forbidden,workflow:forbidden,discover:forbidden,provider:{interpret:async()=>({kind:'unknown',question:'explanation',sections:['Coffee'],seeds:[],concepts:[],constraints:[],strategy:'discover'}),choose:forbidden,compose:async()=>{throw Error('Keep the grounded cards');}}};
+test('fresh chat shortlist remains comparable when the Discover panel has no visible DOM cards',async()=>{
+ const shortlist=await runTurn(initial(),{message:'Pick three things across my interests'},deps);
+ const shown=shortlist.state.history?.at(-1)?.recommendationIds;
+ assert.ok(shown && shown.length>=2);
+ for(const visibleIds of [[],undefined]) {
+  const compared=await runTurn(shortlist.state,{message:'Compare the first and second visible discoveries',visibleIds},deps);
+  assert.deepEqual(compared.comparisonIds,shown.slice(0,2));
+  assert.deepEqual(compared.changed,[]);
+  assert.doesNotMatch(compared.message,/no longer|new shortlist/i);
+ }
+});
 test('a mixed-category request and its follow-up supersede the previous coffee focus',async()=>{
  let state=initial();
  for(const message of ['show me food, music and movie discoveries','give me one restaurant, one artist and one movie',"Don't focus on coffee. Can you give me three recommendations across food, music and movies? One restaurant, one artist and one movie, please.","You keep showing coffee. Please recommend exactly one restaurant, one artist and one movie from my Passport.","No more coffee please. I want exactly one restaurant, one artist and one movie."]){
@@ -25,6 +36,18 @@ test('explicit categories also ground an explanation when model context incorrec
  const reply=await runTurn(initial(),{message:'Tell me about food, music and movie discoveries'},deps);
  assert.deepEqual(reply.state.history?.at(-1)?.recommendationIds,['Restaurant','Artist','Movie']);
  assert.doesNotMatch(reply.message,/Coffee one/);
+});
+test('category corrections in a conversation use the current cards without a new search',async()=>{
+ let state=initial();
+ for(const message of ['Show the restaurants, not coffee','List food instead of coffee','Show my current movies, not music']) {
+  const reply=await runTurn(state,{message},deps);
+  assert.deepEqual(reply.changed,[]);
+  assert.deepEqual(reply.state.cards,state.cards);
+  assert.doesNotMatch(reply.message,/Coffee one/);
+  if(/movies/.test(message)) assert.deepEqual(reply.state.history?.at(-1)?.referenceIds,['Movie']);
+  else assert.deepEqual(reply.state.history?.at(-1)?.referenceIds,['Restaurant']);
+  state=reply.state;
+ }
 });
 test('explicit categories take precedence over across, and show is a verb rather than a TV category',()=>{
  assert.deepEqual(requestedShortlistSections('show three across food, music and movies'),['Eat','Music','Movies']);
