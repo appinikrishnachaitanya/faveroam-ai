@@ -80,3 +80,23 @@
 .together-reveal .together-results > .common-ground-more > summary,
 .together-reveal .together-results > .common-ground-week > summary { padding:13px 4px; color:#17243b; }
 @media(max-width:600px){.progressive-app .together-reveal .together-heading{display:block}.together-reveal .taste-exchange-grid{grid-template-columns:minmax(0,1fr)}.together-reveal .shared-hangout{padding:16px}.together-reveal .shared-hangout > a{width:100%;justify-content:center}.together-reveal .together-preference-summary{align-items:stretch;flex-direction:column}.together-reveal .together-preference-summary button{align-self:flex-start}}
+
+/* The other person's interest is the starting point; search controls stay available on demand. */
+.progressive-app .taste-intelligence:has(.together-reveal:not([hidden])) .intelligence-intro { margin-bottom:18px; }
+.progressive-app .together-reveal .common-ground-setup { border:0; }
+.progressive-app .together-reveal .common-ground-setup > summary { padding:12px 0; color:#173a30; }
+.progressive-app .together-reveal .together-two-profiles > div { padding:16px; border:1px solid #d9e4d9; border-radius:14px; background:#f3f7ee; }
+.progressive-app .together-reveal .partner-interests label { padding:14px; border:1px solid #d9e4d9; border-radius:14px; background:#fffefa; }
+.progressive-app .together-reveal .partner-matches { margin-top:18px; padding:16px; border:1px solid #d9e4d9; border-radius:14px; background:#f8faf5; }
+.progressive-app .common-ground-adjust { margin:0 0 16px; padding:0 16px; border:1px solid #d9e4d9; border-radius:14px; background:#fffefa; }
+.progressive-app .common-ground-adjust > summary { cursor:pointer; min-height:52px; display:flex; align-items:center; justify-content:space-between; gap:12px; color:#173a30; font-weight:700; }
+.progressive-app .common-ground-adjust > summary span { font-size:13px; font-weight:500; color:#526078; text-align:right; }
+.progressive-app .common-ground-adjust > p { margin:0 0 12px; color:#526078; }
+.progressive-app .common-ground-adjust .category-multi-select { margin-bottom:16px; }
+.progressive-app .connection-meter { margin:0 0 18px; padding:14px; border:1px solid #d1dfd1; border-radius:12px; background:#fffefa; }
+.progressive-app .connection-meter > strong { display:block; color:#173a30; }
+.progressive-app .connection-meter ol { list-style:none; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin:12px 0 8px; padding:0; }
+.progressive-app .connection-meter li { min-width:0; padding:9px 10px; border-radius:9px; background:#eef0ec; color:#59645b; font-size:12px; line-height:1.35; }
+.progressive-app .connection-meter li.found { background:#dcebe0; color:#173a30; }
+.progressive-app .connection-meter > small { color:#526078; }
+@media(max-width:600px){.progressive-app .common-ground-adjust > summary { align-items:flex-start; flex-direction:column; justify-content:center; gap:2px; }.progressive-app .common-ground-adjust > summary span { text-align:left; }.progressive-app .connection-meter ol { grid-template-columns:1fr; }}
