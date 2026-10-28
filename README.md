@@ -11,8 +11,6 @@ FaveRoam is an agent-powered cultural discovery app for people making a new city
 
 **[Live demo](https://my-faveroam-app.cloud.run/)** · [Project guide](docs/PROJECT_GUIDE.md) · [MIT license](LICENSE)
 
-![FaveRoam: From what you love to where you belong](public/brand/faveroam-cover.png)
-
 ## The problem
 
 A newcomer usually knows what they love but not where those tastes lead in a new city. A generic city guide starts with popularity. A chatbot without cultural retrieval can offer plausible suggestions, but may guess which *Interstellar* or *A.R. Rahman* you meant or give reasons without evidence from the recommended place.
