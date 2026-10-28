@@ -1451,9 +1451,8 @@ body {
 }
 .day-out-plan { padding: 1.25rem 0; }
 .day-out-plan > p { max-width: 70ch; }
-.day-out-stops { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; padding: 0; list-style: none; counter-reset: weekend; }
-.day-out-stops > li { counter-increment: weekend; min-width: 0; border: 1px solid var(--line, #dfd9cc); border-radius: 18px; padding: 1.2rem; }
-.day-out-stops h3::before { content: counter(weekend) ". "; }
+.day-out-stops { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; padding: 0; list-style: none; }
+.day-out-stops > li { min-width: 0; border: 1px solid var(--line, #dfd9cc); border-radius: 18px; padding: 1.2rem; }
 .day-out-stops label { display: block; margin-bottom: .5rem; }
 .day-out-stops select { width: 100%; min-height: 44px; padding: .65rem; border-radius: 8px; background: var(--paper, #fffaf0); color: inherit; }
 .day-out-stops p, .day-out-stops small { overflow-wrap: anywhere; }

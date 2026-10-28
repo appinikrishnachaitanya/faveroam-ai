@@ -88,3 +88,25 @@
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
 }
+
+/* Repeat interactions must show content immediately, without replaying a transcript
+   or staggering previously loaded cards each time a panel is mounted. */
+.progressive-app .discovery-concierge,
+.progressive-app .concierge-drawer[open],
+.progressive-app .conversation > .message,
+.progressive-app :is(.account-dialog, .account-library-dialog, .match-dialog, .feedback-dialog, .taste-profile-dialog)[open],
+.progressive-app .discovery-grid > :is(.shortlist-choice, .discovery-card),
+.progressive-app .day-out-stops > li,
+.progressive-app .area-choices > article {
+  animation: none;
+}
+
+/* Avoid full-page backdrop blur over the retained map and card inventory. */
+.progressive-app dialog::backdrop { backdrop-filter: none; }
+
+/* Workspace switches are navigation, not a new landing-page reveal. Avoid
+   opacity/translate entrance waits on first mount and when hidden panels reopen. */
+.progressive-app :is(.workspace-panel, .workspace-view-anchor) :is(
+  .intelligence-intro, .analysis-intro, .outing-intro, .vibe-intro,
+  .together-heading img, .journey-illustration, .cover-illustration
+) { animation: none; }

@@ -73,6 +73,12 @@ export function passportAnswer(state: AgentState, intent: Intent, request=''): s
       const values = [...new Set(requirements)];
       if (query.priceMax !== undefined) values.push(`maximum price category ${query.priceMax}/4 (${priceLabel(query.priceMax) ?? "relative price"})`);
       if (query.businessRatingMin !== undefined) values.push(`minimum rating ${query.businessRatingMin}/5`);
+      if (query.locationQuery) values.push(`area: ${query.locationQuery}`);
+      if (query.excludeLocation) values.push(`avoid area: ${query.excludeLocation}`);
+      if (query.includeTags?.length) for(const id of query.includeTags) {
+        const tag=state.tags.find(tag=>tag.id===id);if(tag&&!values.includes(tag.name))values.push(tag.name);
+      }
+      for(const constraint of state.categoryConstraints[section]??[])if(!values.includes(constraint))values.push(constraint==='crowded'?'quiet atmosphere':constraint);
       if (query.excludeTags?.length || query.excludeEntities?.length) values.push("your saved exclusions");
       return `${sectionLabel(section)}: ${values.join(", ") || "no additional category filters"}.`;
     });

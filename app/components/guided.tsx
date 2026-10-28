@@ -111,7 +111,7 @@ export function RefinementRecovery({
         <section className="refinement-recovery" key={section} role="status">
           <h3>Let’s adjust your {sectionLabel(section).toLowerCase()} search</h3>
           <p>
-            The last search was not applied. These cards still use your previous active preferences. Adjust Preferences to try a different search.
+            The last search found no verified match or could not complete. These cards still use your previous active preferences. Choose a different search below.
           </p>
           {session.failedSearches?.[section] && <p>Last attempted search (not applied): {[
             ...(session.failedSearches[section]?.queryPreferences?.locationQuery ? [`in ${session.failedSearches[section]?.queryPreferences?.locationQuery}`] : []),
@@ -153,7 +153,12 @@ export function RefinementRecovery({
                 {label}
               </button>
             ))}
-            <button className="quiet-button" disabled={disabled} onClick={()=>onApply({recovery:{section,action:"retry"}})}>Try {sectionLabel(section).toLowerCase()} again</button>
+            {session.failedSearches?.[section]?.queryPreferences?.locationQuery && (
+              <button className="quiet-button" disabled={disabled} onClick={()=>onApply({recovery:{section,action:"area-only"}})}>
+                Search {session.failedSearches[section].queryPreferences.locationQuery} with my tastes only
+              </button>
+            )}
+            <button className="quiet-button" disabled={disabled} onClick={()=>onApply({recovery:{section,action:"retry"}})}>Retry the same search</button>
           </div>
         </section>
       ))}

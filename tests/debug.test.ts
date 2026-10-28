@@ -37,6 +37,7 @@ test("backend traces isolate concurrent requests and redact arbitrary metadata, 
       count: -1,
       sections: ["Eat", "do-not-log-person"],
     });
+    debugEvent("agent.response", { action: "skipped", count: 3 });
     const logs = lines.map((line) => JSON.parse(line));
     const starts = logs.filter((log) => log.event === "api.started");
     assert.equal(new Set(starts.map((log) => log.requestTrace)).size, 3);
@@ -55,7 +56,8 @@ test("backend traces isolate concurrent requests and redact arbitrary metadata, 
       trace("agent.turn"),
     );
     assert.ok(!lines.join(" ").includes("do-not-log"));
-    assert.deepEqual(logs.at(-1).sections, ["Eat"]);
+    assert.deepEqual(logs.find(log => log.event === "qloo.result").sections, ["Eat"]);
+    assert.ok(logs.some(log => log.event === "agent.response" && log.action === "skipped" && log.count === 3));
     const before = lines.length;
     process.env.AGENT_DEBUG = "0";
     debugEvent("qloo.cache_hit");

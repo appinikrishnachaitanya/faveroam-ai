@@ -94,13 +94,19 @@ export function confirmed(
   );
 }
 export function typeLabel(candidate: Candidate) {
-  return candidate.types
-    .map((t) =>
-      t.startsWith("urn:tag")
-        ? `cultural concept · ${t.split(":")[2] ?? "taste"}`
-        : t.replace("urn:entity:", "").replaceAll("_", " "),
-    )
-    .join(" · ");
+  const labels = candidate.types.map((t) =>
+    t.startsWith("urn:tag")
+      ? `cultural concept · ${t.split(":")[2] ?? "taste"}`
+      : t.replace("urn:entity:", "").replaceAll("_", " "),
+  );
+  // Deduplicate labels while preserving order to avoid "artist · artist" display.
+  const seen = new Set<string>();
+  return labels.filter((label) => {
+    const key = label.toLowerCase().trim();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  }).join(" · ");
 }
 
 export function onboardingTastes(intent: Intent): string[] {

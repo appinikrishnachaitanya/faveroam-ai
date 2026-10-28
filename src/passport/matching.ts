@@ -24,6 +24,45 @@ export function suggestedMatches(items: { query: string; candidates: Candidate[]
   return chosen;
 }
 
+/**
+ * Remove candidates that share no meaningful word overlap with the query and
+ * whose type is clearly different from what the query implies. This prevents
+ * obviously irrelevant alternatives from appearing in the resolver dialog.
+ */
+export function filterIrrelevantCandidates(query: string, candidates: Candidate[]): Candidate[] {
+  if (candidates.length <= 1) return candidates;
+  const normalize = (text: string) =>
+    text.normalize("NFKC").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  const queryNorm = normalize(query);
+  const queryTokens = new Set(queryNorm.split(/\s+/).filter(t => t.length >= 3));
+
+  // Classify query intent by type keywords
+  const queryImpliesPlace = /restaurant|cafe|café|bar|venue|place|food|cuisine|shop|store|market/i.test(query);
+  const queryImpliesMedia = /film|movie|show|series|album|book|novel|song|track/i.test(query);
+  const queryImpliesPerson = /director|actor|actress|author|singer|artist|musician|chef|chef/i.test(query);
+
+  return candidates.filter((c) => {
+    const nameNorm = normalize(c.name);
+    const nameTokens = new Set(nameNorm.split(/\s+/).filter(t => t.length >= 3));
+    // Keep if there's at least one shared meaningful token.
+    const sharedTokens = [...queryTokens].filter(t => nameNorm.includes(t) || nameTokens.has(t));
+    if (sharedTokens.length > 0) return true;
+
+    // Keep if name is close enough (within edit distance proportional to length).
+    const minLen = Math.min(queryNorm.replace(/\s/g, "").length, nameNorm.replace(/\s/g, "").length);
+    if (minLen >= 4 && editDistance(queryNorm.replace(/\s/g, ""), nameNorm.replace(/\s/g, "")) <= Math.floor(minLen * 0.35)) return true;
+
+    // Exclude if types are obviously mismatched and there's no name overlap.
+    const typeStr = c.types.join(" ").toLowerCase();
+    if (queryImpliesPlace && /\b(?:artist|movie|book|tv_show|podcast|video_game|brand|person)\b/.test(typeStr)) return false;
+    if (queryImpliesMedia && /\b(?:place|restaurant|cafe)\b/.test(typeStr)) return false;
+    if (queryImpliesPerson && /\b(?:place|movie|book|tv_show)\b/.test(typeStr)) return false;
+
+    // Default: keep to avoid over-filtering.
+    return true;
+  });
+}
+
 /** Retrieval order is a tie breaker; lexical similarity is never a cultural affinity score. */
 export function rankCandidates(query: string, candidates: Candidate[]): Candidate[] {
   const normalize = (text:string)=>text.normalize("NFKC").toLowerCase().replace(/[^\p{L}\p{N}]+/gu," ").trim();

@@ -25,6 +25,24 @@ test('provider failure also rolls back attempted category preferences',async()=>
  const original=state();const reply=await runTurn(original,{discovery:{sections:['Eat'],preferences:filters}},{...deps,discover:forbidden});
  assert.deepEqual(reply.state.queryPreferences,original.queryPreferences);assert.deepEqual(reply.state.cards,original.cards);
 });
+test('named-area recovery searches Wembley with confirmed tastes but no inherited filters',async()=>{
+ const original=state();
+ original.categoryConstraints.Eat=['mainstream'];
+ original.categoryTags={Eat:['urn:tag:genre:place:restaurant']};
+ const failed=await runTurn(original,{discovery:{sections:['Eat'],preferences:{...filters,locationQuery:'Wembley'}}},deps);
+ let observed=false;
+ const recovered=await runTurn(failed.state,{recovery:{section:'Eat',action:'area-only'}},{...deps,discover:async(s)=>{
+  observed=true;
+  assert.deepEqual(s.queryPreferences?.Eat,{locationQuery:'Wembley',radius:0});
+  assert.deepEqual(s.categoryConstraints.Eat,[]);
+  assert.deepEqual(s.categoryTags?.Eat,[]);
+  return [{id:'wembley-place',name:'Wembley place',section:'Eat',types:['urn:entity:place'],detail:''} as Card];
+ }});
+ assert.ok(observed);
+ assert.deepEqual(recovered.changed,['Eat']);
+ assert.equal(recovered.state.failedSearches?.Eat,undefined);
+ assert.equal(recovered.state.queryPreferences?.Eat?.locationQuery,'Wembley');
+});
 for (const message of ['Are these open now?','What are their opening hours?','Book a table for me']) {
  test(`unsupported availability action is read-only: ${message}`,async()=>{
   const original=state();const reply=await runTurn(original,{message},deps);

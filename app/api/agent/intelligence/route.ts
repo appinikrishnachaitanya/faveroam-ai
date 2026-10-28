@@ -1,5 +1,6 @@
 import { browserRequestError, readRequestText } from "../../../../src/http/request.ts";
-import { relevantThemes } from "../../../../src/passport/taste-themes";
+import {jointProfileState,togetherPlanningCards,distinctIntroductions} from "../../../../src/passport/common-ground";
+import { themesPerInterest } from "../../../../src/passport/taste-themes";
 import { validSessionId } from "../../../../src/agent/session-lifetime.ts";
 import { trending } from "../../../../src/qloo/trending";
 import { loadSession } from "../../../../src/agent/store";
@@ -9,7 +10,7 @@ import { entityDetails, tagTypes } from "../../../../src/qloo/lookups";
 import { normalizeEntity } from "../../../../src/qloo/normalizer";
 import { queryRecord } from "../../../../src/qloo/diagnostics";
 import { sectionOrder } from "../../../../src/workspace/state";
-import type { Section } from "../../../../src/passport/model";
+import {sectionTypes,type Section} from "../../../../src/passport/model";
 import { configuredProvider } from "../../../../src/agent/provider";
 import { evidenceFacts } from "../../../../src/qloo/explanation";
 import { debugRequest } from "../../../../src/agent/debug";
@@ -75,9 +76,21 @@ async function handlePOST(request: Request) {
       let interests;
       try { interests=selectAnalysisSignals(state.selected,b.interestIds); }
       catch { return json({error:"Choose one to five confirmed interests to explore."},400); }
-      const analysis = await analyze(b.kind as AnalysisKind, interests, state.city, signal);
-      if (analysis.kind === "taste") analysis.tags = relevantThemes(analysis.tags, state.selected.filter(interest => b.interestIds.includes(interest.id)));
-      return json({analysis});
+      let analysis;
+      let themeStatus;
+      if(b.kind==='taste'){
+        const chosen=state.selected.filter(interest=>b.interestIds.includes(interest.id));
+        const grouped=await themesPerInterest(chosen,async interest=>{
+          const single=selectAnalysisSignals(state.selected,[interest.id]);
+          const result=await analyze('taste',single,state.city,signal);
+          if(result.kind!=='taste')throw Error('Unexpected taste analysis result.');
+          return result.tags;
+        });
+        if(!grouped.tags.length)throw Error('No distinct taste connections were returned.');
+        themeStatus={unavailable:grouped.unavailable,noConnections:grouped.noConnections};
+        analysis={kind:'taste' as const,recordedAt:new Date().toISOString(),tags:grouped.tags};
+      }else analysis=await analyze(b.kind as AnalysisKind, interests, state.city, signal);
+      return json({analysis,...(themeStatus?{themeStatus}:{})});
     }
     if (b.action === "trends") {
       if (!selectedCard) return json({error:"Choose a current discovery."},400);
@@ -89,7 +102,7 @@ async function handlePOST(request: Request) {
     if (b.action === "explain") {
       if (!selectedCard)
         return json({ error: "Choose a current discovery." }, 400);
-      const facts = evidenceFacts(selectedCard);
+      const facts = evidenceFacts(selectedCard,state.selected.map(taste=>taste.id));
       try {
         const provider = configuredProvider();
         if (!provider?.explain) throw Error();
@@ -127,11 +140,11 @@ async function handlePOST(request: Request) {
         400,
       );
     const choices = unseal(b.token);
-    const partner = choices.flatMap((item) =>
+    const partner = [...new Map(choices.flatMap((item) =>
       item.candidates.filter(
         (c) => b.ids.includes(c.id) && !c.id.startsWith("urn:tag:"),
       ),
-    );
+    ).map(candidate=>[candidate.id,candidate])).values()];
     if (partner.length !== b.ids.length)
       return json(
         { error: "Choose returned entity matches for the comparison." },
@@ -149,6 +162,8 @@ async function handlePOST(request: Request) {
     if (!comparison.shared.length)
       return json({
         comparison,
+        partner:partner.map(seed=>seed.name),
+        partnerSignals:partner.map(({id,name})=>({id,name})),
         cards: [],
         notice:
           "No shared cultural tags were returned. Your existing Passport is preserved.",
@@ -156,39 +171,41 @@ async function handlePOST(request: Request) {
     const sections = (Array.isArray(b.sections) ? b.sections : [b.section]) as Section[];
     const rejected = state.feedback.filter((f) => !f.accepted).map((f) => f.id);
     try {
-      const tags = comparison.shared.map((t) => ({
-        id: t.id,
-        name: t.name,
-        types: ["urn:tag"],
-        detail: "Returned common ground",
-      }));
-      const joint = structuredClone(state);
-      joint.selected = [...new Map([...state.selected, ...partner].map(c => [c.id,c])).values()];
-      joint.tags = [...new Map([...state.tags, ...tags].map(c => [c.id,c])).values()];
-      joint.categoryTags ??= {};
-      // A previous Ask session may have left a one-off activity such as
-      // nightlife in Culture. Together is a fresh multi-category comparison.
-      joint.intent = {
-        kind: "refine",
-        seeds: [],
-        concepts: [],
-        constraints: joint.categoryConstraints[sections[0]] ?? [],
-        sections,
-        strategy: "discover",
-      };
-      if (joint.activityGenres) delete joint.activityGenres.Culture;
       const cards: Awaited<ReturnType<typeof discoverSection>> = [];
-      for (const section of sections) {
-        joint.categoryTags[section] = [...new Set([...(joint.categoryTags[section] ?? []), ...tags.map(t => t.id)])];
-        const result = await discoverSection(joint, section, state.categoryConstraints[section] ?? [], [...a, ...partner.map(c => c.id), ...rejected], false, signal);
-        cards.push(...result.filter(card => card.section === section).slice(0, 3));
-      }
+      const failedSections:Section[]=[];
+      const jointResults=await Promise.all(sections.map(async section=>{
+        const joint=jointProfileState(state,partner,comparison,section);
+        try{return (await discoverSection(joint,section,state.categoryConstraints[section]??[],[...a,...partner.map(c=>c.id),...rejected],false,signal)).filter(card=>card.section===section).slice(0,12);}
+        catch{failedSections.push(section);return [];}
+      }));
+      cards.push(...jointResults.flat());
+      const placeSections=sections.filter(section=>sectionTypes[section]==='place');
+      const exchange=await Promise.all([
+        {person:'you',seeds:state.selected.filter(candidate=>a.includes(candidate.id)),themes:comparison.aOnly},
+        {person:'them',seeds:partner,themes:comparison.bOnly},
+      ].map(async profile=>{
+        const personalCards:typeof cards=[];
+        const themeCandidates=profile.themes.slice(0,3).map(theme=>({id:theme.id,name:theme.name,types:['urn:tag'],detail:'Returned individual comparison theme'}));
+        for(const section of placeSections){
+          const solo=structuredClone(state);
+          solo.selected=profile.seeds;
+          solo.tags=themeCandidates;
+          solo.queryPreferences??={};solo.queryPreferences[section]={...solo.queryPreferences[section],inspirationTags:themeCandidates.map(theme=>theme.id)};
+          solo.intent={kind:'refine',seeds:[],concepts:[],constraints:state.categoryConstraints[section]??[],sections:[section],strategy:'discover'};
+          if(solo.activityGenres)delete solo.activityGenres.Culture;
+          try{personalCards.push(...togetherPlanningCards(await discoverSection(solo,section,state.categoryConstraints[section]??[],rejected,false,signal),state.city,8));}catch{failedSections.push(section);}
+        }
+        return {person:profile.person,theme:profile.themes[0]?.name,card:personalCards[0],cards:personalCards};
+      }));
       return json({
         comparison,
         partner: partner.map((p) => p.name),
+        partnerSignals:partner.map(({id,name})=>({id,name})),
+        failedSections:[...new Set(failedSections)],
         cards,
+        exchange:distinctIntroductions(exchange),
         notice: cards.length
-          ? "Each category was searched using both confirmed taste profiles and the shared themes returned by the comparison. These are starting ideas, not a compatibility score or a guarantee you will both like every result."
+          ? "Each category was searched using both confirmed taste profiles with shared themes used as soft taste signals. Explicit category and geographic requirements stayed in place. These are starting ideas, not a compatibility score or a guarantee you will both like every result."
           : "No matches appeared for these shared tastes and current preferences. Your Passport is preserved.",
       });
     } catch {

@@ -33,7 +33,7 @@ test("oversize guest data and storage failures never crash the UI",()=>{
  assert.doesNotThrow(()=>clearGuestPassport(blocked));
 });
 test("UI commits recovery snapshots after successful render and clears on intentional reset",()=>{
- const page=readFileSync(new URL("../app/page.tsx",import.meta.url),"utf8");
+ const page=readFileSync(new URL("../app/home.tsx",import.meta.url),"utf8");
  assert.match(page,/useEffect\(\(\) => \{[\s\S]*?restoreGuestPassport\(window\.sessionStorage/);
  assert.match(page,/rememberGuestPassport\(window\.sessionStorage, result\)/);
  assert.match(page,/clearGuestPassport\(window\.sessionStorage\)/);

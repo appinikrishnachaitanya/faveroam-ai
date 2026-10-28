@@ -232,6 +232,45 @@ export async function discoverSection(
     if (musicTags.length)
       params["signal.interests.tags"] = musicTags.map((t) => t.id).join(",");
   }
+  // For media/content sections (Books, Podcasts, Games, Brands, People),
+  // ensure the Qloo query is grounded in the user's confirmed taste signals
+  // rather than falling back to generic popularity. This prevents results
+  // like children's books appearing for an adult-taste passport, broad
+  // mainstream podcasts unrelated to the user's interests, or games/brands
+  // that have no visible connection to the selected tastes.
+  if (type !== "place" && type !== "artist") {
+    const sectionTagList = sectionTags(state, section).filter(
+      (t) => !/:place:|:restaurant:|:cuisine:|:ambience:/.test(t.id),
+    );
+    // Prefer section-specific tags, then fall back to all taste tags.
+    const tasteTags = sectionTagList.length
+      ? sectionTagList
+      : state.selected.filter(s => s.id.startsWith("urn:tag:")).map(s => ({ id: s.id, name: s.name ?? "", detail: "" }));
+    if (tasteTags.length && !params["signal.interests.tags"])
+      params["signal.interests.tags"] = tasteTags.map((t) => t.id).join(",");
+    // For Books: if the concepts include a genre keyword, add it as a type filter
+    // so we don't get generic children's books when the user likes literary fiction.
+    if (section === "Books") {
+      const concepts = state.categoryConcepts?.Books ?? state.intent?.concepts ?? [];
+      const genreHints = concepts
+        .map(c => c.toLowerCase())
+        .filter(c => /fiction|thriller|mystery|fantasy|sci.fi|literary|romance|history|biography|non.fiction|graphic|manga/i.test(c));
+      if (genreHints.length && !params["filter.tags"]) {
+        // Don't add a hard filter tag — just ensure the signal is rich enough.
+        // The signal.interests.tags already drives the query; no further action needed.
+      }
+    }
+    // For Podcasts: require at least entity or tag signals so results are not
+    // purely popularity-based (which returns broad mainstream shows).
+    if (section === "Podcasts" && !ids.length && !params["signal.interests.tags"]) {
+      // No signals at all — return empty and let the UI surface a helpful prompt.
+      return [];
+    }
+    // For Games: restrict to video_game type explicitly (already set via filter.type
+    // from insightParams when no ids, but confirm it is not overridden).
+    if (section === "Games" && !params["filter.type"] && !ids.length)
+      params["filter.type"] = "urn:entity:video_game";
+  }
   if (type !== "place" && !params["signal.interests.tags"] && state.selected.some(s=>s.id.startsWith("urn:tag:")))
     params["signal.interests.tags"] = state.selected.filter(s=>s.id.startsWith("urn:tag:")).map(s=>s.id).join(",");
   if (excluded.length)
@@ -274,7 +313,9 @@ export async function discoverSection(
   // Merge the shared planner's applied settings with existing category filters.
   // Omitted settings remain in the server session; unrelated categories are untouched.
   const categoryFilter = params["filter.tags"];
+  const originalTasteSignals=params['signal.interests.tags'];
   Object.assign(params, planned.params);
+  if(planned.params['signal.interests.tags'])params['signal.interests.tags']=[...new Set([...(originalTasteSignals??'').split(',').filter(Boolean),...planned.params['signal.interests.tags'].split(',')])].join(',');
   if (planned.params["filter.location"]) delete params["filter.location.query"];
   if (preferences.includeTags?.length && type === "place") {
     params["filter.tags"] = [
@@ -454,7 +495,12 @@ export async function discoverSection(
   const eligible = avoidMainstream ? mixed.filter(card=>!knownChain(card)) : mixed;
   if (avoidMainstream && eligible.length < mixed.length)
     state.notices.push(`Excluded ${mixed.length-eligible.length} known chain listings from ${section}. Independent ownership of remaining venues is not verified.`);
-  const cards = rankDiverseChoices(diversifyCards(eligible, section), section);
+  // Enforce a price ceiling locally even if the provider ignores a filter.
+  // Unknown prices cannot establish affordability.
+  const affordable = type === "place" && preferences.priceMax !== undefined && preferences.priceMax < 4
+    ? eligible.filter(card => typeof card.intelligence?.commercial?.priceLevel === "number" && card.intelligence.commercial.priceLevel <= preferences.priceMax!)
+    : eligible;
+  const cards = rankDiverseChoices(diversifyCards(affordable, section), section);
   debugEvent("discovery.completed", { section, mode, count: cards.length });
   return cards;
 }

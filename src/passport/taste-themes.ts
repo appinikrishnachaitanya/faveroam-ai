@@ -6,7 +6,7 @@ import { editDistance } from "../text/edit-distance.ts";
 function themeMeaning(name:string):string {
   return name.toLowerCase()
     .replace(/\b(?:cuisine|foods?|style|dishes?|specialt(?:y|ies)|restaurants?|kitchen|cooking|local|homestyle|savouries|savories|variety|selection|of|and|accompaniments?)\b/g,'')
-    .replace(/[^\p{L}\p{N}]/gu,'');
+    .replace(/[^\p{L}\p{N}]+/gu,' ').trim().split(/\s+/).sort().join('');
 }
 
 export function themeCategories(theme:TasteTag|undefined,active:Section[]):Section[] {
@@ -25,11 +25,34 @@ export function themeCategories(theme:TasteTag|undefined,active:Section[]):Secti
 export function curatedThemes(tags:TasteTag[],limit=6):TasteTag[] {
   const grouped=new Map<string,TasteTag[]>();
   const meanings:string[]=[];
+  const perSource=new Map<string,number>();
+  const perSourceFamily=new Map<string,number>();
   for(const tag of displayTags(tags)){
-    const key=themeMeaning(tag.name);
-    if(!key || meanings.some(previous=>key===previous || Math.min(key.length,previous.length)>=8 && editDistance(key,previous)<=1))continue;
-    meanings.push(key);
+    if(/^(versatile|expressive|dynamic|passionate|innovative|ambitious|creative|popular|entertainment)$/i.test(tag.name.trim()))continue;
+    const source=tag.sourceInterestId;
     const family=tag.id.split(':').slice(2,4).join(':');
+    if(source&&((perSource.get(source)??0)>=3 || (perSourceFamily.get(`${source}:${family}`)??0)>=2))continue;
+    const key=themeMeaning(tag.name);
+    if(!key) continue;
+    // Stronger deduplication: reject a theme if its meaning key is:
+    //   1. identical to an existing one, or
+    //   2. a substring of an existing one (e.g. "coffee" ⊂ "indiancoffee"),
+    //   3. has an existing one as a substring of it, or
+    //   4. within edit distance 2 of an existing key of similar length.
+    const isDuplicate = meanings.some(previous => {
+      if (key === previous) return true;
+      // Substring containment in either direction catches "coffee"/"indian coffee".
+      if (key.length >= 4 && previous.includes(key)) return true;
+      if (previous.length >= 4 && key.includes(previous)) return true;
+      // Edit-distance near-match with proportional threshold.
+      const minLen = Math.min(key.length, previous.length);
+      const threshold = minLen >= 10 ? 2 : minLen >= 6 ? 1 : 0;
+      if (threshold > 0 && editDistance(key, previous) <= threshold) return true;
+      return false;
+    });
+    if (isDuplicate) continue;
+    meanings.push(key);
+    if(source){perSource.set(source,(perSource.get(source)??0)+1);perSourceFamily.set(`${source}:${family}`,(perSourceFamily.get(`${source}:${family}`)??0)+1);}
     grouped.set(family,[...(grouped.get(family)??[]),tag]);
   }
   const result:TasteTag[]=[];
@@ -41,6 +64,34 @@ export function curatedThemes(tags:TasteTag[],limit=6):TasteTag[] {
 /** Stay within the selected interests' returned taxonomy. Audience association
  * alone does not make an unrelated dish or venue a useful film theme. */
 export function relevantThemes(tags:TasteTag[], interests:readonly {id:string;types:string[];name?:string}[]):TasteTag[] {
+  const attributed=tags.some(tag=>Boolean(tag.sourceInterestId));
+  if(attributed)return interests.flatMap(interest=>relevantThemesFor(tags.filter(tag=>!tag.sourceInterestId||tag.sourceInterestId===interest.id),[interest]));
+  return relevantThemesFor(tags,interests);
+}
+
+/** Look up each selected favorite independently so one domain cannot dominate
+ * the combined result. Preserve partial success and identify missing sources. */
+export async function themesPerInterest<T extends {id:string;name:string;types:string[]}>(
+  interests:readonly T[],
+  lookup:(interest:T)=>Promise<TasteTag[]>,
+):Promise<{tags:TasteTag[];unavailable:string[];noConnections:string[]}> {
+  const results=await Promise.allSettled(interests.map(async interest=>({
+    interest,
+    tags:relevantThemes(await lookup(interest),[interest]),
+  })));
+  const tags:TasteTag[]=[];
+  const unavailable:string[]=[];
+  const noConnections:string[]=[];
+  results.forEach((result,index)=>{
+    const interest=interests[index];
+    if(result.status==='rejected') { unavailable.push(interest.name); return; }
+    if(!result.value.tags.length) { noConnections.push(interest.name); return; }
+    tags.push(...result.value.tags.map(tag=>({...tag,sourceInterestId:interest.id,sourceInterestName:interest.name})));
+  });
+  return {tags,unavailable,noConnections};
+}
+
+function relevantThemesFor(tags:TasteTag[],interests:readonly {id:string;types:string[];name?:string}[]):TasteTag[] {
   const domains = new Set(interests.flatMap(interest => interest.id.startsWith('urn:tag:')
     ? [/^urn:tag:(?:cuisine|specialty_dish|dietary_option|dietary_attribute):/.test(interest.id) ? 'place' : interest.id.split(':')[3]] : interest.types.map(type=>type.replace('urn:entity:',''))));
   const allowed = new Set<string>();

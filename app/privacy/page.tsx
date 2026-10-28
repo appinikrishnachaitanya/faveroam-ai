@@ -2,7 +2,7 @@ import Link from "next/link";
 export default function Privacy() {
   return (
     <main className="privacy-page">
-      <Link href="/">← TastePassport</Link>
+      <Link href="/">← FaveRoam</Link>
       <h1>Your tastes belong to you.</h1>
       <p>
         You can explore without creating an account. Guest Passports live
@@ -21,6 +21,12 @@ export default function Privacy() {
         is dated; it is not a guarantee of current venue availability.
       </p>
       <h2>External services</h2>
+      <p>
+        Explore near me requests browser location only after you tap Use my location.
+        FaveRoam uses it in this page to order already returned places by distance;
+        it is not sent to our server, included in provider requests, or saved in
+        your Passport. Clear location removes it from the current page.
+      </p>
       <p>
         Qloo receives cultural IDs, concepts, bounded preferences and the
         selected destination—not your account email or password. Gemini may
@@ -51,6 +57,10 @@ export default function Privacy() {
         must publish a private support channel and applicable retention details
         before public launch.
       </p>
+      <footer className="workspace-footer">
+        <span>© 2026 FaveRoam</span>
+        <nav aria-label="About FaveRoam"><a href="/">Home</a><a href="/about">About us</a><a href="/privacy" aria-current="page">Privacy policy</a></nav>
+      </footer>
     </main>
   );
 }

@@ -2,7 +2,7 @@
 
 export default function ErrorRecovery({ reset }: { error: Error & { digest?: string }; reset: () => void }) {
   return <main className="page-recovery">
-    <p className="micro-label">TASTEPASSPORT</p>
+    <p className="micro-label">FAVEROAM</p>
     <h1>Your Passport hit a display problem.</h1>
     <p>We couldn't display the latest update. Try restoring your last successfully displayed Passport in this browser tab.</p>
     <button onClick={reset}>Restore my Passport view</button>

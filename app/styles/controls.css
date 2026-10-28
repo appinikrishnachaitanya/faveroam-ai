@@ -152,6 +152,14 @@
   padding-left: 0;
   box-shadow: none;
 }
+.progressive-app .move-onboarding .field-with-icon :is(input,select),
+.progressive-app .move-onboarding .field-with-icon :is(input,select):is(:hover,:focus,:focus-visible) {
+  background: transparent;
+  color: var(--ui-ink);
+}
+.progressive-app .move-onboarding .field-with-icon:is(:hover,:focus-within) {
+  background: #fffdf5;
+}
 
 .mode-category select {
   margin: 0;

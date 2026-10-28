@@ -1,6 +1,6 @@
 "use client";
 import { Icon } from "./passport";
-import { useState, useEffect } from "react";
+import { memo, useState, useEffect, useMemo } from "react";
 import type { Card } from "../../src/passport/model";
 import type { Passport } from "../../src/workspace/state";
 import {
@@ -8,6 +8,7 @@ import {
   dayOutText,
   stopDistance,
   nearbyOutingOptions,
+  suggestedOutingChoice,
   outingActivities,
   activityMatches,
 } from "../../src/passport/day-out";
@@ -15,14 +16,14 @@ import { evidenceFacts } from "../../src/qloo/explanation";
 import { cityDate, cityTimeZone, nextWeekend, planDateError, savedStopActivity, type SavedPlan } from "../../src/account/plans";
 import { accountRequest, showNotice } from "../../src/account/browser";
 
-export default function DayOutPlan({
+export default memo(function DayOutPlan({
   passport,
   disabled,
   signedIn = false,
   saveRequest = 0,
   onSaveRequestHandled,
-  expanded,
   editPlan,
+  startFrom,
   onFindActivity,
 }: {
   passport: Passport;
@@ -30,8 +31,8 @@ export default function DayOutPlan({
   signedIn?: boolean;
   saveRequest?: number;
   onSaveRequestHandled?: () => void;
-  expanded?: boolean;
   editPlan?: {plan:SavedPlan;nonce:number};
+  startFrom?: {cardId:string;sessionId?:string;nonce:number};
   onFindActivity?: (id:string)=>void;
 }) {
   const [choices, setChoices] = useState<Record<string, string>>({});
@@ -44,7 +45,23 @@ export default function DayOutPlan({
   const [activities, setActivities] = useState<string[]>(()=>requestOrder?.length ? requestOrder : ["Coffee","Culture","Eat"].filter(id=>dayOutOptions(passport.cards,passport.city).some(c=>activityMatches(c,id))));
   const orderKey=requestOrder?.join(',') ?? '';
   useEffect(()=>{if(orderKey)setActivities(orderKey.split(','));},[orderKey]);
-  const options = dayOutOptions(passport.cards, passport.city);
+  const options = useMemo(()=>dayOutOptions(passport.cards, passport.city),[passport.cards,passport.city]);
+  const [handledStartNonce,setHandledStartNonce]=useState<number>();
+  const startPending=Boolean(startFrom&&startFrom.sessionId===passport.session?.id&&startFrom.nonce!==handledStartNonce);
+  useEffect(()=>{
+    if(!startFrom||!startPending)return;
+    const card=options.find(option=>option.id===startFrom.cardId);
+    setHandledStartNonce(startFrom.nonce);
+    if(!card){setStatus('That place is no longer in your discoveries. Choose another place on the map.');return;}
+    const activity=['Cinema','Nightlife','Coffee','Eat','Culture'].find(id=>activityMatches(card,id));
+    if(!activity){setStatus('This place cannot be added to a day out. Choose another place on the map.');return;}
+    const extras=['Coffee','Culture','Eat'].filter(id=>id!==activity&&options.some(option=>activityMatches(option,id))).slice(0,2);
+    setActivities([activity,...extras]);
+    setChoices({[activity]:card.id});
+    setOmitted({});
+    setStopTimes({});
+    setStatus(`Starting with ${card.name}. You can add or swap stops below. Check routes, hours and availability before going.`);
+  },[startFrom?.nonce,options]);
   useEffect(()=>{
     if(!editPlan || editPlan.plan.city!==passport.city)return;
     const plan=editPlan.plan;
@@ -64,21 +81,24 @@ export default function DayOutPlan({
       : "Your saved plan is open. Change its stops or times, then update it for this date.");
   },[editPlan?.nonce]);
   const editingSameDate=editPlan?.plan.city===passport.city && editPlan.plan.scheduled_date===date;
+  const foodAnchor=activities.includes("Eat") ? options.find(card=>card.id===choices.Eat) ?? options.find(card=>activityMatches(card,"Eat")) : undefined;
   let previousStop:Card | undefined;
+  const usedDefaults=new Set<string>();
   const stops = activities.map(id => ({ ...outingActivities.find(a => a.id === id)!, id })).map((stop) => {
-    const pool = nearbyOutingOptions(options.filter((card) => activityMatches(card, stop.id)),previousStop);
+    const pool = nearbyOutingOptions(options.filter((card) => activityMatches(card, stop.id)),previousStop??foodAnchor);
     // A choice removed by refinement requires explicit reselection.
     const selected = choices[stop.id]
       ? pool.find((card) => card.id === choices[stop.id])
-      : pool[0];
+      : suggestedOutingChoice(pool.filter(card=>!usedDefaults.has(card.id)),previousStop??foodAnchor);
     const chosen=omitted[stop.id] ? undefined : selected;
     const distance=previousStop && chosen ? stopDistance(previousStop,chosen) : undefined;
-    if(chosen)previousStop=chosen;
+    if(chosen){previousStop=chosen;usedDefaults.add(chosen.id);}
     return {...stop,pool,selected:chosen,distance};
   });
   // Pin every displayed default; sequence changes must never choose new venues.
   const displayedKey = stops.map(stop => `${stop.id}:${stop.selected?.id ?? ""}`).join("|");
   useEffect(() => {
+    if(startPending)return;
     setChoices(current => {
       const next = {...current};
       let changed = false;
@@ -88,7 +108,7 @@ export default function DayOutPlan({
       }
       return changed ? next : current;
     });
-  }, [displayedKey]);
+  }, [displayedKey,startPending]);
   const selected = stops.flatMap((stop) =>
     stop.selected ? [stop.selected] : [],
   );
@@ -113,11 +133,11 @@ export default function DayOutPlan({
     let previous: Card | undefined;
     for (const id of activities) {
       if (omitted[id]) continue;
-      const chosen = nearbyOutingOptions(options.filter(card=>activityMatches(card,id)),previous)[0];
+      const chosen = suggestedOutingChoice(options.filter(card=>activityMatches(card,id)),previous??foodAnchor);
       if (chosen) { next[id]=chosen.id; previous=chosen; }
     }
     setChoices(next);
-    setStatus("Venues reselected for this order from your current discoveries. Check travel times and availability.");
+    setStatus("Nearby venues reselected for this order. Stops without a verified option within 3 km remain open. Check travel times and availability.");
   }
 
   const dateError=planDateError(passport.city,date);
@@ -183,17 +203,14 @@ export default function DayOutPlan({
   },[saveRequest]);
 
   return (
-    <details className="secondary-reveal day-out-reveal" open={expanded}>
-      <summary>Plan a day out in {passport.city}</summary>
-      <div className="day-out-plan">
-        <header className="outing-intro"><span className="outing-emblem" aria-hidden="true"><Icon name="pin" size={28}/></span><div><span className="micro-label">A LITTLE TASTE. A WHOLE DAY OUT.</span>
-        <h2>Make a day of it.</h2><p>Your places, your pace. Bring a few favorites together into a plan.</p></div></header>
-        <div className="outing-progress" aria-label="Your plan at a glance"><span><Icon name="pin" size={16}/>{passport.city}</span><span>{selected.length}/{activities.length} stops chosen</span><span>{date ? new Date(`${date}T12:00:00Z`).toLocaleDateString(undefined,{month:"short",day:"numeric",timeZone:"UTC"}) : "Choose a date"}</span></div>
-        {selected.length < activities.length && <p role="status">{activities.length-selected.length} stops still need a place. Choose an option below, or leave them open.</p>}
-        <p>Swap a stop or change the order. Your selected venues stay put.</p>
-        <div className="plan-schedule">
+    <section className="day-out-plan" aria-labelledby="day-out-title">
+        <header className="first-week-heading outing-intro"><div><span className="micro-label">A USEFUL DAY IN YOUR CITY</span>
+        <h2 id="day-out-title">Plan a day out</h2><p>Choose a date and arrange returned places into a day that suits you.</p></div><img className="day-out-illustration" src="/illustrations/day-out-route.svg" width="120" height="90" alt="" aria-hidden="true" loading="lazy" decoding="async"/></header>
+        <p className="day-out-summary" role="status">{passport.city} · {selected.length} of {activities.length} places chosen · {date ? new Date(`${date}T12:00:00Z`).toLocaleDateString(undefined,{month:"short",day:"numeric",timeZone:"UTC"}) : "Choose a date"}</p>
+        {selected.length < activities.length && <p className="day-out-notice" role="status">{activities.length-selected.length} {activities.length-selected.length===1?'stop needs':'stops need'} a place. Choose one below or leave it open.</p>}
+        <div className="plan-schedule first-week-controls day-out-schedule">
           <label htmlFor="plan-date">
-            When are you going?
+            Date
             <input
               id="plan-date"
               type="date"
@@ -223,6 +240,7 @@ export default function DayOutPlan({
         <fieldset className="outing-activities"><legend>What would you like to do?</legend>
           {outingActivities.map(activity => <label key={activity.id}><input type="checkbox" checked={activities.includes(activity.id)} disabled={disabled || saving} onChange={e => {setActivities(old => e.target.checked ? [...old, activity.id] : old.filter(id => id !== activity.id)); if(e.target.checked && !options.some(card=>activityMatches(card,activity.id))) onFindActivity?.(activity.id);}} />{activity.label}</label>)}
         </fieldset>
+        <p className="day-out-guidance">Swap places or change the order; your current selections stay put. Nearby defaults use straight-line distance only.</p>
         <ol className="day-out-stops">
           {stops.map((stop, index) => (
             <li key={stop.id}>
@@ -240,9 +258,9 @@ export default function DayOutPlan({
                   aria-label={`Move ${stop.label} later`}
                   onClick={() => moveActivity(stop.id, 1)}>↓ Later</button>
               </div>
-              <label htmlFor={`day-out-${stop.id}`}>{stop.label}</label>
               <select
                 id={`day-out-${stop.id}`}
+                aria-label={`Choose place for ${stop.label}`}
                 disabled={disabled || saving || !stop.pool.length}
                 value={stop.selected?.id ?? ""}
                 onChange={(event) => {
@@ -290,7 +308,7 @@ export default function DayOutPlan({
                   </a>
                   <details>
                     <summary>Why this stop?</summary>
-                    {evidenceFacts(stop.selected).slice(0,4).map(fact => <p key={fact}>{fact}</p>)}
+                    {evidenceFacts(stop.selected,passport.selected.map(taste=>taste.id)).slice(0,4).map(fact => <p key={fact}>{fact}</p>)}
                     <small>Suggested for your confirmed interests.</small>
                   </details>
                 </>
@@ -340,8 +358,7 @@ export default function DayOutPlan({
                 : "Sign in to save plan"}
           </button>
         </div>
-        <p role="status">{status}</p>
-      </div>
-    </details>
+        {status&&<p className="day-out-notice" role="status">{status}</p>}
+    </section>
   );
-}
+});

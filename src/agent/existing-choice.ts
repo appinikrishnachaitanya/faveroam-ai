@@ -12,13 +12,17 @@ function selectionLanguage(text: string): string {
     .replace(/\bfor\s+mr\b/g, "for me");
 }
 const reference = /\b(?:above|these|those|them|already|current|existing|shown|listed|from (?:the|your) (?:list|results|suggestions))\b/;
+function ratingQuestion(q:string) {
+  if(/\b(?:find|search|discover|update|change|refine|replace|remove|add|set|apply|adjust)\b/.test(q))return false;
+  return /^(?:which|what)\b/i.test(q) && /\b(?:highest|best|top)(?:[ -]rated|\s+(?:returned\s+)?rating)\b/i.test(q);
+}
 export function isExistingChoiceRequest(text: string): boolean {
   const q = selectionLanguage(refinementScope(text).positive);
   if (/\b(?:new|different|elsewhere|replace|refresh|update|refine|remove|hide|change|adjust)\b/.test(q)) return false;
   if (/\b(?:pick|choose|select|recommend)\b[\s\S]*\b(?:one|1|single)\b/.test(q)) return true;
-  if (/^which (?:one |of (?:these|those) )?has the (?:highest|best) rating\??$/.test(q.trim())) return true;
+  if (ratingQuestion(q)) return true;
   if (/^(?:and )?which(?: one)?(?: is)? (?:the )?(?:best|better|top one)(?: choice)?[?!.,\s]*$/.test(q.trim()) || /^(?:what(?:'s| is) )?(?:your )?(?:best )?pick[?!.,\s]*$/.test(q.trim())) return true;
-  if (/\bcompare\b/.test(q) && /\b(?:two|both|first and second|these|those)\b/.test(q)) return true;
+  if (/\bcompare\b/.test(q)) return true;
   if (/\bwhich\b[\s\S]*\b(?:should|would)\b[\s\S]*\b(?:pick|choose|recommend|try|visit|go)\b/.test(q)) return true;
   return reference.test(q) && /\b(?:pick|choose|select|recommend|best|top|highest[ -]rated|best[ -]rated|cheapest|most affordable|lowest price)\b/.test(q);
 }
@@ -37,21 +41,43 @@ export interface ExistingChoice {
   message: string;
   comparison?: boolean;
 }
-export function chooseExisting(state: AgentState, text: string): ExistingChoice {
+export function chooseExisting(state: AgentState, text: string, visibleIds?:string[]): ExistingChoice {
   const q = selectionLanguage(refinementScope(text).positive);
   const sections = requestedShortlistSections(q);
   const genre = requestedGenre(q);
-  const ids = lastReferencedIds(state);
+  const ids = visibleIds ?? lastReferencedIds(state);
   const above = reference.test(q);
-  const implicitShown = /^which (?:one |of (?:these|those) )?has the (?:highest|best) rating\??$/.test(q.trim());
+  const implicitShown = ratingQuestion(q);
   const available = state.cards.filter(card => !state.hiddenCategories?.includes(card.section) &&
     !state.feedback.some(feedback => feedback.id === card.id && !feedback.accepted));
   const contextualBest = /^(?:and )?which(?: one)?(?: is)? (?:the )?(?:best|better|top one)(?: choice)?[?!.,\s]*$/.test(q.trim()) || /^(?:what(?:'s| is) )?(?:your )?(?:best )?pick[?!.,\s]*$/.test(q.trim());
-  const source = (above || implicitShown || contextualBest || /\bcompare\b/.test(q)) && ids !== undefined
+  const namedCards=available.filter(card=>q.includes(card.name.toLowerCase()));
+  const source = /\bcompare\b/.test(q)&&namedCards.length===2?namedCards:(above || implicitShown || contextualBest || /\bcompare\b/.test(q)) && ids !== undefined
     ? ids.flatMap(id => available.find(card => card.id === id) ?? [])
     : available;
   const contextualSections = state.intent?.sections?.filter(section => available.some(card => card.section === section)) ?? [];
-  let eligible = source.filter(card => (!sections?.length || sections.includes(card.section)) && (!genre || hasGenre(card, genre)));
+
+  // When the user asks for a "nightclub alternative" or "cinema alternative",
+  // restrict eligible cards to the same activityGenre as the currently selected
+  // venue so that cinemas never appear in nightclub results and vice versa.
+  // We detect the genre from the query and from the last-selected card's tags.
+  const queryImpliesNightclub = /\bnightclub|nightlife|club\b/i.test(q);
+  const queryImpliesCinema = /\bcinema|movie theater|movie theatre\b/i.test(q);
+  const isAlternativeRequest = /\b(?:alternative|instead|different|another|other|next best|second best|second choice)\b/i.test(q);
+
+  let eligible = source.filter(card => {
+    if (sections?.length && !sections.includes(card.section)) return false;
+    if (genre && !hasGenre(card, genre)) return false;
+    // If query implies a specific venue genre, filter to only that genre.
+    if (isAlternativeRequest && card.section === "Culture") {
+      const tagIds = (card.evidence?.result.tags ?? []).map(t => (t.id ?? "").toLowerCase() + " " + (t.name ?? "").toLowerCase()).join(" ");
+      const isNightclub = /nightclub|night club|nightlife/.test(tagIds);
+      const isCinema = /cinema|movie theater|movie theatre/.test(tagIds);
+      if (queryImpliesNightclub && !isNightclub) return false;
+      if (queryImpliesCinema && !isCinema) return false;
+    }
+    return true;
+  });
   if (!sections?.length && ids === undefined && contextualSections.length === 1 && /\bcompare\b/.test(q))
     eligible = eligible.filter(card => card.section === contextualSections[0]);
   const rating = (card: Card) => isPlaceSection(card.section)
@@ -60,7 +86,9 @@ export function chooseExisting(state: AgentState, text: string): ExistingChoice 
   if (comparison) {
     if (ids !== undefined && ids.slice(0, 2).some(id => !available.some(card => card.id === id)))
       return {cards: [], message: "One of those choices is no longer in your current discoveries. Ask for a new shortlist before comparing. Your Passport is unchanged."};
-    const cards = eligible.slice(0, 2);
+    const ordinals=[...q.matchAll(/\b(first|second|third|1st|2nd|3rd)\b/g)].map(match=>({first:0,second:1,third:2,'1st':0,'2nd':1,'3rd':2}[match[1]]!));
+    const named=eligible.filter(card=>q.includes(card.name.toLowerCase()));
+    const cards = named.length===2?named:ordinals.length===2?ordinals.flatMap(index=>eligible[index]?[eligible[index]]:[]):eligible.slice(0, 2);
     return cards.length < 2
       ? {cards: [], message: source.length < 2 && ids !== undefined ? "One of those choices is no longer in your current discoveries. Ask for a new shortlist before comparing. Your Passport is unchanged." : "I need two current choices to compare. Ask me to show a few options first; your Passport is unchanged."}
       : {cards, comparison: true, message: `Comparing ${cards[0].name} and ${cards[1].name}. I’ll use only details returned for these listings; where a detail is missing, I’ll leave it open rather than guess.`};

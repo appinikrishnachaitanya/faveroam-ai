@@ -1,11 +1,12 @@
 "use client";
 import { sectionLabel } from "../../src/passport/labels";
-import { rankCandidates } from "../../src/passport/matching";
+import { rankCandidates, filterIrrelevantCandidates } from "../../src/passport/matching";
 import { useEffect, useState } from "react";
 import type { Candidate, Section } from "../../src/passport/model";
 import type { Familiarity } from "../../src/passport/evidence";
 import type { Resolution } from "../../src/workspace/state";
 import { typeLabel } from "../../src/workspace/state";
+import { tasteInputFeedback } from "../../src/agent/conversation-grounding";
 import { Icon } from "./passport";
 
 export function StepIndicator({ step }: { step: number }) {
@@ -54,6 +55,7 @@ export function MoveForm({
   onOrigin,
   onDraft,
   onSubmit,
+  onSample,
   activities = [],
   onActivities,
 }: {
@@ -65,12 +67,15 @@ export function MoveForm({
   onOrigin: (value: string) => void;
   onDraft: (values: string[]) => void;
   onSubmit: () => void;
+  onSample?: (city:string) => void;
   activities?: Section[];
   onActivities?: (values: Section[]) => void;
 }) {
   const [input, setInput] = useState("");
+  const [tasteError, setTasteError] = useState("");
   const [destinations, setDestinations] = useState<string[]>([]);
   const [cityError, setCityError] = useState("");
+  const [nextStepMessage, setNextStepMessage] = useState("");
   const [loadingCities, setLoadingCities] = useState(true);
   async function loadDestinations(signal?: AbortSignal) {
     setLoadingCities(true);
@@ -92,8 +97,14 @@ export function MoveForm({
   }, []);
   const add = (text: string) => {
     const value = text.trim();
+    if (!value) return;
+    const feedback = tasteInputFeedback(value);
+    if (feedback) {
+      setTasteError(feedback);
+      return;
+    }
+    setTasteError("");
     if (
-      value &&
       value.length <= 100 &&
       draft.length < 5 &&
       !draft.some((t) => t.toLowerCase() === value.toLowerCase())
@@ -102,20 +113,37 @@ export function MoveForm({
       setInput("");
     }
   };
+  const advanceFromHero = () => {
+    if (!destinations.includes(city)) {
+      setNextStepMessage("Choose your destination to continue.");
+      document.getElementById("destination")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      document.getElementById("destination")?.focus({ preventScroll: true });
+      return;
+    }
+    if (draft.length < 1) {
+      setNextStepMessage("Add one interest to find your taste matches.");
+      document.getElementById("taste-input")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      document.getElementById("taste-input")?.focus({ preventScroll: true });
+      return;
+    }
+    setNextStepMessage("");
+    onSubmit();
+  };
   return (
     <section className="move-onboarding" aria-labelledby="move-title">
-      <div className="onboarding-heading">
+      <div className="onboarding-heading landing-city-hero">
         <span className="micro-label">
           MAKE YOUR NEXT CHAPTER FEEL LIKE YOU
         </span>
         <h1 id="move-title">
-          Your taste.
-          <br />
-          <em>A new city.</em>
+          From what you love<br />
+          <em>to where you belong.</em>
         </h1>
-        <p>Tell us where you’re moving and a few things you already love.</p>
+        <p>Discover places that feel like you, build your first week, and find Common Ground in a new city.</p>
+        <div className="landing-actions">{onSample&&<button type="button" className="primary-button" disabled={disabled||loadingCities||!destinations.length} onClick={()=>onSample(destinations.includes('London')?'London':destinations[0])}>Try a sample <Icon name="arrow" size={16}/></button>}<button type="button" className="quiet-button" disabled={disabled||loadingCities||!destinations.length} onClick={advanceFromHero}>{!destinations.includes(city) ? "Choose my city" : draft.length ? "Review my interests" : "Add my interests"} <Icon name="arrow" size={16}/></button></div>
+        {nextStepMessage && <p className="helper" role="status">{nextStepMessage}</p>}
         <div className="onboarding-story">
-          <img className="journey-illustration" src="/illustrations/passport-journey.svg" width="520" height="350" alt="" aria-hidden="true" />
+          <img className="journey-illustration" src="/illustrations/editorial-city-route.svg" width="440" height="260" alt="" aria-hidden="true" fetchPriority="high" decoding="async" />
           <ul>
             <li><Icon name="check" size={16} /> Your tastes, explicitly confirmed</li>
             <li><Icon name="check" size={16} /> Real discoveries. Visible connections.</li>
@@ -124,6 +152,8 @@ export function MoveForm({
         </div>
       </div>
       <form
+        id="city-onboarding-form"
+        tabIndex={-1}
         className="move-form"
         onSubmit={(event) => {
           event.preventDefault();
@@ -196,7 +226,9 @@ export function MoveForm({
               <input
                 id="taste-input"
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
+                aria-describedby={tasteError ? "taste-error" : undefined}
+                aria-invalid={tasteError ? true : undefined}
+                onChange={(e) => { setInput(e.target.value); if (tasteError) setTasteError(""); }}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === ",") {
                     e.preventDefault();
@@ -221,6 +253,11 @@ export function MoveForm({
                 <Icon name="plus" />
               </button>
             </div>
+            {tasteError && (
+              <p id="taste-error" className="taste-input-error" role="alert">
+                {tasteError}
+              </p>
+            )}
           </div>
           <div className="taste-suggestions">
             <span>Need a little inspiration?</span>
@@ -357,7 +394,7 @@ export function TasteConfirmation({
                     <option value="" disabled>
                       Select the one you love
                     </option>
-                    {rankCandidates(item.query,item.candidates).map((c) => (
+                    {rankCandidates(item.query, filterIrrelevantCandidates(item.query, item.candidates)).map((c) => (
                       <option key={c.id} value={c.id}>
                         {c.name} · {friendlyType(c)}
                         {c.id.startsWith("urn:tag:")
@@ -388,6 +425,9 @@ export function TasteConfirmation({
       </div>
       <fieldset className="initial-mode">
         <legend>How should your new city feel?</legend>
+        <p className="helper">
+          This sets the default discovery style for your entire Passport — how closely your restaurant, coffee, culture and lifestyle picks match what you already know and love. You can change it any time after your Passport is built.
+        </p>
         <div className="initial-mode-options">
           {(["familiar", "balanced", "explore"] as Familiarity[]).map(
             (value) => (
@@ -408,10 +448,10 @@ export function TasteConfirmation({
                 </strong>
                 <small>
                   {value === "familiar"
-                    ? "Start with what you love"
+                    ? "Places very similar to what you love"
                     : value === "balanced"
-                      ? "A little familiar, a little new"
-                      : "Find your next favorite"}
+                      ? "A mix of familiar favourites and new finds"
+                      : "Stretches beyond your known tastes"}
                 </small>
               </button>
             ),
@@ -428,7 +468,7 @@ export function TasteConfirmation({
           onClick={onSubmit}
           disabled={disabled || !complete}
         >
-          Create my TastePassport <Icon name="arrow" />
+          Create my FaveRoam <Icon name="arrow" />
         </button>
       </div>
       {!complete && (

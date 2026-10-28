@@ -1,4 +1,5 @@
 import { matchesDishRequirements } from "../passport/dish-evidence.ts";
+import {removeCancelledRequirements,isRequirementRemoval} from './cancelled-requirements.ts';
 import { responseContext, responseReceipt, validateResponse } from "./response.ts";
 import { refinementSettings, restoreRefinementSettings } from "./refinement-settings.ts";
 import { conversationFocus, updateConversationMemory } from "./memory.ts";
@@ -12,7 +13,7 @@ import { isOutputCategoryConcept } from './output-category.ts';
 import { conversationContext } from "./context.ts";
 import { decisionSummary } from "./decision-summary.ts";
 import { passportAnswer, passportAnswerCards, cardSpecificAnswer, isListRequest, listPassportCards, listPassportResults, previewRefinedResults } from "./answers.ts";
-import { isReadOnlyFollowUp, readOnlyFollowUp } from "./read-only.ts";
+import { isReadOnlyFollowUp, readOnlyFollowUp, isPreferenceQuestion } from "./read-only.ts";
 import { debugEvent } from "./debug.ts";
 import {
   normalizeSession,
@@ -68,6 +69,7 @@ function conceptAlreadyApplied(
   state: AgentState,
   section: Section,
   concept: string,
+  tagIds?: string[],
 ) {
   const wanted = conceptKey(concept);
   if (!wanted) return true;
@@ -87,7 +89,7 @@ function conceptAlreadyApplied(
           "somewhere",
         ].includes(word),
     );
-  return (state.categoryTags?.[section] ?? []).some((id) => {
+  return (tagIds ?? state.categoryTags?.[section] ?? []).some((id) => {
     const tag = state.tags.find((candidate) => candidate.id === id);
     if (!tag) return false;
     const current = conceptKey(`${tag.name} ${tag.detail}`);
@@ -123,6 +125,7 @@ export async function runTurn(
   guard = new TurnGuard(),
 ): Promise<AgentReply> {
   const request = new RequestMachine(routeRequest(input));
+  let qlooOperations=0;
   debugEvent("agent.route", { action: request.route });
   const provider = deps.provider;
   const wrapped: AgentDependencies = {
@@ -147,10 +150,12 @@ export async function runTurn(
     } } : {}),
     workflow: async (...args) => {
       request.move("executing");
+      qlooOperations++;
       return deps.workflow(...args);
     },
     discover: async (...args) => {
       request.move("executing");
+      qlooOperations++;
       return deps.discover(...args);
     },
   };
@@ -182,9 +187,22 @@ export async function runTurn(
     // Composing it again can discard those IDs and leave only a plain-text list.
     const isGroundedShortlist = Boolean(input.message && isShortlistRequest(input.message) &&
       result.state.history?.at(-1)?.recommendationIds?.length);
-    const simpleReply = input.message && /^(?:hi|hello|hey|thanks(?: bro)?|thank you(?: bro)?|cheers)[!,.\s]*$/i.test(input.message.trim());
+    const simpleReply = input.message && (/^(?:hi|hello|hey|thanks(?: bro)?|thank you(?: bro)?|cheers)[!,.\s]*$/i.test(input.message.trim()) || isRequirementRemoval(input.message));
     const answeredWithoutRetrieval = request.route === "current-results" || Boolean(result.state.pending) || isGreetingOrTypo(input.message ?? "");
-    if (input.message && provider?.compose && input.reset !== "conversation" && !result.action && !isGroundedShortlist && !simpleReply && !answeredWithoutRetrieval && result.state.providerHealth !== "unavailable") {
+    const lastTurn = result.state.history?.at(-1);
+    const hasGroundedUpdate = result.changed.length > 0 && Boolean(lastTurn?.recommendationIds?.length);
+    // Avoid a second generative round trip when the validated result already
+    // appears as cards with returned evidence. Keep synthesis for questions,
+    // comparisons, and explicit requests for reasons.
+    const asksForExplanation = Boolean(input.message && /[?]|\b(?:why|explain|reason|because|compare|highest|lowest|cheapest|best|which|open(?: now)?|tonight|when|how)\b/i.test(input.message));
+    const hasAppliedFilters = result.changed.some(section =>
+      Object.keys(result.state.queryPreferences?.[section] ?? {}).length > 0 ||
+      (result.state.categoryConstraints?.[section]?.length ?? 0) > 0,
+    );
+    const groundedCardsAreEnough = hasGroundedUpdate && !asksForExplanation && !hasAppliedFilters;
+    if (groundedCardsAreEnough)
+      debugEvent("agent.response", { action: "skipped", count: lastTurn?.recommendationIds?.length ?? 0 });
+    if (input.message && provider?.compose && input.reset !== "conversation" && !result.action && !isGroundedShortlist && !simpleReply && !answeredWithoutRetrieval && !groundedCardsAreEnough && result.state.providerHealth !== "unavailable") {
       let responseFailure = "transport";
       try {
         const context=responseContext(result,input);
@@ -211,6 +229,14 @@ export async function runTurn(
       result.state.recovery?.length ? (result.changed.length ? "partial" : "blocked") : "completed");
     debugEvent("agent.completed", { action: request.snapshot().phase, count: result.changed.length, elapsedMs: request.snapshot().elapsedMs });
     const completed = { ...result, execution: request.snapshot() };
+    const lastMessage=completed.state.history?.at(-1);
+    if(lastMessage?.role==='agent' && input.message)lastMessage.checks={
+      route:request.route,
+      model:completed.mode==='model-mcp'?'Gemini interpreted request':'Used current Passport or guided interpretation',
+      qlooOperations,
+      validation:'Server checked the response and any allowed Passport changes',
+      kept:refinementScope(input.message).preserved,
+    };
     updateConversationMemory(original, completed, input);
     return completed;
   } catch (error) {
@@ -327,7 +353,9 @@ async function executeTurn(
     }
     if (route === "current-results" && isExistingChoiceRequest(input.message)) {
       delete state.pending;
-      const choice = chooseExisting(state, input.message);
+      const visibleIds=input.visibleIds;
+      if(visibleIds && (!Array.isArray(visibleIds)||visibleIds.length>40||new Set(visibleIds).size!==visibleIds.length||visibleIds.some(id=>typeof id!=='string'||!state.cards.some(card=>card.id===id&&!state.hiddenCategories?.includes(card.section)))))return reply('Those visible choices have changed. Open Discover and select the choices again. Your Passport is unchanged.');
+      const choice = chooseExisting(state, input.message,visibleIds);
       if (!choice.cards.length) markNeedsInput();
       return reply(choice.message, choice.cards, undefined, choice.comparison ? choice.cards.map(card=>card.id) : undefined);
     }
@@ -342,7 +370,7 @@ async function executeTurn(
     // classification. Otherwise "rating for second" can become a filter and
     // destroy the original shortlist or unrelated category state.
     if (route === "current-results" && isReadOnlyFollowUp(input.message)) {
-      delete state.pending;
+      if(!isPreferenceQuestion(input.message))delete state.pending;
       const named=findMentionedCard(input.message,state.cards.filter(card=>!state.hiddenCategories?.includes(card.section)));
       return reply(readOnlyFollowUp(state,input.message),named?[named]:undefined);
     }
@@ -410,6 +438,17 @@ async function executeTurn(
     const { section, action } = input.recovery;
     const failedSearch = state.failedSearches?.[section];
     if (failedSearch) restoreRefinementSettings(state, section, failedSearch);
+    if (action === "area-only") {
+      const locationQuery = failedSearch?.queryPreferences?.locationQuery;
+      if (!locationQuery) throw Error("No named area is available to search.");
+      // Keep confirmed tastes and the destination, but remove category filters
+      // that made the previous area search impossible to satisfy.
+      state.queryPreferences ??= {};
+      state.queryPreferences[section] = { locationQuery, radius: 0 };
+      state.categoryConstraints[section] = [];
+      state.categoryTags ??= {};
+      state.categoryTags[section] = [];
+    }
     let constraints = [...(state.categoryConstraints[section] ?? [])];
     if (action === "relax-quiet")
       constraints = constraints.filter(
@@ -459,6 +498,14 @@ async function executeTurn(
       return reply(
         "Saved as your vibe. Future refinements can use this cultural signal.",
       );
+    }
+    if (input.feedback.reason === "Too expensive") {
+      state.queryPreferences ??= {};
+      const previous = state.queryPreferences[current.section] ?? {};
+      const returnedPrice = current.intelligence?.commercial?.priceLevel;
+      const ceiling = Math.max(1, Math.min(previous.priceMax ?? 4,
+        typeof returnedPrice === "number" ? returnedPrice - 1 : 2));
+      state.queryPreferences[current.section] = { ...previous, priceMax: ceiling, priceMin: undefined };
     }
     state.cards = state.cards.filter((card) => card.id !== current.id);
     intent = {
@@ -547,7 +594,7 @@ async function executeTurn(
     rememberedRank = Boolean(pending.rankMcp);
     if (rememberedRank && deps.provider) mode = "model-mcp";
     delete state.pending;
-  } else if (deps.provider && input.message) {
+  } else if (deps.provider && input.message && !isRequirementRemoval(input.message)) {
     event("Interpreting your cultural request", "active");
     try {
       intent = validateIntent(
@@ -694,6 +741,7 @@ async function executeTurn(
     for (const section of targets)
       state.categoryModes[section] = intent.familiarity;
   if (intent.kind === "refine") {
+    if(input.message)removeCancelledRequirements(state,intent,input.message,targets);
     // Migrate generic content kinds out of older unresolved taste drafts.
     for(const section of targets) {
       if(state.categoryConcepts[section])state.categoryConcepts[section]=state.categoryConcepts[section].filter(concept=>!isOutputCategoryConcept(concept,[section]));
@@ -703,11 +751,54 @@ async function executeTurn(
       if(preferences?.includeTags)preferences.includeTags=preferences.includeTags.filter(id=>!obsolete.has(id));
     }
     intent.concepts=intent.concepts.filter(concept=>!isOutputCategoryConcept(concept,targets));
-    if (!intent.concepts.length && targets.length === 1)
+
+    // Detect exclusive cuisine/concept replacement phrases. When the user says
+    // "Chinese only", "just Chinese food", or "I don't need chicken — only Indian",
+    // the new set of concepts REPLACES all previous ones for that section rather
+    // than merging with them. This prevents stale requirements (e.g. Chicken
+    // Biryani, Indian, Vegetarian) from surviving after the user cancels them.
+    const exclusiveReplacement = input.message
+      ? /\b(?:just|only|solely|exclusively)\b/i.test(input.message) ||
+        /\bdon['']t\s+(?:need|want)\b.*\b(?:just|only|instead)\b/i.test(input.message) ||
+        /\bchange\s+(?:it\s+)?to\b/i.test(input.message)
+      : false;
+
+    // Detect explicit cancellation of previously active concepts.
+    const cancelledKeywords = input.message
+      ? (input.message.match(/\b(?:don['']t\s+(?:need|want)|not|no|remove|cancel|forget|drop|exclude)\s+([^,.!?;]{1,40})/gi) ?? [])
+        .map(m => m.replace(/^(?:don['']t\s+(?:need|want)|not|no|remove|cancel|forget|drop|exclude)\s+/i, "").trim().toLowerCase())
+      : [];
+
+    if (!intent.concepts.length && targets.length === 1 && !exclusiveReplacement)
       intent.concepts = [...(state.categoryConcepts[targets[0]] ?? [])];
-    for (const section of targets)
-      if (intent.concepts.some(concept=>conceptSections(concept, targets).includes(section)))
-        state.categoryConcepts[section] = intent.concepts.filter(concept=>conceptSections(concept, targets).includes(section));
+
+    for (const section of targets) {
+      const incomingForSection = intent.concepts.filter(concept=>conceptSections(concept, targets).includes(section));
+      if (incomingForSection.length > 0) {
+        if (exclusiveReplacement) {
+          // Hard replace: the new set is the only set.
+          state.categoryConcepts[section] = incomingForSection;
+          // Also wipe any cuisine tags that are being replaced.
+          if (section === "Eat") {
+            state.categoryTags[section] = (state.categoryTags[section] ?? []).filter(id => {
+              const tag = state.tags.find(t => t.id === id);
+              // "Refresh only affordable Indian Food" repeats a confirmed
+              // cuisine; do not discard its ID and ask to resolve it again.
+              return incomingForSection.some(concept=>conceptAlreadyApplied(state,section,concept,[id])) ||
+                !tag || !/cuisine|restaurant/i.test(`${tag.id} ${tag.name} ${tag.detail}`);
+            });
+          }
+        } else {
+          // Normal merge: new concepts replace the section's list.
+          state.categoryConcepts[section] = incomingForSection;
+        }
+      } else if (cancelledKeywords.length > 0 && state.categoryConcepts[section]) {
+        // Remove any explicitly cancelled keywords from existing concepts.
+        state.categoryConcepts[section] = state.categoryConcepts[section].filter(concept =>
+          !cancelledKeywords.some(kw => concept.toLowerCase().includes(kw) || kw.includes(concept.toLowerCase()))
+        );
+      }
+    }
   }
   if (!targets.includes("Culture")) delete intent.activityGenres;
   if (intent.activityGenres?.length) intent.concepts = [];
@@ -739,12 +830,25 @@ async function executeTurn(
   if (input.message && /\bcheaper\b|less expensive/i.test(input.message) &&
       interpret(input.message, state.city).query?.priceMax === undefined && intent.query)
     delete intent.query.priceMax;
-  if (input.message && intent.constraints.includes("expensive") && intent.query?.priceMax === undefined) {
+
+  // "Make those cheaper" / "less expensive" must always produce a strictly
+  // lower priceMax than the current setting, regardless of whether the model
+  // put "expensive" in constraints. We detect the phrase directly here so it
+  // is never silently ignored and never repeats the same results.
+  const asksCheaper = Boolean(input.message && /\bcheaper\b|less expensive|more (?:affordable|budget)/i.test(input.message));
+  if (asksCheaper) {
     for (const section of targets) {
       const current = state.queryPreferences[section] ?? {};
-      const priceMax = /cheaper|less expensive/i.test(input.message)
-        ? Math.max(1, (current.priceMax ?? 3) - 1)
-        : Math.min(2, current.priceMax ?? 2);
+      const currentMax = current.priceMax ?? 3; // First cheaper request caps at moderate; later requests tighten it.
+      const newMax = Math.max(1, currentMax - 1);
+      state.queryPreferences[section] = patchPreferences(current, { priceMax: newMax });
+    }
+    // Ensure the model constraint is aligned so the qloo query picks it up.
+    if (!intent.constraints.includes("expensive")) intent.constraints = [...intent.constraints, "expensive"];
+  } else if (input.message && intent.constraints.includes("expensive") && intent.query?.priceMax === undefined) {
+    for (const section of targets) {
+      const current = state.queryPreferences[section] ?? {};
+      const priceMax = Math.min(2, current.priceMax ?? 2);
       state.queryPreferences[section] = patchPreferences(current, { priceMax });
     }
   }
@@ -1178,7 +1282,12 @@ async function executeTurn(
         ),
     );
     state.categoryConstraints[section] = constraints;
-    const excluded = state.feedback.filter((f) => !f.accepted).map((f) => f.id);
+    const excluded = [...new Set([
+      ...state.feedback.filter((f) => !f.accepted).map((f) => f.id),
+      ...(input.discovery?.preferNew
+        ? original.cards.filter((card) => card.section === section).map((card) => card.id)
+        : []),
+    ])];
     const rank =
       intent.strategy === "rank" ||
       modelChoices.some((c) => c.name === "qloo_rank");
@@ -1368,6 +1477,8 @@ async function executeTurn(
     state.failedSearches ??= {};
     state.failedSearches[section] = refinementSettings(state, section);
     restoreRefinementSettings(state, section, refinementSettings(original, section));
+    // A failed replacement search must not resurrect an explicitly cancelled requirement.
+    if(input.message && isRequirementRemoval(input.message))removeCancelledRequirements(state,intent,input.message,[section]);
   }
   for (const section of changed) if (state.failedSearches) delete state.failedSearches[section];
   state.relaxed = state.relaxed?.filter(item => changed.includes(item.section));
@@ -1392,7 +1503,9 @@ async function executeTurn(
   const finalReply = reply(
     changed.length
       ? `Updated ${changed.map(section => sectionLabel(section)).join(", ")} suggestions. ${decisionSummary(original, state, changed)} ${state.relaxed!.length ? "I couldn't find a strong match satisfying every preference, so these results prioritize your confirmed cultural tastes. Optional preferences relaxed: " + [...new Set(state.relaxed!.flatMap((r) => r.constraints))].map((c) => (c === "crowded" ? "quiet atmosphere" : c)).join(", ") + ". " : ""}${state.pending ? "You can also confirm the atmosphere concept to refine further. " : ""}Your other categories and confirmed interests are unchanged.${previewRefinedResults(state, changed)}`
-      : "I couldn’t apply that search because no verified match was returned. Your previous discoveries and their active preferences are unchanged. The attempted search is kept separately so you can adjust it or retry.",
+      : input.feedback?.reason === "Too expensive"
+        ? "I couldn’t verify a cheaper alternative within the lower price ceiling. I haven’t substituted premium places. Your earlier discoveries are not new affordable matches; the lower-budget search is kept separately so you can adjust it or retry."
+        : "I couldn’t apply that search because no verified match was returned. Your previous discoveries and their active preferences are unchanged. The attempted search is kept separately so you can adjust it or retry.",
     changed.length ? chatShortlist(state,changed) : undefined,
   );
   return input.message && intent.action === "plan-day" &&

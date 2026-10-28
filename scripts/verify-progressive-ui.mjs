@@ -194,6 +194,11 @@ assert.equal(
   await evaluate("document.querySelectorAll('.confirmation-card').length"),
   3,
 );
+for (const width of [320, 390, 768, 1440]) {
+  await call("Emulation.setDeviceMetricsOverride", {width,height:1100,deviceScaleFactor:1,mobile:width<768});
+  assert.ok(await evaluate("(()=>{const panel=document.querySelector('.taste-confirmation');const style=getComputedStyle(panel);return parseFloat(style.paddingLeft)>=16 && parseFloat(style.paddingRight)>=16 && document.documentElement.scrollWidth<=innerWidth;})()"), `Review Interests must have content gutters at ${width}px`);
+  assert.ok(await evaluate("(()=>{const buttons=[...document.querySelectorAll('.confirmation-actions > button')];return buttons.every(button=>button.getBoundingClientRect().height>=48) && Math.abs(buttons[0].getBoundingClientRect().height-buttons[1].getBoundingClientRect().height)<2;})()"), `Review actions must have equal touch-friendly heights at ${width}px`);
+}
 for (let i = 0; i < 3; i++) {
   const selected = await evaluate(
     `(()=>{const s=document.querySelectorAll('.inline-match select')[${i}];return [...s.options].find(o=>o.value${i === 1 ? "&&o.textContent.includes('2014')" : i === 2 ? "&&o.value==='urn:tag:cuisine:qloo:indian'" : ""}).value})()`,
@@ -253,7 +258,10 @@ assert.ok(!(await evaluate("document.querySelector('.cultural-reveal').open")));
 assert.ok(
   !(await evaluate("Boolean(document.querySelector('.why-section[open]'))")),
 );
-assert.ok(!(await evaluate("document.querySelector('#taste-concierge').open")));
+assert.ok(await evaluate("document.querySelector('#taste-concierge').open"), "Ask TastePassport should welcome the user when Discover first opens");
+assert.ok(await evaluate("document.querySelector('.conversation').textContent.includes('Welcome to Toronto')"), "The first Discover welcome should name the destination");
+await evaluate("document.querySelector('[aria-label=\"Close Taste Concierge\"]').click()");
+await waitFor("!document.querySelector('#taste-concierge').open");
 await clickText('Plan a day');
 await evaluate("document.querySelector('.day-out-reveal').scrollIntoView({behavior:'instant',block:'start'})");
 const outingBefore = await evaluate("[...document.querySelectorAll('.day-out-stops select')].map(s=>s.value)");
@@ -498,6 +506,12 @@ await shot("/tmp/tastepassport-assistant-mobile.png");
 await evaluate(
   "document.querySelector('[aria-label=\"Close Taste Concierge\"]').click()",
 );
+for (const section of ['Preferences','Together','Taste insights','Plan a day','My Vibe','Discover']) {
+  await evaluate("document.querySelector('.passport-menu-toggle').click()");
+  await clickText(section);
+  assert.equal(await evaluate('document.documentElement.scrollWidth>innerWidth'),false,`${section} must fit a 390px viewport`);
+  assert.ok(await evaluate("document.querySelector('.passport-workspace-content').getBoundingClientRect().right<=innerWidth"),`${section} content must stay inside the viewport`);
+}
 await clickText("New Passport");
 await waitFor("Boolean(document.querySelector('.taste-profile-dialog[open]')) || Boolean(document.querySelector('#taste-input'))");
 if (await evaluate("Boolean(document.querySelector('.taste-profile-dialog[open]'))")) await clickText("Continue without saving");

@@ -1,7 +1,8 @@
 "use client";
 import { sectionLabel } from "../../src/passport/labels";
-import { useState } from "react";
+import { memo, useState } from "react";
 import { ResultMetrics, WhyEvidence } from "./intelligence-evidence";
+import { tasteEvidenceCoverage } from "../../src/passport/taste-evidence-coverage";
 import { evidenceFacts, recommendationSummary } from "../../src/qloo/explanation";
 import { threeChoices } from "../../src/passport/shortlist";
 import { bridgeRoutes, sparseSections } from "../../src/passport/evidence";
@@ -295,6 +296,7 @@ function EntityPhoto({url,name,section}:{url?:string;name:string;section:Section
 export function DiscoveryCard({
   session,
   card,
+  selected = [],
   feedback,
   onFeedback,
   live = false,
@@ -304,9 +306,13 @@ export function DiscoveryCard({
   live?: boolean;
   disabled?: boolean;
   card: Card;
+  selected?: {id:string}[];
   feedback?: Feedback;
-  onFeedback: (id: string, value: Feedback) => void;
+  onFeedback: (id: string, value: Feedback) => void | Promise<void>;
 }) {
+  const [saving,setSaving]=useState(false);
+  const summary=recommendationSummary(card,selected?.map(taste=>taste.id));
+  const coverage=tasteEvidenceCoverage(card,selected);
   return (
     <article
       data-entity-id={card.id}
@@ -326,7 +332,7 @@ export function DiscoveryCard({
         </span>
         <h4>{card.name}</h4>
       </div>
-      {recommendationSummary(card) && <p className="card-query-inputs">{recommendationSummary(card)}</p>}
+      {summary && <p className="card-query-inputs">{summary}</p>}
       {card.address && (
         <p className="card-address">
           <Icon name="pin" size={13} />
@@ -342,12 +348,13 @@ export function DiscoveryCard({
       {card.evidence?.strategyNote?.startsWith("Dish match not verified:") && (
         <p className="helper">Dish not verified · check the menu</p>
       )}
-      <ResultMetrics card={card} />
+      <ResultMetrics card={card} selected={selected} />
       <details className="why-section">
         <summary>
           Why this suggestion? <Icon name="plus" size={12} />
         </summary>
-        {evidenceFacts(card).slice(0, 4).map((fact) => <p key={fact}>{fact}</p>)}
+        {coverage && <p className="taste-evidence-cue"><strong>Connected to {coverage.count} of your {coverage.total} confirmed tastes</strong><span>Individual returned evidence for this suggestion. This is not a predicted match score.</span></p>}
+        {evidenceFacts(card,selected?.map(taste=>taste.id)).slice(0, 4).map((fact) => <p key={fact}>{fact}</p>)}
         <div className="why-signals">
           {(
             card.evidence?.inputs
@@ -359,18 +366,19 @@ export function DiscoveryCard({
               <span key={name}>{name}</span>
             ))}
         </div>
-        <WhyEvidence card={card} session={session} />
+        <WhyEvidence card={card} session={session} confirmedIds={selected.map(taste=>taste.id)} />
       </details>
       <div className="feedback-actions">
         <button
           type="button"
-          disabled={disabled}
+          disabled={disabled || saving}
+          aria-busy={saving}
           aria-pressed={feedback === "like"}
           className={feedback === "like" ? "liked" : ""}
-          onClick={() => onFeedback(card.id, "like")}
+          onClick={async () => {if(saving)return;setSaving(true);try{await onFeedback(card.id,'like');}finally{setSaving(false);}}}
         >
           <Icon name="heart" size={14} />
-          My vibe
+          {saving ? (feedback==='like'?'Saved to My Vibe':'Saving…') : feedback==='like'?'Saved to My Vibe':'Save to My Vibe'}
         </button>
         <button
           type="button"
@@ -386,21 +394,23 @@ export function DiscoveryCard({
       {feedback && (
         <small className="feedback-note">
           {live
-            ? "Your preference is saved for this visit. We’ll look for a replacement when one is available."
+            ? feedback === "like" ? "Saved to My Vibe for this visit." : "Your preference is saved for this visit. We’ll look for a replacement when one is available."
             : "Preference saved for this session. Recommendations haven’t been replanned."}
         </small>
       )}
     </article>
   );
 }
-export function PassportSections({
+export const PassportSections = memo(function PassportSections({
   result,
   feedback,
   onFeedback,
   updates = {},
   updating = [],
   previewLimit = 3,
+  disabled = false,
 }: {
+  disabled?: boolean;
   previewLimit?: number;
   updates?: Partial<Record<Section, number>>;
   updating?: Section[];
@@ -511,10 +521,11 @@ export function PassportSections({
                   session={result.agent}
                   key={c.id}
                   card={c}
+                  selected={result.selected}
                   feedback={feedback[c.id]}
                   onFeedback={onFeedback}
                   live={Boolean(result.agent)}
-                  disabled={updating.length > 0}
+                  disabled={disabled || updating.length > 0}
                 />
                 </div>
               ))}
@@ -536,4 +547,4 @@ export function PassportSections({
       ))}
     </div>
   );
-}
+});

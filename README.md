@@ -1,43 +1,85 @@
-# TastePassport AI
+# FaveRoam
 
-**Move anywhere. Keep your vibe.**
+**Move anywhere. Keep what moves you.**
 
-TastePassport is an agent-powered cultural discovery app for people making a new city feel like home. Tell it what you already love—a film, an artist, a cuisine, a book—and it helps you find places and culture in your destination, refine those choices through conversation, find common ground with someone else, and shape a day out. You can explore without creating an account.
+FaveRoam is an agent-powered cultural discovery app for people making a new city feel like home. Tell it a film, an artist or a cuisine you already love. It turns those confirmed tastes into places and culture in your destination, a first-week plan, weekly rituals, and common ground with someone you've just met. Suggestions disclose the evidence available; when Qloo returns nothing suitable, the app shows a gap instead of inventing a venue.
 
-**[Try the Cloud Run demo](https://taste-passport-ai.cloud.run/)** · [Project guide](docs/PROJECT_GUIDE.md) · [MIT license](LICENSE)
+![License: MIT](https://img.shields.io/badge/license-MIT-blue)
+![Node 24+](https://img.shields.io/badge/node-%E2%89%A524-339933)
+![Next.js 16](https://img.shields.io/badge/Next.js-16-black)
+![Built for the Qloo Agentic Hackathon](https://img.shields.io/badge/built%20for-Qloo%20Agentic%20Hackathon-6f42c1)
 
-## Why we built it
+**[Live demo](https://my-faveroam-app.cloud.run/)** · [Project guide](docs/PROJECT_GUIDE.md) · [MIT license](LICENSE)
 
-Moving changes more than an address. A newcomer often knows what they love but not where those tastes might lead in a new city. A generic city guide starts with popularity. A general-purpose chatbot can offer plausible ideas, but its answer alone does not confirm which *Interstellar* or *A.R. Rahman* the person meant, retrieve Qloo's cultural associations, or carry verified preferences through later decisions.
+## The problem
 
-TastePassport starts with **confirmed cultural interests** and makes a useful next step from them. The user stays in control: they can correct a match, set a budget or other supported requirements, reject a suggestion, ask a follow-up, or choose the stops in an outing.
+A newcomer usually knows what they love but not where those tastes lead in a new city. A generic city guide starts with popularity. A chatbot without cultural retrieval can offer plausible suggestions, but may guess which *Interstellar* or *A.R. Rahman* you meant or give reasons without evidence from the recommended place.
 
-## Explore the app
+## Our answer
 
-1. Pick a destination and add **one to five interests**. For example, try *A.R. Rahman*, *Interstellar*, and *Indian cuisine*. The home city is optional and labels your journey; it does not silently infer your tastes.
-2. Review the suggested identity for each interest. The dropdown contains other returned matches so you can correct a title or name before discovery.
-3. Choose the activities you want to explore. Open a recommendation to see what evidence is available: its type, place details where returned, and an explanation that distinguishes an audience-taste association from a proven personal preference.
-4. Ask TastePassport something specific, such as **“Find quieter Indian food within a moderate budget. Keep my movies unchanged.”** Check which section changed and whether the choices meet the request. Follow with **“Make those cheaper.”**
-5. Save a promising choice to **My Vibe**. Ask **“Save my Passport”** to save it to your signed-in account, or **“Plan a day out”** to open the editable planner. Try **Together** with another confirmed interest to look for shared cultural ground. Choose stops and times; reorder stops without silently replacing their venues.
-6. Optionally create an account to save a Passport, a dated plan, or a named taste profile for another destination.
+FaveRoam starts from **confirmed cultural interests** and keeps the person in control. Qloo supplies the cultural entities and associations. Gemini helps interpret language. **The server verifies every result before the app shows it.**
 
-Live coverage varies by city and interest. The app should show a gap when Qloo does not return a suitable choice rather than manufacture a venue. For a recorded demo, use the results the app actually returns.
+## A quick tour
 
-## Why Qloo changes the answer
+1. Open the **[live demo](https://my-faveroam-app.cloud.run/)** and choose **Try a sample**. It fills a destination and three interests, then asks you to confirm each match.
+2. Open **Discover**. Returned places appear on a map. Choose an **Around [venue]** group to filter nearby places, then open a card to see *why it may fit* and the limits of the evidence.
+3. Ask: **"Find quieter Indian food within a moderate budget. Keep my movies unchanged."** Then ask **"Make those cheaper."** Expand **What I checked** to see the route, the protected sections and the validation steps.
+4. Select a place on the map and plan a day from it, then build a seven-day **First Week**.
+5. Open **Common Ground** and enter a second person's interests. Explore shared themes, a first place to try, and something each person can show the other.
+6. Sign in with your own account, then download a taste card or create an expiring read-only link that a friend can use to start their own comparison.
 
-| A standalone LLM answer | TastePassport's Qloo-grounded workflow |
+## What it does
+
+| Feature | What you get |
 |---|---|
-| Suggests plausible places from general knowledge, which may be stale or hard to verify. | Retrieves named entities and supported metadata from Qloo, then checks output type, locality, exclusions and observable constraints. |
-| May guess which artist, film or food concept the user meant. | Presents returned candidates for explicit confirmation before using them as taste signals. |
-| Can explain a recommendation fluently without evidence for that particular connection. | Uses returned tags, query provenance and available contribution evidence; it labels collective associations honestly. |
-| Treats a follow-up as a new prompt unless an application carries state. | Keeps a revision-checked Passport with confirmed interests, category preferences, feedback and conversation context. |
-| Can propose a group outing in prose. | Uses Qloo Compare for shared cultural associations and lets people assemble an outing from returned place choices. |
+| **Confirmed interests** | Qloo returns candidates; you pick the right title or name before anything is used as a taste signal. |
+| **Discover and evidence** | Cards for food, coffee, music, film, culture and more, with returned tags and labelled audience associations. |
+| **Place map and clusters** | Returned places with real coordinates on a map; nearby venues grouped around a real anchor venue. No invented neighbourhoods. |
+| **Ask FaveRoam** | Conversational refinement with budget and cuisine requirements. "Keep my movies unchanged" is enforced by the server. |
+| **Vibe Dial** | Choose a direction from themes Qloo actually returned, with a receipt of what changed. |
+| **First Week** | Seven editable days built from returned venues. Lock, remove (leaves an open slot), undo, and export to a calendar file. |
+| **My Rituals** | Turn a verified discovery into a weekly or fortnightly routine; replace it only by approving a returned alternative. |
+| **Common Ground** | Compare two people's confirmed tastes, get one first place to try, grounded conversation starters, and a shared first week where each stop is marked *you*, *partner* or *both*. |
+| **Share** | Signed-in users can download a taste card or create an expiring, revocable, read-only link, and manage their links from their account. |
+| **Accounts** | Save Passports, plans, First Weeks, rituals and taste profiles, and share. Guests can explore discovery, the map and Common Ground without signing in. |
 
-This describes the **difference in workflow and evidence**, not a measured claim that every TastePassport result beats every LLM answer. Gemini is valuable for understanding language and selecting tools; Qloo supplies the cultural entities and discovery candidates that the app can inspect and preserve.
+## Why it is different
 
-The integration uses Qloo [entity search, tags, Insights and Compare](https://docs.qloo.com/reference/qloo-llm-hackathon-developer-guide), plus validated official harness/MCP functions where appropriate. In an Insights request, `filter.type` is the **requested output type**. An artist and a film can be input signals while `urn:entity:place` requests places. Food, coffee and cinema are place activities selected with supported taxonomy, not made-up entity types. Music results are artist discoveries, not verified local concerts.
+| Design choice | Why it matters | Where to look |
+|---|---|---|
+| **Gemini suggests, the server verifies.** | The model never executes tools or commits changes. A revision check updates the session only if identity, destination and every untouched section are unchanged. | [`src/agent/orchestrator.ts`](src/agent/orchestrator.ts) |
+| **Only confirmed tastes are called yours.** | Inputs the app resolves from your wording (a dietary phrase, a dish) are labelled "used from your request", not "your confirmed tastes". | [`src/agent/chat-shortlist.ts`](src/agent/chat-shortlist.ts) |
+| **Evidence before explanation.** | Audience associations are labelled as collective patterns, not proof of personal preference. Broader or unverified results carry the same label everywhere. | [`src/qloo/explanation.ts`](src/qloo/explanation.ts) |
+| **Gaps instead of guesses.** | Missing categories stay open in plans, and a place is never added without returned evidence. | [`src/passport/first-week.ts`](src/passport/first-week.ts) |
+| **Common Ground ranks venues by evidence.** | The first place to try favours a returned shared theme, then signals tying it to both people, and says plainly when nothing connects it. | [`src/passport/common-ground.ts`](src/passport/common-ground.ts) |
+| **Share links are built defensively.** | Random 24-byte tokens, a hash used for lookup, 14-day expiry, revocation, five active links per account, and no chat history in a share. The owner's display name appears on the shared page when available. The table is locked to the server's service role by row-level security. | [`src/share/links.ts`](src/share/links.ts) |
 
-## How a conversation turn works today
+## How we use Qloo
+
+| Qloo capability | Used for |
+|---|---|
+| Entity search and lookup (`/search`, `/entities`) | Resolve and confirm the artists, films, cuisines and places a person names. |
+| Tags (`/v2/tags`, `/v2/tags/types`) | Turn a concept such as a cuisine, dish or atmosphere into a Qloo tag. |
+| Insights (`/v2/insights/`) | Discovery. `filter.type` is the requested **output type** (for example `urn:entity:place`), while confirmed entities and tags are the input signals. |
+| Compare (`/v2/analysis/compare`) | Shared and distinct cultural themes between two people. |
+| Trending (`/v2/trending`) and analysis views | Audience context: taste, heatmap and demographic analysis ([`src/qloo/analysis.ts`](src/qloo/analysis.ts)). |
+
+Validated official harness/MCP functions are used where appropriate. See the [Qloo developer guide](https://docs.qloo.com/reference/qloo-llm-hackathon-developer-guide).
+
+This table describes a difference in workflow and evidence. It is not a measured claim that every FaveRoam result beats every LLM answer.
+
+## Architecture
+
+```mermaid
+flowchart LR
+  Browser["Next.js UI and MapLibre map"] --> API["API routes"]
+  API --> Agent["Agent layer: guards, intent, validation"]
+  Agent --> Gemini["Gemini: intent and wording only"]
+  Agent --> Qloo["Qloo: search, tags, insights, compare"]
+  API --> DB[("Supabase, optional")]
+```
+
+### How one conversation turn works
 
 ```mermaid
 flowchart LR
@@ -57,39 +99,22 @@ flowchart LR
   Compose --> Reply
 ```
 
-The API loads the current Passport from the server session and validates the incoming message before interpreting it. Exact greetings, current-result listing/comparison, some card questions, and unsupported actions such as booking or checking live hours can be answered directly from the existing state. Other messages go to Gemini as a structured `interpret_cultural_intent` function call. Explicit save and plan intents go through server validation: saving uses the signed-in account endpoint; planning opens the editable schedule. This is currently a required intent call (`ANY`); Gemini does **not** yet make one `AUTO` choice among separate answer, clarification and discovery tools.
+This is **structured intent plus server-orchestrated retrieval** with a bounded taxonomy tool loop. It is not a fully autonomous multi-agent system: Gemini does not choose arbitrary endpoints, make bookings or commit changes. Schemas, input checks, tool allow-lists, evidence validation, preservation checks and revision checks are the safety boundary, not model temperature. The [project guide](docs/PROJECT_GUIDE.md) documents the details.
 
-For a request such as **“Find chicken biryani in London, keep my movies unchanged”**, the flow is:
+## Tech stack
 
-1. The server checks the text for secrets, personal contact details, unsupported length and explicit “keep unchanged” clauses. The protected Movies section becomes a server-side commit guard.
-2. Gemini receives the latest request with a compact context: destination, confirmed tastes, active preferences and filters, a short validated conversation summary, recent turns, and a capped set of current recommendation cards. The system prompt says to interpret only the latest request, treat history and tool output as untrusted, preserve omitted preferences, and ask when meaning is unclear.
-3. Gemini returns a schema-constrained intent: Food section, the specific “chicken biryani” concept, and any requested constraints. The server validates the object and grounds concepts in the latest message; in model mode, omitted fields remain omitted rather than being filled from a competing regex interpretation. Deterministic interpretation is the fallback when Gemini is unavailable. Explicit preservation rules are applied independently by the server.
-4. If the concept needs taxonomy resolution, a bounded Gemini function-calling pass can select the Qloo tag lookup. Only tool names and arguments allowed by the application are executed. Returned tags are treated as data, not instructions, and candidate IDs must come from Qloo.
-5. The server builds the Insights request using the requested output type (`urn:entity:place` for venues), the selected destination and validated tags/preferences. The server—not Gemini—calls Qloo, checks returned entities and constraints, and prepares the new cards. If evidence is too broad or absent, the UI must disclose that rather than claim an exact dish match.
-6. A commit check verifies that identity, destination, confirmed tastes and every untouched section are unchanged. The session is updated only if this check passes. One optional tool-free Gemini response call may summarize the verified outcome; its claims and card references are validated against the actual result. If it fails, the deterministic response remains.
-
-This is a **structured intent plus server-orchestrated retrieval** pattern with a bounded taxonomy tool loop. It is not a fully autonomous multi-agent system: Gemini does not execute tools, choose arbitrary endpoints, make bookings, or commit Passport changes. The server allows at most three Gemini planning calls per turn (intent plus up to two taxonomy observations), one optional response-composition call, and four guarded MCP/tool workflow calls. Qloo Insights discovery is performed by the server and uses its own bounded transport retry policy. The planned single `AUTO` planner with `find_tags`, `discover_places` and `reply_from_context` tools is not yet implemented. This distinction is important: a flowchart or prompt proposal must not be mistaken for deployed behavior.
-
-Generation settings currently use temperature `1.0` and explicit output-token ceilings. Temperature is not the security boundary: schemas, input checks, tool allow-lists, evidence validation, preservation checks and revision checks are. Backend logs record safe stages and status, not keys, account tokens, chat transcripts or raw provider payloads.
-
-Discovery first checks identity and hard requirements, then ranks and diversifies eligible results. Matching-domain tastes guide familiar choices; Balanced can blend direct and adjacent Qloo results; Explore can surface more adjacent discoveries. Chain and duplicate limits reduce repetitive previews. These are product ranking rules, **not Qloo-issued probabilities**. The [project guide](docs/PROJECT_GUIDE.md) documents retrieval, ranking, sessions and failure behavior in more detail.
-
-## Architecture and data
-
-| Part | Responsibility |
+| Layer | Technology |
 |---|---|
-| Next.js 16, React, TypeScript | Onboarding, Discover, Ask TastePassport, My Vibe, Together, insights and the outing planner |
-| Qloo API and official harness/MCP | Resolve interests and concepts; retrieve cultural entities, places and shared associations |
-| Gemini via `@google/genai` | Interpret conversational requests and select permitted functions; compose responses from checked facts |
-| Server-side policy and session state | Validate requests, preserve unaffected preferences, reject unsupported results and coordinate revisions |
-| Supabase (optional) | Email/password accounts, saved Passports, plans, taste profiles, destinations and persisted editing sessions |
-| Google Cloud Run | Host the public Next.js application |
-
-Guest discovery needs Qloo but no account. If account storage is configured, the browser receives only an active-session pointer; canonical editing state stays on the server. Saved Passports hold bounded Qloo-backed discoveries and preferences, not chat history or provider credentials.
+| App | Next.js 16, React, TypeScript |
+| Map | MapLibre GL with CARTO Voyager tiles |
+| Cultural data | Qloo API and official harness/MCP |
+| Language model | Gemini via `@google/genai` |
+| Accounts and storage (optional) | Supabase |
+| Hosting | Google Cloud Run |
 
 ## Run it locally
 
-Use **Node.js 24+** and npm. Install dependencies, copy the example configuration to a Git-ignored local file, and run the app:
+Use **Node.js 24+** and npm.
 
 ```sh
 npm ci
@@ -97,23 +122,22 @@ cp .env.example .env.local
 npm run dev -- --port 3000
 ```
 
-Open `http://localhost:3000`. Set these **server-side** values in `.env.local` or your host's secret settings:
+Open `http://localhost:3000`. Set these **server-side** values in `.env.local`:
 
-| Setting | Purpose |
-|---|---|
-| `QLOO_API_KEY` | Required for live Qloo discovery. Obtain a hackathon-enabled key. |
-| `QLOO_API_BASE_URL` | Use `https://hackathon.api.qloo.com`. |
-| `GEMINI_API_KEY` or `GOOGLE_API_KEY` | Enables native Gemini conversation through Vertex AI Express Mode. `GOOGLE_API_KEY` takes precedence if both are set. |
-| `GEMINI_MODEL` | Configurable lower-cost model for concise response composition; defaults to `gemini-3.1-flash-lite`. |
-| `GEMINI_DECISION_MODEL` | Optional model for intent decisions and tool selection; defaults to `GEMINI_MODEL` when unset. |
-| `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY` | Optional together for accounts and durable saved data. Keep the service-role key server-only. |
-| `APP_ORIGIN` | Canonical origin for account email redirects, for example `http://localhost:3000` locally or the deployed HTTPS origin. |
+| Setting | Required | Purpose |
+|---|---|---|
+| `QLOO_API_KEY` | Yes | Live Qloo discovery. Use a hackathon-enabled key. |
+| `QLOO_API_BASE_URL` | Yes | `https://hackathon.api.qloo.com` |
+| `GEMINI_API_KEY` | Recommended | Native Gemini conversation. Without it the app falls back to deterministic interpretation. |
+| `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY` | Optional | Accounts and saved data. Keep the service-role key server-only. |
+| `APP_ORIGIN` | Optional | Canonical HTTPS origin for account email redirects. |
+| `CARTO_API_KEY` | Optional | Website key for map tiles. Without it the map shows a setup message and a schematic view. |
 
-The `AGENT_MODEL_*` compatibility adapter is optional for other providers; native Gemini does not need it. Do not put any provider or service-role secret in a `NEXT_PUBLIC_` variable, a commit, logs or screenshots.
+Never put a provider or service-role secret in a `NEXT_PUBLIC_` variable, a commit, logs or screenshots. The CARTO key is the exception: it is visible to anyone inspecting browser requests, so restrict it to your site's origins in the CARTO dashboard (for example `https://my-faveroam-app.cloud.run`, and localhost for local testing only).
 
-For account features, create a Supabase project, enable email/password authentication and the desired email-confirmation setting, configure the local and deployed `/auth/callback` redirect URLs, then run [db-scripts/setup.sql](db-scripts/setup.sql) **manually once** in its SQL Editor. **That script deletes existing app-owned Passports, plans, profiles and active sessions.** It preserves Auth users and existing destination rows. Do not run it in CI or on every deployment. Without Supabase configuration, use the guest discovery flow.
+For accounts, create a Supabase project, enable email/password sign-in, set the `/auth/callback` redirect URLs, and run [`db-scripts/setup.sql`](db-scripts/setup.sql) manually in the SQL Editor. **It is a destructive reset** of app-owned data (Auth users are kept), so never run it from startup or CI. After running it, start a New Passport.
 
-## Verify and deploy
+## Verify
 
 ```sh
 npm run check:docs
@@ -123,12 +147,27 @@ npm run build
 npm run smoke:production
 ```
 
-Those checks use local fixtures and a production smoke test; they do not certify live Qloo, Gemini or email delivery. Opt-in live checks are `npm run verify:qloo`, `npm run verify:gemini`, `npm run verify:accuracy` and `npm run verify:relevance`; they consume provider quota. For the hosted demo, also test a complete guest journey and the account flow if you intend to show it.
+These checks use local fixtures and a production smoke test; they do not certify live Qloo, Gemini, map-tile or email behaviour. Opt-in live checks are `npm run verify:qloo`, `npm run verify:gemini`, `npm run verify:accuracy` and `npm run verify:relevance`. They consume provider quota.
 
-The app can be deployed to Cloud Run from GitHub. It listens on the host-provided `PORT` and exposes `/api/health` for process readiness. Configure secrets in the host, set `APP_ORIGIN` to the public HTTPS origin, and verify a real discovery and refinement in addition to the health response. GitHub Actions validates pushed `feat/**` branches. **[Open the live demo](https://taste-passport-ai.cloud.run/).**
+The app listens on the host-provided `PORT` and exposes `/api/health` for readiness. GitHub Actions checks the configured branches; verify the latest workflow run before deploying.
 
-## Boundaries
+## Honest boundaries
 
-TastePassport does not book venues, verify current opening hours or showtimes, guarantee travel times, or certify dietary or medical safety. Some Qloo entities have no image, rating or usable venue details; the UI must not infer missing facts. Geographic affinity and aggregate audience patterns do not describe an individual.
+FaveRoam does not book venues, verify opening hours or showtimes, guarantee travel times, or certify dietary or medical safety. Some Qloo entities have no image, rating or venue details, and the app does not infer missing facts. Audience associations and geographic affinity describe aggregate patterns, not an individual. Live coverage varies by city and interest.
 
-We built TastePassport for the [Qloo Agentic Hackathon](https://qloo.devpost.com/) around a specific use case: carrying familiar cultural interests into a new city. The public code is available under the [MIT license](LICENSE). Developers can start with this README, inspect the [project guide](docs/PROJECT_GUIDE.md) for implementation details, and run the app with their own credentials.
+## Repository layout
+
+| Path | Contents |
+|---|---|
+| `app/` | Next.js pages, API routes and React components |
+| `src/agent/` | Conversation orchestration, guards, intent, validation and ranking |
+| `src/qloo/` | Qloo client, query planning, Compare, analysis and explanations |
+| `src/passport/` | First Week, Common Ground, Vibe Dial, area clusters and day planning |
+| `src/share/`, `src/account/` | Share links, accounts, saved plans and rituals |
+| `db-scripts/` | Database schema and policies |
+| `tests/`, `scripts/` | Automated tests and verification scripts |
+| `docs/` | One maintained project guide |
+
+## Acknowledgements and license
+
+Built for the Qloo Agentic Hackathon with Qloo's cultural API, Google Gemini and Google Cloud Run. Map data © OpenStreetMap contributors, © CARTO. Released under the [MIT license](LICENSE).

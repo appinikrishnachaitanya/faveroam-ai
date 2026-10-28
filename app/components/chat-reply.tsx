@@ -1,4 +1,4 @@
-import { Fragment } from 'react';
+import { Fragment, memo } from 'react';
 import { chatParagraphs } from '../../src/agent/chat-presentation';
 
 /** Render only text and a small, safe formatting vocabulary; never provider HTML. */
@@ -6,7 +6,7 @@ function inline(text:string) {
   return text.split(/(\*\*[^*]+\*\*)/g).map((part,index)=>part.startsWith('**')&&part.endsWith('**')
     ? <strong key={index}>{part.slice(2,-2)}</strong> : <Fragment key={index}>{part}</Fragment>);
 }
-export default function ChatReply({text,hasCards=false}:{text:string;hasCards?:boolean}) {
+export default memo(function ChatReply({text,hasCards=false}:{text:string;hasCards?:boolean}) {
   return <div className="chat-reply-copy">{chatParagraphs(text,hasCards).map((block,index)=>{
     const rows=block.split('\n').map(line=>line.trim()).filter(Boolean);
     const groups:{list:boolean;lines:string[]}[]=[];
@@ -19,4 +19,4 @@ export default function ChatReply({text,hasCards=false}:{text:string;hasCards?:b
       ? <ul key={i}>{group.lines.map((line,j)=><li key={j}>{inline(line.replace(/^(?:[•*-]|\d+[.)])\s+/,''))}</li>)}</ul>
       : <p key={i}>{inline(group.lines.join(' '))}</p>)}</Fragment>;
   })}</div>;
-}
+});

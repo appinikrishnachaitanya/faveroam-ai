@@ -1,19 +1,17 @@
 "use client";
 import { sectionLabel } from "../../src/passport/labels";
-import { useState } from "react";
+import { memo, useState } from "react";
 import type { Passport } from "../../src/workspace/state";
 import type { Candidate, Card, Section } from "../../src/passport/model";
 import { bridgeRoutes } from "../../src/passport/evidence";
 import { evidenceFacts } from "../../src/qloo/explanation";
 import { DiscoveryCard, Icon } from "./passport";
 import type { Feedback } from "./passport";
-export function PassportCover({
+export const PassportCover = memo(function PassportCover({
   passport,
-  origin,
   onConnections,
 }: {
   passport: Passport;
-  origin: string;
   onConnections: () => void;
 }) {
   const count = passport.cards.filter(
@@ -22,16 +20,11 @@ export function PassportCover({
   return (
     <header className="passport-cover">
       <div className="cover-copy">
-        <span className="micro-label">MOVE ANYWHERE. KEEP YOUR VIBE.</span>
-        <div className="cover-journey">
-          <span>{origin || "Your interests"}</span>
-          <Icon name="arrow" size={16} />
-          <span>{passport.city}</span>
-        </div>
+        <span className="micro-label">FROM WHAT YOU LOVE TO WHERE YOU BELONG.</span>
         <h1 id="passport-title">
           Your {passport.city}
           <br />
-          <em>TastePassport</em>
+          <em>FaveRoam</em>
         </h1>
         <p>A new chapter, connected to the things you already love.</p>
         <div className="passport-taste-preview">
@@ -44,7 +37,7 @@ export function PassportCover({
         </button>
       </div>
       <div className="cover-art" aria-hidden="true">
-        <img className="cover-illustration" src="/illustrations/passport-journey.svg" width="520" height="350" alt="" />
+        <img className="cover-illustration" src="/illustrations/editorial-city-route.svg" width="440" height="300" alt="" loading="lazy" decoding="async" />
         <div className="cover-stamp">
           <strong>{count}</strong>
           <span>
@@ -56,14 +49,16 @@ export function PassportCover({
       </div>
     </header>
   );
-}
-export function SavedDiscoveries({
+});
+export const SavedDiscoveries = memo(function SavedDiscoveries({
   cards,
+  selected,
   feedback,
   onFeedback,
   disabled,
 }: {
   cards: Card[];
+  selected: Candidate[];
   feedback: Record<string, Feedback>;
   onFeedback: (id: string, value: Feedback) => void;
   disabled: boolean;
@@ -74,9 +69,10 @@ export function SavedDiscoveries({
         <span className="vibe-emblem" aria-hidden="true"><Icon name="heart" size={28}/></span>
         <div><span className="micro-label">A COLLECTION THAT FEELS LIKE YOU</span>
           <h2 id="saved-title">Your favorites, all in one place.</h2>
-          <p>The discoveries you love stay here as you explore. Save your Passport to keep them for your next visit.</p>
+          <p>Your saved discoveries also help shape future refinements in this Passport. Save your Passport to keep this collection for your next visit.</p>
           <div className="vibe-summary"><span>{cards.length} saved {cards.length === 1 ? "discovery" : "discoveries"}</span><span>{new Set(cards.map(card=>card.section)).size} categories</span></div>
         </div>
+        <img className="vibe-collection-illustration" src="/illustrations/vibe-collection.svg" width="130" height="108" alt="" aria-hidden="true" loading="lazy" decoding="async"/>
       </header>
       {cards.length ? (
         <div className="discovery-grid">
@@ -84,6 +80,7 @@ export function SavedDiscoveries({
             <DiscoveryCard
               key={card.id}
               card={card}
+              selected={selected}
               feedback={feedback[card.id]}
               onFeedback={onFeedback}
               live
@@ -103,7 +100,7 @@ export function SavedDiscoveries({
       )}
     </section>
   );
-}
+});
 export function ConnectionExplorer({ passport, onExplore, onAsk }: { passport: Passport; onExplore?: (section: Section) => void; onAsk?: (question: string) => void }) {
   const allRoutes = bridgeRoutes(passport.cards, passport.selected);
   const [interest, setInterest] = useState<string>();
@@ -172,7 +169,7 @@ export function ConnectionExplorer({ passport, onExplore, onAsk }: { passport: P
             <details>
               <summary>Why did this appear?</summary>
               {(() => {
-                const facts=evidenceFacts(card).filter(f=>/helped shape|returned tags include|Associated via cross-domain audience affinity with/.test(f)).slice(0,2);
+                const facts=evidenceFacts(card,passport.selected.map(taste=>taste.id)).filter(f=>/helped shape|returned tags include|Associated via cross-domain audience affinity with/.test(f)).slice(0,2);
                 return facts.length ? facts.map(f=><p key={f}>{f}</p>) : <p>These interests were considered together. Individual contribution evidence was not returned for this suggestion.</p>;
               })()}
               <small>This search considered the interests above, but may not identify which one influenced the result.</small>

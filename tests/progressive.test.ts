@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import Home from "../app/page.tsx";
+import Home from "../app/home.tsx";
 import { MoveForm, TasteConfirmation } from "../app/components/onboarding.tsx";
 import ConciergeDrawer from "../app/components/concierge.tsx";
 import FeedbackDialog from "../app/components/feedback.tsx";
@@ -15,17 +15,15 @@ const signal: Candidate = {
   detail: "Protocol metadata",
 };
 
-test("first load has one clear onboarding action without agent panels or advanced disclosures", () => {
+test("first load waits for Passport restoration before showing onboarding or saved profiles", () => {
   const html = renderToStaticMarkup(createElement(Home));
-  assert.match(html, /Build your/);
-  assert.match(html, /Moving to/);
-  assert.match(html, /What already feels like you/);
-  assert.match(html, /Find my taste matches/);
+  assert.match(html, /Restoring your Passport/);
+  assert.doesNotMatch(html, /Build your|Moving to|What already feels like you|Find my taste matches|Try a sample/);
   assert.doesNotMatch(
     html,
     /Taste Concierge|Agent execution activity|THE DEMO JOURNEY|View Qloo evidence|cultural-reveal|guided-panel|split-workspace/,
   );
-  assert.equal((html.match(/class="primary-button/g) ?? []).length, 1);
+  assert.equal((html.match(/class="primary-button/g) ?? []).length, 0);
   assert.doesNotMatch(html, /Reset conversation|New Passport/);
 });
 test("onboarding requires city and one taste, uses a single taste input and accessible removable chips", () => {
@@ -80,7 +78,7 @@ test("confirmation offers actual candidates inline, explicit selection, replacem
   assert.match(html, /Feels like home/);
   assert.match(html, /Balanced/);
   assert.match(html, /Help me explore/);
-  assert.match(html, /Create my TastePassport/);
+  assert.match(html, /Create my FaveRoam/);
   assert.doesNotMatch(html, /class="confirmation-card confirmed"/);
   const confirmed = renderToStaticMarkup(
     createElement(TasteConfirmation, {
@@ -102,6 +100,7 @@ test("assistant remains a closed modal with accessible close control and manual 
   assert.match(html, /<dialog[^>]*aria-labelledby="concierge-title"/);
   assert.doesNotMatch(html, /<dialog[^>]*\sopen/);
   assert.match(html, /Close Taste Concierge/);
+  assert.match(html, /Widen chat/);
   assert.match(html, /Refine manually/);
 });
 test("feedback modal retains all seven adaptive reasons and requires an explicit choice", () => {

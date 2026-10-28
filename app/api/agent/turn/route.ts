@@ -58,6 +58,7 @@ async function handlePOST(request: Request) {
     if (actions.length !== 1) throw Error();
     if (input.discovery) {
       if (!Array.isArray(input.discovery.sections) || input.discovery.sections.length < 1 || input.discovery.sections.length > 3 || new Set(input.discovery.sections).size !== input.discovery.sections.length || input.discovery.sections.some(section => !sectionOrder.includes(section))) throw Error();
+      if (input.discovery.preferNew !== undefined && typeof input.discovery.preferNew !== "boolean") throw Error();
       input.discovery.preferences = validatePreferences(
         input.discovery.preferences,
       );
@@ -94,7 +95,7 @@ async function handlePOST(request: Request) {
     if (
       input.recovery &&
       (!sectionOrder.includes(input.recovery.section) ||
-        !["keep-concept", "relax-quiet", "allow-popular", "closest", "retry"].includes(
+        !["keep-concept", "relax-quiet", "allow-popular", "closest", "retry", "area-only"].includes(
           input.recovery.action,
         ))
     )
@@ -125,6 +126,7 @@ async function handlePOST(request: Request) {
         } catch {}
       };
       try {
+        send({type:'activity',event:{label:'Picking up your Passport',status:'active'}});
         const reply = await inSession(
           body.sessionId as string,
           body.revision as number,

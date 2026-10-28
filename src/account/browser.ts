@@ -3,7 +3,8 @@ export class AccountRequestError extends Error {
   constructor(message: string, signInRequired = false) { super(message); this.signInRequired = signInRequired; }
 }
 export async function accountRequest(path: string, body?: unknown, method = "POST") {
-  const signal = AbortSignal.timeout(path === "/api/account/preferences" ? 100_000 : 25_000);
+  const longRequest = path === "/api/account/preferences" || (path === "/api/account/rituals" && body && typeof body === "object" && "action" in body && body.action === "replace");
+  const signal = AbortSignal.timeout(longRequest ? 100_000 : 25_000);
   const response = await fetch(path, body === undefined ? { cache: "no-store", signal } : {
     signal,
     method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),

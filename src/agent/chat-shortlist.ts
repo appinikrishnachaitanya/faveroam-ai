@@ -48,7 +48,9 @@ export function requestedShortlistSections(request:string):Section[]|undefined {
 export function chatShortlist(state: AgentState, sections?: readonly Section[]): Card[] {
   const requested = sections?.length ? sections : state.activeCategories?.length ? state.activeCategories : sectionOrder;
   const order = [...new Set(requested)].filter(section=>!state.hiddenCategories?.includes(section));
-  const pools=order.map(section=>state.cards.filter(card=>card.section===section));
+  // Within a category, cards from the requested search come before broader or unverified fallbacks.
+  const pools=order.map(section=>{const cards=state.cards.filter(card=>card.section===section);
+    return [...cards.filter(card=>!chatBroadening(card)),...cards.filter(card=>chatBroadening(card))];});
   if(sections && sections.length>1)return pools.flatMap(pool=>pool[0]?[pool[0]]:[]).slice(0,3);
   const chosen:Card[]=[];
   // One starting choice per category before additional choices from any category.
@@ -60,31 +62,57 @@ export function chatShortlist(state: AgentState, sections?: readonly Section[]):
   return chosen;
 }
 
-export function chatReason(card: Card): string {
+/** Cards from broader or unverified routes need the same label everywhere they appear. */
+export function chatBroadening(card:Card):{label:string;text:string;dish:boolean}|undefined {
+  const note=card.evidence?.strategyNote??"";
+  if(note.startsWith("Dish match not verified:"))return {label:"Dish not verified",text:note,dish:true};
+  if(note.startsWith("Broader local"))return {label:"Broader local suggestion",text:"Broader local suggestion: your venue requirements were kept, but taste similarity was broadened, so it is not tied to one specific interest.",dish:false};
+  if(card.evidence?.pool==="adjacent")return {label:"Broader discovery",text:"Broader discovery: this comes from a wider reading of your cultural profile, not a match to one specific interest.",dish:false};
+  return undefined;
+}
+
+function specificReason(card:Card,confirmedIds?:readonly string[]):string|undefined {
   const inputs=card.evidence?.inputs ?? [];
   const tags=displayTags(card.evidence?.result?.tags ?? []);
   const matched=tags.filter(tag=>inputs.some(input=>input.id===tag.id));
   if(matched.length) return `${matched.slice(0,2).map(tag=>tag.name).join(" and ")} appears in both this listing’s tags and the search used to find it.`;
-  const names=(card.intelligence?.taste?.contributingSignals ?? []).filter(signal=>signal.contribution>0)
+  const positive=(card.intelligence?.taste?.contributingSignals ?? []).filter(signal=>Number.isFinite(signal.contribution)&&signal.contribution>0)
     .sort((a,b)=>b.contribution-a.contribution)
-    .flatMap(signal=>inputs.find(input=>input.id.toLowerCase()===signal.id.toLowerCase())?.name ?? []);
+    .flatMap(signal=>inputs.filter(input=>input.id.toLowerCase()===signal.id.toLowerCase()));
+  const own=confirmedIds&&new Set(confirmedIds.map(id=>id.toLowerCase()));
+  const names=positive.filter(input=>!own||own.has(input.id.toLowerCase())).map(input=>input.name);
   if(names.length) return `An audience-taste signal connects this listing with ${[...new Set(names)].slice(0,2).join(" and ")}${tags.length ? `; its listed themes include ${tags.slice(0,2).map(tag=>tag.name).join(" and ")}` : ""}.`;
+  const additional=[...new Set(positive.map(input=>input.name))];
+  if(additional.length)return `A returned audience signal connects this listing to the additional search signal ${additional.slice(0,2).join(" and ")}; this was not one of your confirmed tastes.`;
+}
+
+export function chatReason(card: Card,confirmedIds?:readonly string[]): string {
+  const broader=chatBroadening(card),specific=specificReason(card,confirmedIds);
+  if(broader)return specific&&!broader.dish?`${broader.text} ${specific}`:broader.text;
+  if(specific)return specific;
+  const inputs=card.evidence?.inputs ?? [];
+  const tags=displayTags(card.evidence?.result?.tags ?? []);
   const seeds=[...new Set(inputs.filter(input=>input.role!=="tag-filter").map(input=>input.name))].slice(0,2);
   if(seeds.length) return `Found in a search using ${seeds.join(" and ")}. An individual taste connection wasn’t supplied for this result.`;
   return tags.length ? `Listed as ${tags.slice(0,2).map(tag=>tag.name).join(" and ")}. Individual taste evidence is unavailable.`
     : "A current Passport discovery. There isn’t enough returned evidence to explain a more specific taste connection.";
 }
 
-/** Only positive, returned contributions support an individual audience link. */
-export function chatTasteEvidence(card:Card):{names:string[];associated:boolean} {
+/** Only tastes the person confirmed may be shown as theirs. Entities the app resolved
+ * from refinement wording (a dietary phrase, a dish) are reported separately. */
+export function chatTasteEvidence(card:Card,confirmedIds:readonly string[]):{names:string[];associated:boolean;requestNames:string[]} {
   const inputs=card.evidence?.inputs ?? [];
+  const confirmed=new Set(confirmedIds.map(id=>id.toLowerCase()));
+  const isConfirmed=(id:string)=>confirmed.has(id.toLowerCase());
+  const signals=inputs.filter(input=>input.role==='entity-signal'||input.role==='tag-signal');
+  const requestNames=[...new Set(signals.filter(input=>!isConfirmed(input.id)).map(input=>input.name))].slice(0,2);
   const contributors=(card.intelligence?.taste?.contributingSignals ?? [])
     .filter(signal=>Number.isFinite(signal.contribution) && signal.contribution>0)
     .sort((a,b)=>b.contribution-a.contribution)
-    .flatMap(signal=>inputs.find(input=>input.id.toLowerCase()===signal.id.toLowerCase() && input.role==='entity-signal')?.name ?? []);
+    .flatMap(signal=>inputs.find(input=>input.id.toLowerCase()===signal.id.toLowerCase() && input.role==='entity-signal' && isConfirmed(input.id))?.name ?? []);
   const names=[...new Set(contributors)].slice(0,2);
-  if(names.length)return {names,associated:true};
-  return {names:[...new Set(inputs.filter(input=>input.role==='entity-signal'||input.role==='tag-signal').map(input=>input.name))].slice(0,2),associated:false};
+  if(names.length)return {names,associated:true,requestNames};
+  return {names:[...new Set(signals.filter(input=>isConfirmed(input.id)).map(input=>input.name))].slice(0,2),associated:false,requestNames};
 }
 
 export function chatShortlistText(state:AgentState,cards:Card[],sections?:readonly Section[]):string {

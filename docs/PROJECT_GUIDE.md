@@ -1,18 +1,18 @@
-# TastePassport AI — project guide
+# FaveRoam — project guide
 
-This is the single reference for the product, Qloo integration, agent design, development, deployment, demo, and submission. The [root README](../README.md) is the short entry point for judges.
+This is the maintained technical reference for the product, Qloo integration, agent design, persistence, deployment, and verification. Start with the [root README](../README.md) for the product overview.
 
 ## Product and customer journey
 
-Moving cities changes daily routines, but a generic city guide starts from popularity rather than the music, films, food, and other culture a newcomer already loves. TastePassport lets a person bring one to five confirmed interests to a supported destination, discover Qloo-returned places and cultural entities, adapt a Passport through conversation, and turn choices into an outing. Discovery is available to guests.
+Moving cities changes daily routines, but a generic city guide starts from popularity rather than the music, films, food, and other culture a newcomer already loves. FaveRoam lets a person bring one to five confirmed interests to a supported destination, discover Qloo-returned places and cultural entities, adapt a Passport through conversation, and turn choices into an outing. Discovery is available to guests.
 
 1. Pick a destination and one to five interests. An optional home city labels the Passport cover; it does not fetch origin-city recommendations or infer a background.
 2. Confirm ambiguous named entities. Taxonomy concepts such as cuisine and dietary options use returned Qloo tags rather than invented identifiers.
 3. Choose discovery categories. The application requests output entity types appropriate to each category, then validates and ranks returned candidates. Place cards can contain available address, image, business rating, and price metadata. Cultural content is not presented as a local event.
-4. Refine one or more sections with Ask TastePassport or guided controls. Explicit constraints and untouched categories remain intact. My Vibe saves liked cards within the Passport; rejected cards guide future relevant retrieval.
-5. Compare confirmed profiles through Together. Qloo Compare returns shared cultural associations that inform joint discovery; a match is not a claim of personal compatibility.
+4. Refine one or more sections with Ask FaveRoam or guided controls. Explicit constraints and untouched categories remain intact. My Vibe saves liked cards within the Passport; rejected cards guide future relevant retrieval.
+5. Compare confirmed profiles through Common Ground. Qloo Compare returns shared cultural associations that inform joint discovery; a match is not a claim of personal compatibility.
 6. Build an outing from actual place options, select a date and suggested local times, reorder stops without replacing venues, and swap a stop deliberately. The planner does not book or verify hours, routes, or showtimes.
-7. Optionally sign in. Named taste profiles can be reused in another city; saved Passports retain the current discoveries and My Vibe; upcoming plans are separate. An already-saved active Passport updates after successful edits. A fresh Passport in the same city does not overwrite an older saved one until explicitly saved or reopened.
+7. Optionally sign in. Named taste profiles can be reused in another city; saved Passports retain current discoveries and My Vibe; day outings and seven-day First Weeks are saved separately. First Weeks can be reopened, updated, downloaded, and deleted in Upcoming plans. An already-saved active Passport updates after successful edits. A fresh Passport in the same city does not overwrite an older saved one until explicitly saved or reopened.
 
 The default demo journey is Bengaluru → Toronto with A.R. Rahman, *Interstellar*, and Indian cuisine. Confirm the exact artist and film; then ask for cheaper vegetarian Indian food while keeping Music and Movies unchanged. Follow with “make those cheaper,” inspect the actual decision receipt, and plan dinner plus a cinema. Use only results returned by the live app when recording; change the script if a provider returns different choices.
 
@@ -22,12 +22,12 @@ Gemini interprets requests and writes grounded replies. Qloo supplies real cultu
 
 The hackathon [developer guide](https://docs.qloo.com/reference/qloo-llm-hackathon-developer-guide) describes the hackathon host `https://hackathon.api.qloo.com`. The server sends `X-Api-Key` from `QLOO_API_KEY`; credentials and raw provider responses never belong in the public repository. The main operations are:
 
-| Qloo operation | Use in TastePassport |
+| Qloo operation | Use in FaveRoam |
 |---|---|
 | `/search` and entity details | Resolve named inputs and enrich returned entities before identity confirmation. |
 | `/v2/tags` and `/v2/tags/types` | Resolve supported cuisine, dietary, dish, ambience, and venue concepts; the latter also supports diagnostics. |
 | `/v2/insights/` | Retrieve real entities from confirmed tastes, the requested output type, locality and supported filters. |
-| `/v2/analysis/compare` | Return shared associations for Together; both confirmed profiles inform follow-up discovery. |
+| `/v2/analysis/compare` | Return shared associations for Common Ground; both confirmed profiles inform follow-up discovery. |
 | Special tag, geographic-affinity, and aggregate-demographic Insights | Supply optional cultural themes and area context where usable evidence exists. They are not a probability that an individual likes something. |
 | Official harness/MCP (`qloo_find_tags`, `qloo_rank`) | Execute validated model-selected taxonomy lookup and eligible shortlist ranking. |
 
@@ -39,7 +39,7 @@ Cards retain available Qloo metadata, query inputs, and returned contribution ev
 
 ## Agent architecture
 
-TastePassport is one stateful agent with bounded tool use. A Next.js API route owns the turn; Gemini uses the native `@google/genai` SDK with Vertex AI Express Mode; server policy owns authorization and state changes.
+FaveRoam is one stateful agent with bounded tool use. A Next.js API route owns the turn; Gemini uses the native `@google/genai` SDK with Vertex AI Express Mode; server policy owns authorization and state changes.
 
 ```mermaid
 flowchart LR
@@ -69,11 +69,13 @@ Provider, tool, and Qloo failures can activate a clearly labelled guided path. T
 
 Candidate identity and hard requirements are checked before ranking. Matching-domain seeds get priority for familiar content: film tastes are the primary film signals, artist tastes the primary artist signals. Cross-domain associations can still add adjacent discovery. Familiar and Explore use direct or adjacent grounded pools. Balanced uses weighted reciprocal-rank fusion (0.75 direct / 0.25 adjacent, rank constant 60) and may reserve up to four of twenty places for adjacent-only results when a direct pool exists. Deduplication, branch/chain limits, and bounded first-three diversity reduce repetitive place choices while preserving the leading relevant candidate. These are product policies, not Qloo-issued match probabilities or a certified relevance score. Strict user filters remain strict across all three modes; results can legitimately overlap.
 
+Taste Insights can turn a returned theme into a soft taste signal for a subsequent discovery; the chosen theme's name also enters the bounded agent context. The first Passport does not wait for a separate theme analysis. The optional audience lens uses Qloo's documented `signal.demographics.age` values and is off by default; it changes retrieval only after a user selects a group in Preferences. It does not infer or store the user's age. The card's “taste evidence %” is `100 × individually evidenced confirmed tastes / confirmed tastes`, rounded to a whole number. A supporting contribution or an exact returned taste tag counts as individual evidence; search inputs and raw affinity alone do not. The badge is omitted when no individual evidence is returned. This percentage is neither a Qloo match probability nor a satisfaction prediction. Demographic affinity is a relative audience association, not evidence of dietary, medical or accessibility suitability.
+
 ## Accounts, state and database
 
-Guest discovery needs Qloo but no account. With Supabase configured, Auth supports optional sign-in and profile ownership. `saved_passports` stores a bounded snapshot with My Vibe, feedback, and per-category preferences; it excludes chat history and credentials. `taste_profiles` stores portable confirmed tastes and compatible preferences for another destination. `saved_plans` stores dated outing stops/times. Server-only `active_passport_sessions` preserves the editable session across process restarts. `destinations` is an editable catalogue, not a city check constraint on saved rows.
+Guest discovery needs Qloo but no account. With Supabase configured, Auth supports optional sign-in and profile ownership. `saved_passports` stores a bounded snapshot with My Vibe, feedback, and per-category preferences; it excludes chat history and credentials. `taste_profiles` stores portable confirmed tastes and compatible preferences for another destination. `saved_plans` stores dated outing stops/times; `saved_first_weeks` stores seven-day plans with compact snapshots of verified places. Server-only `active_passport_sessions` preserves the editable session across process restarts. `destinations` is an editable catalogue, not a city check constraint on saved rows.
 
-The only schema file is [db-scripts/setup.sql](../db-scripts/setup.sql). **It is destructive to app-owned saved Passports, plans, taste profiles, and active sessions.** It preserves Supabase Auth users and existing destination rows, then inserts starter destinations only when absent. Run it manually in the Supabase SQL Editor for a fresh/reset environment. Do not run it during deployment or CI. Set `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, and server-only `SUPABASE_SERVICE_ROLE_KEY`; set `APP_ORIGIN` to the deployed HTTPS origin. Test registration, email confirmation, login, save/restore, deletion, and ownership with real accounts before including those actions in a demo.
+The canonical schema bootstrap is [db-scripts/setup.sql](../db-scripts/setup.sql). **It is destructive to app-owned saved Passports, plans, taste profiles, share links, and active sessions.** It preserves Supabase Auth users and existing destination rows, then inserts starter destinations only when absent. Run it manually in the Supabase SQL Editor to reset an existing installation to the current schema; do not run it during deployment or CI. The setup script also includes First Week, ritual and sharing policies. Start a New Passport after resetting active sessions. Set `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, and server-only `SUPABASE_SERVICE_ROLE_KEY`; set `APP_ORIGIN` to the deployed HTTPS origin. Test registration, email confirmation, login, save/restore, deletion, and ownership with real accounts before including those actions in a demo.
 
 The browser stores only a per-tab active-session pointer for signed-in refresh. The server reloads canonical state; the pointer cannot create a lost session. A separate per-tab marker permits automatic snapshot updates only after that exact session was explicitly saved or reopened. Deleting the saved Passport clears the marker while keeping the current active view. Guest tab recovery holds a bounded local Passport view but requires a valid server session before edits or saves.
 
@@ -97,11 +99,11 @@ npm run build
 npm run smoke:production
 ```
 
-These use local fixtures and do not prove current Qloo/Gemini availability. On October 21, 2026, this code passed a production build, all 387 unit/integration tests, production smoke, and an isolated Chromium account UI contract with mocked account APIs. The browser contract includes signed-in refresh, retained My Vibe and per-category preferences, delete confirmations, and no empty-profile loading flash. Re-run on the submitted commit. Mocked account responses are not proof of Supabase email or ownership behavior.
+These checks use local fixtures and do not prove current Qloo/Gemini availability. Re-run them on the exact release commit. Isolated Chromium checks with mocked account APIs can verify responsive UI, refresh, preferences and confirmation controls; they do not prove Supabase email delivery or ownership behavior. Test the hosted signed-in flow separately.
 
 Opt-in provider probes, which consume quota, include `npm run verify:gemini`, `npm run verify:qloo`, `npm run verify:accuracy`, and `npm run verify:relevance`. `scripts/verify-account-ui.mjs` requires an isolated Chromium CDP instance and a locally running production build; it mocks account endpoints. Real hosted acceptance remains separate. `npm run spike` is a feasibility diagnostic, not the consumer demo.
 
-Deployment on Google Cloud Run uses the Node/Next.js production build, listens on the platform `PORT`, and exposes `/api/health`. GitHub CI runs checks for a pushed branch; the connected Cloud Run build trigger builds and deploys the selected branch. Compare the deployed commit to the submitted branch before judging. The currently used release branch is `feat/discover-first-workspace-polish`; the repository default branch may differ. Use `https://taste-passport-ai.cloud.run/` for the public demo and `https://taste-passport-ai.cloud.run` for `APP_ORIGIN`. A successful health check alone does not validate the guest or agent journey.
+Deployment on Google Cloud Run uses the Node/Next.js production build, listens on the platform `PORT`, and exposes `/api/health`. GitHub CI runs checks for a pushed branch; the connected Cloud Run build trigger builds and deploys the selected branch. Compare the deployed commit to the submitted branch. The deployed branch and the repository default branch may differ; verify the deployed commit before sharing the demo. Use `https://my-faveroam-app.cloud.run/` for the public app and `https://my-faveroam-app.cloud.run` for `APP_ORIGIN`. A successful health check alone does not validate the guest or agent journey.
 
 ## Security boundaries and deployment controls
 
@@ -113,25 +115,25 @@ Responses include anti-framing, MIME-sniffing and referrer protections. The CSP 
 
 Per-turn budgets and session locks limit individual operations; this app does not yet implement distributed request rate limiting. Before opening traffic widely, configure provider quotas, Cloud Run maximum instances and an edge rate-limiting policy. A Cloud Armor policy requires a supported load-balancer setup; a directly accessible Cloud Run URL must not bypass that boundary. Budget alerts notify rather than enforce a spending cap. Infrastructure controls and live ownership/email acceptance need separate deployment verification.
 
-## Judge and submission guide
+## Demo and public project information
 
-The [hackathon page](https://qloo.devpost.com/) asks for an agentic tool/app where Qloo’s cultural graph makes the result materially better than a generic LLM. Frame the project around **cultural continuity for a newcomer**, not the number of endpoints or cards. The published judging areas described in the project materials are technological implementation, design, potential impact, and quality of the idea. The submission should show a functional public demo, public code repository with an open-source license, and a clear project description; verify the current rules and field requirements on Devpost before final submission.
+The [hackathon page](https://qloo.devpost.com/) asks for an agentic tool/app whose cultural intelligence changes the outcome. Demonstrate **cultural continuity for a newcomer** with real returned choices, a working public demo, public source under an open-source license, and a clear project description. Verify the current Devpost rules before submission.
 
-Suggested project name: **TastePassport AI — The Cultural Belonging Agent**. Elevator pitch: **Move anywhere. Keep your vibe. A Qloo-powered agent that carries your cultural tastes into a new city, adapts to feedback, and helps you find common ground.**
+Suggested project name: **FaveRoam — The Cultural Belonging Agent**. Elevator pitch: **From what you love to where you belong. A Qloo-powered agent that carries your cultural tastes into a new city, adapts to feedback, and helps you find common ground.**
 
-For the project story: explain the relocation problem, the guest journey, actual Qloo endpoint roles, native Gemini function calling plus server-side validation, Together and planning outcomes, the difficulty of ambiguous names and constraint preservation, and what was learned about evidence-backed explanations. List Next.js, React, TypeScript, Node.js, Qloo, Gemini, `@google/genai`, MCP, Supabase, PostgreSQL, and the actual hosting platform used by the submitted build. State limitations honestly; do not claim measured superiority from an illustrative model-only comparison. The repository includes [MIT](../LICENSE).
+For the project story: explain the relocation problem, the guest journey, actual Qloo endpoint roles, native Gemini function calling plus server-side validation, Common Ground and planning outcomes, the difficulty of ambiguous names and constraint preservation, and what was learned about evidence-backed explanations. List Next.js, React, TypeScript, Node.js, Qloo, Gemini, `@google/genai`, MCP, Supabase, PostgreSQL, and the actual hosting platform used by the submitted build. State limitations honestly; do not claim measured superiority from an illustrative model-only comparison. The repository includes [MIT](../LICENSE).
 
 ### Four-minute demo outline
 
 1. **0:00–0:25 — Human hook.** “You can move your belongings; moving your sense of belonging is harder.” Show a real destination and tastes.
 2. **0:25–1:05 — Qloo proof.** Confirm exact interests, generate discoveries, show a few strong returned choices and one evidence-backed explanation. Show that an input film or cuisine changes a relevant domain only if the live result actually demonstrates it.
 3. **1:05–2:05 — Agent proof.** Ask a constrained multi-part refinement; show the request/tool/Qloo/result trace in safe logs if recording allows. Point out the actual changed category, retained categories, and a concrete choice. Follow with a contextual cheaper request.
-4. **2:05–2:45 — Together.** Confirm another profile, show returned common-ground associations and a useful joint discovery. Avoid presenting a compatibility score that Qloo did not return.
+4. **2:05–2:45 — Common Ground.** Confirm another profile, show returned common-ground associations and a useful joint discovery. Avoid presenting a compatibility score that Qloo did not return.
 5. **2:45–3:35 — Practical outcome.** Select dinner and a real cinema, choose times, reorder without swapping venues, and show what the user must verify independently.
 6. **3:35–4:00 — Why this architecture matters.** Gemini understands intent; Qloo provides real cultural evidence; server policy preserves trust and continuity.
 
-Use actual app screenshots for media (identity confirmation, discovery, agent refinement, Together, outing), preferably 3:2 and under Devpost’s file-size limit. Do not stage invented cards, successful-agent messages, prices, or travel times. Confirm the live URL, submitted branch, license, media access, eligibility, and deadline while signed out. No video URL or externally verified submission status is implied by this repository.
+Use actual app screenshots for media (identity confirmation, discovery, agent refinement, Common Ground, outing), preferably 3:2 and under Devpost’s file-size limit. Do not stage invented cards, successful-agent messages, prices, or travel times. Confirm the live URL, submitted branch, license, media access, eligibility, and deadline while signed out. No video URL or externally verified submission status is implied by this repository.
 
 ## Boundaries and remaining acceptance
 
-TastePassport does not book, verify live opening hours, certify menu ingredients/allergens, provide guaranteed route timing, or turn content recommendations into real events. Geographic audience affinity and aggregate demographics do not describe an individual. Returned image availability and category coverage vary by provider and destination. Failed searches keep earlier choices only when clearly distinguished from un-applied constraints. Before submission, rerun a signed-out hosted journey with real Qloo and Gemini, account save/restore if demonstrated, a complete outing, public source/license access, and the exact deployment commit.
+FaveRoam does not book, verify live opening hours, certify menu ingredients/allergens, provide guaranteed route timing, or turn content recommendations into real events. Geographic audience affinity and aggregate demographics do not describe an individual. Returned image availability and category coverage vary by provider and destination. Failed searches keep earlier choices only when clearly distinguished from un-applied constraints. Before submission, rerun a signed-out hosted journey with real Qloo and Gemini, account save/restore if demonstrated, a complete outing, public source/license access, and the exact deployment commit.

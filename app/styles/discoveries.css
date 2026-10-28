@@ -485,3 +485,20 @@
 .outing-progress { margin: 0 0 24px; }
 @media (max-width: 600px) { .vibe-intro, .outing-intro { gap: 14px; padding: 22px 18px; } .vibe-emblem, .outing-emblem { flex-basis: 44px; width: 44px; height: 44px; border-radius: 14px; } .progressive-app .day-out-plan { padding: 12px; } }
 @media (prefers-reduced-motion: reduce) { .progressive-app .discovery-card { transition: none; } .progressive-app .discovery-card:hover { transform: none; } }
+
+.generation-previews { margin: 24px 0; padding: var(--space-panel); border: 1px solid var(--ui-border); border-radius: 18px; background: var(--ui-surface); }
+.generation-previews > p { margin-top: 8px; color: var(--ui-muted); font-size: 14px; }
+.generation-previews > div { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,240px),1fr)); gap: 16px; margin-top: 20px; }
+.generation-previews article { min-width: 0; padding: 16px; border: 1px solid var(--ui-border); border-radius: 12px; }
+.generation-previews h3 { font-size: 20px; }
+.generation-previews ol { padding-left: 20px; margin: 12px 0 0; }
+.generation-previews li { padding: 8px 0; overflow-wrap: anywhere; }
+.generation-previews small { display: block; font-size: 12px; line-height: 1.5; color: var(--ui-muted); margin-top: 4px; }
+
+.generation-previews > header { margin-bottom: 24px; }
+.generation-previews h1 { font-size: clamp(28px,4vw,44px); line-height: 1.15; margin: 12px 0; }
+.generation-previews h1:focus { outline: none; }
+.generation-previews article h2 { font-size: 20px; }
+.generation-previews footer { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--ui-border); }
+.generation-previews footer p { font-size: 13px; color: var(--ui-muted); max-width: 55ch; }
+@media(max-width:640px){.generation-previews footer{align-items:stretch;flex-direction:column;}.generation-previews footer button{width:100%;}}

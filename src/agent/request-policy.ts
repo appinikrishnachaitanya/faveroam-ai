@@ -77,8 +77,8 @@ export function checkTurnCommit(original: AgentState, result: AgentReply, input:
       if (card.evidence) {
         if (card.evidence.result.id !== card.id || card.evidence.destination !== state.city) return false;
         const preferences = state.queryPreferences?.[section];
-        const price = card.intelligence?.commercial.priceLevel;
-        const rating = card.intelligence?.quality.businessRating;
+        const price = card.intelligence?.commercial?.priceLevel;
+        const rating = card.intelligence?.quality?.businessRating;
         if (preferences?.priceMax !== undefined && preferences.priceMax < 4 && (price === undefined || price > preferences.priceMax)) return false;
         if ((preferences?.priceMin ?? 0) > 0 && preferences?.priceMin !== undefined && (price === undefined || price < preferences.priceMin)) return false;
         if ((preferences?.businessRatingMin ?? 0) > 0 && preferences?.businessRatingMin !== undefined && (rating === undefined || rating < preferences.businessRatingMin)) return false;

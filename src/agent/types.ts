@@ -59,6 +59,7 @@ export interface ConversationMessage {
   recommendationIds?: string[];
   referenceIds?: string[];
   comparisonIds?: string[];
+  checks?: {route:string; model:string; qlooOperations:number; validation:string; kept:Section[]};
 }
 export interface AgentState {
   id: string;
@@ -202,9 +203,12 @@ export interface ToolResult {
   execution?: { transport?: string };
 }
 export interface AgentInput {
+  visibleIds?:string[];
   discovery?: {
     sections: Section[];
     preferences: import("../qloo/query-plan.ts").QueryPreferences;
+    /** One search only: ask Qloo for alternatives to the visible cards. */
+    preferNew?: boolean;
   };
   reset?: "conversation";
   familiarity?: {
@@ -215,7 +219,7 @@ export interface AgentInput {
   guided?: { section: Section; constraints: Constraint[] };
   recovery?: {
     section: Section;
-    action: "keep-concept" | "relax-quiet" | "allow-popular" | "closest" | "retry";
+    action: "keep-concept" | "relax-quiet" | "allow-popular" | "closest" | "retry" | "area-only";
   };
   message?: string;
   feedback?: {
