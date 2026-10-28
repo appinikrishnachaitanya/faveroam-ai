@@ -100,10 +100,9 @@ export function chooseExisting(state: AgentState, text: string, visibleIds?:stri
       ? {cards: [], message: source.length < 2 && ids !== undefined ? "One of those choices is no longer in your current discoveries. Ask for a new shortlist before comparing. Your Passport is unchanged." : "I need two current choices to compare. Ask me to show a few options first; your Passport is unchanged."}
       : {cards, comparison: true, message: `Comparing ${cards[0].name} and ${cards[1].name}. I’ll use only details returned for these listings; where a detail is missing, I’ll leave it open rather than guess.`};
   }
-  const genericBest = /\b(?:which(?: one)?(?: is)? )?(?:the )?best\??$/.test(q.trim()) || contextualBest;
+  const genericBest = /\b(?:which(?: one)?(?: is)? )?(?:the )?best\??$/.test(q.trim()) || contextualBest || (above && /\bbest\b/.test(q));
   const explicitRating = /\b(?:highest|best|top)[ -]rated\b|\b(?:best|highest) rating\b/.test(q);
-  const allRated = eligible.length > 0 && eligible.every(card => rating(card) !== undefined);
-  const highestRated = explicitRating || (genericBest && allRated);
+  const highestRated = explicitRating;
   const cheapest = /\b(?:cheapest|least expensive|lowest price|most affordable)\b/.test(q);
   // A request for an unverified condition must not become an unsupported guarantee.
   if (/\b(?:quiet|quietest|peaceful|vegetarian|vegan|halal|gluten|accessible|wheelchair|open now|tonight|tickets?|available|nearest|closest)\b/.test(q)) {
@@ -112,7 +111,7 @@ export function chooseExisting(state: AgentState, text: string, visibleIds?:stri
   // Extra descriptors must be supported by returned tags, not silently ignored.
   // The vocabulary is for the choice command; arbitrary cultural terms are
   // checked against evidence rather than maintained as a cuisine allowlist.
-  const commandWords = new Set("a an the this that these those from above below of in for me my our your us you i we mr bro man please can could would should which go visit try start with pick choose select recommend give tell show help one two three 1 2 3 single best top highest rated rating cheapest least expensive lowest price most affordable option options choice choices result results suggestion suggestions recommendation recommendations current existing already shown listed list among between and or is are to it them something kind all interests categories across restaurants restaurant dining dinner food coffee cafe cafes cafés music artist artists movies movie film films culture museums museum cinema nightlife nightclub nightclubs books book podcasts shows games brands people destinations shops bookstores gallery galleries art theater theatre".split(" "));
+  const commandWords = new Set("a an the this that these those from above below visible of in for me my our your us you i we mr bro man please can could would should which go visit try start with pick choose select recommend give tell show help one two three 1 2 3 single best top highest rated rating cheapest least expensive lowest price most affordable option options choice choices result results suggestion suggestions recommendation recommendations current existing already shown listed list among between and or is are to it them something kind all interests categories across restaurants restaurant dining dinner food coffee cafe cafes cafés music artist artists movies movie film films culture museums museum cinema nightlife nightclub nightclubs books book podcasts shows games brands people destinations shops bookstores gallery galleries art theater theatre".split(" "));
   const named = eligible.filter(card => q.includes(card.name.toLowerCase()));
   if (named.length) eligible = named;
   let qualifiers = q.replace(state.city.toLowerCase(), " ");

@@ -441,8 +441,7 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
       )
     ) {
       setMessages((m) => [...m, { role: "user", text }]);
-      const visibleIds=/\bcompare\b/i.test(text)&&/\bvisible\b/i.test(text)?[...document.querySelectorAll<HTMLElement>('.passport-sections [data-entity-id]')].filter(element=>element.getClientRects().length>0).map(element=>element.dataset.entityId!).filter(Boolean).slice(0,40):undefined;
-      await refine({ message: text,...(visibleIds?.length?{visibleIds}:{}) });
+      await refine({ message: text });
       return;
     }
     const request = draftRequests.current!.start();

@@ -18,6 +18,13 @@ function initial() {
 }
 const unexpected=async():Promise<never>=>{throw Error("Choosing existing results must not call Gemini, Qloo or MCP");};
 const noTools:AgentDependencies={tools:unexpected,workflow:unexpected,discover:unexpected,provider:{interpret:unexpected,choose:unexpected}};
+test('which one of those is best uses the latest shown taste order',async()=>{
+ const state=initial();state.history=[{role:'agent',text:'Fresh shortlist',recommendationIds:['first-club','second-club']}];
+ const result=await runTurn(state,{message:'Which one of those is best?'},noTools);
+ assert.deepEqual(result.state.history.at(-1)?.recommendationIds,['first-club']);
+ assert.match(result.message,/First returned club/);
+ assert.deepEqual(result.changed,[]);
+});
 test('comparison preserves ordinal identity when an unrelated shown card disappears',async()=>{
  const state=initial();state.cards=state.cards.filter(card=>card.id!=='museum');
  const result=await runTurn(state,{message:'Compare the second and third choices'},noTools);
