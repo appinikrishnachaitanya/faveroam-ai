@@ -100,6 +100,7 @@ test("assistant remains a closed modal with accessible close control and manual 
   assert.match(html, /<dialog[^>]*aria-labelledby="concierge-title"/);
   assert.doesNotMatch(html, /<dialog[^>]*\sopen/);
   assert.match(html, /Close Taste Concierge/);
+  assert.match(html, /Widen chat/);
   assert.match(html, /Refine manually/);
 });
 test("feedback modal retains all seven adaptive reasons and requires an explicit choice", () => {

@@ -1269,7 +1269,6 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
 
             {assistantTab === "ask" ? (
               <div id="ask-panel" role="tabpanel" aria-labelledby="ask-tab">
-                {phase==='refining'&&<div className="chat-progress" role="status" aria-live="polite"><span aria-hidden="true">•••</span><p>{chatProgress}</p></div>}
                 <p className="concierge-intro">
                   Ask a follow-up, refine one category, or get help choosing your next stop.
                 </p>
@@ -1372,6 +1371,7 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
                 </div>
               </div>}
               {chatNotice && <p className="chat-stop-notice" role="status">{chatNotice}</p>}
+              {phase==='refining'&&<div className="chat-progress" role="status" aria-live="polite"><span aria-hidden="true">•••</span><p>{chatProgress || "Checking your request…"}</p></div>}
               <ChatComposer processing={phase === "refining"} onStop={stopAgentRequest} prompt={composerPrompt} draftRef={composerDraft} disabled={busy || recoveryStatus === "checking"} onSend={sendComposerMessage}/>
             </>
           )}
