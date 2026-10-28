@@ -125,10 +125,10 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
   const [visitedViews, setVisitedViews] = useState<Set<string>>(() => new Set(["discover"]));
   const [planMode,setPlanMode]=useState<"week"|"day">("week");
   const [visitedPlanModes,setVisitedPlanModes]=useState<Set<"week"|"day">>(()=>new Set(["week"]));
-  const choosePlanMode=(mode:"week"|"day")=>{
+  const choosePlanMode=useCallback((mode:"week"|"day")=>{
     setVisitedPlanModes(current=>current.has(mode)?current:new Set([...current,mode]));
     setPlanMode(mode);
-  };
+  },[]);
   const [planFrom,setPlanFrom]=useState<{cardId:string;sessionId?:string;nonce:number}>();
   const [ritualCardId,setRitualCardId]=useState<string>();
   const ritualInitialHandled=useCallback(()=>setRitualCardId(undefined),[]);
@@ -769,14 +769,15 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
     } else
       {
         const prior=result;
+        const wasSaved=feedback[id]==="like"||Boolean(prior?.session?.savedCards.some(item=>item.id===id));
         if(prior){
-          const nextFeedback={...feedback,[id]:feedback[id]==="like"?undefined:"like"};
+          const nextFeedback={...feedback,[id]:wasSaved?undefined:"like"};
           const card=prior.cards.find(item=>item.id===id);
           const saved=new Map((prior.session?.savedCards??[]).map(item=>[item.id,item]));
-          if(feedback[id]==="like")saved.delete(id);else if(card)saved.set(id,card);
+          if(wasSaved)saved.delete(id);else if(card)saved.set(id,card);
           setResult({...prior,session:prior.session?{...prior.session,feedback:[...prior.session.feedback.filter(item=>item.id!==id),...(nextFeedback[id]==="like"?[{id,section:card?.section??"Eat",accepted:true}]:[])],savedCards:[...saved.values()]}:prior.session});
         }
-        const saved=await refine({feedback:{id,accepted:true,clear:feedback[id]==="like"}});
+        const saved=await refine({feedback:{id,accepted:true,clear:wasSaved}});
         if(saved===false&&prior)setResult(prior);
       }
   }
@@ -823,12 +824,13 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
   const shareFromDiscover=useCallback(()=>stableSelectWorkspaceView('shares'),[stableSelectWorkspaceView]);
   const openVibeDial=useCallback(()=>{setShowSaved(false);setWorkspaceView('discover');setVisitedViews(current=>new Set([...current,'discover']));setVibeDialOpen(true);requestAnimationFrame(()=>document.querySelector<HTMLElement>('.vibe-dial')?.scrollIntoView({behavior:'smooth',block:'center'}));},[]);
   const openAssistant=useCallback(()=>setAssistantOpen(true),[]);
-  const navigateWorkspace=useCallback((destination:'discover'|'saved'|'plan'|'preferences'|'together'|'connections'|'shares')=>{
+  const navigateWorkspace=useCallback((destination:'discover'|'saved'|'day'|'plan'|'preferences'|'together'|'connections'|'shares')=>{
+    if(destination==='day'||destination==='plan')choosePlanMode(destination==='day'?'day':'week');
     setShowSaved(destination==='saved');
     if(destination==='saved')setVisitedViews(current=>new Set([...current,'saved']));
-    stableSelectWorkspaceView(destination==='saved'?'discover':destination);
+    stableSelectWorkspaceView(destination==='saved'?'discover':destination==='day'?'plan':destination);
     requestAnimationFrame(()=>document.getElementById('passport-workspace-content')?.focus({preventScroll:true}));
-  },[stableSelectWorkspaceView]);
+  },[stableSelectWorkspaceView,choosePlanMode]);
   const openConnections=useCallback(()=>stableSelectWorkspaceView('connections'),[stableSelectWorkspaceView]);
   const findPlanActivity = useCallback((id:string)=>{
     const target=id==='Cinema'?'cinemas':id==='Nightlife'?'nightclubs':id==='Coffee'?'coffee shops':id==='Eat'?'restaurants':'museums';
@@ -1042,7 +1044,7 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
               onConnections={openConnections}
             />
             <div className="passport-workspace">
-              <PassportNavigation active={workspaceView === "discover" && showSaved ? "saved" : workspaceView}
+              <PassportNavigation active={workspaceView === "discover" && showSaved ? "saved" : workspaceView === "plan" && planMode === "day" ? "day" : workspaceView}
                 savedCount={result.session?.savedCards.length ?? 0}
                 onNavigate={navigateWorkspace}/>
               <div id="passport-workspace-content" className="passport-workspace-content" tabIndex={-1}>
@@ -1130,12 +1132,12 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
                   onFeedback={stableFeedback}
                   disabled={busy}
                 /></>}</div>
-                <div hidden={showSaved}>
+                <div className="discover-results-layout" hidden={showSaved}>
                   {mappedPlaceCount>0&&<div className="map-section-heading">
                     <div className="map-section-title"><span className="map-section-icon" aria-hidden="true"><Icon name="pin" size={20}/></span><div><span className="micro-label">DISCOVER THE CITY</span><h3>Places on a map</h3><p>See where {mappedPlaceCount} returned places sit, then pick one to explore.</p></div></div>
                     <button className="quiet-button map-toggle" type="button" aria-expanded={showMap} onClick={()=>setShowMap(value=>!value)}>{showMap?'Collapse map':'Explore map'} <span aria-hidden="true">{showMap?'−':'↗'}</span></button>
                   </div>}
-                  {visibleResult&&mappedPlaceCount>0&&<div hidden={!showMap}><PassportMap cards={visibleResult.cards} cartoKey={cartoKey} active={workspaceView==='discover'&&!showSaved&&showMap} selectedCluster={activeCluster?.id} onClusterSelect={setSelectedCluster} onSelect={openMappedCard} onPlanFrom={planFromMap} plannableIds={plannableIds}/></div>}
+                  {visibleResult&&mappedPlaceCount>0&&<div className="discover-map-wrap" hidden={!showMap}><PassportMap cards={visibleResult.cards} cartoKey={cartoKey} active={workspaceView==='discover'&&!showSaved&&showMap} selectedCluster={activeCluster?.id} onClusterSelect={setSelectedCluster} onSelect={openMappedCard} onFavorite={card=>stableFeedback(card.id,"like")} favoriteIds={new Set(result.session?.savedCards.map(card=>card.id)??[])} favoriteDisabled={busy} onPlanFrom={planFromMap} plannableIds={plannableIds}/></div>}
                   {visibleResult&&<PassportSections disabled={busy} result={clusteredResult!} feedback={feedback} onFeedback={stableFeedback} updates={updates} updating={updating}/>}
                 </div>
             </div>

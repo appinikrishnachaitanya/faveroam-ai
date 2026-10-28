@@ -2,6 +2,7 @@
 import { sectionLabel } from "../../src/passport/labels";
 import { memo, useState } from "react";
 import { ResultMetrics, WhyEvidence } from "./intelligence-evidence";
+import { tasteEvidenceCoverage } from "../../src/passport/taste-evidence-coverage";
 import { evidenceFacts, recommendationSummary } from "../../src/qloo/explanation";
 import { threeChoices } from "../../src/passport/shortlist";
 import { bridgeRoutes, sparseSections } from "../../src/passport/evidence";
@@ -311,6 +312,7 @@ export function DiscoveryCard({
 }) {
   const [saving,setSaving]=useState(false);
   const summary=recommendationSummary(card,selected?.map(taste=>taste.id));
+  const coverage=tasteEvidenceCoverage(card,selected);
   return (
     <article
       data-entity-id={card.id}
@@ -351,8 +353,8 @@ export function DiscoveryCard({
         <summary>
           Why this suggestion? <Icon name="plus" size={12} />
         </summary>
+        {coverage && <p className="taste-evidence-cue"><strong>Connected to {coverage.count} of your {coverage.total} confirmed tastes</strong><span>Individual returned evidence for this suggestion. This is not a predicted match score.</span></p>}
         {evidenceFacts(card,selected?.map(taste=>taste.id)).slice(0, 4).map((fact) => <p key={fact}>{fact}</p>)}
-        <p className="helper">Taste evidence % counts confirmed tastes with an individual returned contribution or matching returned tag on this card. It is not a prediction of enjoyment.</p>
         <div className="why-signals">
           {(
             card.evidence?.inputs

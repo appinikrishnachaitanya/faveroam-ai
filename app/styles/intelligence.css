@@ -159,7 +159,8 @@
 }
 .result-metrics > span { color: #234b35; background: #edf3e4; border-color: #bdcdb1; font-weight: 650; font-size: 14px; white-space: nowrap; }
 .result-metrics .metric-unavailable { color: #59644a; background: transparent; border-style: dashed; font-weight: 500; font-size: 12px; }
-.result-metrics .evidence-coverage { color:#4d3755; background:#f3eaf1; border-color:#d6bdcb; }
+.taste-evidence-cue { display:grid; gap:4px; margin:12px 0; padding:12px 14px; border:1px solid #c8d8cd; border-radius:10px; background:#f0f6ee; color:#183e31; line-height:1.45; }
+.taste-evidence-cue span { color:#4c6054; font-size:13px; }
 .audience-lens-control > label { display:grid; gap:8px; max-width:320px; margin-top:14px; font-weight:650; }
 .audience-lens-control select { width:100%; min-height:44px; }
 .result-metrics small { font-size: 11px; font-weight: 500; margin-left: 4px; }

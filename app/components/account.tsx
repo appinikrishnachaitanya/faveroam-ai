@@ -468,12 +468,11 @@ function AccountControl({
                     : "Your saved Passports"
                   : pendingSave
                     ? "Keep your next chapter"
-                    : "Welcome to FaveRoam"}
+                    : tab === "register" ? "Create your account" : "Welcome to FaveRoam"}
             </h2>
             {!account?.user && !verificationPending && (
               <p className="account-intro">
-                Explore as a guest. Sign in when you want to keep your confirmed
-                tastes, discoveries and My Vibe shortlist across visits.
+                {tab === "register" ? "Keep your favourite places, tastes and plans ready for your next city." : "Explore as a guest. Sign in to keep your tastes, places and plans across visits."}
               </p>
             )}
             {verificationPending ? (
@@ -601,12 +600,12 @@ function AccountControl({
                             Open
                           </button>
                           <button
-                            className="icon-button"
+                            className="quiet-button passport-delete-button"
                             disabled={busy}
                             aria-label={`Delete saved ${entry.city} Passport`}
                             onClick={() => setDeleteTarget({kind:"passport",id:entry.id,name:`your saved ${entry.city} Passport`})}
                           >
-                            <Icon name="close" size={14} />
+                            <Icon name="close" size={14} /> Delete
                           </button>
                         </article>
                       ))

@@ -26,6 +26,8 @@
 .map-place-detail p { margin:5px 0 0; color:#526956; line-height:1.5; overflow-wrap:anywhere; }
 .map-place-actions { grid-column:1/-1; display:flex; flex-wrap:wrap; gap:10px; }
 .map-place-actions button { min-height:42px; }
+.map-place-actions .primary-button[aria-pressed="true"] { background:#e7f2e9; border-color:#9fc5aa; color:#184833; box-shadow:none; }
+@media(max-width:640px){.map-place-actions{display:grid;grid-template-columns:minmax(0,1fr)}.map-place-actions button{width:100%;justify-content:center;white-space:normal}}
 @media(max-width:640px){.passport-map-canvas{height:350px}.passport-map-panel{padding:16px}}
 .first-week-panel { margin-top:32px; padding:clamp(16px,2.5vw,28px); border:1px solid var(--ui-border); border-radius:18px; background:var(--ui-surface); }
 .first-week-panel h3 { font-size:clamp(22px,3vw,32px); margin:8px 0; }

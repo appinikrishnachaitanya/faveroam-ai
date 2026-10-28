@@ -88,6 +88,8 @@
 .first-week-panel { margin-top:0; }
 .first-week-controls .primary-button { justify-self:start; min-width:min(100%,210px); }
 .familiarity-disclosure { padding:0; border:1px solid var(--ui-border); border-radius:14px; background:var(--ui-surface); }
+.vibe-tuning-disclosure>summary { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:4px 12px; min-height:52px; color:var(--ui-ink); }
+.vibe-tuning-disclosure>summary>span { margin-inline-start:0; }
 .familiarity-disclosure[open] { padding:0 18px 18px; }
 .progressive-app .saved-plan .plan-date>span { color:#fffefa; font-size:12px; line-height:1.4; min-width:3em; }
 @container(max-width:520px){.first-week-controls .primary-button{width:100%;justify-self:stretch}}

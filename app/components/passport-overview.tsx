@@ -37,7 +37,7 @@ export const PassportCover = memo(function PassportCover({
         </button>
       </div>
       <div className="cover-art" aria-hidden="true">
-        <img className="cover-illustration" src="/illustrations/passport-journey.svg" width="440" height="300" alt="" loading="lazy" decoding="async" />
+        <img className="cover-illustration" src="/illustrations/editorial-city-route.svg" width="440" height="300" alt="" loading="lazy" decoding="async" />
         <div className="cover-stamp">
           <strong>{count}</strong>
           <span>
