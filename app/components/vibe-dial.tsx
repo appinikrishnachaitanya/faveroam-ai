@@ -23,6 +23,7 @@ export default memo(function VibeDial({passport,busy,open,onClose,onApply}:{pass
  const [receipt,setReceipt]=useState('');
  const [rotation,setRotation]=useState(0);
  const [spinning,setSpinning]=useState(false);
+ const [waitingSeconds,setWaitingSeconds]=useState(0);
  const started=useRef(false);
  const dialog=useRef<HTMLDialogElement>(null);
  const returnFocus=useRef<HTMLElement|null>(null);
@@ -43,6 +44,12 @@ export default memo(function VibeDial({passport,busy,open,onClose,onApply}:{pass
    }
  },[open]);
  useEffect(()=>()=>{if(spinTimer.current)window.clearTimeout(spinTimer.current);},[]);
+ useEffect(()=>{
+   if(!pending){setWaitingSeconds(0);return;}
+   const startedAt=Date.now();
+   const timer=window.setInterval(()=>setWaitingSeconds(Math.floor((Date.now()-startedAt)/1000)),1000);
+   return ()=>window.clearInterval(timer);
+ },[pending]);
  useEffect(()=>{
    if(!pending)return;
    if(busy){started.current=true;return;}
@@ -104,11 +111,11 @@ export default memo(function VibeDial({passport,busy,open,onClose,onApply}:{pass
              {spinning?<><strong>Finding a direction…</strong><span>The wheel is choosing from {directions.length} returned themes.</span></>:selected?<><strong>{choiceSource==='spin'?'The wheel landed on':'You chose'} {selected.theme.name}</strong><span>{selected.sections.map(sectionLabel).join(' · ')} · Explore this direction when you’re ready.</span></>:<><strong>Ready when you are</strong><span>{directions.length} themes came back in your discoveries. Spin, or pick one yourself.</span></>}
            </div>
            <button type="button" className="primary-button vibe-wheel-spin" disabled={spinning||busy||Boolean(pending)} onClick={spin}>{spinning?'Spinning…':directions.length===1?'Choose this theme':'Spin the wheel'}</button>
-           <button type="button" className={`${selected&&!spinning?'primary-button':'quiet-button'} vibe-wheel-apply`} disabled={!selected||spinning||busy||Boolean(pending)} onClick={apply}>{pending?'Finding places…':'Explore this direction'}</button>
+           <button type="button" className={`${selected&&!spinning?'primary-button':'quiet-button'} vibe-wheel-apply`} disabled={!selected||spinning||busy||Boolean(pending)} onClick={apply}>{pending?'Finding choices…':'Explore this direction'}</button>
          </div>
        </div>
        <details className="vibe-wheel-manual"><summary>Choose a theme yourself</summary><div className="vibe-directions" role="group" aria-label="Returned taste themes">{directions.map(direction=><button key={direction.theme.id} type="button" disabled={busy||Boolean(pending)||spinning} aria-pressed={choice===direction.theme.id} onClick={()=>{setChoice(direction.theme.id);setChoiceSource('manual');setReceipt('');}}><strong>{direction.theme.name}</strong><small>{direction.sections.map(sectionLabel).join(' · ')}</small></button>)}</div></details>
-       <div className="vibe-dial-feedback">{receipt&&<p role="status">{receipt}</p>}<small>Every option comes from your returned discoveries. The wheel is a playful picker, not a match score or guarantee.</small></div>
+       <div className="vibe-dial-feedback">{pending&&<p role="status">{waitingSeconds >= 70 ? 'This is taking longer than expected. Your current discoveries are safe; the request will time out if it cannot finish.' : waitingSeconds >= 12 ? 'Still checking for verified alternatives. You can close this panel while the search finishes.' : 'Checking returned themes against new choices…'}</p>}{receipt&&<p role="status">{receipt}</p>}<small>Every option comes from your returned discoveries. The wheel is a playful picker, not a match score or guarantee.</small></div>
      </>}
    </section>
  </dialog>;

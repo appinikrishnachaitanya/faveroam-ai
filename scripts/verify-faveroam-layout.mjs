@@ -15,7 +15,7 @@ for(let n=0;n<60;n++){if(await evaluate('Boolean(document.querySelector(".move-o
 assert.ok(await evaluate('Boolean(document.querySelector(".move-onboarding"))'));
 await evaluate('document.fonts.ready.then(()=>true)');
 for(let n=0;n<100;n++){
- if(await evaluate(`(()=>{const button=[...document.querySelectorAll('button')].find(button=>button.textContent.includes('Explore my city'));const key=button&&Object.keys(button).find(key=>key.startsWith('__reactProps'));return key&&typeof button[key].onClick==='function'&&!document.querySelector('#destination')?.textContent.includes('Loading');})()`))break;
+ if(await evaluate(`(()=>{const button=[...document.querySelectorAll('button')].find(button=>button.textContent.includes('Choose my city'));const key=button&&Object.keys(button).find(key=>key.startsWith('__reactProps'));return key&&typeof button[key].onClick==='function'&&!button.disabled;})()`))break;
  await new Promise(resolve=>setTimeout(resolve,100));
 }
 
@@ -27,7 +27,14 @@ for(const width of [375,768,1440]){
  await evaluate('window.scrollTo({top:0,behavior:"instant"})');
  const shot=await call('Page.captureScreenshot',{format:'png'});await fs.writeFile(`${process.env.PASSPORT_TEST_ARTIFACTS??'/tmp'}/faveroam-${width}.png`,Buffer.from(shot.result.data,'base64'));
 }
-await evaluate('[...document.querySelectorAll("button")].find(button=>button.textContent.includes("Explore my city")).click()');
+await evaluate('[...document.querySelectorAll("button")].find(button=>button.textContent.includes("Choose my city")).click()');
 await evaluate('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))');
-assert.ok(await evaluate('["destination","city-onboarding-form"].includes(document.activeElement.id)'),'City CTA focuses the onboarding form');
+assert.ok(await evaluate('document.activeElement.id==="destination"'),'City CTA focuses the destination');
+assert.ok(await evaluate('document.querySelector(".landing-city-hero [role=status]")?.textContent.includes("Choose your destination")'),'City CTA explains the next step');
+await evaluate(`(()=>{const select=document.querySelector('#destination');const value=[...select.options].find(option=>option.value)?.value;select.value=value;select.dispatchEvent(new Event('change',{bubbles:true}));return value;})()`);
+await evaluate('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))');
+assert.ok(await evaluate('[...document.querySelectorAll("button")].some(button=>button.textContent.includes("Add my interests"))'),'City selection advances the CTA');
+await evaluate('[...document.querySelectorAll("button")].find(button=>button.textContent.includes("Add my interests")).click()');
+await evaluate('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))');
+assert.ok(await evaluate('document.activeElement.id==="taste-input"'),'Next step focuses the taste input');
 ws.close();console.log('Browser PASS: 375/768/1440 landing overflow, branding, city CTA and local fonts. No discovery/auth/provider acceptance claimed.');

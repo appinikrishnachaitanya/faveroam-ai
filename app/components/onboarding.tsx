@@ -75,6 +75,7 @@ export function MoveForm({
   const [tasteError, setTasteError] = useState("");
   const [destinations, setDestinations] = useState<string[]>([]);
   const [cityError, setCityError] = useState("");
+  const [nextStepMessage, setNextStepMessage] = useState("");
   const [loadingCities, setLoadingCities] = useState(true);
   async function loadDestinations(signal?: AbortSignal) {
     setLoadingCities(true);
@@ -112,6 +113,22 @@ export function MoveForm({
       setInput("");
     }
   };
+  const advanceFromHero = () => {
+    if (!destinations.includes(city)) {
+      setNextStepMessage("Choose your destination to continue.");
+      document.getElementById("destination")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      document.getElementById("destination")?.focus({ preventScroll: true });
+      return;
+    }
+    if (draft.length < 1) {
+      setNextStepMessage("Add one interest to find your taste matches.");
+      document.getElementById("taste-input")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      document.getElementById("taste-input")?.focus({ preventScroll: true });
+      return;
+    }
+    setNextStepMessage("");
+    onSubmit();
+  };
   return (
     <section className="move-onboarding" aria-labelledby="move-title">
       <div className="onboarding-heading landing-city-hero">
@@ -123,7 +140,8 @@ export function MoveForm({
           <em>to where you belong.</em>
         </h1>
         <p>Discover places that feel like you, build your first week, and find Common Ground in a new city.</p>
-        <div className="landing-actions">{onSample&&<button type="button" className="primary-button" disabled={disabled||loadingCities||!destinations.length} onClick={()=>onSample(destinations.includes('London')?'London':destinations[0])}>Try a sample <Icon name="arrow" size={16}/></button>}<button type="button" className="quiet-button" onClick={()=>{const form=document.getElementById('city-onboarding-form');form?.scrollIntoView({behavior:'smooth',block:'start'});const destination=document.querySelector<HTMLSelectElement>('#destination');if(destination&&!destination.disabled)destination.focus({preventScroll:true});else form?.focus({preventScroll:true});}}>Explore my city</button></div>
+        <div className="landing-actions">{onSample&&<button type="button" className="primary-button" disabled={disabled||loadingCities||!destinations.length} onClick={()=>onSample(destinations.includes('London')?'London':destinations[0])}>Try a sample <Icon name="arrow" size={16}/></button>}<button type="button" className="quiet-button" disabled={disabled||loadingCities||!destinations.length} onClick={advanceFromHero}>{!destinations.includes(city) ? "Choose my city" : draft.length ? "Review my interests" : "Add my interests"} <Icon name="arrow" size={16}/></button></div>
+        {nextStepMessage && <p className="helper" role="status">{nextStepMessage}</p>}
         <div className="onboarding-story">
           <img className="journey-illustration" src="/illustrations/editorial-city-route.svg" width="440" height="260" alt="" aria-hidden="true" fetchPriority="high" decoding="async" />
           <ul>

@@ -95,7 +95,7 @@ async function handlePOST(request: Request) {
     if (
       input.recovery &&
       (!sectionOrder.includes(input.recovery.section) ||
-        !["keep-concept", "relax-quiet", "allow-popular", "closest", "retry"].includes(
+        !["keep-concept", "relax-quiet", "allow-popular", "closest", "retry", "area-only"].includes(
           input.recovery.action,
         ))
     )
