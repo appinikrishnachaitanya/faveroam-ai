@@ -438,6 +438,17 @@ async function executeTurn(
     const { section, action } = input.recovery;
     const failedSearch = state.failedSearches?.[section];
     if (failedSearch) restoreRefinementSettings(state, section, failedSearch);
+    if (action === "area-only") {
+      const locationQuery = failedSearch?.queryPreferences?.locationQuery;
+      if (!locationQuery) throw Error("No named area is available to search.");
+      // Keep confirmed tastes and the destination, but remove category filters
+      // that made the previous area search impossible to satisfy.
+      state.queryPreferences ??= {};
+      state.queryPreferences[section] = { locationQuery, radius: 0 };
+      state.categoryConstraints[section] = [];
+      state.categoryTags ??= {};
+      state.categoryTags[section] = [];
+    }
     let constraints = [...(state.categoryConstraints[section] ?? [])];
     if (action === "relax-quiet")
       constraints = constraints.filter(

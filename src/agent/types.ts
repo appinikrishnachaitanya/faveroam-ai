@@ -217,7 +217,7 @@ export interface AgentInput {
   guided?: { section: Section; constraints: Constraint[] };
   recovery?: {
     section: Section;
-    action: "keep-concept" | "relax-quiet" | "allow-popular" | "closest" | "retry";
+    action: "keep-concept" | "relax-quiet" | "allow-popular" | "closest" | "retry" | "area-only";
   };
   message?: string;
   feedback?: {
