@@ -592,13 +592,13 @@ function AccountControl({
                               {new Date(entry.updated_at).toLocaleDateString()}
                             </small>
                           </div>
-                          <button
+                          {entry.city !== passport?.city && <button
                             className="quiet-button"
                             disabled={busy || disabled}
                             onClick={() => void restore(entry.id)}
                           >
                             Open
-                          </button>
+                          </button>}
                           <button
                             className="quiet-button passport-delete-button"
                             disabled={busy}

@@ -17,7 +17,7 @@ export default function ConfirmDelete({ title, description, busy, onCancel, onCo
     <span className="micro-label">CONFIRM DELETE</span>
     <h2 id="delete-title">{title}</h2>
     <p>{description}</p>
-    <div className="profile-save-actions">
+    <div className="confirm-delete-actions">
       <button type="button" className="quiet-button" autoFocus disabled={busy} onClick={onCancel}>Keep it</button>
       <button type="button" className="primary-button" disabled={busy} onClick={onConfirm}>{busy ? "Deleting…" : "Delete"}</button>
     </div>

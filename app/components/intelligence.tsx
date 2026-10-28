@@ -1,6 +1,6 @@
 "use client";
 import { sectionLabel } from "../../src/passport/labels";
-import { memo, useEffect, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import type { Passport, Resolution } from "../../src/workspace/state";
 import { activeCategories } from "../../src/passport/active-categories";
 import { sectionOrder } from "../../src/workspace/state";
@@ -8,6 +8,7 @@ import { CategoryMultiSelect } from "./category-multi-select";
 import type { AgentInput } from "../../src/agent/types";
 import type { Card, Section } from "../../src/passport/model";
 import type { TasteComparison } from "../../src/qloo/compare";
+import { createLatestRequest } from "../../src/workspace/latest-request";
 import { audienceAgeBands, type AudienceAgeBand, type DiscoveryGoal, type QueryPreferences } from "../../src/qloo/query-plan";
 import { ResultMetrics, WhyEvidence } from "./intelligence-evidence";
 import { priceLabel } from "../../src/passport/pricing";
@@ -126,9 +127,26 @@ export default memo(function TasteIntelligence({
   const sharedCards=nearbySharedPlaces(together?.cards??[],sharedAnchor,sharedRadius);
   const [debug, setDebug] = useState<unknown>();
   const hasEntityProfile = passport.selected.some(candidate => !candidate.id.startsWith("urn:tag:"));
-  async function post(path: string, body: unknown) {
+  const profileScope = `${passport.agent?.sessionId ?? ""}|${passport.agent?.revision ?? ""}|${passport.city}|${passport.selected.map(item => item.id).join(",")}`;
+  const currentProfileScope = useRef(profileScope);
+  currentProfileScope.current = profileScope;
+  const comparisonRequests = useRef<ReturnType<typeof createLatestRequest> | null>(null);
+  if (!comparisonRequests.current) comparisonRequests.current = createLatestRequest();
+  useEffect(() => {
+    comparisonRequests.current?.cancel();
+    setResolution(undefined);
+    setIds({});
+    setTogether(undefined);
+    setDebug(undefined);
+    setError("");
+    setLoading(false);
+    return () => comparisonRequests.current?.cancel();
+  }, [profileScope]);
+  async function post(path: string, body: unknown, signal?: AbortSignal) {
     const r = await fetch(path, {
-      signal: AbortSignal.timeout(75_000),
+      signal: signal
+        ? AbortSignal.any([signal, AbortSignal.timeout(75_000)])
+        : AbortSignal.timeout(75_000),
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
@@ -138,56 +156,72 @@ export default memo(function TasteIntelligence({
     return b;
   }
   async function resolvePartner() {
+    const scope = profileScope;
+    const request = comparisonRequests.current!.start();
     setLoading(true);
     setError("");
     setTogether(undefined);
     try {
-      const matches = await post("/api/agent/resolve", { seeds: partner.map(value=>value.trim()).filter(Boolean) });
+      const matches = await post("/api/agent/resolve", { seeds: partner.map(value=>value.trim()).filter(Boolean) }, request.signal);
+      if (!comparisonRequests.current?.isCurrent(request) || currentProfileScope.current !== scope) return;
       setResolution(matches);
       setExpandedMatch(undefined);
       setIds(suggestedMatches(matches.items.map((item: Resolution["items"][number]) => ({ ...item, candidates: item.candidates.filter(candidate => !candidate.id.startsWith("urn:tag:")) }))));
     } catch {
+      if (!comparisonRequests.current?.isCurrent(request) || currentProfileScope.current !== scope) return;
       setError(
         "Could not find that interest. Try a specific artist, film, book or brand.",
       );
     } finally {
-      setLoading(false);
+      if (comparisonRequests.current?.isCurrent(request)) {
+        comparisonRequests.current.cancel();
+        setLoading(false);
+      }
     }
   }
   async function commonGround() {
     if (!passport.agent || !resolution) return;
+    const scope = profileScope;
+    const request = comparisonRequests.current!.start();
     setLoading(true);
     setError("");
     try {
-      setTogether(
-        await post("/api/agent/intelligence", {
-          ...passport.agent,
-          action: "together",
-          token: resolution.token,
-          ids: [...new Set(Object.values(ids))],
-          sections: selectedSections,
-        }),
-      );
+      const comparison = await post("/api/agent/intelligence", {
+        ...passport.agent,
+        action: "together",
+        token: resolution.token,
+        ids: [...new Set(Object.values(ids))],
+        sections: selectedSections,
+      }, request.signal);
+      if (!comparisonRequests.current?.isCurrent(request) || currentProfileScope.current !== scope) return;
+      setTogether(comparison);
     } catch (e) {
+      if (!comparisonRequests.current?.isCurrent(request) || currentProfileScope.current !== scope) return;
       setError(
         e instanceof Error
           ? e.message
           : "Comparison is unavailable. Your Passport is preserved.",
       );
     } finally {
-      setLoading(false);
+      if (comparisonRequests.current?.isCurrent(request)) {
+        comparisonRequests.current.cancel();
+        setLoading(false);
+      }
     }
   }
   return (
     <section className="taste-intelligence" aria-label={view === "together" ? "Together" : "Your discovery preferences"}>
       <div className="intelligence-content">
         <div className="intelligence-intro"><div><span className="micro-label">{view === "together" ? "TOGETHER" : "MAKE IT YOURS"}</span><h2>{view === "together" ? "Find your next yes, together." : "Your city. Your kind of day."}</h2><p>{view === "together" ? "One thing they love is enough to find a shared starting point." : "Choose one or more categories to refresh together. Your other discoveries stay put."}</p></div><span className="intelligence-intro-mark" aria-hidden="true"><Icon name={view === "together" ? "People" : "sliders"} size={44}/></span></div>
-        <CategoryMultiSelect label={view === "together" ? "Categories to find together" : "Categories to update"}
+        {view === "together" && <details className="common-ground-adjust"><summary>Adjust search <span>{selectedSections.map(sectionLabel).join(", ")} · {passport.city}</span></summary><p>Choose what kind of place you want to find. Your saved filters for these categories still apply. <button type="button" className="text-button" onClick={onPreferences}>Review preferences</button></p><CategoryMultiSelect label="Places to find together"
           available={available} selected={selectedSections} disabled={busy||loading} onChange={next=>{
             setSelectedSections(next);
             const focus=next[0];setSection(focus);
             const pref=passport.session?.queryPreferences?.[focus];setGoal(pref?.goal??"discover");setAudienceAge(pref?.audienceAge??"all");setPrice(pref?.priceMax?.toString()??"4");setRating(pref?.businessRatingMin?.toString()??"");setArea(pref?.locationQuery??"");setAvoidArea(pref?.excludeLocation??"");setSource(pref?.requiredExternalSources?.[0]??"");setReviews(pref?.tripAdvisorReviewCountMin?.toString()??"");setTogether(undefined);
-          }}/>
+          }}/></details>}
+        {view === "preferences" && <CategoryMultiSelect label="Categories to update" available={available} selected={selectedSections} disabled={busy||loading} onChange={next=>{
+          setSelectedSections(next);const focus=next[0];setSection(focus);const pref=passport.session?.queryPreferences?.[focus];setGoal(pref?.goal??"discover");setAudienceAge(pref?.audienceAge??"all");setPrice(pref?.priceMax?.toString()??"4");setRating(pref?.businessRatingMin?.toString()??"");setArea(pref?.locationQuery??"");setAvoidArea(pref?.excludeLocation??"");setSource(pref?.requiredExternalSources?.[0]??"");setReviews(pref?.tripAdvisorReviewCountMin?.toString()??"");setTogether(undefined);
+        }}/>} 
         <form
           hidden={view !== "preferences"}
           className="intelligence-preferences"
@@ -366,11 +400,10 @@ export default memo(function TasteIntelligence({
           </button>
         </form>
         <section className="together-reveal" hidden={view !== "together"} aria-label="Find common ground">
-          <details className="common-ground-setup" open={!together}><summary>{together ? "Change interests or preferences" : "Choose who you’re exploring with"}</summary>
-          <div className="together-preference-summary"><div><strong>{selectedSections.map(sectionLabel).join(", ")} in {passport.city}</strong><p className="helper">The matching categories’ existing filters carry into the shared search. No single score is used to claim compatibility.</p></div><button type="button" className="quiet-button" onClick={onPreferences}>Review preferences</button></div>
-          <div className="together-heading"><div><span className="micro-label">A LITTLE OF YOU. A LITTLE OF THEM.</span><h3>Find something you’ll both want to try</h3><p>Add one thing they love. Confirm the match, then explore places together.</p></div><img src="/illustrations/together-passports.svg" width="230" height="160" alt="" aria-hidden="true" loading="lazy" decoding="async" /></div>
+          <details className="common-ground-setup" open={!together}><summary>{together ? "Compare with someone else" : "Your tastes + their interests"}</summary>
+          <div className="together-heading"><div><span className="micro-label">A LITTLE OF YOU. A LITTLE OF THEM.</span><h3>Find your common ground</h3><p>Start with one named artist, film, book or brand they love. We’ll look for a real place to try together.</p></div></div>
           <div className="together-two-profiles"><div><strong>Person 1 · your confirmed tastes</strong><p>{passport.selected.map(taste=>taste.name).join(' · ')}</p></div></div>
-          <p className="helper">Start with one. Add more if you like. Your Passport and preferences stay yours.</p>
+          <p className="helper">A dish or cuisine alone cannot be compared here. For a food outing, add a named interest first, then choose Food under Adjust search.</p>
           {!hasEntityProfile && <p role="status">Add a named artist, film, book or brand to your Passport to use Together.</p>}
           <form
             onSubmit={(e) => {
@@ -419,7 +452,7 @@ export default memo(function TasteIntelligence({
                     {item.candidates.filter(c=>!c.id.startsWith("urn:tag:")).map(candidate=><button key={candidate.id} type="button" disabled={busy||loading} aria-pressed={ids[i]===candidate.id} onClick={()=>{setIds(v=>({...v,[i]:candidate.id}));setExpandedMatch(undefined);}}><strong>{candidate.name}</strong><small>{candidate.detail}</small></button>)}
                   </div>}
                   {!item.candidates.some(c => !c.id.startsWith("urn:tag:")) && (
-                    <p>No named entity match. Use a specific artist, film, book or brand; cuisine concepts cannot be used as the other person's entity profile.</p>
+                    <p role="status">We couldn’t confirm “{item.query}” as a named artist, film, book or brand. Try one of those interests above, then look it up again. You can still choose Food for the outing.</p>
                   )}
                 </section>
               ))}
@@ -432,16 +465,17 @@ export default memo(function TasteIntelligence({
                 }
                 onClick={() => void commonGround()}
               >
-                Find something for both of us
+                Find our common ground
               </button>
-              <p className="helper">Uses {new Set(Object.values(ids)).size} selected interest{new Set(Object.values(ids)).size===1?'':'s'}. Interests without a selected match are not included. Choose a match above to include them.</p>
+              <p className="helper">{Object.values(ids).length ? `${new Set(Object.values(ids)).size} confirmed interest${new Set(Object.values(ids)).size===1?'':'s'} ready.` : 'Confirm one named interest above to continue.'}</p>
             </div>
           )}
           </details>
           {together && (
             <section className="together-results" aria-label="Your common ground">
               <div className="shared-story"><span className="micro-label">YOUR COMMON GROUND</span><h3>Find somewhere you both love</h3><p>Start with one returned place, then explore what each of you could introduce.</p></div>
-              {(()=>{const first=passport.selected[0]?.name??'your taste',second=together.partner?.[0]??'their taste';const hangout=sharedHangout(sharedCards,together.comparison,passport.selected,together.partnerSignals??[]);return <div className="shared-hangout">
+              {(()=>{const first=passport.selected[0]?.name??'your taste',second=together.partner?.[0]??'their taste';const hangout=sharedHangout(sharedCards,together.comparison,passport.selected,together.partnerSignals??[]);const themes=meaningfulSharedThemes(together.comparison).filter(theme=>!theme.broad);const venueTheme=Boolean(hangout?.card.evidence?.result.tags.some(tag=>themes.some(theme=>theme.id===tag.id)));return <div className="shared-hangout">
+                <div className="connection-meter" aria-label="Connection evidence"><strong>Connection trail</strong><ol><li className="found">Both tastes compared</li><li className={themes.length?'found':'missing'}>{themes.length?`${themes.length} shared theme${themes.length===1?'':'s'} found`:'No specific shared theme'}</li><li className={venueTheme?'found':'missing'}>{venueTheme?'Theme on this place':'Place-specific theme unverified'}</li></ol><small>Evidence steps, not a compatibility score.</small></div>
                 <span className="micro-label">BEST PLACE TO START</span>{hangout?<><h4>{hangout.card.name}</h4><p>{hangout.card.address??`Returned place in ${passport.city}`}</p><p>{hangoutExplanation(hangout)}</p><a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([hangout.card.name,hangout.card.address,passport.city].filter(Boolean).join(', '))}`} target="_blank" rel="noopener noreferrer">Check this place ↗</a></>:<p>No verified place was returned for these interests. Try another category or taste.</p>}
                 <details className="common-ground-more"><summary>Conversation starters</summary><ol>{commonGroundStarters(together.comparison,first,second).map(starter=><li key={starter}>{starter}</li>)}</ol></details>
               </div>;})()}

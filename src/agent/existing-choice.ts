@@ -45,7 +45,9 @@ export function chooseExisting(state: AgentState, text: string, visibleIds?:stri
   const q = selectionLanguage(refinementScope(text).positive);
   const sections = requestedShortlistSections(q);
   const genre = requestedGenre(q);
-  const ids = visibleIds ?? lastReferencedIds(state);
+  // A hidden Discover panel has no DOM-visible cards. An empty browser
+  // snapshot must not erase the shortlist just presented in this conversation.
+  const ids = visibleIds?.length ? visibleIds : lastReferencedIds(state);
   const above = reference.test(q);
   const implicitShown = ratingQuestion(q);
   const available = state.cards.filter(card => !state.hiddenCategories?.includes(card.section) &&
@@ -84,19 +86,23 @@ export function chooseExisting(state: AgentState, text: string, visibleIds?:stri
     ? card.intelligence?.quality.businessRating : card.intelligence?.quality.qlooRating;
   const comparison = /\bcompare\b/.test(q);
   if (comparison) {
-    if (ids !== undefined && ids.slice(0, 2).some(id => !available.some(card => card.id === id)))
-      return {cards: [], message: "One of those choices is no longer in your current discoveries. Ask for a new shortlist before comparing. Your Passport is unchanged."};
     const ordinals=[...q.matchAll(/\b(first|second|third|1st|2nd|3rd)\b/g)].map(match=>({first:0,second:1,third:2,'1st':0,'2nd':1,'3rd':2}[match[1]]!));
     const named=eligible.filter(card=>q.includes(card.name.toLowerCase()));
-    const cards = named.length===2?named:ordinals.length===2?ordinals.flatMap(index=>eligible[index]?[eligible[index]]:[]):eligible.slice(0, 2);
+    // Resolve positions against the original presentation before filtering.
+    // Removing a card must never silently shift what "second" refers to.
+    const requestedIds = named.length===2 ? named.map(card=>card.id)
+      : ids !== undefined ? (ordinals.length===2 ? ordinals.map(index=>ids[index]) : ids.slice(0,2)) : undefined;
+    if (requestedIds !== undefined && requestedIds.some(id => !id || !available.some(card => card.id === id)))
+      return {cards: [], message: "One of those choices is no longer in your current discoveries. Ask for a new shortlist before comparing. Your Passport is unchanged."};
+    const cards = requestedIds !== undefined ? requestedIds.flatMap(id=>eligible.find(card=>card.id===id)??[])
+      : ordinals.length===2?ordinals.flatMap(index=>eligible[index]?[eligible[index]]:[]):eligible.slice(0, 2);
     return cards.length < 2
       ? {cards: [], message: source.length < 2 && ids !== undefined ? "One of those choices is no longer in your current discoveries. Ask for a new shortlist before comparing. Your Passport is unchanged." : "I need two current choices to compare. Ask me to show a few options first; your Passport is unchanged."}
       : {cards, comparison: true, message: `Comparing ${cards[0].name} and ${cards[1].name}. I’ll use only details returned for these listings; where a detail is missing, I’ll leave it open rather than guess.`};
   }
-  const genericBest = /\b(?:which(?: one)?(?: is)? )?(?:the )?best\??$/.test(q.trim()) || contextualBest;
+  const genericBest = /\b(?:which(?: one)?(?: is)? )?(?:the )?best\??$/.test(q.trim()) || contextualBest || (above && /\bbest\b/.test(q));
   const explicitRating = /\b(?:highest|best|top)[ -]rated\b|\b(?:best|highest) rating\b/.test(q);
-  const allRated = eligible.length > 0 && eligible.every(card => rating(card) !== undefined);
-  const highestRated = explicitRating || (genericBest && allRated);
+  const highestRated = explicitRating;
   const cheapest = /\b(?:cheapest|least expensive|lowest price|most affordable)\b/.test(q);
   // A request for an unverified condition must not become an unsupported guarantee.
   if (/\b(?:quiet|quietest|peaceful|vegetarian|vegan|halal|gluten|accessible|wheelchair|open now|tonight|tickets?|available|nearest|closest)\b/.test(q)) {
@@ -105,7 +111,7 @@ export function chooseExisting(state: AgentState, text: string, visibleIds?:stri
   // Extra descriptors must be supported by returned tags, not silently ignored.
   // The vocabulary is for the choice command; arbitrary cultural terms are
   // checked against evidence rather than maintained as a cuisine allowlist.
-  const commandWords = new Set("a an the this that these those from above below of in for me my our your us you i we mr bro man please can could would should which go visit try start with pick choose select recommend give tell show help one two three 1 2 3 single best top highest rated rating cheapest least expensive lowest price most affordable option options choice choices result results suggestion suggestions recommendation recommendations current existing already shown listed list among between and or is are to it them something kind all interests categories across restaurants restaurant dining dinner food coffee cafe cafes cafés music artist artists movies movie film films culture museums museum cinema nightlife nightclub nightclubs books book podcasts shows games brands people destinations shops bookstores gallery galleries art theater theatre".split(" "));
+  const commandWords = new Set("a an the this that these those from above below visible of in for me my our your us you i we mr bro man please can could would should which go visit try start with pick choose select recommend give tell show help one two three 1 2 3 single best top highest rated rating cheapest least expensive lowest price most affordable option options choice choices result results suggestion suggestions recommendation recommendations current existing already shown listed list among between and or is are to it them something kind all interests categories across restaurants restaurant dining dinner food coffee cafe cafes cafés music artist artists movies movie film films culture museums museum cinema nightlife nightclub nightclubs books book podcasts shows games brands people destinations shops bookstores gallery galleries art theater theatre".split(" "));
   const named = eligible.filter(card => q.includes(card.name.toLowerCase()));
   if (named.length) eligible = named;
   let qualifiers = q.replace(state.city.toLowerCase(), " ");
