@@ -1282,7 +1282,12 @@ async function executeTurn(
         ),
     );
     state.categoryConstraints[section] = constraints;
-    const excluded = state.feedback.filter((f) => !f.accepted).map((f) => f.id);
+    const excluded = [...new Set([
+      ...state.feedback.filter((f) => !f.accepted).map((f) => f.id),
+      ...(input.discovery?.preferNew
+        ? original.cards.filter((card) => card.section === section).map((card) => card.id)
+        : []),
+    ])];
     const rank =
       intent.strategy === "rank" ||
       modelChoices.some((c) => c.name === "qloo_rank");

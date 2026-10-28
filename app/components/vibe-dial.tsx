@@ -50,8 +50,7 @@ export default memo(function VibeDial({passport,busy,open,onClose,onApply}:{pass
    const before=new Set(pending.ids);
    const current=passport.cards.filter(card=>pending.sections.includes(card.section));
    const added=current.filter(card=>!before.has(card.id)).length;
-   const kept=current.filter(card=>before.has(card.id)).length;
-   setReceipt(added?`${added} new choices and ${kept} previous choices in ${pending.sections.map(section=>sectionLabel(section as import('../../src/passport/model').Section)).join(', ')}. Your confirmed tastes are unchanged.`:'No new choices were confirmed. Your current discoveries remain available.');
+   setReceipt(added?`${added} new choices in ${pending.sections.map(section=>sectionLabel(section as import('../../src/passport/model').Section)).join(', ')}. Your confirmed tastes are unchanged.`:`No new verified choices were returned for this direction. Your current discoveries remain available. Try another theme or adjust your preferences.`);
    setPending(undefined);started.current=false;
  },[busy,passport.cards,pending]);
 
@@ -77,7 +76,7 @@ export default memo(function VibeDial({passport,busy,open,onClose,onApply}:{pass
    if(!selected||busy||pending||spinning)return;
    setReceipt('');started.current=false;
    setPending({ids:passport.cards.filter(card=>selected.sections.includes(card.section)).map(card=>card.id),sections:selected.sections});
-   onApply({discovery:{sections:selected.sections,preferences:{inspirationTags:[selected.theme.id],inspirationName:selected.theme.name}}});
+   onApply({discovery:{sections:selected.sections,preferences:{inspirationTags:[selected.theme.id],inspirationName:selected.theme.name},preferNew:true}});
  }
 
  return <dialog ref={dialog} className="vibe-dial-modal" aria-labelledby="vibe-dial-title" onCancel={event=>{event.preventDefault();onClose();}} onClick={event=>{if(event.target===event.currentTarget)onClose();}}>

@@ -207,6 +207,8 @@ export interface AgentInput {
   discovery?: {
     sections: Section[];
     preferences: import("../qloo/query-plan.ts").QueryPreferences;
+    /** One search only: ask Qloo for alternatives to the visible cards. */
+    preferNew?: boolean;
   };
   reset?: "conversation";
   familiarity?: {
