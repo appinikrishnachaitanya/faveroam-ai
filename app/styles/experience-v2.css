@@ -1,0 +1,163 @@
+/* FaveRoam's shared customer workspace. Kept last so each screen uses one palette. */
+:root {
+  --ui-ink:#17372f;
+  --ui-muted:#53665b;
+  --ui-action:#174b3c;
+  --ui-action-hover:#103b30;
+  --ui-surface:#fffdf8;
+  --ui-tint:#f5f0e6;
+  --ui-border:#d9ddd0;
+  --ui-accent:#a34c32;
+  --ui-shadow:0 12px 32px #17372f12;
+  --ink:#17372f;
+  --muted:#53665b;
+  --paper:#f8f4eb;
+  --accent:#e6a840;
+  --line:#d9ddd0;
+}
+body { background:#f8f4eb; color:var(--ui-ink); }
+.progressive-app { background-color:#f8f4eb; }
+.progressive-app :focus-visible { outline:3px solid #b6603d; outline-offset:3px; }
+.progressive-app :is(h1,h2,h3) { color:var(--ui-ink); }
+.progressive-app .workspace-topbar { background:#fffdf8; border-color:#d9ddd0; box-shadow:0 4px 18px #17372f0c; }
+.progressive-app .brand { color:#17372f; }
+.progressive-app .brand-symbol { background:#17372f; }
+.progressive-app .current-city { color:#17372f; background:#f5f0e6; }
+.progressive-app .header-greeting { color:#17372f; }
+.progressive-app .living-passport { min-width:0; background:transparent; padding:clamp(12px,2vw,28px) 0 0; }
+.progressive-app .passport-cover { display:grid; grid-template-columns:minmax(0,1fr) minmax(160px,29%); align-items:center; gap:24px; padding:clamp(20px,2.5vw,32px); border:1px solid #e2d9c8; border-radius:22px; background:linear-gradient(115deg,#fffdf8,#f7ecda); box-shadow:0 6px 22px #17372f0b; color:#17372f; }
+.progressive-app .passport-cover h1 { margin:8px 0; color:#17372f; font-size:clamp(31px,3vw,46px); }
+.progressive-app .passport-cover h1 em { color:#a34c32; }
+.progressive-app .passport-cover .cover-copy>p,.progressive-app .passport-cover .micro-label { color:#53665b; }
+.progressive-app .passport-cover .cover-illustration { max-height:190px; min-height:0; }
+.progressive-app .passport-cover .cover-art { min-height:0; }
+.progressive-app .passport-cover .passport-taste-preview>span { color:#17372f; background:#fffdf8; border-color:#d6d7ca; }
+.progressive-app .passport-cover .cover-connection { color:#17372f; border-color:#c8a87b; background:#f9ebd5; }
+.progressive-app .passport-cover .cover-connection:hover { background:#f1ddb9; }
+.progressive-app .passport-workspace { grid-template-columns:minmax(194px,224px) minmax(0,1fr); gap:clamp(16px,2vw,28px); align-items:start; margin-top:20px; }
+.progressive-app .passport-workspace-content { min-width:0; padding:0; border:0; background:transparent; }
+.progressive-app .passport-sidebar { position:static; min-width:0; padding:18px 10px; border:1px solid #234f42; border-radius:18px; background:#173b30; color:#fff8ec; box-shadow:0 10px 25px #17372f18; }
+.progressive-app .passport-sidebar-title { display:block; margin:0 12px 14px; color:#e0cba6; font-size:11px; letter-spacing:.12em; }
+.progressive-app .passport-sidebar .passport-sidebar-title { color:#e0cba6; }
+.progressive-app .passport-mobile-heading { display:none; }
+.progressive-app .passport-navigation { gap:5px; }
+.progressive-app .passport-navigation button { min-height:46px; padding:10px 11px; border-radius:11px; color:#f5f4e9; font-size:13px; font-weight:650; line-height:1.35; }
+.progressive-app .passport-navigation button:hover { border-color:#688f79; background:#285445; color:#fffefa; }
+.progressive-app .passport-navigation button[aria-current="page"] { border-color:#6c987d; background:#2e654d; color:#fffefa; }
+.progressive-app .passport-sidebar .passport-navigation button>.passport-navigation-label { color:inherit; }
+.progressive-app .passport-navigation button>.flow-nav-icon { flex:0 0 28px; background:#f8f0dc; }
+.progressive-app .passport-navigation button[aria-current="page"]>.flow-nav-icon { background:#f8f0dc; }
+.progressive-app .passport-saved-count { color:#173b30; background:#f7dfb4; }
+.progressive-app .passport-sidebar .passport-saved-count { color:#173b30; }
+.passport-bottom-navigation { display:none; }
+.progressive-app :is(.discovery-concierge,.first-week-panel,.day-out-plan,.intelligence-preferences,.together-reveal,.taste-analysis,.share-taste-card,.passport-map-panel,.vibe-dial) { border:1px solid #d9ddd0; border-radius:18px; background:#fffdf8; box-shadow:0 4px 18px #17372f09; }
+.progressive-app .discovery-concierge { display:grid; grid-template-columns:minmax(0,1fr) minmax(220px,.7fr); gap:20px; align-items:center; margin:0 0 16px; padding:clamp(18px,2.2vw,28px); background:linear-gradient(110deg,#fffdf8,#f5eee1); }
+.progressive-app .discovery-concierge h2 { margin:6px 0; font-size:clamp(23px,2.6vw,34px); }
+.progressive-app .discovery-concierge p { margin:6px 0 14px; color:#53665b; line-height:1.55; }
+.progressive-app .discovery-welcome-actions .primary-button { width:auto; min-height:44px; padding:10px 16px; }
+.progressive-app .discovery-quick-actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+.progressive-app .discovery-quick-actions button { min-width:0; min-height:58px; border:1px solid #d4dbcd; border-radius:11px; background:#fffdf8; color:#17372f; text-align:left; }
+.progressive-app .discovery-quick-actions button:hover { background:#edf4eb; border-color:#8ab39a; }
+.progressive-app .primary-button,.progressive-app .intelligence-apply { background:#174b3c; border-color:#174b3c; color:#fffdf8; box-shadow:none; }
+.progressive-app .primary-button:hover:not(:disabled),.progressive-app .intelligence-apply:hover:not(:disabled) { background:#103b30; border-color:#103b30; color:#fffdf8; }
+.progressive-app .assistant-launch { background:#a34c32; border-color:#a34c32; color:#fffdf8; box-shadow:0 8px 20px #7039232b; }
+.progressive-app .vibe-tuning-disclosure { margin:10px 0 18px; background:#f6f0e5; border-color:#d5cbb7; }
+.progressive-app .vibe-tuning-disclosure>summary { min-height:54px; color:#17372f; }
+.progressive-app .vibe-tuning-disclosure>summary>span { color:#53665b; }
+.progressive-app .map-section-heading { margin:12px 0; border-color:#d9ddd0; background:#f6f0e5; }
+.progressive-app .map-section-heading h3 { color:#17372f; }
+.progressive-app .passport-map-panel { margin:0; padding:14px; }
+.progressive-app .map-place-detail { background:#fffdf8; border-color:#d9ddd0; }
+.progressive-app .map-place-detail strong { color:#17372f; }
+.progressive-app .map-place-actions .primary-button { color:#fffdf8; }
+.progressive-app .map-place-actions .primary-button[aria-pressed="true"] { color:#174b3c; background:#e8f1e7; border-color:#a8c5ae; }
+.progressive-app .result-section { border-top:1px solid #d9ddd0; }
+.progressive-app .result-heading h3 { color:#17372f; }
+.progressive-app .discovery-grid { grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; }
+.progressive-app .discovery-card { min-width:0; padding:17px; border:1px solid #d9ddd0; border-radius:15px; background:#fffdf8; box-shadow:0 4px 18px #17372f0c; }
+.progressive-app .discovery-card:hover { transform:none; border-color:#acbda9; box-shadow:0 9px 24px #17372f16; }
+.progressive-app .discovery-card h4 { color:#17372f; font-size:clamp(20px,1.65vw,24px); line-height:1.3; }
+.progressive-app .discovery-card .category-token { color:#7e412d; background:#f8ebda; border-color:#e8d0b8; }
+.progressive-app .discovery-card .feedback-actions button { min-height:44px; border-radius:9px; }
+.progressive-app .discovery-card .feedback-actions button.liked { color:#174b3c; background:#e8f1e7; }
+.progressive-app .taste-evidence-cue { color:#17372f; background:#edf4eb; border-color:#b9cfbd; }
+.progressive-app .planner-mode-switch { max-width:420px; background:#eee9dc; border-color:#d9ddd0; }
+.progressive-app .planner-mode-switch button[aria-pressed="true"] { background:#174b3c; color:#fffdf8; }
+.progressive-app .first-week-heading,.progressive-app .together-heading,.progressive-app .analysis-intro,.progressive-app .outing-intro { min-width:0; }
+.progressive-app .analysis-intro,.progressive-app .vibe-intro,.progressive-app .outing-intro,.progressive-app .together-reveal .together-heading { border-color:#e2d9c8; background:linear-gradient(115deg,#fffdf8,#f6eddf); }
+.progressive-app .intelligence-intro { background:linear-gradient(120deg,#173b30,#2b5c48); border-color:#173b30; }
+.progressive-app .intelligence-modes button[aria-pressed="true"] { background:#174b3c; border-color:#174b3c; color:#fffdf8; }
+.progressive-app .taste-analysis .taste-theme-list button[aria-pressed="true"] { background:#174b3c; border-color:#174b3c; color:#fffdf8; }
+.progressive-app .move-onboarding .landing-city-hero { background:#fffaf0; border-color:#e2d9c8; }
+.progressive-app .move-onboarding :is(p,small) { color:#53665b; }
+.progressive-app .onboarding-heading h1,.progressive-app .landing-city-hero h1 { color:#17372f; }
+.progressive-app .onboarding-heading h1 em,.progressive-app .landing-city-hero h1 em { color:#a34c32; }
+.progressive-app .landing-city-hero .micro-label { color:#53665b; }
+.progressive-app .landing-city-hero .landing-actions .primary-button { background:#174b3c; border-color:#174b3c; color:#fffdf8; }
+.progressive-app .landing-city-hero .landing-actions .primary-button:hover:not(:disabled) { background:#103b30; border-color:#103b30; color:#fffdf8; }
+.progressive-app .landing-city-hero .landing-actions .quiet-button { border-color:#8aa58e; color:#174b3c; background:#fffdf8; }
+.progressive-app .move-form,.progressive-app .taste-confirmation { background:#fffdf8; border-color:#d9ddd0; }
+.progressive-app .account-dialog { background:#fffdf8; }
+.account-library-dialog .saved-passport-list article { min-width:0; gap:10px; }
+.account-library-dialog .saved-passport-list article>div { min-width:0; }
+.progressive-app :is(input,select,textarea) { background:#fffdf8; border-color:#aab9a9; color:#17372f; }
+.progressive-app :is(input,select,textarea)::placeholder { color:#637468; }
+.progressive-app .share-taste-card,.progressive-app .together-reveal .taste-exchange { background:#f7efe2; border-color:#e2d9c8; }
+/* Show the real returned map alongside discover cards when space permits. */
+@media (min-width:1250px) {
+  .progressive-app .discover-results-layout:has(>.discover-map-wrap:not([hidden])) { display:grid; grid-template-columns:minmax(0,1fr) minmax(340px,38%); column-gap:18px; align-items:start; }
+  .progressive-app .discover-results-layout>.map-section-heading { grid-column:1/-1; }
+  .progressive-app .discover-results-layout>.discover-map-wrap { grid-column:2; grid-row:2; min-width:0; }
+  .progressive-app .discover-results-layout>.passport-sections { grid-column:1; grid-row:2; min-width:0; margin-top:0; }
+  .progressive-app .discover-results-layout:has(>.discover-map-wrap:not([hidden])) .discovery-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .progressive-app .discover-results-layout .passport-map-canvas { height:340px; }
+  .progressive-app .discover-results-layout .cluster-options { grid-template-columns:minmax(0,1fr); }
+}
+@media (min-width:760px) and (max-width:1249px) {
+  .progressive-app .passport-workspace { grid-template-columns:190px minmax(0,1fr); }
+  .progressive-app .discovery-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media (max-width:759px) {
+  .progressive-app .passport-workspace { display:block; margin-top:14px; }
+  .progressive-app .passport-sidebar { position:static; width:auto; padding:0; margin:0; border:0; background:transparent; box-shadow:none; }
+  .progressive-app .passport-sidebar-title,.progressive-app .passport-mobile-heading { display:none; }
+  .progressive-app .passport-navigation { display:none; }
+  .progressive-app .passport-sidebar[data-menu-open="true"] .passport-navigation { position:fixed; z-index:81; left:12px; right:12px; bottom:calc(72px + env(safe-area-inset-bottom)); display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; max-height:min(65dvh,560px); overflow:auto; padding:14px; border:1px solid #4b7860; border-radius:18px; background:#173b30; box-shadow:0 12px 34px #10291f55; }
+  .progressive-app .passport-sidebar .passport-navigation button:nth-child(1),
+  .progressive-app .passport-sidebar .passport-navigation button:nth-child(2),
+  .progressive-app .passport-sidebar .passport-navigation button:nth-child(4) { display:none; }
+  .progressive-app .passport-navigation button { min-height:52px; }
+  .passport-bottom-navigation { position:fixed; z-index:80; left:0; right:0; bottom:0; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); align-items:center; min-height:64px; padding:5px max(8px,env(safe-area-inset-right)) calc(5px + env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left)); border-top:1px solid #cdd7cc; background:#fffdf8; box-shadow:0 -5px 18px #17372f13; }
+  .passport-bottom-navigation button { display:grid; justify-items:center; align-content:center; gap:1px; min-width:0; min-height:52px; padding:3px 2px; border:0; border-radius:10px; background:transparent; color:#435d4e; font:600 11px/1.25 Inter,system-ui,sans-serif; }
+  .progressive-app .passport-sidebar .passport-bottom-navigation button>span { color:inherit; }
+  .passport-bottom-navigation button[aria-current="page"],.passport-bottom-navigation button[aria-expanded="true"] { color:#174b3c; background:#e8f1e7; }
+  .passport-bottom-navigation button>.flow-nav-icon { display:grid; place-items:center; width:24px; height:24px; }
+  .passport-bottom-navigation button .mobile-more-icon { font-size:24px; line-height:24px; }
+  .progressive-app .living-passport { padding-top:10px; }
+  .progressive-app .passport-cover { grid-template-columns:minmax(0,1fr); padding:18px; }
+  .progressive-app .passport-cover .cover-art { display:none; }
+  .progressive-app .passport-cover h1 { font-size:clamp(28px,8vw,38px); }
+  .progressive-app .passport-workspace-content { padding:0; }
+  .progressive-app .discovery-concierge { grid-template-columns:minmax(0,1fr); padding:16px; }
+  .progressive-app .discovery-quick-actions { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .progressive-app .discovery-grid { grid-template-columns:minmax(0,1fr); }
+  .progressive-app .discovery-card { padding:16px; }
+  .progressive-app .result-heading h3 { font-size:clamp(22px,6vw,28px); }
+  .progressive-app .map-section-heading { padding:14px; }
+  .progressive-app .passport-map-canvas { height:clamp(270px,52vh,390px); }
+  .progressive-app .week-days { display:flex; overflow-x:auto; scroll-snap-type:x mandatory; }
+  .progressive-app .week-days button { flex:0 0 86px; scroll-snap-align:start; }
+  .progressive-app .first-week-panel,.progressive-app .day-out-plan,.progressive-app .taste-analysis,.progressive-app .intelligence-preferences,.progressive-app .together-reveal,.progressive-app .share-taste-card { padding:16px; }
+  .progressive-app .assistant-launch { bottom:calc(78px + env(safe-area-inset-bottom)); }
+  .progressive-app { padding-bottom:calc(130px + env(safe-area-inset-bottom)); }
+}
+@media (max-width:390px) {
+  .progressive-app .passport-sidebar[data-menu-open="true"] .passport-navigation { grid-template-columns:minmax(0,1fr); }
+  .progressive-app .discovery-quick-actions { grid-template-columns:minmax(0,1fr); }
+}
+@media (max-width:520px) {
+  .account-library-dialog .saved-passport-list article { flex-wrap:wrap; }
+  .account-library-dialog .saved-passport-list article>div { flex:1 1 100%; }
+  .account-library-dialog .saved-passport-list article>button { flex:1 1 110px; justify-content:center; min-height:44px; }
+}
+@media (prefers-reduced-motion:reduce) { .progressive-app :is(.discovery-card,.passport-navigation button,.passport-bottom-navigation button) { transition:none; } }

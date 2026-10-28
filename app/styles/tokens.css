@@ -1,0 +1,17 @@
+/* Tokens: shared TastePassport presentation. */
+
+:root {
+  --space-page: clamp(16px, 3vw, 32px);
+  --space-panel: clamp(16px, 2vw, 24px);
+  --space-section: 24px;
+  --ui-ink: #173a30;
+  --ui-muted: #596a5c;
+  --ui-action: #194934;
+  --ui-action-hover: #103725;
+  --ui-surface: #fffdf7;
+  --ui-tint: #f5ead1;
+  --ui-border: #dcd7c5;
+  --ui-shadow: 0 15px 40px #2b392619;
+  --ui-radius: 18px;
+  --ui-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+}

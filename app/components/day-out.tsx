@@ -1,0 +1,364 @@
+"use client";
+import { Icon } from "./passport";
+import { memo, useState, useEffect, useMemo } from "react";
+import type { Card } from "../../src/passport/model";
+import type { Passport } from "../../src/workspace/state";
+import {
+  dayOutOptions,
+  dayOutText,
+  stopDistance,
+  nearbyOutingOptions,
+  suggestedOutingChoice,
+  outingActivities,
+  activityMatches,
+} from "../../src/passport/day-out";
+import { evidenceFacts } from "../../src/qloo/explanation";
+import { cityDate, cityTimeZone, nextWeekend, planDateError, savedStopActivity, type SavedPlan } from "../../src/account/plans";
+import { accountRequest, showNotice } from "../../src/account/browser";
+
+export default memo(function DayOutPlan({
+  passport,
+  disabled,
+  signedIn = false,
+  saveRequest = 0,
+  onSaveRequestHandled,
+  editPlan,
+  startFrom,
+  onFindActivity,
+}: {
+  passport: Passport;
+  disabled: boolean;
+  signedIn?: boolean;
+  saveRequest?: number;
+  onSaveRequestHandled?: () => void;
+  editPlan?: {plan:SavedPlan;nonce:number};
+  startFrom?: {cardId:string;sessionId?:string;nonce:number};
+  onFindActivity?: (id:string)=>void;
+}) {
+  const [choices, setChoices] = useState<Record<string, string>>({});
+  const [omitted, setOmitted] = useState<Record<string, boolean>>({});
+  const [status, setStatus] = useState("");
+  const [date, setDate] = useState(() => cityDate(passport.city));
+  const [stopTimes, setStopTimes] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
+  const requestOrder = passport.session?.outingActivities?.filter(id=>outingActivities.some(a=>a.id===id));
+  const [activities, setActivities] = useState<string[]>(()=>requestOrder?.length ? requestOrder : ["Coffee","Culture","Eat"].filter(id=>dayOutOptions(passport.cards,passport.city).some(c=>activityMatches(c,id))));
+  const orderKey=requestOrder?.join(',') ?? '';
+  useEffect(()=>{if(orderKey)setActivities(orderKey.split(','));},[orderKey]);
+  const options = useMemo(()=>dayOutOptions(passport.cards, passport.city),[passport.cards,passport.city]);
+  const [handledStartNonce,setHandledStartNonce]=useState<number>();
+  const startPending=Boolean(startFrom&&startFrom.sessionId===passport.session?.id&&startFrom.nonce!==handledStartNonce);
+  useEffect(()=>{
+    if(!startFrom||!startPending)return;
+    const card=options.find(option=>option.id===startFrom.cardId);
+    setHandledStartNonce(startFrom.nonce);
+    if(!card){setStatus('That place is no longer in your discoveries. Choose another place on the map.');return;}
+    const activity=['Cinema','Nightlife','Coffee','Eat','Culture'].find(id=>activityMatches(card,id));
+    if(!activity){setStatus('This place cannot be added to a day out. Choose another place on the map.');return;}
+    const extras=['Coffee','Culture','Eat'].filter(id=>id!==activity&&options.some(option=>activityMatches(option,id))).slice(0,2);
+    setActivities([activity,...extras]);
+    setChoices({[activity]:card.id});
+    setOmitted({});
+    setStopTimes({});
+    setStatus(`Starting with ${card.name}. You can add or swap stops below. Check routes, hours and availability before going.`);
+  },[startFrom?.nonce,options]);
+  useEffect(()=>{
+    if(!editPlan || editPlan.plan.city!==passport.city)return;
+    const plan=editPlan.plan;
+    const pairs=plan.stops.map((card,index)=>({
+      activity:savedStopActivity(card),
+      card,time:plan.stop_times?.[index],
+    })).filter((row):row is typeof row & {activity:typeof outingActivities[number]["id"]}=>Boolean(row.activity));
+    const activities=[...new Set(pairs.map(row=>row.activity))];
+    const available=new Set(options.map(card=>card.id));
+    setActivities(activities);
+    setDate(plan.scheduled_date);
+    setChoices(Object.fromEntries(pairs.filter(row=>available.has(row.card.id)).map(row=>[row.activity,row.card.id])));
+    setOmitted(Object.fromEntries(pairs.filter(row=>!available.has(row.card.id)).map(row=>[row.activity,true])));
+    setStopTimes(Object.fromEntries(pairs.filter(row=>row.time).map(row=>[row.activity,row.time!])));
+    setStatus(pairs.some(row=>!available.has(row.card.id))
+      ? "Your saved plan is open. Some places are no longer in this Passport; choose current discoveries before updating it."
+      : "Your saved plan is open. Change its stops or times, then update it for this date.");
+  },[editPlan?.nonce]);
+  const editingSameDate=editPlan?.plan.city===passport.city && editPlan.plan.scheduled_date===date;
+  const foodAnchor=activities.includes("Eat") ? options.find(card=>card.id===choices.Eat) ?? options.find(card=>activityMatches(card,"Eat")) : undefined;
+  let previousStop:Card | undefined;
+  const usedDefaults=new Set<string>();
+  const stops = activities.map(id => ({ ...outingActivities.find(a => a.id === id)!, id })).map((stop) => {
+    const pool = nearbyOutingOptions(options.filter((card) => activityMatches(card, stop.id)),previousStop??foodAnchor);
+    // A choice removed by refinement requires explicit reselection.
+    const selected = choices[stop.id]
+      ? pool.find((card) => card.id === choices[stop.id])
+      : suggestedOutingChoice(pool.filter(card=>!usedDefaults.has(card.id)),previousStop??foodAnchor);
+    const chosen=omitted[stop.id] ? undefined : selected;
+    const distance=previousStop && chosen ? stopDistance(previousStop,chosen) : undefined;
+    if(chosen){previousStop=chosen;usedDefaults.add(chosen.id);}
+    return {...stop,pool,selected:chosen,distance};
+  });
+  // Pin every displayed default; sequence changes must never choose new venues.
+  const displayedKey = stops.map(stop => `${stop.id}:${stop.selected?.id ?? ""}`).join("|");
+  useEffect(() => {
+    if(startPending)return;
+    setChoices(current => {
+      const next = {...current};
+      let changed = false;
+      for (const stop of stops) if (stop.selected && current[stop.id] === undefined) {
+        next[stop.id] = stop.selected.id;
+        changed = true;
+      }
+      return changed ? next : current;
+    });
+  }, [displayedKey,startPending]);
+  const selected = stops.flatMap((stop) =>
+    stop.selected ? [stop.selected] : [],
+  );
+  const duplicateStops = new Set(selected.map(card => card.id)).size !== selected.length;
+  const timeFor = (id: string, index: number) => stopTimes[id] ?? `${String(11 + Math.floor(index * 90 / 60)).padStart(2, "0")}:${String(index * 90 % 60).padStart(2, "0")}`;
+  const selectedStops = stops.filter(stop => Boolean(stop.selected));
+  const timesInOrder = selectedStops.every((stop, index) => index === 0 || timeFor(selectedStops[index - 1].id, stops.indexOf(selectedStops[index - 1])) < timeFor(stop.id, stops.indexOf(stop)));
+
+  function moveActivity(id: string, direction: -1 | 1) {
+    setActivities(current => {
+      const index = current.indexOf(id);
+      const destination = index + direction;
+      if (index < 0 || destination < 0 || destination >= current.length) return current;
+      const next = [...current];
+      [next[index], next[destination]] = [next[destination], next[index]];
+      return next;
+    });
+  }
+
+  function reselectNearby() {
+    const next: Record<string,string> = {};
+    let previous: Card | undefined;
+    for (const id of activities) {
+      if (omitted[id]) continue;
+      const chosen = suggestedOutingChoice(options.filter(card=>activityMatches(card,id)),previous??foodAnchor);
+      if (chosen) { next[id]=chosen.id; previous=chosen; }
+    }
+    setChoices(next);
+    setStatus("Nearby venues reselected for this order. Stops without a verified option within 3 km remain open. Check travel times and availability.");
+  }
+
+  const dateError=planDateError(passport.city,date);
+  function exportError():string|undefined {
+    return planDateError(passport.city,date) ?? (!timesInOrder ? "Put your stops in time order." : duplicateStops ? "Choose different venues for each activity." : !selected.length ? "Choose at least one stop." : undefined);
+  }
+  function download() {
+    const error=exportError();
+    if(error){setStatus(error);showNotice(error,"error");return;}
+    const itinerary=stops.map((stop,index)=>({activity:stop.id as typeof outingActivities[number]["id"],time:timeFor(stop.id,index),card:stop.selected}));
+    const blob = new Blob([dayOutText(passport.city,itinerary,date,cityTimeZone(passport.city))], {
+      type: "text/plain;charset=utf-8",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "tastepassport-day-out.txt";
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    const message=selected.length === activities.length ? "Your plan is downloaded." : "Your plan is downloaded with the open stops clearly marked.";
+    setStatus(message);
+    showNotice(message);
+  }
+  async function savePlan() {
+    if (!signedIn) {
+      setStatus(
+        "Sign in, then choose Save to Upcoming plans. Your chosen date and stops will stay here.",
+      );
+      window.dispatchEvent(new Event("tastepassport:open-account"));
+      return;
+    }
+    const error=exportError();
+    if(error){setStatus(error);showNotice(error,"error");return;}
+    if (!passport.agent) return;
+    setSaving(true);
+    try {
+      const saved = await accountRequest("/api/account/plans", {
+        sessionId: passport.agent.sessionId,
+        revision: passport.agent.revision,
+        ids: selected.map((s) => s.id),
+        stopTimes: selectedStops.map(stop => timeFor(stop.id, stops.indexOf(stop))),
+        date,
+      });
+      setStatus(
+        "Saved! Open My plans & Passports in the navigation, then choose Upcoming plans.",
+      );
+      showNotice(editingSameDate ? "Your saved plan was updated." : "Your plan is saved to Upcoming plans.");
+      window.dispatchEvent(new CustomEvent<{plan:SavedPlan}>("tastepassport:plans-updated",{detail:{plan:saved.plan}}));
+    } catch (error) {
+      const text =
+        error instanceof Error ? error.message : "Could not save your plan.";
+      setStatus(text);
+      showNotice(text, "error");
+    } finally {
+      setSaving(false);
+    }
+  }
+  useEffect(()=>{
+    if(saveRequest>0){
+      onSaveRequestHandled?.();
+      void savePlan();
+    }
+  },[saveRequest]);
+
+  return (
+    <section className="day-out-plan" aria-labelledby="day-out-title">
+        <header className="first-week-heading outing-intro"><div><span className="micro-label">A USEFUL DAY IN YOUR CITY</span>
+        <h2 id="day-out-title">Plan a day out</h2><p>Choose a date and arrange returned places into a day that suits you.</p></div><img className="day-out-illustration" src="/illustrations/day-out-route.svg" width="120" height="90" alt="" aria-hidden="true" loading="lazy" decoding="async"/></header>
+        <p className="day-out-summary" role="status">{passport.city} · {selected.length} of {activities.length} places chosen · {date ? new Date(`${date}T12:00:00Z`).toLocaleDateString(undefined,{month:"short",day:"numeric",timeZone:"UTC"}) : "Choose a date"}</p>
+        {selected.length < activities.length && <p className="day-out-notice" role="status">{activities.length-selected.length} {activities.length-selected.length===1?'stop needs':'stops need'} a place. Choose one below or leave it open.</p>}
+        <div className="plan-schedule first-week-controls day-out-schedule">
+          <label htmlFor="plan-date">
+            Date
+            <input
+              id="plan-date"
+              type="date"
+              min={cityDate(passport.city)}
+              value={date}
+              disabled={disabled || saving}
+              onChange={(event) => setDate(event.target.value)}
+            />
+          </label>
+
+          <button
+            className="quiet-button"
+            type="button"
+            disabled={disabled || saving}
+            onClick={() => {
+              const weekend = nextWeekend(passport.city);
+              setDate(weekend);
+              setStatus(
+                `Your plan is set for ${new Date(`${weekend}T12:00:00Z`).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric", timeZone: "UTC" })}.`,
+              );
+            }}
+          >
+            Next weekend
+          </button>
+          <span className="plan-zone">{cityTimeZone(passport.city) === "UTC" ? "Times shown in UTC" : `Local time in ${passport.city}`}</span>
+        </div>
+        <fieldset className="outing-activities"><legend>What would you like to do?</legend>
+          {outingActivities.map(activity => <label key={activity.id}><input type="checkbox" checked={activities.includes(activity.id)} disabled={disabled || saving} onChange={e => {setActivities(old => e.target.checked ? [...old, activity.id] : old.filter(id => id !== activity.id)); if(e.target.checked && !options.some(card=>activityMatches(card,activity.id))) onFindActivity?.(activity.id);}} />{activity.label}</label>)}
+        </fieldset>
+        <p className="day-out-guidance">Swap places or change the order; your current selections stay put. Nearby defaults use straight-line distance only.</p>
+        <ol className="day-out-stops">
+          {stops.map((stop, index) => (
+            <li key={stop.id}>
+              <div className="stop-heading"><span className="stop-number">{String(index+1).padStart(2,"0")}</span><div><span className="micro-label">{stop.label}</span><h3>{stop.selected?.name ?? `Choose your ${stop.label.toLowerCase()} stop`}</h3></div><Icon name={stop.section} size={22}/></div>
+              <label className="stop-time-label">Start time
+                <input type="time" value={timeFor(stop.id,index)} disabled={disabled || saving} onChange={event=>setStopTimes(old=>({...old,[stop.id]:event.target.value}))}/>
+              </label>
+              <div className="outing-order">
+                <button type="button" className="quiet-button"
+                  disabled={disabled || saving || index === 0}
+                  aria-label={`Move ${stop.label} earlier`}
+                  onClick={() => moveActivity(stop.id, -1)}>↑ Earlier</button>
+                <button type="button" className="quiet-button"
+                  disabled={disabled || saving || index === stops.length - 1}
+                  aria-label={`Move ${stop.label} later`}
+                  onClick={() => moveActivity(stop.id, 1)}>↓ Later</button>
+              </div>
+              <select
+                id={`day-out-${stop.id}`}
+                aria-label={`Choose place for ${stop.label}`}
+                disabled={disabled || saving || !stop.pool.length}
+                value={stop.selected?.id ?? ""}
+                onChange={(event) => {
+                  const id = event.target.value;
+                  setChoices((old) => ({ ...old, [stop.id]: id }));
+                  setOmitted((old) => ({ ...old, [stop.id]: !id }));
+                  setStatus(
+                    `${stop.section} updated. Your other choices stay the same.`,
+                  );
+                }}
+              >
+                <option value="">
+                  {stop.pool.length ? "Leave this stop open" : "No matches yet"}
+                </option>
+                {stop.pool.map((card) => (
+                  <option key={card.id} value={card.id}>
+                    {card.name}
+                  </option>
+                ))}
+              </select>
+              {!stop.pool.length && (
+                <p className="helper">
+                  No local suggestions here yet. Try adjusting this category, or
+                  leave the stop open.
+                  {onFindActivity && <button type="button" className="quiet-button" disabled={disabled||saving} onClick={()=>onFindActivity(stop.id)}>Find {stop.label.toLowerCase()} options</button>}
+                </p>
+              )}
+              {stop.distance !== undefined && <p className="helper">{stop.distance.toFixed(1)} km straight-line from the previous stop. Check transport and travel time.</p>}
+              {stop.selected && (
+                <>
+                  <p>
+                    {stop.selected.address ||
+                      "Address not provided in this discovery."}
+                  </p>
+                  <a
+                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                      [stop.selected.name, stop.selected.address, passport.city]
+                        .filter(Boolean)
+                        .join(", "),
+                    )}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Look up location &amp; hours ↗
+                  </a>
+                  <details>
+                    <summary>Why this stop?</summary>
+                    {evidenceFacts(stop.selected,passport.selected.map(taste=>taste.id)).slice(0,4).map(fact => <p key={fact}>{fact}</p>)}
+                    <small>Suggested for your confirmed interests.</small>
+                  </details>
+                </>
+              )}
+              {!stop.selected && stop.pool.length > 0 && (
+                <p className="helper">
+                  Choose a discovery above, or keep this stop open. A previous
+                  choice may have changed after refinement.
+                </p>
+              )}
+            </li>
+          ))}
+        </ol>
+        {!timesInOrder && <p role="alert">Your stop times need to follow the order above. Adjust a time or move a stop.</p>}
+        <button type="button" className="quiet-button" disabled={disabled || !options.length} onClick={reselectNearby}>Reselect venues for this order</button>
+        {selected.some(
+          (card, index) =>
+            index > 0 && (stopDistance(selected[index - 1], card) ?? 0) > 15,
+        ) && (
+          <p role="status">
+            Some stops are more than 15 km apart in a straight line. Consider a
+            closer choice and check transport before going.
+          </p>
+        )}
+        <details className="outing-checklist"><summary>Before you go</summary><p>Your chosen times are suggestions, not verified opening hours or reservations. Check hours, travel times, current prices and availability. Saving again for the same city and date updates that plan.</p></details>
+        {dateError && <p role="alert">{dateError}</p>}
+        <div className="plan-save-actions">
+          {duplicateStops && <p role="alert">Choose different venues for each activity, or leave a repeated stop open.</p>}
+          <button
+            className="quiet-button download-plan"
+            onClick={download}
+            disabled={disabled || !selected.length || duplicateStops || Boolean(dateError) || !timesInOrder}
+          >
+            {selected.length === activities.length
+              ? "Download my plan"
+              : `Download plan · ${selected.length}/${activities.length} places chosen`}
+          </button>
+          <button
+            className="primary-button"
+            disabled={disabled || saving || !selected.length || !date || Boolean(dateError) || duplicateStops || !timesInOrder}
+            onClick={() => void savePlan()}
+          >
+            {saving
+              ? "Saving your plan…"
+              : signedIn
+                ? editingSameDate ? "Update saved plan" : "Save to Upcoming plans"
+                : "Sign in to save plan"}
+          </button>
+        </div>
+        {status&&<p className="day-out-notice" role="status">{status}</p>}
+    </section>
+  );
+});

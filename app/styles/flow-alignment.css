@@ -1,0 +1,63 @@
+/* A consistent reading edge and action rhythm across the workspace flows. */
+.progressive-app :is(.first-week-panel,.taste-intelligence,.taste-analysis,.together-reveal,.share-taste-card,.share-management) {
+  min-width: 0;
+  text-align: start;
+}
+.progressive-app :is(.first-week-panel,.taste-intelligence,.taste-analysis,.together-reveal,.share-taste-card,.share-management) :is(h2,h3,h4,p,small,li,label,summary) {
+  text-align: start;
+  overflow-wrap: anywhere;
+}
+.progressive-app :is(.first-week-heading,.intelligence-intro,.analysis-intro,.together-heading,.share-taste-copy,.share-management header) > div {
+  min-width: 0;
+}
+
+/* First Week: headline, controls, and save actions share the same left edge. */
+.progressive-app .first-week-heading { align-items: flex-start; margin: 0 0 18px; }
+.progressive-app .first-week-heading h3 { margin: 6px 0 8px; line-height: 1.22; }
+.progressive-app .first-week-heading p { max-width: 65ch; margin: 0; }
+.progressive-app .first-week-controls { margin: 0 0 18px; }
+.progressive-app .first-week-controls label { display: grid; gap: 8px; }
+.progressive-app .week-save-summary { align-items: start; }
+.progressive-app .week-save-summary p { margin: 5px 0 0; }
+.progressive-app .week-save-summary .first-week-actions { align-items: center; margin: 0; }
+.progressive-app .week-stops .week-stop-editor { min-width: 0; }
+
+/* Preferences and Common Ground: let descriptions line up with their headings. */
+.progressive-app .intelligence-content { min-width: 0; }
+.progressive-app .intelligence-intro { align-items: center; }
+.progressive-app .intelligence-intro h2 { margin: 6px 0 8px; line-height: 1.2; }
+.progressive-app .intelligence-intro p { max-width: 65ch; margin: 0; line-height: 1.55; }
+.progressive-app .intelligence-preferences .preference-style-heading { align-items: start; }
+.progressive-app .intelligence-preferences .preference-section-heading { min-width: 0; }
+.progressive-app .intelligence-preferences .preference-style-description { align-items: start; }
+.progressive-app .together-reveal .together-heading { align-items: start; }
+.progressive-app .together-reveal .together-heading p { margin: 6px 0 0; }
+.progressive-app .together-reveal .shared-story :is(h3,p) { margin: 4px 0; }
+.progressive-app .together-reveal .together-preference-summary { align-items: start; }
+.progressive-app .together-reveal .together-preference-summary p { margin: 4px 0 0; }
+
+/* Taste Insights and sharing: predictable spacing for copy and controls. */
+.progressive-app .analysis-intro { align-items: start; }
+.progressive-app .analysis-intro h2 { margin: 6px 0 8px; }
+.progressive-app .analysis-intro p { margin: 0; }
+.progressive-app .taste-analysis .analysis-result :is(h3,h4) { margin-top: 0; }
+.progressive-app .taste-analysis .analysis-result > p { margin: 8px 0 14px; }
+.progressive-app .share-taste-copy h3 { margin: 6px 0 10px; line-height: 1.2; }
+.progressive-app .share-taste-copy > p { max-width: 65ch; margin: 0; line-height: 1.6; }
+.progressive-app .share-taste-card { grid-template-columns: minmax(0,1fr); gap: 20px; }
+.progressive-app .share-options { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 14px; }
+.progressive-app .share-options > div { min-width: 0; }
+.progressive-app .share-link-result label { display: grid; gap: 8px; min-width: 0; }
+.progressive-app .share-link-result-actions { align-items: center; }
+.progressive-app .share-management header { margin-bottom: 18px; }
+.progressive-app .share-management header h2 { margin: 6px 0 8px; line-height: 1.2; }
+.progressive-app .share-management header p { margin: 0; }
+.progressive-app .share-management-pagination { align-items: center; }
+
+@media (max-width: 640px) {
+  .progressive-app .share-options { grid-template-columns: minmax(0,1fr); }
+  .progressive-app .week-save-summary .first-week-actions { align-items: stretch; }
+  .progressive-app .intelligence-preferences .preference-style-heading { align-items: stretch; }
+  .progressive-app .together-reveal .together-preference-summary { align-items: stretch; }
+  .progressive-app .share-management-pagination { align-items: stretch; }
+}

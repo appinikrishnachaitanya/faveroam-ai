@@ -1,0 +1,227 @@
+/* Navigation: shared TastePassport presentation. */
+
+.progressive-app .workspace-topbar {
+  position: relative;
+  margin-top: 16px;
+  z-index: 30;
+  height: var(--header-height);
+  background: #fffdf4;
+  /* Opaque surface avoids blurring the map/cards during overlay transitions. */
+  border: 1px solid var(--ui-border);
+  border-radius: 18px;
+  box-shadow: 0 10px 28px #193e3112;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 24px;
+  padding-inline: clamp(16px, 3vw, 40px);
+}
+
+.header-controls, .header-controls .account-control, .header-controls .topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  min-width: 0;
+}
+
+.header-controls {
+  justify-content: flex-end;
+  flex-wrap: nowrap;
+  align-self: stretch;
+}
+
+.header-controls .account-control,
+.header-controls .topbar-actions {
+  flex-wrap: nowrap;
+}
+
+.header-controls .topbar-actions {
+  gap: 10px;
+}
+
+.header-controls button, .header-controls .current-city {
+  white-space: nowrap;
+}
+
+.progressive-app .brand {
+  white-space: nowrap;
+}
+
+.progressive-app .topbar-caption {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.progressive-app .brand {
+  font-size: 23px;
+  letter-spacing: -1px;
+  gap: 12px;
+}
+
+.progressive-app .brand-symbol {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  box-shadow: 0 4px 12px #214f3e20;
+}
+
+.progressive-app .brand small {
+  font-size: 10px;
+  letter-spacing: 1px;
+}
+.account-welcome { margin:18px 0 0; padding:12px 16px; border:1px solid #c8d7bf; border-radius:14px; background:#edf3e6; color:#284b36; font-size:14px; line-height:1.5; font-weight:600; }
+
+.progressive-app .topbar-caption {
+  font-size: 16px;
+  color: var(--ui-muted);
+}
+
+.skip-link {
+  position: fixed;
+  top: -100px;
+  left: 16px;
+  z-index: 100;
+  padding: 14px 20px;
+  border-radius: 12px;
+  color: #fff;
+  background: var(--ui-action);
+}
+
+.skip-link:focus {
+  top: 12px;
+}
+
+#passport-content:focus {
+  outline: none;
+}
+
+@media (max-width: 1000px) {
+  .progressive-app .topbar-caption {
+    display: none;
+  }
+  .progressive-app .workspace-topbar {
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 16px;
+  }
+  .header-controls .current-city {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .progressive-app .workspace-topbar {
+    grid-template-columns: minmax(0, 1fr);
+    height: auto;
+    min-height: var(--header-height);
+    margin-top: 10px;
+    gap: 4px;
+    padding: 10px 16px;
+  }
+  .progressive-app .brand {
+    font-size: 18px;
+    gap: 8px;
+  }
+  .progressive-app .brand-symbol {
+    width: 34px;
+    height: 38px;
+    border-radius: 11px;
+  }
+  .header-controls, .header-controls .topbar-actions, .header-controls .account-control {
+    gap: 4px;
+  }
+  .header-controls { width:100%; justify-content:space-between; flex-wrap:wrap; }
+  .header-controls .account-control { flex-wrap:wrap; }
+  .progressive-app .workspace-topbar:not(:has(.save-passport)):not(:has(.signout-button)) { grid-template-columns:auto minmax(0,1fr); min-height:76px; }
+  .workspace-topbar:not(:has(.save-passport)):not(:has(.signout-button)) .header-controls { justify-content:flex-end; }
+}
+
+@media (max-width: 380px) {
+  .progressive-app .workspace-topbar {
+    grid-template-columns: 1fr;
+    height: auto;
+    margin-top: 8px;
+    padding: 8px 12px;
+    gap: 2px;
+  }
+  .progressive-app .brand {
+    margin-right: auto;
+    font-size: 16px;
+  }
+  .progressive-app .brand-symbol {
+    width: 30px;
+    height: 34px;
+  }
+  .header-controls {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
+.new-passport-short { display: none; }
+@media (max-width: 640px) {
+  .new-passport-label { display: none; }
+  .new-passport-short { display: inline; }
+}
+
+/* Signed-in mobile header uses explicit rows instead of wrapping unrelated actions. */
+@media (max-width: 640px) {
+  .progressive-app .workspace-topbar:has(.header-greeting) {
+    grid-template-columns: minmax(0, 1fr);
+    height: auto;
+    padding-block: 16px;
+    row-gap: 12px;
+  }
+  .header-controls:has(.header-greeting) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px 8px;
+    width: 100%;
+  }
+  .header-controls:has(.header-greeting) .header-greeting {
+    grid-column: 1;
+    grid-row: 1;
+    max-width: 100%;
+    min-width: 0;
+    padding: 0;
+    font-size: 14px;
+  }
+  .header-controls:has(.header-greeting) .topbar-actions {
+    grid-column: 2;
+    grid-row: 1;
+    justify-content: flex-end;
+  }
+  .header-controls:has(.header-greeting) .account-control {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    padding-top: 12px;
+    border-top: 1px solid var(--ui-border);
+  }
+  .header-controls:has(.header-greeting) .account-control > button {
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    margin: 0;
+    padding: 10px 8px;
+    white-space: normal;
+    text-align: center;
+    line-height: 1.4;
+    border: 1px solid var(--ui-border);
+    border-radius: 10px;
+  }
+  .header-controls:has(.header-greeting) .save-passport { background: var(--ui-action); color: #fffdf7; border-color: var(--ui-action); }
+}
+
+/* One text style for the greeting and adjacent navbar actions at every width. */
+.progressive-app .header-controls :is(.header-greeting, .account-control > button, .topbar-actions > button) {
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: normal;
+}
