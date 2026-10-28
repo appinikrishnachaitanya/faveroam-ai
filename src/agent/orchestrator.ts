@@ -93,10 +93,10 @@ function conceptAlreadyApplied(
     const tag = state.tags.find((candidate) => candidate.id === id);
     if (!tag) return false;
     const current = conceptKey(`${tag.name} ${tag.detail}`);
-    return (
-      current.includes(wanted) ||
-      (words.length > 0 && words.every((word) => current.includes(word)))
-    );
+    const currentWords = new Set(current.split(" "));
+    // Substring checks confuse unrelated taxonomy labels ("art" in
+    // "cartoon", for example) and can silently skip a requested lookup.
+    return words.length > 0 && words.every((word) => currentWords.has(word));
   });
 }
 export interface AgentDependencies {

@@ -91,18 +91,20 @@ export function passportAnswer(state: AgentState, intent: Intent, request=''): s
 
 // Chat is a first-class recommendation surface. "List them here" is read-only,
 // so it must never re-run Qloo, change the Passport, or invent venue metadata.
-const listWords = new Set("please can could you bro hey list show display give me tell name what are which did find have found here them these those results suggestions recommendations options your already current existing the my all in passport restaurants restaurant dining food eat places place venues venue coffee cafes cafe movies movie films film books book music culture museums museum galleries gallery cinema nightlife nightclubs nightclub shows show series tv games game gaming podcasts podcast lifestyle shops shop shopping bookstores bookstore brands brand people artists artist authors author destinations destination cities".split(" "));
+const listWords = new Set("please can could you bro hey list show display give me tell name what are which did find have found here them these those results suggestions recommendations options your already current existing the my all in passport restaurants restaurant dining food eat places place venues venue coffee cafes cafe movies movie films film books book music culture museums museum galleries gallery cinema nightlife nightclubs nightclub shows show series tv games game gaming podcasts podcast lifestyle shops shop shopping bookstores bookstore brands brand people artists artist authors author destinations destination cities not instead of".split(" "));
 export function isListRequest(text: string): boolean {
   const request=categoryLanguage(text).normalize("NFD").replace(/\p{M}/gu, "").trim().toLowerCase();
   if (request.match(/[a-z]+/g)?.some(word=>!listWords.has(word))) return false;
   const verb = /^(?:(?:please|can you|could you|bro|hey)\s+)*(?:list|show|display|give me|tell me|name|what are|which are|what did you find|what have you found)\b/.test(request);
   if (!verb || /\b(?:new|more|different|fresh|another|find me|cheaper|quieter|vegetarian|vegan|budget|rating|under|without|exclude|independent)\b/.test(request)) return false;
   return /\b(?:here|them|these|those|results|suggestions|recommendations|your list|already|current|existing|you found|found)\b/.test(request) || /\bwhat did you find\b/.test(request) ||
+    /\b(?:not|instead of)\b/.test(request) && /\b(?:restaurants?|dining|food|eat|coffee|cafes?|movies?|films?|music)\b/.test(request) ||
     /^(?:(?:please|can you|could you|bro|hey)\s+)*list\b/.test(request) &&
       /\b(?:restaurants?|dining|food|eat|places|venues|coffee|cafes?|movies|films|books|music)\b/.test(request);
 }
 export function listPassportCards(state: AgentState, request: string): Card[] {
-  const explicit=requestedShortlistSections(request);
+  const positive=request.split(/\b(?:not|instead of)\b/i,1)[0];
+  const explicit=requestedShortlistSections(positive);
   if(explicit?.length)return state.cards.filter(card=>explicit.includes(card.section) && !state.hiddenCategories?.includes(card.section));
   const q=categoryLanguage(request).toLowerCase();
   const section = /\b(?:restaurants?|dining|food|eat)\b/.test(q) ? "Eat"

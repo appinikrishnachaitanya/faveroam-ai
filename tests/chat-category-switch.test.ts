@@ -26,6 +26,18 @@ test('explicit categories also ground an explanation when model context incorrec
  assert.deepEqual(reply.state.history?.at(-1)?.recommendationIds,['Restaurant','Artist','Movie']);
  assert.doesNotMatch(reply.message,/Coffee one/);
 });
+test('category corrections in a conversation use the current cards without a new search',async()=>{
+ let state=initial();
+ for(const message of ['Show the restaurants, not coffee','List food instead of coffee','Show my current movies, not music']) {
+  const reply=await runTurn(state,{message},deps);
+  assert.deepEqual(reply.changed,[]);
+  assert.deepEqual(reply.state.cards,state.cards);
+  assert.doesNotMatch(reply.message,/Coffee one/);
+  if(/movies/.test(message)) assert.deepEqual(reply.state.history?.at(-1)?.referenceIds,['Movie']);
+  else assert.deepEqual(reply.state.history?.at(-1)?.referenceIds,['Restaurant']);
+  state=reply.state;
+ }
+});
 test('explicit categories take precedence over across, and show is a verb rather than a TV category',()=>{
  assert.deepEqual(requestedShortlistSections('show three across food, music and movies'),['Eat','Music','Movies']);
  assert.deepEqual(requestedShortlistSections('show me food'),['Eat']);
