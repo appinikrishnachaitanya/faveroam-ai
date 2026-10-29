@@ -19,6 +19,10 @@ A newcomer usually knows what they love but not where those tastes lead in a new
 
 FaveRoam starts from **confirmed cultural interests** and keeps the person in control. Qloo supplies the cultural entities and associations. Gemini helps interpret language. **The server verifies every result before the app shows it.**
 
+## Who it helps
+
+FaveRoam is for people starting over in an unfamiliar city, especially international students and early-career professionals relocating for study or work. They already have artists, films, food and routines they care about, but need a practical way to find places and make plans near their new home. The guest Passport lets them try that journey without an account; saved places, a first-week plan and Common Ground give them reasons to return and invite someone else. We have not measured retention or willingness to pay, so these are intended use cases rather than proven outcomes.
+
 ## A quick tour
 
 1. Open the **[live demo](https://my-faveroam-app.cloud.run/)** and choose **Try a sample**. It fills a destination and three interests, then asks you to confirm each match.
