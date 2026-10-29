@@ -53,7 +53,7 @@ export default memo(function PassportMap({cards,cartoKey='',onSelect,onPlanFrom,
     const timer=window.setTimeout(()=>{if(!disposed){map?.stop();setFailureKind('tiles');setFailed(true);}},12000);
     void Promise.resolve().then(async()=>{
       if(!cartoKey)throw Error('map-key-unavailable');
-      return (await import('maplibre-gl')).default;
+      return await import('maplibre-gl');
     }).then(maplibregl=>{
       if(disposed||!container.current)return;
       const first=places[0].intelligence!.location;
