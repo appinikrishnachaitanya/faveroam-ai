@@ -23,6 +23,7 @@ import './styles/planning.css';
 import './styles/common-ground.css';
 import './styles/flow-alignment.css';
 import './styles/experience-v2.css';
+import './styles/dark-theme.css';
 export const metadata:Metadata={
   metadataBase:new URL('https://my-faveroam-app.cloud.run/'),
   title:'FaveRoam — Wherever you roam, take your favourites with you.',
