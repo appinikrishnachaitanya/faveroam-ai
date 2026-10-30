@@ -122,3 +122,10 @@
 .favourites-journey-discover { background-position:50% 50%; float:right; width:130px; margin:0 0 10px 16px; }
 .favourites-journey-together { background-position:100% 50%; width:150px; }
 @media(max-width:600px){ .favourites-journey-favourites { width:180px; margin-inline:auto; }.favourites-journey-discover { width:90px; }.favourites-journey-together { width:110px; margin-bottom:12px; } }
+
+/* Keep artwork in the content flow rather than behind the landing copy. */
+.progressive-app .landing-city-hero::before { display:none; }
+.progressive-app .landing-city-hero .onboarding-story { position:relative; inset:auto; z-index:auto; height:auto; margin:20px 0 0; padding:0; overflow:visible; background:none; }
+.progressive-app .landing-city-hero .favourites-journey-favourites { width:min(100%,240px); margin-inline:auto; }
+.progressive-app .together-heading .favourites-journey-together { order:2; width:150px; }
+@media(max-width:600px){.progressive-app .landing-city-hero .favourites-journey-favourites { width:170px; }.progressive-app .together-heading .favourites-journey-together { width:120px; margin:12px auto; }}

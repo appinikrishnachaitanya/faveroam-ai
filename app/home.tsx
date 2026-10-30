@@ -1,6 +1,5 @@
 "use client";
 import { refinementErrorMessage } from "../src/agent/customer-error";
-import ThemeToggle from './components/theme-toggle';
 import {generatePassport} from '../src/workspace/generation-browser';
 import GenerationPreview from './components/generation-preview';
 import { sectionLabel } from "../src/passport/labels";
@@ -948,7 +947,6 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
           </span>
         </a>
         <nav className="header-controls" aria-label="Passport actions">
-          <ThemeToggle />
           {accountSignedIn&&<span className="header-greeting" aria-label={accountFirstName?"Signed in as "+accountFirstName:"Signed in"}>{accountFirstName?"Hi, "+accountFirstName:"Welcome back"}</span>}
           {result && (
             <div className="topbar-actions">
