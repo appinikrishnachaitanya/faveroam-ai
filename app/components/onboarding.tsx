@@ -8,6 +8,7 @@ import type { Resolution } from "../../src/workspace/state";
 import { typeLabel } from "../../src/workspace/state";
 import { tasteInputFeedback } from "../../src/agent/conversation-grounding";
 import { Icon } from "./passport";
+import JourneyArt from './journey-art';
 
 export function StepIndicator({ step }: { step: number }) {
   return (
@@ -143,7 +144,7 @@ export function MoveForm({
         <div className="landing-actions">{onSample&&<button type="button" className="primary-button" disabled={disabled||loadingCities||!destinations.length} onClick={()=>onSample(destinations.includes('London')?'London':destinations[0])}>Try a sample <Icon name="arrow" size={16}/></button>}<button type="button" className="quiet-button" disabled={disabled||loadingCities||!destinations.length} onClick={advanceFromHero}>{!destinations.includes(city) ? "Choose my city" : draft.length ? "Review my interests" : "Add my interests"} <Icon name="arrow" size={16}/></button></div>
         {nextStepMessage && <p className="helper" role="status">{nextStepMessage}</p>}
         <div className="onboarding-story">
-          <img className="journey-illustration" src="/illustrations/editorial-city-route.svg" width="440" height="260" alt="" aria-hidden="true" fetchPriority="high" decoding="async" />
+          <JourneyArt scene="favourites" />
           <ul>
             <li><Icon name="heart" size={16} /> Carry what you love into somewhere new</li>
             <li><Icon name="check" size={16} /> Your tastes, explicitly confirmed</li>

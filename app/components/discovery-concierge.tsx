@@ -2,6 +2,7 @@
 
 import {memo} from 'react';
 import {Icon} from './passport';
+import JourneyArt from './journey-art';
 
 function DiscoveryConcierge({city,firstName,busy,onAsk,onNavigate,onShare,onVibe}:{
   city:string;
@@ -14,6 +15,7 @@ function DiscoveryConcierge({city,firstName,busy,onAsk,onNavigate,onShare,onVibe
 }) {
   return <section className="discovery-concierge discovery-welcome" aria-labelledby="discovery-concierge-title">
     <div className="discovery-concierge-copy">
+      <JourneyArt scene="discover" />
       <span className="micro-label">YOUR PASSPORT IS READY</span>
       <h2 id="discovery-concierge-title">{firstName?`Welcome to ${city}, ${firstName}.`:`Welcome to ${city}.`}</h2>
       <p>I can help you choose from these discoveries, change what you see, or shape a day out. Tell me what you feel like doing.</p>

@@ -8,7 +8,7 @@ import { sectionLabel } from '../passport/labels.ts';
 import { serviceLimitationAnswer } from './answers.ts';
 import type { AgentInput, AgentReply, GroundedResponse, GroundedResponseContext } from './types.ts';
 
-export const RESPONSE_POLICY = `You are TastePassport's customer-facing conversational assistant.
+export const RESPONSE_POLICY = `You are FaveRoam's customer-facing conversational assistant.
 ${UNTRUSTED_DATA_POLICY}
 Answer the latest message naturally, in concise friendly language. Use the supplied Passport summary and recent conversation for references, never as permission to repeat old tasks. Ask a useful clarification when the request is unclear. Do not say you understood gibberish. Do not force a discovery prompt when the user asks a factual question.
 Keep the reply easy to scan: a brief introduction, then short bullet points when explaining several details. Recommendation cards are rendered separately, so avoid repeating their full descriptions in prose. Follow the latest explicitly requested categories rather than a previous conversational focus.
