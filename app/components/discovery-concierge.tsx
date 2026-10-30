@@ -15,7 +15,6 @@ function DiscoveryConcierge({city,firstName,busy,onAsk,onNavigate,onShare,onVibe
 }) {
   return <section className="discovery-concierge discovery-welcome" aria-labelledby="discovery-concierge-title">
     <div className="discovery-concierge-copy">
-      <JourneyArt scene="discover" />
       <span className="micro-label">YOUR PASSPORT IS READY</span>
       <h2 id="discovery-concierge-title">{firstName?`Welcome to ${city}, ${firstName}.`:`Welcome to ${city}.`}</h2>
       <p>I can help you choose from these discoveries, change what you see, or shape a day out. Tell me what you feel like doing.</p>
@@ -23,6 +22,7 @@ function DiscoveryConcierge({city,firstName,busy,onAsk,onNavigate,onShare,onVibe
         <button type="button" className="primary-button" disabled={busy} onClick={()=>onAsk()}>Ask FaveRoam <Icon name="arrow" size={16}/></button>
       </div>
     </div>
+    <JourneyArt scene="discover" />
     <div className="discovery-quick-actions" aria-label="Next things to try">
       <button type="button" onClick={()=>onNavigate('plan')}><Icon name="pin" size={18}/><span>Plan my first week</span></button>
       <button type="button" onClick={()=>onNavigate('together')}><Icon name="star" size={18}/><span>Explore together</span></button>

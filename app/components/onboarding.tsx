@@ -144,7 +144,7 @@ export function MoveForm({
         <div className="landing-actions">{onSample&&<button type="button" className="primary-button" disabled={disabled||loadingCities||!destinations.length} onClick={()=>onSample(destinations.includes('London')?'London':destinations[0])}>Try a sample <Icon name="arrow" size={16}/></button>}<button type="button" className="quiet-button" disabled={disabled||loadingCities||!destinations.length} onClick={advanceFromHero}>{!destinations.includes(city) ? "Choose my city" : draft.length ? "Review my interests" : "Add my interests"} <Icon name="arrow" size={16}/></button></div>
         {nextStepMessage && <p className="helper" role="status">{nextStepMessage}</p>}
         <div className="onboarding-story">
-          <JourneyArt scene="favourites" />
+          <div className="onboarding-art-pair"><figure><JourneyArt scene="favourites" /><figcaption>Carry your favourites</figcaption></figure><span className="onboarding-art-connection" aria-hidden="true">→</span><figure><JourneyArt scene="discover" /><figcaption>Explore somewhere new</figcaption></figure></div>
           <ul>
             <li><Icon name="heart" size={16} /> Carry what you love into somewhere new</li>
             <li><Icon name="check" size={16} /> Your tastes, explicitly confirmed</li>

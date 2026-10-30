@@ -161,3 +161,18 @@ body { background:#f8f4eb; color:var(--ui-ink); }
   .account-library-dialog .saved-passport-list article>button { flex:1 1 110px; justify-content:center; min-height:44px; }
 }
 @media (prefers-reduced-motion:reduce) { .progressive-app :is(.discovery-card,.passport-navigation button,.passport-bottom-navigation button) { transition:none; } }
+
+/* Art occupies its own column, never a float inside the welcome copy. */
+.progressive-app .landing-city-hero .onboarding-story { position:relative; inset:auto; width:100%; height:auto; margin:20px 0 0; overflow:visible; z-index:auto; }
+.progressive-app .move-onboarding .landing-city-hero { padding:clamp(20px,3vw,38px); }
+.progressive-app .discovery-concierge { grid-template-columns:minmax(0,1.2fr) 140px minmax(240px,1fr); gap:24px; }
+.progressive-app .discovery-concierge > .favourites-journey-discover { float:none; width:140px; margin:0; align-self:center; }
+.progressive-app .discovery-concierge-copy { min-width:0; }
+.progressive-app .discovery-quick-actions { margin:0; align-self:center; }
+.progressive-app .onboarding-art-pair { display:grid; grid-template-columns:minmax(0,1fr) 24px minmax(0,1fr); gap:8px; align-items:center; width:100%; max-width:540px; margin-inline:auto; }
+.progressive-app .onboarding-art-pair figure { margin:0; min-width:0; text-align:center; }
+.progressive-app .onboarding-art-pair .favourites-journey-art { float:none; width:100%; max-width:220px; margin:0 auto; }
+.progressive-app .onboarding-art-pair figcaption { color:#405b4d; font-size:13px; line-height:1.4; margin-top:8px; font-weight:600; }
+.onboarding-art-connection { color:#b66d2e; font-size:24px; text-align:center; }
+@media(max-width:1000px){.progressive-app .discovery-concierge{grid-template-columns:minmax(0,1fr) 120px}.progressive-app .discovery-concierge > .favourites-journey-discover{width:120px}.progressive-app .discovery-quick-actions{grid-column:1/-1; width:100%;}}
+@media(max-width:600px){.progressive-app .discovery-concierge{grid-template-columns:minmax(0,1fr);gap:16px}.progressive-app .discovery-concierge > .favourites-journey-discover{width:120px;justify-self:center;grid-row:2}.progressive-app .discovery-quick-actions{grid-row:3;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.progressive-app .discovery-quick-actions button{min-width:0;white-space:normal;text-align:left}.progressive-app .onboarding-art-pair{gap:4px;grid-template-columns:minmax(0,1fr) 18px minmax(0,1fr)}.progressive-app .onboarding-art-pair figcaption{font-size:12px}}
