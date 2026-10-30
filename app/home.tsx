@@ -1060,7 +1060,7 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
           </div>
         )}
         {busy && phase!=='exploring' && <JourneyLoading phase={phase} detail={progress} />}
-        {phase==='exploring'&&<GenerationPreview city={city} previews={generationPreviews} onCancel={()=>{generationRequest.current?.abort();generationRequest.current=null;setGenerationPreviews({});setPhase('confirming');}}/>}
+        {phase==='exploring'&&<GenerationPreview city={city} sections={requestedActivities} previews={generationPreviews} onCancel={()=>{generationRequest.current?.abort();generationRequest.current=null;setGenerationPreviews({});setPhase('confirming');}}/>}
         {result && (
           <section
             className="living-passport"

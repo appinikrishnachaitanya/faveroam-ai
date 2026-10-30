@@ -110,3 +110,8 @@
   .intelligence-intro, .analysis-intro, .outing-intro, .vibe-intro,
   .together-heading img, .journey-illustration, .cover-illustration
 ) { animation: none; }
+
+/* Decorative illustrations should not keep repainting during everyday use. */
+.progressive-app :is(.first-week-heading img,.vibe-dial-heading img,.vibe-collection-illustration,.insight-illustration,.day-out-illustration,.together-heading>img) { animation:none; }
+.generation-category-progress { display:flex; flex-wrap:wrap; gap:8px; list-style:none; padding:0; margin:16px 0; }
+.generation-category-progress li { padding:8px 12px; border:1px solid var(--ui-border); border-radius:10px; background:var(--ui-surface); color:var(--ui-ink); font-size:14px; }

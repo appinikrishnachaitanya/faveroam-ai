@@ -195,13 +195,16 @@ export async function runTurn(
     // appears as cards with returned evidence. Keep synthesis for questions,
     // comparisons, and explicit requests for reasons.
     const asksForExplanation = Boolean(input.message && /[?]|\b(?:why|explain|reason|because|compare|highest|lowest|cheapest|best|which|open(?: now)?|tonight|when|how)\b/i.test(input.message));
-    const hasAppliedFilters = result.changed.some(section =>
-      Object.keys(result.state.queryPreferences?.[section] ?? {}).length > 0 ||
-      (result.state.categoryConstraints?.[section]?.length ?? 0) > 0,
-    );
-    const groundedCardsAreEnough = hasGroundedUpdate && !asksForExplanation && !hasAppliedFilters;
-    if (groundedCardsAreEnough)
+    // Applied filters are already included in the validated update receipt.
+    // Their presence alone does not justify another model round trip.
+    const groundedCardsAreEnough = hasGroundedUpdate && !asksForExplanation;
+    if (groundedCardsAreEnough) {
+      const receipt = responseReceipt(result,input);
+      if (receipt) result.message += `\n\n${receipt}`;
+      const latest = result.state.history?.at(-1);
+      if (latest?.role === "agent") latest.text = result.message;
       debugEvent("agent.response", { action: "skipped", count: lastTurn?.recommendationIds?.length ?? 0 });
+    }
     if (input.message && provider?.compose && input.reset !== "conversation" && !result.action && !isGroundedShortlist && !simpleReply && !answeredWithoutRetrieval && !groundedCardsAreEnough && result.state.providerHealth !== "unavailable") {
       let responseFailure = "transport";
       try {
