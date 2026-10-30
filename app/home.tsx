@@ -803,6 +803,8 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
   const feedbackHandler = useRef(recordFeedback);
   useLayoutEffect(()=>{feedbackHandler.current=recordFeedback;});
   const stableFeedback = useCallback((id:string,value:Feedback)=>feedbackHandler.current(id,value),[]);
+  const favoriteIds = useMemo(()=>new Set(result?.session?.savedCards.map(card=>card.id)??[]),[result?.session?.savedCards]);
+  const favoriteFromMap = useCallback((card:import('../src/passport/model').Card)=>stableFeedback(card.id,"like"),[stableFeedback]);
   const visibleCards = useMemo(
     () => result?.cards.filter(card => !result.session?.hiddenCategories.includes(card.section)) ?? [],
     [result?.cards, result?.session?.hiddenCategories],
@@ -1112,14 +1114,14 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
             >
               {visitedViews.has("discover") && <>
               {!showSaved && <DiscoveryConcierge city={result.city} firstName={accountSignedIn?accountFirstName:undefined} busy={busy} onAsk={openAssistantFromDiscover} onNavigate={stableSelectWorkspaceView} onShare={shareFromDiscover} onVibe={openVibeDial}/>}
-              {result.session && !showSaved && (
+              {result.session && (
                 <details className="vibe-tuning-disclosure familiarity-disclosure"><summary>Fine-tune discoveries <span>Optional · familiar, balanced or explore</span></summary><FamiliarityControl
                   session={result.session}
                   disabled={busy}
                   onChange={(input) => {setShowSaved(false);setWorkspaceView("discover");void refine(input);}}
                 /></details>
               )}
-              {!showSaved&&<VibeDial key={`vibe:${result.agent?.sessionId??result.city}`} passport={result} busy={busy} open={vibeDialOpen} onClose={()=>setVibeDialOpen(false)} onApply={stableRefine}/>}
+              <VibeDial key={`vibe:${result.agent?.sessionId??result.city}`} passport={result} busy={busy} open={vibeDialOpen&&!showSaved} onClose={()=>setVibeDialOpen(false)} onApply={stableRefine}/>
               </>}
             </div>
             {workspaceView === "discover" && !showSaved && missingSections.length > 0 && (
@@ -1163,7 +1165,7 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
                     <div className="map-section-title"><span className="map-section-icon" aria-hidden="true"><Icon name="pin" size={20}/></span><div><span className="micro-label">DISCOVER THE CITY</span><h3>Places on a map</h3><p>See where {mappedPlaceCount} returned places sit, then pick one to explore.</p></div></div>
                     <button className="quiet-button map-toggle" type="button" aria-expanded={showMap} onClick={()=>setShowMap(value=>!value)}>{showMap?'Collapse map':'Explore map'} <span aria-hidden="true">{showMap?'−':'↗'}</span></button>
                   </div>}
-                  {visibleResult&&mappedPlaceCount>0&&<div className="discover-map-wrap" hidden={!showMap}><PassportMap cards={visibleResult.cards} cartoKey={cartoKey} active={workspaceView==='discover'&&!showSaved&&showMap} selectedCluster={activeCluster?.id} onClusterSelect={setSelectedCluster} onSelect={openMappedCard} onFavorite={card=>stableFeedback(card.id,"like")} favoriteIds={new Set(result.session?.savedCards.map(card=>card.id)??[])} favoriteDisabled={busy} onPlanFrom={planFromMap} plannableIds={plannableIds}/></div>}
+                  {visibleResult&&mappedPlaceCount>0&&<div className="discover-map-wrap" hidden={!showMap}><PassportMap cards={visibleResult.cards} cartoKey={cartoKey} active={workspaceView==='discover'&&!showSaved&&showMap} selectedCluster={activeCluster?.id} onClusterSelect={setSelectedCluster} onSelect={openMappedCard} onFavorite={favoriteFromMap} favoriteIds={favoriteIds} favoriteDisabled={busy} onPlanFrom={planFromMap} plannableIds={plannableIds}/></div>}
                   {visibleResult&&<PassportSections disabled={busy} result={clusteredResult!} feedback={feedback} onFeedback={stableFeedback} updates={updates} updating={updating}/>}
                 </div>
             </div>
