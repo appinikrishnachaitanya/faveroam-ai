@@ -1,6 +1,8 @@
 # FaveRoam
 
-**Move anywhere. Keep what moves you.**
+**Wherever you roam, take your favourites with you.**
+
+**FaveRoam = Favourites + Roaming.**
 
 FaveRoam is an agent-powered cultural discovery app for people making a new city feel like home. Tell it a film, an artist or a cuisine you already love. It turns those confirmed tastes into places and culture in your destination, a first-week plan, recurring rituals, and common ground with someone you've just met. Suggestions disclose the evidence available; when Qloo returns nothing suitable, the app shows a gap instead of inventing a venue.
 

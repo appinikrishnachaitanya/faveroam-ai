@@ -25,9 +25,9 @@ import './styles/flow-alignment.css';
 import './styles/experience-v2.css';
 export const metadata:Metadata={
   metadataBase:new URL('https://my-faveroam-app.cloud.run/'),
-  title:'FaveRoam — From what you love to where you belong.',
+  title:'FaveRoam — Wherever you roam, take your favourites with you.',
   description:'Turn what you love into places, experiences, and shared discoveries in a new city.',
   icons:{icon:'/brand/faveroam-mark.svg'},
-  openGraph:{title:'FaveRoam',description:'From what you love to where you belong.',images:[{url:'/brand/faveroam-cover.png',width:1200,height:800}]},
+  openGraph:{title:'FaveRoam',description:'Wherever you roam, take your favourites with you.',images:[{url:'/brand/faveroam-cover.png',width:1200,height:800}]},
 };
 export default function Layout({children}:{children:React.ReactNode}){return <html lang="en"><body>{children}</body></html>}

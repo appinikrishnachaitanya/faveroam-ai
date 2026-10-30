@@ -79,7 +79,7 @@ interface Message {
 }
 const welcome: Message = {
   role: "agent",
-  text: "From what you love to where you belong. Tell me your new city and one to five cultural tastes you love. We’ll build a bridge between your world and your next chapter.",
+  text: "Wherever you roam, take your favourites with you. Tell me your new city and one to five cultural tastes you love. We’ll build a bridge between your world and your next chapter.",
 };
 const verifyShareToken=(value:string)=>/^[a-zA-Z0-9_-]{32}$/.test(value);
 async function post<T>(path: string, body: unknown, cancellation?: AbortSignal): Promise<T> {
@@ -1258,7 +1258,7 @@ export default function Home({cartoKey=''}:{cartoKey?:string}) {
         )}
       </div>
       <footer className="workspace-footer">
-        <span>© 2026 FaveRoam · From what you love to where you belong.</span>
+        <span>© 2026 FaveRoam · Wherever you roam, take your favourites with you.</span>
         <nav aria-label="About FaveRoam">
           <a href="/about">About us</a>
           <a href="/privacy">Privacy policy</a>
