@@ -1,5 +1,5 @@
 import { browserRequestError, readRequestText } from "../../../src/http/request.ts";
-import { debugRequest } from "../../../src/agent/debug";
+import { debugRequest, debugEvent } from "../../../src/agent/debug";
 import { NextResponse } from "next/server";
 import { passport } from "../../../src/passport/service.ts";
 import { createSession, syncSession } from "../../../src/agent/store.ts";
@@ -80,12 +80,13 @@ async function handlePOST(request: Request, onCategory?: (section:Section,cards:
       { headers: { "Cache-Control": "no-store" } },
     );
   } catch (e) {
+    debugEvent("api.failed", {route:"passport",reason: e instanceof QlooError ? "provider" : signal.aborted ? "cancelled" : "generation", ...(e instanceof QlooError ? {status:e.status} : {})});
     return NextResponse.json(
       {
         error:
           e instanceof QlooError
             ? e.message
-            : "Could not build your passport. Resolve your tastes and try again.",
+            : "Your Passport could not finish this time. Your confirmed interests are still here; please try again.",
       },
       { status: e instanceof QlooError && e.status === 400 ? 400 : 502 },
     );

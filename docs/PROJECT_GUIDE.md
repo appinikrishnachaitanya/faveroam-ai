@@ -119,7 +119,7 @@ Per-turn budgets and session locks limit individual operations; this app does no
 
 The [hackathon page](https://qloo.devpost.com/) asks for an agentic tool/app whose cultural intelligence changes the outcome. Demonstrate **cultural continuity for a newcomer** with real returned choices, a working public demo, public source under an open-source license, and a clear project description. Verify the current Devpost rules before submission.
 
-Suggested project name: **FaveRoam — The Cultural Belonging Agent**. Elevator pitch: **From what you love to where you belong. A Qloo-powered agent that carries your cultural tastes into a new city, adapts to feedback, and helps you find common ground.**
+Suggested project name: **FaveRoam — The Cultural Belonging Agent**. Elevator pitch: **Wherever you roam, take your favourites with you. A Qloo-powered agent that carries your cultural tastes into a new city, adapts to feedback, and helps you find common ground.**
 
 For the project story: explain the relocation problem, the guest journey, actual Qloo endpoint roles, native Gemini function calling plus server-side validation, Common Ground and planning outcomes, the difficulty of ambiguous names and constraint preservation, and what was learned about evidence-backed explanations. List Next.js, React, TypeScript, Node.js, Qloo, Gemini, `@google/genai`, MCP, Supabase, PostgreSQL, and the actual hosting platform used by the submitted build. State limitations honestly; do not claim measured superiority from an illustrative model-only comparison. The repository includes [MIT](../LICENSE).
 
@@ -137,3 +137,8 @@ Use actual app screenshots for media (identity confirmation, discovery, agent re
 ## Boundaries and remaining acceptance
 
 FaveRoam does not book, verify live opening hours, certify menu ingredients/allergens, provide guaranteed route timing, or turn content recommendations into real events. Geographic audience affinity and aggregate demographics do not describe an individual. Returned image availability and category coverage vary by provider and destination. Failed searches keep earlier choices only when clearly distinguished from un-applied constraints. Before submission, rerun a signed-out hosted journey with real Qloo and Gemini, account save/restore if demonstrated, a complete outing, public source/license access, and the exact deployment commit.
+
+
+## Brand story
+
+**FaveRoam = Favourites + Roaming.** The public tagline is **Wherever you roam, take your favourites with you.** Favourite artists, films, books and food become confirmed starting signals for discovering places and culture in another city. The landing page pairs this message with a light city-route illustration and a favourites cue; the route represents exploration rather than a verified itinerary.

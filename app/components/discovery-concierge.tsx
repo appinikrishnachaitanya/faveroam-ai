@@ -2,6 +2,7 @@
 
 import {memo} from 'react';
 import {Icon} from './passport';
+import JourneyArt from './journey-art';
 
 function DiscoveryConcierge({city,firstName,busy,onAsk,onNavigate,onShare,onVibe}:{
   city:string;
@@ -21,6 +22,7 @@ function DiscoveryConcierge({city,firstName,busy,onAsk,onNavigate,onShare,onVibe
         <button type="button" className="primary-button" disabled={busy} onClick={()=>onAsk()}>Ask FaveRoam <Icon name="arrow" size={16}/></button>
       </div>
     </div>
+    <JourneyArt scene="discover" />
     <div className="discovery-quick-actions" aria-label="Next things to try">
       <button type="button" onClick={()=>onNavigate('plan')}><Icon name="pin" size={18}/><span>Plan my first week</span></button>
       <button type="button" onClick={()=>onNavigate('together')}><Icon name="star" size={18}/><span>Explore together</span></button>

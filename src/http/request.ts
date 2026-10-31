@@ -3,7 +3,7 @@ import { sameOrigin } from "../account/policy.ts";
 /** Browser writes must originate from the configured app, not another site. */
 export function browserRequestError(request: Request): Response | undefined {
   if (!sameOrigin(request) || request.headers.get("sec-fetch-site") === "cross-site")
-    return Response.json({ error: "Please use TastePassport to make this request." }, {
+    return Response.json({ error: "Please use FaveRoam to make this request." }, {
       status: 403, headers: { "Cache-Control": "private, no-store" },
     });
 }

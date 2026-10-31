@@ -110,3 +110,22 @@
   .intelligence-intro, .analysis-intro, .outing-intro, .vibe-intro,
   .together-heading img, .journey-illustration, .cover-illustration
 ) { animation: none; }
+
+/* Decorative illustrations should not keep repainting during everyday use. */
+.progressive-app :is(.first-week-heading img,.vibe-dial-heading img,.vibe-collection-illustration,.insight-illustration,.day-out-illustration,.together-heading>img) { animation:none; }
+.generation-category-progress { display:flex; flex-wrap:wrap; gap:8px; list-style:none; padding:0; margin:16px 0; }
+.generation-category-progress li { padding:8px 12px; border:1px solid var(--ui-border); border-radius:10px; background:var(--ui-surface); color:var(--ui-ink); font-size:14px; }
+
+/* Three small scenes share one 55 KB asset; reserved dimensions prevent layout shifts. */
+.favourites-journey-art { width:min(100%,280px); aspect-ratio:1; flex:0 0 auto; background-image:url('/illustrations/favourites-journey.webp'); background-size:300% 100%; background-repeat:no-repeat; border-radius:16px; }
+.favourites-journey-favourites { background-position:0% 50%; }
+.favourites-journey-discover { background-position:50% 50%; float:right; width:130px; margin:0 0 10px 16px; }
+.favourites-journey-together { background-position:100% 50%; width:150px; }
+@media(max-width:600px){ .favourites-journey-favourites { width:180px; margin-inline:auto; }.favourites-journey-discover { width:90px; }.favourites-journey-together { width:110px; margin-bottom:12px; } }
+
+/* Keep artwork in the content flow rather than behind the landing copy. */
+.progressive-app .landing-city-hero::before { display:none; }
+.progressive-app .landing-city-hero .onboarding-story { position:relative; inset:auto; z-index:auto; height:auto; margin:20px 0 0; padding:0; overflow:visible; background:none; }
+.progressive-app .landing-city-hero .favourites-journey-favourites { width:min(100%,240px); margin-inline:auto; }
+.progressive-app .together-heading .favourites-journey-together { order:2; width:150px; }
+@media(max-width:600px){.progressive-app .landing-city-hero .favourites-journey-favourites { width:170px; }.progressive-app .together-heading .favourites-journey-together { width:120px; margin:12px auto; }}
