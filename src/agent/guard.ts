@@ -61,7 +61,7 @@ export class TurnGuard {
   /** One optional tool-free response pass; timeout must not discard validated results. */
   async respond<T>(call:(signal:AbortSignal)=>Promise<T>):Promise<T> {
     if (++this.responseCalls > 1) throw Error("Response budget reached");
-    const remaining = Math.min(18_000, this.deadline - Date.now());
+    const remaining = Math.min(8_000, this.deadline - Date.now());
     if (remaining < 500 || this.signal.aborted) throw Error("Response budget unavailable");
     const controller = new AbortController();
     const signal = AbortSignal.any([this.signal, controller.signal]);

@@ -15,6 +15,7 @@ import { priceLabel } from "../../src/passport/pricing";
 import { suggestedMatches } from "../../src/passport/matching";
 import { isPlaceSection } from "../../src/passport/model";
 import { Icon } from "./passport";
+import JourneyArt from './journey-art';
 import FirstWeek from './first-week';
 import CommonGroundThemes from './common-ground-themes';
 import {commonGroundStarters,sharedHangout,hangoutExplanation,meaningfulSharedThemes,nearbySharedPlaces} from '../../src/passport/common-ground';
@@ -401,7 +402,7 @@ export default memo(function TasteIntelligence({
         </form>
         <section className="together-reveal" hidden={view !== "together"} aria-label="Find common ground">
           <details className="common-ground-setup" open={!together}><summary>{together ? "Compare with someone else" : "Your tastes + their interests"}</summary>
-          <div className="together-heading"><div><span className="micro-label">A LITTLE OF YOU. A LITTLE OF THEM.</span><h3>Find your common ground</h3><p>Start with one named artist, film, book or brand they love. We’ll look for a real place to try together.</p></div></div>
+          <div className="together-heading"><JourneyArt scene="together" /><div><span className="micro-label">A LITTLE OF YOU. A LITTLE OF THEM.</span><h3>Find your common ground</h3><p>Start with one named artist, film, book or brand they love. We’ll look for a real place to try together.</p></div></div>
           <div className="together-two-profiles"><div><strong>Person 1 · your confirmed tastes</strong><p>{passport.selected.map(taste=>taste.name).join(' · ')}</p></div></div>
           <p className="helper">A dish or cuisine alone cannot be compared here. For a food outing, add a named interest first, then choose Food under Adjust search.</p>
           {!hasEntityProfile && <p role="status">Add a named artist, film, book or brand to your Passport to use Together.</p>}

@@ -19,7 +19,7 @@ export default memo(function PassportMap({cards,cartoKey='',onSelect,onPlanFrom,
   useEffect(()=>{
     const map=mapInstance.current;
     if(!map)return;
-    if(active)map.resize();
+    if(active){const frame=requestAnimationFrame(()=>map.resize());return()=>cancelAnimationFrame(frame);}
     else map.stop();
   },[active]);
   const [retryKey,setRetryKey]=useState(0);

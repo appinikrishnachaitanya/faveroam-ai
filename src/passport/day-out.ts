@@ -72,7 +72,7 @@ export interface OutingExportStop {
 export function dayOutText(city: string, stops: OutingExportStop[], date?: string, timeZone?: string): string {
   const chosen=stops.filter(stop=>stop.card).length;
   return [
-    `My day out in ${city} · TastePassport AI`,
+    `My day out in ${city} · FaveRoam`,
     ...(date ? [`Planned for ${date}`] : []),
     ...(timeZone ? [`Suggested times (${timeZone})`] : []),
     `${chosen === stops.length ? "Complete day plan" : `Day plan · ${chosen} of ${stops.length} stops have a place`}`,

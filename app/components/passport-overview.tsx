@@ -20,7 +20,7 @@ export const PassportCover = memo(function PassportCover({
   return (
     <header className="passport-cover">
       <div className="cover-copy">
-        <span className="micro-label">FROM WHAT YOU LOVE TO WHERE YOU BELONG.</span>
+        <span className="micro-label">WHEREVER YOU ROAM, TAKE YOUR FAVOURITES WITH YOU.</span>
         <h1 id="passport-title">
           Your {passport.city}
           <br />

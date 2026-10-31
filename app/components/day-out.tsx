@@ -154,7 +154,7 @@ export default memo(function DayOutPlan({
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = "tastepassport-day-out.txt";
+    link.download = "faveroam-day-out.txt";
     link.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
     const message=selected.length === activities.length ? "Your plan is downloaded." : "Your plan is downloaded with the open stops clearly marked.";

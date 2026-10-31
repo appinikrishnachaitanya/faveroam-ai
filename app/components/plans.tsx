@@ -8,7 +8,7 @@ import { cityTimeZone } from "../../src/account/plans";
 export function downloadCalendar(plan: SavedPlan) {
   const url = URL.createObjectURL(new Blob([calendarFile(plan)], { type: "text/calendar;charset=utf-8" }));
   const link = document.createElement("a");
-  link.href = url; link.download = "tastepassport-plan.ics"; link.click();
+  link.href = url; link.download = "faveroam-plan.ics"; link.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 export default function UpcomingPlans({ plans, weeks=[], busy, error, editableCity, onEdit, onEditWeek, onDelete, onDeleteWeek=()=>{}, onRetry }: {

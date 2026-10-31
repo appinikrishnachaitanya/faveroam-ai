@@ -8,6 +8,7 @@ import type { Resolution } from "../../src/workspace/state";
 import { typeLabel } from "../../src/workspace/state";
 import { tasteInputFeedback } from "../../src/agent/conversation-grounding";
 import { Icon } from "./passport";
+import JourneyArt from './journey-art';
 
 export function StepIndicator({ step }: { step: number }) {
   return (
@@ -133,18 +134,19 @@ export function MoveForm({
     <section className="move-onboarding" aria-labelledby="move-title">
       <div className="onboarding-heading landing-city-hero">
         <span className="micro-label">
-          MAKE YOUR NEXT CHAPTER FEEL LIKE YOU
+          FAVOURITES + ROAMING
         </span>
         <h1 id="move-title">
-          From what you love<br />
-          <em>to where you belong.</em>
+          Wherever you roam,<br />
+          <em>take your favourites with you.</em>
         </h1>
-        <p>Discover places that feel like you, build your first week, and find Common Ground in a new city.</p>
+        <p>Your favourite music, films and food are the starting point. Find places to love, plan your first week, and discover Common Ground in a new city.</p>
         <div className="landing-actions">{onSample&&<button type="button" className="primary-button" disabled={disabled||loadingCities||!destinations.length} onClick={()=>onSample(destinations.includes('London')?'London':destinations[0])}>Try a sample <Icon name="arrow" size={16}/></button>}<button type="button" className="quiet-button" disabled={disabled||loadingCities||!destinations.length} onClick={advanceFromHero}>{!destinations.includes(city) ? "Choose my city" : draft.length ? "Review my interests" : "Add my interests"} <Icon name="arrow" size={16}/></button></div>
         {nextStepMessage && <p className="helper" role="status">{nextStepMessage}</p>}
         <div className="onboarding-story">
-          <img className="journey-illustration" src="/illustrations/editorial-city-route.svg" width="440" height="260" alt="" aria-hidden="true" fetchPriority="high" decoding="async" />
+          <div className="onboarding-art-pair"><figure><JourneyArt scene="favourites" /><figcaption>Carry your favourites</figcaption></figure><span className="onboarding-art-connection" aria-hidden="true">→</span><figure><JourneyArt scene="discover" /><figcaption>Explore somewhere new</figcaption></figure></div>
           <ul>
+            <li><Icon name="heart" size={16} /> Carry what you love into somewhere new</li>
             <li><Icon name="check" size={16} /> Your tastes, explicitly confirmed</li>
             <li><Icon name="check" size={16} /> Real discoveries. Visible connections.</li>
             <li><Icon name="check" size={16} /> Places to try and a day out to plan</li>

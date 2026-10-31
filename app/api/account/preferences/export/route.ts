@@ -17,7 +17,7 @@ export function GET(request: Request) {
       if (id && !data?.length) return privateJson({error:"Profile not found."},404);
       const profiles = (data ?? []).map(exportTasteProfile);
       return Response.json({schema:"tastepassport.profile-export",version:1,profiles},{headers:{
-        "Cache-Control":"private, no-store",Vary:"Cookie","Content-Disposition":'attachment; filename="tastepassport-profiles.json"',
+        "Cache-Control":"private, no-store",Vary:"Cookie","Content-Disposition":'attachment; filename="faveroam-profiles.json"',
       }});
     } catch { return privateJson({error:"Profiles could not be exported. Please retry."},503); }
   });

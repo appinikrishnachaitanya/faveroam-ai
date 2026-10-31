@@ -66,3 +66,17 @@ test("explicit explanation requests still use Gemini composition", async () => {
   await runTurn(testCase.state, { message: testCase.message }, testCase.deps);
   assert.equal(testCase.compositions(), 1);
 });
+
+test("saved budget remains active when a grounded refresh skips composition", async () => {
+  const testCase = fixture("Refresh my restaurant suggestions");
+  testCase.state.queryPreferences = { Eat: { priceMax: 2 } };
+  const untouched = { ...resultCard, id: "kept-movie", name: "Kept movie", section: "Movies" as const, types: ["urn:entity:movie"] };
+  testCase.state.cards.push(untouched);
+  const reply = await runTurn(testCase.state, { message: testCase.message }, testCase.deps);
+  assert.equal(testCase.compositions(), 0);
+  assert.equal(reply.state.queryPreferences?.Eat?.priceMax, 2);
+  assert.deepEqual(reply.changed, ["Eat"]);
+  assert.deepEqual(reply.state.cards.find(card => card.id === untouched.id), untouched);
+  assert.ok(reply.message.length > 0);
+  assert.deepEqual(reply.state.history?.at(-1)?.recommendationIds, ["new-food-place"]);
+});

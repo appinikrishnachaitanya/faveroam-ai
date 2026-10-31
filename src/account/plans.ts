@@ -97,7 +97,7 @@ export function calendarFile(plan: Pick<SavedPlan, "id" | "city" | "scheduled_da
   }) : ["BEGIN:VEVENT", `UID:${escape(plan.id)}@tastepassport`, `DTSTAMP:${stamp}`,
     `DTSTART;VALUE=DATE:${date}`, `DTEND;VALUE=DATE:${next.toISOString().slice(0, 10).replaceAll("-", "")}`,
     `SUMMARY:${escape(`A day out in ${plan.city}`)}`, `DESCRIPTION:${escape(description)}`, "END:VEVENT"];
-  const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//TastePassport//Personal plans//EN", ...events, "END:VCALENDAR"];
+  const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//FaveRoam//Personal plans//EN", ...events, "END:VCALENDAR"];
   // Fold UTF-8 content lines at 75 octets, as required by iCalendar.
   return lines.map((line) => {
     let result = "", size = 0;
